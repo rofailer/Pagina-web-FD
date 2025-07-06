@@ -1,0 +1,464 @@
+:root {
+  --primary-color: #ff9545;
+}
+
+/* Contenedor principal */
+#perfilSection {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px color-mix(in srgb, var(--primary-color) 10%, #000 7%);
+  padding: 40px 30px 30px 30px;
+  margin: 0 auto;
+  max-width: 900px;
+  width: 100%;
+}
+
+#perfilSection h2 {
+  color: var(--primary-color);
+  margin-bottom: 18px;
+  font-size: 2em;
+  text-align: center;
+}
+#perfilSection h3 {
+  color: var(--primary-color);
+}
+#perfilSection .section-desc {
+  font-size: 1.1em;
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+/* Panel de perfil: menú + contenido */
+.perfil-panel {
+  display: flex;
+  flex-direction: row;
+  background: color-mix(in srgb, var(--primary-color) 4%, #fff 96%);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px color-mix(in srgb, var(--primary-color) 10%, #000 7%);
+  min-height: 340px;
+  margin-top: 24px;
+  overflow: hidden;
+}
+
+/* Menú lateral */
+.perfil-menu {
+  min-width: 180px;
+  max-width: 240px;
+  width: 100%;
+  background: color-mix(in srgb, var(--primary-color) 3%, #fff 97%);
+  border-right: 2px solid color-mix(in srgb, var(--primary-color) 10%, #fff 90%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  justify-content: flex-start;
+}
+.perfil-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.perfil-menu li {
+  padding: 12px 18px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #444;
+  border-left: 4px solid transparent;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+  user-select: none;
+  white-space: normal;
+  word-break: break-word;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+/* Menú activo y hover */
+.perfil-menu li.active,
+.perfil-menu li:hover {
+  background: color-mix(in srgb, var(--primary-color) 10%, #fff 90%);
+  color: var(--primary-color);
+  border-left: 4px solid var(--primary-color);
+}
+
+/* Contenido de perfil */
+.perfil-content {
+  flex: 1 1 0;
+  padding: 32px 28px;
+  background: color-mix(in srgb, var(--primary-color) 2%, #fff 98%);
+  max-width: 600px;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 320px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Tabs: solo el activo se muestra */
+.perfil-tab-content {
+  display: none;
+  width: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  background: transparent;
+  position: relative;
+}
+.perfil-tab-content.active {
+  display: flex;
+}
+
+/* Centrado de contenido interno */
+.perfil-tab-content > *,
+#encryptionConfigContainer,
+#keysListContainer {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+/* Selector de cifrado moderno */
+.encryption-select-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 70px 0 22px 0;
+  padding: 18px 20px;
+  background: color-mix(in srgb, var(--primary-color) 6%, #fff 94%);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-color) 8%, #000 7%);
+  width: 100%;
+  box-sizing: border-box;
+}
+.encryption-label {
+  font-weight: 600;
+  margin-right: 8px;
+  color: var(--primary-color);
+  font-size: 1.08em;
+  letter-spacing: 0.2px;
+}
+.encryption-select {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1.5px solid color-mix(in srgb, var(--primary-color) 30%, #ccc 70%);
+  background: color-mix(in srgb, var(--primary-color) 3%, #fff 97%);
+  font-size: 1em;
+  font-weight: 500;
+  color: #333;
+  outline: none;
+  transition: border 0.2s, background 0.2s;
+  min-width: 140px;
+}
+.encryption-select:focus {
+  border: 1.5px solid var(--primary-color);
+  background: #fff;
+}
+.btn-primary {
+  background: var(--primary-color, #0078d7);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.btn-primary:hover {
+  background: #005fa3;
+}
+.encryption-msg {
+  color: #2e7d32;
+  margin-top: 12px;
+  font-size: 1em;
+  min-height: 1.2em;
+  text-align: center;
+  width: 100%;
+}
+.info {
+  color: #666;
+  font-size: 0.97em;
+}
+
+#generateKeysButton {
+  margin-bottom: 30px;
+}
+/* Lista de llaves */
+
+.keys-list {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--primary-color) 12%, #fff 88%) 20%,
+    color-mix(in srgb, var(--primary-color) 8%, #fff 92%) 100%
+  );
+  border-radius: 12px;
+  list-style: none;
+  padding: 12px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+  max-height: 480px; /* Muestra aprox. 3 llaves (ajusta según tu diseño) */
+  overflow-y: auto; /* Scroll vertical si hay más de 3 llaves */
+  overflow-x: hidden;
+}
+.key-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--primary-color) 5%, #fff 95%) 80%,
+    color-mix(in srgb, var(--primary-color) 2%, #fff 98%) 100%
+  );
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 1em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  position: relative;
+  border-left: 4px solid transparent;
+  transition: box-shadow 0.18s, border-color 0.18s;
+}
+.key-item.active {
+  border-left: 4px solid var(--primary-color); /* Verde pastel */
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--primary-color) 18%, #fff 82%) 80%,
+    color-mix(in srgb, var(--primary-color) 10%, #fff 90%) 100%
+  );
+  box-shadow: 0 4px 16px color-mix(in srgb, #3ec97b 10%, #000 8%);
+}
+.key-label {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+.key-type,
+.key-cipher {
+  color: var(--primary-color, #0078d7);
+  font-weight: 500;
+  font-size: 0.97em;
+  border-radius: 8px;
+  display: inline-block;
+  letter-spacing: 0.5px;
+}
+.key-date {
+  font-size: 0.96em;
+  color: #888;
+  margin-right: 8px;
+}
+.key-item .btn-mini {
+  align-self: flex-end;
+  margin-top: 6px;
+}
+.btn-mini {
+  background: #fff;
+  color: #d32f2f;
+  border: 1px solid #d32f2f;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 0.95em;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+.btn-mini:hover {
+  background: #d32f2f;
+  color: #fff;
+}
+.btn-secondary {
+  background: #fff;
+  color: var(--primary-color);
+  border: 1.5px solid var(--primary-color);
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: background 0.18s, color 0.18s;
+}
+.btn-secondary:hover {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+/* Iconos simples con emoji (puedes reemplazar por SVG si tienes) */
+.icon-lock::before {
+  content: "🔒 ";
+}
+.icon-key::before {
+  content: "🔑 ";
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+@media (max-width: 900px) {
+  #perfilSection {
+    padding: 24px 4vw;
+  }
+  .perfil-panel {
+    flex-direction: column;
+    min-height: unset;
+    box-shadow: none;
+    border-radius: 0;
+    margin-top: 16px;
+    align-items: center;
+  }
+  .perfil-menu {
+    flex-direction: column;
+    border-right: none;
+    border-bottom: none;
+    max-width: 100vw;
+    min-width: 0;
+    width: 100%;
+    background: #f7f7f7;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 22px;
+    padding: 8px 0 8px 0;
+  }
+  .perfil-menu ul {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 6px;
+  }
+  .perfil-menu li {
+    border-left: 4px solid transparent;
+    border-bottom: 1px solid #ececec;
+    padding: 14px 0;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    font-size: 1.08em;
+    border-radius: 8px;
+    margin: 0 0 2px 0;
+    background: #f7f7f7;
+  }
+  .perfil-menu li.active,
+  .perfil-menu li:hover {
+    border-left: 4px solid var(--primary-color, #0078d7);
+    background: #fff;
+    color: var(--primary-color, #0078d7);
+  }
+  .perfil-content {
+    padding: 18px 3vw 18px 3vw;
+    max-width: 100vw;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 90vh;
+    border-radius: 12px;
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+  }
+  .perfil-tab-content {
+    display: none;
+    width: 100%;
+    position: relative;
+    align-items: center;
+    justify-content: flex-start;
+    padding-bottom: 18px;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 80vh;
+    gap: 18px;
+  }
+  .perfil-tab-content.active {
+    display: flex;
+  }
+  .keys-list {
+    max-width: 100%;
+    width: 100%;
+    align-items: center;
+    overflow-y: auto;
+    max-height: 44vh;
+    gap: 18px;
+    padding-bottom: 8px;
+    padding-top: 8px;
+  }
+  .key-item {
+    max-width: 98vw;
+    width: 100%;
+    font-size: 1.04em;
+    padding: 16px 10px;
+    margin-bottom: 6px;
+    border-radius: 12px;
+    gap: 10px;
+  }
+  .encryption-select-group {
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin: 20px 0 14px 0;
+  }
+  .key-cipher {
+    font-size: 1em;
+    margin-bottom: 6px;
+  }
+  .key-label {
+    font-size: 1.08em;
+  }
+  .key-date {
+    font-size: 1em;
+  }
+  .btn-secondary,
+  .btn-primary {
+    font-size: 1.08em;
+    padding: 10px 22px;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 500px) {
+  #perfilSection {
+    padding: 10px 1vw;
+  }
+  .perfil-content {
+    padding: 10px 1vw;
+    font-size: 1em;
+    border-radius: 8px;
+  }
+  .perfil-menu li {
+    font-size: 1em;
+    padding: 10px 0;
+    border-radius: 6px;
+  }
+  .key-item {
+    font-size: 1em;
+    padding: 12px 4px;
+    border-radius: 8px;
+  }
+  .keys-list {
+    gap: 12px;
+    max-height: 38vh;
+  }
+  .perfil-tab-content {
+    gap: 12px;
+    padding-bottom: 10px;
+    max-height: 70vh;
+  }
+}

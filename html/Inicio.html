@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Firmas Digitales FD</title>
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" />
+    <!-- Hojas de estilo -->
+    <link rel="stylesheet" href="/css/mainStyle.css" />
+    <link rel="stylesheet" href="/css/footerStyle.css" />
+    <link rel="stylesheet" href="/css/authModal.css" />
+    <link rel="stylesheet" href="/css/userKeysModal.css" />
+    <link rel="stylesheet" href="/css/profileMenu.css" />
+    <link rel="stylesheet" href="/css/tutorial.css" />
+
+    <link rel="stylesheet" href="/css/sections/inicioSection.css" />
+    <link rel="stylesheet" href="/css/sections/firmarSection.css" />
+    <link rel="stylesheet" href="/css/sections/verificarSection.css" />
+    <link rel="stylesheet" href="/css/sections/contactoSection.css" />
+    <link rel="stylesheet" href="/css/sections/perfilSection.css" />
+    <link rel="stylesheet" href="/css/sections/opcionesSection.css" />
+
+    <link rel="stylesheet" href="/css/Header/headerStyle.css" />
+    <link rel="stylesheet" href="/css/Header/hHamburguer.css" />
+
+    <script src="/scripts/frontend/theme.js"></script>
+  </head>
+  <body style="visibility: hidden">
+    <!-- Header con menú de autenticación -->
+    <header>
+      <div class="header-left">
+        <a href="#inicio" class="logo-link">
+          <img
+            src="../recursos/logotipo-de-github.png"
+            alt="Logo"
+            class="logo-img"
+          />
+          <span id="tituloWeb">Firmas Digitales FD</span>
+        </a>
+      </div>
+      <!-- Botón hamburguesa aquí -->
+      <nav class="header-center">
+        <ul>
+          <li><a href="#inicio">Inicio</a></li>
+          <li><a href="#firmar">Firmar</a></li>
+          <li><a href="#verificar">Verificar</a></li>
+          <li><a href="#contacto">Contacto</a></li>
+        </ul>
+      </nav>
+      <div class="header-right">
+        <ul id="authMenu">
+          <li id="loginBtnLi"><a href="#" id="loginBtn">Iniciar Sesión</a></li>
+          <li id="registerBtnLi">
+            <a href="#" id="registerBtn">Registrarse</a>
+          </li>
+          <!-- Botón hamburguesa -->
+          <img
+            src="../recursos/Hamburguer.png"
+            id="headerMenuBtn"
+            class="header-menu-btn"
+            alt="Abrir menú"
+          />
+        </ul>
+      </div>
+
+      <!-- Menú móvil -->
+      <nav id="headerMobileMenu" class="header-mobile-menu">
+        <ul id="mobileMenuList"></ul>
+      </nav>
+    </header>
+
+    <!-- Botón de ayuda flotante -->
+    <button id="showTutorialBtn" title="Ver tutorial de uso">?</button>
+
+    <!-- Modal de Tutorial de Uso -->
+    <div id="tutorialModal" class="tutorial-modal">
+      <div class="tutorial-modal-content">
+        <h2>¿Cómo usar el sistema de firmas digitales?</h2>
+        <ol>
+          <li>
+            <b>Regístrate o inicia sesión.</b>
+            <div>
+              Pidele a un Administrador que te cree una cuenta y accede con tus
+              credenciales.
+            </div>
+          </li>
+          <li>
+            <b>Genera tus llaves.</b>
+            <div>
+              Al crear una cuenta, ve al apartado de perfil, tienes que generar
+              tus llaves digitales. Estas llaves son necesarias para firmar y
+              verificar documentos. Elige el tipo de cifrado simétrico y
+              establece una contraseña segura para proteger tu llave privada.
+            </div>
+          </li>
+          <li>
+            <b>Firma tus documentos PDF.</b>
+            <div>
+              Sube el archivo PDF que deseas firmar y descarga el documento
+              firmado y AVALADO.
+            </div>
+          </li>
+          <li>
+            <b>Verifica documentos firmados.</b>
+            <div>
+              Sube el PDF original y el firmado AVALADO para comprobar la
+              validez de la firma.
+            </div>
+          </li>
+          <li>
+            <b>Gestiona tus llaves.</b>
+            <div>
+              Puedes ver, renovar o eliminar tus llaves desde tu perfil.
+            </div>
+          </li>
+        </ol>
+        <button id="closeTutorialBtn" class="close-tutorial-btn">Cerrar</button>
+      </div>
+    </div>
+
+    <!-- Modales de Autenticación -->
+    <div id="loginModal" class="auth-modal">
+      <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Iniciar Sesión</h2>
+        <form id="loginForm">
+          <input type="text" id="loginUsuario" placeholder="Usuario" required />
+          <input
+            type="password"
+            id="loginPassword"
+            placeholder="Contraseña"
+            required
+          />
+          <button type="submit">Ingresar</button>
+        </form>
+        <p id="loginError" class="error-message"></p>
+        <p>
+          ¿No tienes cuenta? <a href="#" id="showRegister">Regístrate aquí</a>
+        </p>
+      </div>
+    </div>
+
+    <div id="registerModal" class="auth-modal">
+      <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Registrarse</h2>
+        <form id="registerForm">
+          <input
+            type="text"
+            id="registerNombre"
+            placeholder="Nombre completo"
+            required
+          />
+          <input
+            type="text"
+            id="registerUsuario"
+            placeholder="Usuario"
+            required
+          />
+          <input
+            type="password"
+            id="registerPassword"
+            placeholder="Contraseña"
+            required
+          />
+          <button type="submit">Crear cuenta</button>
+        </form>
+        <p id="registerError" class="error-message"></p>
+        <p>¿Ya tienes cuenta? <a href="#" id="showLogin">Inicia sesión</a></p>
+      </div>
+    </div>
+
+    <!-- Modal para seleccionar otra llave -->
+    <div id="keySelectModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <span id="closeKeySelectModal" class="close">&times;</span>
+        <h3>Selecciona una llave para verificar</h3>
+        <ul id="userKeysList"></ul>
+        <div id="keyConfirmSection" style="display: none; margin-top: 16px">
+          <p id="keyConfirmText"></p>
+          <button id="confirmKeyBtn">Sí, usar esta llave</button>
+          <button id="cancelKeyBtn">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal para contraseña de llave privada -->
+    <div id="keyPasswordModal" class="auth-modal" style="display: none">
+      <div class="modal-content">
+        <span class="close-modal" id="closeKeyPasswordModal">&times;</span>
+        <h2>Contraseña de la llave privada</h2>
+        <form id="keyPasswordForm">
+          <input
+            type="password"
+            id="keyPasswordInput"
+            placeholder="Contraseña de la llave privada"
+            required
+            minlength="4"
+          />
+          <button type="submit" id="keyPasswordSubmitBtn">Aceptar</button>
+        </form>
+        <p id="keyPasswordError" style="color: red; display: none"></p>
+      </div>
+    </div>
+
+    <main class="content" role="main">
+      <section id="inicioSection">
+        <div class="inicio-layout">
+          <div class="inicio-titulo">
+            <h2>
+              Bienvenido a <br /><span id="tituloWebInicio"
+                >Firmas Digitales</span
+              >
+            </h2>
+          </div>
+          <div class="inicio-grid">
+            <div class="inicio-bloque">
+              <div class="icono">🔒</div>
+              <h3>¿Qué es?</h3>
+              <p>
+                Plataforma para
+                <strong>firmar y verificar documentos digitales</strong> de
+                forma segura y eficiente. Ideal para
+                <strong>trabajos de grado</strong> y
+                <strong>proyectos de investigación</strong>.
+              </p>
+            </div>
+            <div class="inicio-bloque">
+              <div class="icono">🛡️</div>
+              <h3>Integridad y Autenticidad</h3>
+              <p>
+                La <strong>firma digital</strong> garantiza que tus documentos
+                no sean alterados y que la autoría esté protegida, manteniendo
+                la confianza en procesos académicos y científicos.
+              </p>
+            </div>
+            <div class="inicio-bloque">
+              <div class="icono">⚖️</div>
+              <h3>¿Firma digital o electrónica?</h3>
+              <p>
+                <strong>Firma electrónica:</strong> cualquier dato digital usado
+                como firma.<br />
+                <strong>Firma digital:</strong> usa criptografía avanzada, es
+                única, segura y tiene validez legal.
+              </p>
+            </div>
+            <div class="inicio-bloque">
+              <div class="icono">💡</div>
+              <h3>¿Sabías que...?</h3>
+              <p>
+                La firma digital es usada en universidades y empresas para
+                <strong>evitar fraudes</strong>, agilizar trámites y asegurar la
+                trazabilidad de los documentos.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="inicio-contacto">
+          <p>
+            Si tienes alguna pregunta, no dudes en
+            <a href="#contacto">contactarnos</a>.
+          </p>
+        </div>
+      </section>
+
+      <section id="firmarSection">
+        <h2>Firmar Documento</h2>
+        <p class="section-desc">
+          Sube tu archivo PDF para firmarlo digitalmente y obtener un aval que
+          garantiza su autenticidad e integridad.
+        </p>
+        <div id="signStepIndicator" class="step-indicator">
+          <div class="step active" data-step="1">1. Seleccionar documento</div>
+          <div class="step" data-step="2">2. Firmar documento</div>
+          <div class="step" data-step="3">3. Descargar documento</div>
+        </div>
+
+        <div id="signStep1">
+          <!-- Firmar -->
+          <form id="signForm">
+            <p class="input-title">Selecciona el documento PDF a firmar:</p>
+            <div style="width: 100%; max-width: 350px">
+              <label class="file">
+                <input
+                  type="file"
+                  id="fileInput"
+                  class="custom-file-input"
+                  accept=".pdf"
+                  aria-label="Seleccionar archivo PDF"
+                  required
+                />
+                <span class="file-custom">Ningún archivo seleccionado</span>
+              </label>
+            </div>
+            <button type="button" id="acceptDocumentBtn">
+              Aceptar documento
+            </button>
+          </form>
+        </div>
+
+        <!-- Paso 2: Firmar -->
+        <div id="signStep2" style="display: none">
+          <div class="loader-container">
+            <button id="signDocumentButton">Firmar documento</button>
+            <div id="signLoading" style="display: none">
+              <span class="loader"></span>
+              <div class="loader-text">Firmando...</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="signStep3" style="display: none">
+          <p>Documento firmado correctamente.</p>
+          <button id="downloadSignedBtn">Descargar documento avalado</button>
+          <button id="restartSignProcessBtn">Volver a empezar</button>
+        </div>
+      </section>
+
+      <!-- Solo la sección relevante de verificar -->
+      <section id="verifySection">
+        <h2>Verificar Aval</h2>
+        <p class="section-desc">
+          Verifica la autenticidad y la integridad de un documento PDF avalado
+          digitalmente por un profesor o tutor.
+        </p>
+        <div id="verifyStepIndicator" class="step-indicator">
+          <div class="step active" data-step="1">1. Seleccionar profesor</div>
+          <div class="step" data-step="2">2. Seleccionar aval firmado</div>
+          <div class="step" data-step="3">3. Seleccionar original</div>
+          <div class="step" data-step="4">4. Resultado</div>
+        </div>
+
+        <div id="verifyStep1">
+          <form id="verifyProfesorForm">
+            <label for="profesorSelect">Profesor/Tutor:</label>
+            <select id="profesorSelect"></select>
+            <button type="button" id="acceptProfesorBtn">Aceptar</button>
+          </form>
+        </div>
+
+        <div id="verifyStep2" style="display: none">
+          <form id="verifyAvalForm">
+            <label for="signedFile">Archivo avalado (PDF firmado):</label>
+            <div style="width: 100%; max-width: 350px">
+              <label class="file">
+                <input
+                  type="file"
+                  id="signedFile"
+                  accept=".pdf"
+                  class="custom-file-input"
+                  aria-label="Seleccionar archivo PDF firmado"
+                  required
+                />
+                <span class="file-custom">Ningún archivo seleccionado</span>
+              </label>
+            </div>
+            <button type="button" id="acceptAvalBtn">Aceptar</button>
+          </form>
+        </div>
+
+        <div id="verifyStep3" style="display: none">
+          <form id="verifyOriginalForm">
+            <label for="originalFile">Archivo original (PDF):</label>
+            <div style="width: 100%; max-width: 350px">
+              <label class="file">
+                <input
+                  type="file"
+                  id="originalFile"
+                  accept=".pdf"
+                  class="custom-file-input"
+                  aria-label="Seleccionar archivo PDF original"
+                  required
+                />
+                <span class="file-custom">Ningún archivo seleccionado</span>
+              </label>
+            </div>
+            <button type="button" id="acceptOriginalBtn">Verificar</button>
+          </form>
+        </div>
+
+        <div id="verifyStep4" style="display: none">
+          <div id="verificationResult"></div>
+          <div id="verificationDetails"></div>
+          <button id="continueVerifyBtn" style="display: none">
+            Verificar otro documento
+          </button>
+          <button id="retryKeyBtn" style="display: none">
+            Intentar con otro profesor
+          </button>
+          <button id="restartVerifyProcessBtn">Volver a empezar</button>
+        </div>
+      </section>
+
+      <section id="perfilSection">
+        <h2>Perfil</h2>
+        <p class="section-desc">
+          Bienvenido a tu perfil. Aquí puedes gestionar tus llaves digitales y
+          personalizar tu cuenta de usuario.
+        </p>
+        <div class="perfil-panel">
+          <aside class="perfil-menu">
+            <ul>
+              <li class="perfil-tab active" data-tab="cifrado">
+                Configuración de cifrado
+              </li>
+              <li class="perfil-tab" data-tab="llaves">Lista de llaves</li>
+            </ul>
+          </aside>
+          <div class="perfil-content">
+            <!-- Tab: Configuración de cifrado -->
+            <div class="perfil-tab-content active" id="perfilTab-cifrado">
+              <div id="encryptionConfigContainer">
+                <h3>
+                  <span class="icon-lock"></span> Configuración de cifrado de
+                  llaves
+                </h3>
+                <p>
+                  Selecciona el tipo de cifrado para proteger tus llaves
+                  privadas. <br />
+                  <span class="info"
+                    >Recomendamos <b>AES-256-CBC</b> para máxima
+                    seguridad.</span
+                  >
+                </p>
+                <div class="encryption-select-group">
+                  <label for="encryptionTypeSelect" class="encryption-label"
+                    >Tipo de cifrado:</label
+                  >
+                  <select id="encryptionTypeSelect" class="encryption-select">
+                    <option value="aes-256-cbc">
+                      AES-256-CBC (Recomendado)
+                    </option>
+                    <option value="aes-192-cbc">AES-192-CBC</option>
+                    <option value="aes-128-cbc">AES-128-CBC</option>
+                  </select>
+                  <button id="confirmEncryptionTypeBtn" class="btn-primary">
+                    Guardar
+                  </button>
+                </div>
+                <p id="encryptionTypeMsg" class="encryption-msg">
+                  <!-- Mensaje dinámico -->
+                </p>
+              </div>
+            </div>
+            <!-- Tab: Lista de llaves -->
+            <div class="perfil-tab-content" id="perfilTab-llaves">
+              <div id="keysListContainer">
+                <h3><span class="icon-key"></span> Tus llaves digitales</h3>
+                <p class="info">
+                  Aquí puedes ver, generar o eliminar tus llaves. Mantén tu
+                  llave privada segura.
+                </p>
+                <button id="generateKeysButton" class="btn-secondary">
+                  <span class="icon-plus">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 -4 20 20"
+                      fill="white"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <rect
+                        x="9"
+                        y="4"
+                        width="2"
+                        height="14"
+                        rx="1"
+                        fill="white"
+                      />
+                      <rect
+                        x="3"
+                        y="9"
+                        width="14"
+                        height="2"
+                        rx="1"
+                        fill="white"
+                      />
+                    </svg>
+                  </span>
+                  Generar nueva llave
+                </button>
+                <ul id="keysList" class="keys-list">
+                  <!-- Ejemplo de llave -->
+                  <li class="key-item active">
+                    <span class="key-label">Llave activa</span>
+                    <span class="key-type">AES-256-CBC</span>
+                    <span class="key-date">Expira: 2025-12-31</span>
+                    <button class="btn-mini btn-danger">Eliminar</button>
+                  </li>
+                  <li class="key-item">
+                    <span class="key-label">Llave anterior</span>
+                    <span class="key-type">AES-192-CBC</span>
+                    <span class="key-date">Expirada</span>
+                    <button class="btn-mini btn-danger">Eliminar</button>
+                  </li>
+                  <li class="key-item">
+                    <span class="key-label">Llave anterior</span>
+                    <span class="key-type">AES-192-CBC</span>
+                    <span class="key-date">Expirada</span>
+                    <button class="btn-mini btn-danger">Eliminar</button>
+                  </li>
+                  <li class="key-item">
+                    <span class="key-label">Llave anterior</span>
+                    <span class="key-type">AES-192-CBC</span>
+                    <span class="key-date">Expirada</span>
+                    <button class="btn-mini btn-danger">Eliminar</button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="contactoSection">
+        <h2>Contacto</h2>
+        <p class="section-desc">
+          Si tienes preguntas o necesitas ayuda, contáctanos.
+        </p>
+        <form id="contactForm">
+          <label for="name">Nombre:</label>
+          <input type="text" id="name" name="name" required />
+
+          <label for="email">Correo Electrónico:</label>
+          <input type="email" id="email" name="email" required />
+
+          <label for="message">Mensaje:</label>
+          <textarea id="message" name="message" required></textarea>
+
+          <button type="submit">Enviar</button>
+        </form>
+        <p
+          id="contactMessage"
+          style="display: none; color: green; margin: 25px"
+        >
+          Mensaje enviado correctamente. Nos pondremos en contacto contigo
+          pronto.
+        </p>
+      </section>
+
+      <section id="opcionesSection">
+        <!-- Botón hamburguesa -->
+        <button
+          id="headerMenuBtn"
+          class="header-menu-btn"
+          aria-label="Abrir menú"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <h2>Opciones de Personalización</h2>
+        <form id="configForm">
+          <!-- Cambiar logo -->
+          <label for="logoUpload">Subir Logo:</label>
+          <div class="input-inline">
+            <div style="width: 100%; max-width: 350px">
+              <label class="file">
+                <input
+                  type="file"
+                  id="logoUpload"
+                  name="logoUpload"
+                  accept="image/*"
+                  class="custom-file-input"
+                  aria-label="Subir logo"
+                />
+                <span class="file-custom">Ningún archivo seleccionado</span>
+              </label>
+              <button type="button" id="removeLogoBtn" title="Quitar logo">
+                X
+              </button>
+            </div>
+          </div>
+          <img
+            id="logoPreview"
+            style="display: none; max-height: 100px; margin-top: 10px"
+          />
+
+          <!-- Cambiar fondo del contenido -->
+          <label for="contentBgFile">Fondo del contenido (imagen):</label>
+          <div class="input-inline">
+            <div style="width: 100%; max-width: 350px">
+              <label class="file">
+                <input
+                  type="file"
+                  id="contentBgFile"
+                  accept="image/*"
+                  class="custom-file-input"
+                  aria-label="Subir fondo"
+                />
+                <span class="file-custom">Ningún archivo seleccionado</span>
+              </label>
+              <button
+                type="button"
+                id="removeContentBgBtn"
+                title="Quitar fondo"
+              >
+                X
+              </button>
+            </div>
+          </div>
+
+          <!-- Cambiar título de la página -->
+          <label for="pageTitle">Título de la Página:</label>
+          <input
+            type="text"
+            id="pageTitle"
+            name="title"
+            placeholder="Nuevo título"
+          />
+
+          <!-- Cambiar colores -->
+          <label for="primaryColor">Color Primario:</label>
+          <input
+            type="color"
+            id="primaryColor"
+            name="primaryColor"
+            value="#ed700f"
+          />
+
+          <label for="secondaryColor">Color Secundario:</label>
+          <input
+            type="color"
+            id="secondaryColor"
+            name="secondaryColor"
+            value="#333333"
+          />
+
+          <!-- Cambiar footer -->
+          <label for="footerText">Texto del Footer:</label>
+          <input
+            type="text"
+            id="footerText"
+            name="footer"
+            placeholder="Nuevo texto del footer"
+          />
+
+          <button type="submit">Guardar Cambios</button>
+        </form>
+      </section>
+    </main>
+
+    <footer class="fixed_footer">
+      <p>&copy; 2025 Firmas Digitales FD. Todos los derechos reservados.</p>
+    </footer>
+
+    <!-- Scripts de frontend -->
+    <script src="/scripts/frontend/auth.frontend.js"></script>
+    <script src="/scripts/frontend/keys.frontend.js"></script>
+    <script src="/scripts/frontend/config.js"></script>
+    <script src="/scripts/frontend/userKeysModal.js"></script>
+    <script src="/scripts/frontend/keyPassword.frontend.js"></script>
+    <script src="/scripts/frontend/signSteps.js"></script>
+    <script src="/scripts/frontend/verifySteps.js"></script>
+    <script src="/scripts/frontend/frontend.js" type="module"></script>
+    <script src="/scripts/frontend/profileEncryption.frontend.js"></script>
+    <script src="/scripts/frontend/headerResponsive.frontend.js"></script>
+    <script src="/scripts/frontend/mobileHamburger.frontend.js"></script>
+    <script src="/scripts/utils/tutorial.js"></script>
+  </body>
+</html>

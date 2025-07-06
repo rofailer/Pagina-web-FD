@@ -1,0 +1,155 @@
+#firmarSection {
+  background: linear-gradient(
+    -45deg,
+    #fff 60%,
+    color-mix(in srgb, var(--primary-color) 30%, #fff 70%) 100%
+  );
+  border-radius: 18px;
+  box-shadow: 0 6px 32px rgba(33, 150, 243, 0.13);
+  padding: 48px 32px 36px 32px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  max-width: 540px;
+  margin: 40px auto 0 auto;
+}
+
+#firmarSection::before {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  font-size: 2.2em;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+#firmarSection h2 {
+  color: var(--primary-color);
+  margin-bottom: 10px;
+  font-size: 2.1em;
+  letter-spacing: 1px;
+}
+
+#firmarSection .section-desc {
+  color: #444;
+  font-size: 1.13em;
+  margin-bottom: 26px;
+  text-align: center;
+}
+
+/* Indicador de pasos */
+#signStepIndicator.step-indicator {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  gap: 8px;
+}
+#signStepIndicator .step {
+  flex: 1;
+  padding: 10px 4px;
+  border-radius: 7px;
+  background: #f3f3f3;
+  color: #888;
+  text-align: center;
+  font-size: 1em;
+  border: 1.5px solid #e0e0e0;
+  transition: background 0.2s, color 0.2s;
+}
+#signStepIndicator .step.active {
+  background: var(--primary-color);
+  color: #fff;
+  font-weight: bold;
+  border-color: var(--primary-color);
+}
+
+/* Formularios */
+#firmarSection form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 10px;
+  max-width: 370px;
+  margin-left: auto;
+  margin-right: auto;
+}
+#firmarSection label {
+  font-weight: 500;
+  color: #222;
+  margin-bottom: 4px;
+  text-align: left;
+  width: 100%;
+  max-width: 350px;
+}
+#firmarSection input[type="file"] {
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1.5px solid #ccc;
+  background: #faf9f7;
+  font-size: 1em;
+  margin-bottom: 8px;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+#firmarSection input[type="file"]:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+#firmarSection .file-custom {
+  color: #888;
+  font-size: 0.97em;
+  margin-left: 8px;
+}
+
+/* Loader y texto */
+.loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  margin-top: 40px;
+}
+.loader {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 4px solid #ccc;
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.loader-text {
+  font-size: 1.1em;
+  color: #444;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* Resultado de firmado */
+#signStep3 p {
+  font-size: 1.18em;
+  color: #2e7d32;
+  margin-bottom: 16px;
+  font-weight: bold;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  #firmarSection {
+    padding: 28px 6vw 24px 6vw;
+    max-width: 98vw;
+  }
+}
+
+.no-bullets {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}

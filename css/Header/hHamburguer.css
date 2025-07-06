@@ -1,0 +1,185 @@
+/* Header Mobile Styles */
+/* Botón hamburguesa */
+.header-menu-btn {
+  background: none;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 42px;
+  height: 42px;
+  border: none;
+  cursor: pointer;
+  z-index: 4001;
+  padding: 0;
+}
+
+.header-menu-btn.active-session {
+  display: flex;
+  margin-right: 1vw;
+}
+
+.header-menu-btn span {
+  display: block;
+  height: 4px;
+  width: 26px;
+  background: #fff;
+  border-radius: 2px;
+  transition: 0.3s;
+}
+
+/* Menú móvil */
+.header-mobile-menu {
+  display: block;
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 0;
+  background: #fff;
+  box-shadow: -4px 0 32px rgba(0, 0, 0, 0.13);
+  z-index: 4002;
+  padding: 56px 0 32px 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s;
+  border-top-left-radius: 22px;
+  border-bottom-left-radius: 22px;
+}
+
+.header-mobile-menu ul {
+  opacity: 0;
+  transition: opacity 0.2s;
+  gap: 22px;
+  width: 90%;
+  margin: 0 auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.header-mobile-menu ul li {
+  list-style: none;
+  width: 100%;
+  transition: background 0.18s;
+}
+
+.header-mobile-menu ul li a,
+.header-mobile-menu ul li span.profile-name {
+  color: #585858;
+  font-size: 1.18em;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 13px 32px;
+  border-radius: 16px;
+  display: block;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.header-mobile-menu ul li a:hover,
+.header-mobile-menu ul li a:focus {
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--primary-color);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.13);
+}
+
+.header-mobile-menu ul li .profile-name {
+  background: transparent;
+  font-weight: 700;
+  font-size: 1.08em;
+  color: #fff;
+  margin-bottom: 8px;
+  padding-bottom: 0;
+  letter-spacing: 0.7px;
+}
+
+.header-mobile-menu.active {
+  width: 240px;
+}
+
+.header-mobile-menu.active ul {
+  opacity: 1;
+}
+
+#mobileLogoutBtnContainer {
+  border-top: none;
+  border-bottom: #fff;
+}
+
+#mobileInicioMenuLi {
+  border-top: 1px solid #fff;
+  border-bottom: none;
+}
+
+#mobileProfileInfo .profile-name {
+  color: #fff;
+}
+
+#mobileLogoutBtnContainer button {
+  background: none;
+  margin-top: 0;
+  padding: 5%;
+}
+#mobileLogoutBtnContainer button:hover {
+  background: #ff7c7c;
+}
+
+/* Responsive: solo muestra en móvil */
+@media (max-width: 1100px) {
+  .header-menu-btn {
+    display: flex !important;
+    margin-right: 1vw;
+  }
+  .header-center,
+  #loginBtnLi,
+  #registerBtnLi,
+  #profileMenuLi {
+    display: none !important;
+  }
+  .header-mobile-menu {
+    display: none;
+  }
+  .header-mobile-menu.active {
+    display: block;
+  }
+}
+@media (max-width: 700px) {
+  .header-right {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    width: 100%;
+  }
+  .header-menu-btn {
+    margin-right: 0.5vw !important;
+    margin-left: 0 !important;
+  }
+  #loginBtnLi,
+  #registerBtnLi {
+    display: none !important;
+  }
+}
+
+.menu-divider hr {
+  border: none;
+  border-top: 4px solid var(--primary-color);
+  margin: 12px 0;
+  opacity: 6;
+}
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 25px;
+}
+.profile-section {
+  margin-bottom: 0;
+}
+.profile-name {
+  font-weight: 700;
+  font-size: 1.08em;
+  color: #fff;
+  letter-spacing: 0.7px;
+}

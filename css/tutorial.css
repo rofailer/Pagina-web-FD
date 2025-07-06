@@ -1,0 +1,136 @@
+.tutorial-modal {
+  display: none;
+  position: fixed;
+  z-index: 3000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  overflow: hidden;
+}
+
+.tutorial-modal-content {
+  background-color: #fff;
+  margin: 3% auto;
+  padding: 30px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: modalFadeIn 0.3s;
+
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.tutorial-modal-content #closeTutorialBtn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 18px auto 0 auto;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tutorial-modal-content h2 {
+  margin-top: 0;
+  color: var(--primary-color);
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.tutorial-modal ol {
+  padding-left: 18px;
+  margin: 0;
+}
+
+.tutorial-modal li {
+  margin-bottom: 10px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+#showTutorialBtn {
+  position: fixed;
+  bottom: 40px;
+  right: 10px;
+  z-index: 1000;
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 60%,
+    color-mix(in srgb, var(--primary-color) 30%, #fff 70%) 100%
+  );
+  color: #fff;
+  border: none;
+  border-radius: 100%;
+  min-width: 52px;
+  width: 52px;
+  height: 52px;
+  font-size: 1.5em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.13);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0;
+  transition: background 0.18s;
+}
+
+#showTutorialBtn:hover {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary-color) 80%, #fff 20%) 60%,
+    color-mix(in srgb, var(--primary-color) 10%, #fff 90%) 100%
+  );
+}
+
+@media (max-width: 700px) {
+  .tutorial-modal-content {
+    max-width: 80vw;
+    padding: 16px;
+    margin: 10% auto;
+  }
+  #showTutorialBtn {
+    bottom: 55px;
+    right: 20px;
+    width: 42px;
+    min-width: 32px;
+    height: 42px;
+    font-size: 1.2em;
+  }
+}
+
+@media (max-width: 500px) {
+  .tutorial-modal-content {
+    max-width: 80vw;
+    padding: 12px;
+    margin: 10vh auto;
+    border-radius: 8px;
+    box-sizing: border-box;
+    /* Asegura que no se salga verticalmente */
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  #showTutorialBtn {
+    bottom: 55px;
+    right: 20px;
+    width: 42px;
+    min-width: 32px;
+    height: 42px;
+    font-size: 1.2em;
+  }
+}

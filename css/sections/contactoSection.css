@@ -1,0 +1,61 @@
+#contactoSection {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+  padding: 40px 30px 30px 30px;
+  text-align: center;
+  overflow: hidden;
+}
+#contactoSection h2 {
+  color: var(--primary-color);
+  margin-bottom: 18px;
+  font-size: 2em;
+}
+#contactoSection label {
+  display: block;
+  margin-top: 18px;
+  margin-bottom: 4px;
+  color: #222;
+  font-weight: 500;
+}
+#contactoSection input,
+#contactoSection textarea {
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 6px;
+  border-radius: 8px;
+  border: 1.5px solid #ccc;
+  margin-bottom: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-size: 1em;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+}
+#contactoSection input:focus,
+#contactoSection textarea:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 12px rgba(237, 112, 15, 0.1);
+  outline: none;
+}
+
+#contactMessage {
+  display: none;
+  color: #219150;
+  background: #eafaf1;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 25px 0 0 0;
+  font-weight: 500;
+  box-shadow: 0 1px 6px rgba(33, 145, 80, 0.07);
+}
+
+#contactoSection form {
+  margin: 0 auto;
+  max-width: 400px;
+  text-align: center;
+}
+
+#contactoSection form button {
+  margin-top: 8px; /* o el valor que prefieras */
+  margin-bottom: 0;
+  align-self: center;
+}

@@ -1,0 +1,267 @@
+#verifySection {
+  background: linear-gradient(
+    135deg,
+    #fff 60%,
+    color-mix(in srgb, var(--primary-color) 30%, #fff 70%) 100%
+  );
+  border-radius: 18px;
+  box-shadow: 0 6px 32px rgba(33, 150, 243, 0.13);
+  padding: 48px 32px 36px 32px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  max-width: 540px;
+  margin: 40px auto 0 auto;
+}
+
+#verifySection h2 {
+  color: var(--primary-color);
+  margin-bottom: 10px;
+  font-size: 2.1em;
+  letter-spacing: 1px;
+}
+#verifySection .section-desc {
+  color: #444;
+  font-size: 1.13em;
+  margin-bottom: 26px;
+  text-align: center;
+}
+
+#verifyForm {
+  max-width: 370px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#verifyForm label {
+  margin-bottom: 4px;
+  font-weight: 500;
+  color: #222;
+  text-align: center;
+}
+
+#verifyForm input[type="file"] {
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1.5px solid #ccc;
+  background: #faf9f7;
+  font-size: 1em;
+  margin-bottom: 8px;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+
+#verifyForm input[type="file"]:focus {
+  border-color: #2196f3;
+  outline: none;
+}
+
+#verifyForm button {
+  margin-top: 10px;
+}
+
+/* Indicador de pasos para verificar (igual que firmar) */
+.step-indicator {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  gap: 8px;
+}
+.step-indicator .step {
+  flex: 1;
+  padding: 10px 4px;
+  border-radius: 7px;
+  background: #f3f3f3;
+  color: #888;
+  text-align: center;
+  font-size: 1em;
+  border: 1.5px solid #e0e0e0;
+  transition: background 0.2s, color 0.2s;
+}
+.step-indicator .step.active {
+  background: var(--primary-color);
+  color: #fff;
+  font-weight: bold;
+  border-color: var(--primary-color);
+}
+
+/* Formularios de pasos */
+#verifySection form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 10px;
+}
+#verifySection label {
+  font-weight: 500;
+  color: #222;
+  margin-bottom: 4px;
+  text-align: center;
+  width: 100%;
+  max-width: 350px;
+}
+#verifySection input[type="file"] {
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1.5px solid #ccc;
+  background: #faf9f7;
+  font-size: 1em;
+  margin-bottom: 8px;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+#verifySection input[type="file"]:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+#verifySection .file-custom {
+  color: #888;
+  font-size: 0.97em;
+  margin-left: 8px;
+}
+
+/* Loader y texto centrados (puedes compartir el mismo bloque que firmar) */
+.loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  margin-top: 40px;
+}
+
+.loader {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 4px solid #ccc;
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loader-text {
+  font-size: 1.1em;
+  color: #444;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* Resultado de verificación */
+#verificationResult {
+  min-height: 2.5em;
+  font-size: 1.25em;
+  font-weight: bold;
+  margin-bottom: 10px;
+  padding: 10px 0 4px 0;
+  border-radius: 7px;
+  transition: background 0.2s;
+  word-break: break-word;
+}
+#verificationResult[style*="color: orange"] {
+  background: #fff7e6;
+}
+#verificationResult[style*="color: red"] {
+  background: #ffeaea;
+}
+#verificationResult[style*="color: green"] {
+  background: #eaffea;
+}
+
+/* Detalles de verificación */
+#verificationDetails {
+  font-size: 1.05em;
+  color: #444;
+  margin-bottom: 12px;
+  text-align: center;
+  display: inline-block;
+  max-width: 420px;
+  background: #f8f8f8;
+  border-radius: 6px;
+  padding: 10px 16px;
+  box-shadow: 0 1px 4px rgba(33, 150, 243, 0.04);
+}
+
+/* Listas sin viñetas */
+.no-bullets {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+/* Select moderno para profesor/tutor */
+.select-container {
+  position: relative;
+  width: 100%;
+  max-width: 350px;
+  margin-bottom: 8px;
+}
+
+#profesorSelect {
+  width: 100%;
+  padding: 10px 38px 10px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #ccc;
+  background: #faf9f7;
+  font-size: 1.08em;
+  color: #222;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  transition: border-color 0.2s;
+  outline: none;
+  box-sizing: border-box;
+}
+
+#profesorSelect:focus {
+  border-color: var(--primary-color);
+  background: #fff;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 1.2em;
+  color: #888;
+}
+
+/* Opcional: mejora el hover */
+#profesorSelect:hover {
+  border-color: var(--primary-color);
+}
+
+/* Opcional: mejora el label */
+#verifyProfesorForm label {
+  font-weight: 500;
+  color: #222;
+  margin-bottom: 4px;
+  text-align: center;
+  width: 100%;
+  max-width: 350px;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  #verifySection {
+    padding: 28px 6vw 24px 6vw;
+    max-width: 98vw;
+  }
+  #verificationDetails {
+    max-width: 95vw;
+    font-size: 0.99em;
+    padding: 8px 6vw;
+  }
+}
