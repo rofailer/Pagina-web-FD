@@ -22,6 +22,11 @@ if (!process.env.JWT_SECRET) {
 
 console.log('✅ Variables de entorno validadas correctamente');
 
+// Logging adicional para Railway
+console.log('🔧 Configurando aplicación Express...');
+console.log(`📊 Memoria inicial: ${JSON.stringify(process.memoryUsage())}`);
+console.log(`🆔 Process ID: ${process.pid}`);
+
 // Middlewares globales
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -44,11 +49,6 @@ app.use("/recursos", express.static(path.join(__dirname, "../recursos")));
 // Configuración de multer para subir archivos
 const upload = multer({ dest: path.join(__dirname, "../uploads") });
 
-// Ruta de healthcheck simple
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
-});
-
 // Crear carpetas necesarias si no existen
 [
   path.join(__dirname, "../downloads"),
@@ -61,7 +61,18 @@ app.get("/health", (req, res) => {
   }
 });
 
-// Página principal
+// Ruta de healthcheck simple
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    pid: process.pid
+  });
+});
+
+// Railway health check
 app.get("/", (req, res) => {
   try {
     const filePath = path.join(__dirname, "../html/Inicio.html");
@@ -342,17 +353,30 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // =================== Graceful shutdown ===================
 process.on('SIGTERM', () => {
-  console.log('SIGTERM recibido. Cerrando servidor gracefully...');
-  server.close(() => {
-    console.log('Servidor cerrado.');
+  console.log('🚨 SIGTERM recibido. Iniciando graceful shutdown...');
+  console.log(`📊 Memoria al cierre: ${JSON.stringify(process.memoryUsage())}`);
+  console.log(`⏰ Uptime: ${process.uptime()} segundos`);
+
+  server.close((err) => {
+    if (err) {
+      console.error('❌ Error al cerrar servidor:', err);
+    } else {
+      console.log('✅ Servidor cerrado correctamente.');
+    }
     process.exit(0);
   });
+
+  // Forzar cierre después de 10 segundos
+  setTimeout(() => {
+    console.log('⚠️ Forzando cierre después de timeout');
+    process.exit(1);
+  }, 10000);
 });
 
 process.on('SIGINT', () => {
-  console.log('SIGINT recibido. Cerrando servidor gracefully...');
+  console.log('🚨 SIGINT recibido. Cerrando servidor gracefully...');
   server.close(() => {
-    console.log('Servidor cerrado.');
+    console.log('✅ Servidor cerrado.');
     process.exit(0);
   });
 });
