@@ -11,7 +11,7 @@ const authenticate = require('./middlewares/authenticate');
 const isAdmin = require('./middlewares/isAdmin');
 const isOwner = require('./middlewares/isOwner');
 const { encrypt, decrypt, decryptWithPassword, decryptAES, decryptWithType } = require('./utils/crypto');
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middlewares globales
 app.use(express.json({ limit: '10mb' }));
@@ -273,8 +273,25 @@ app.get('/api/ping', (req, res) => {
 });
 
 // =================== Inicio del servidor ===================
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor corriendo en puerto ${PORT}`);
   console.log(`Entorno: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// =================== Graceful shutdown ===================
+process.on('SIGTERM', () => {
+  console.log('SIGTERM recibido. Cerrando servidor gracefully...');
+  server.close(() => {
+    console.log('Servidor cerrado.');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT recibido. Cerrando servidor gracefully...');
+  server.close(() => {
+    console.log('Servidor cerrado.');
+    process.exit(0);
+  });
 });
 
