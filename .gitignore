@@ -1,1 +1,16 @@
 node_modules/
+.env
+*.log
+npm-debug.log*
+
+# Archivos temporales
+uploads/*
+!uploads/.gitkeep
+downloads/*
+!downloads/.gitkeep
+llaves/*
+!llaves/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db

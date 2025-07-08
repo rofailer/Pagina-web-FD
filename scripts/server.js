@@ -13,6 +13,15 @@ const isOwner = require('./middlewares/isOwner');
 const { encrypt, decrypt, decryptWithPassword, decryptAES, decryptWithType } = require('./utils/crypto');
 const PORT = process.env.PORT || 3000;
 
+// Validar variables de entorno críticas
+if (!process.env.JWT_SECRET) {
+  console.error('❌ ERROR: JWT_SECRET no está configurado en las variables de entorno');
+  console.error('Por favor, configura JWT_SECRET en Railway');
+  process.exit(1);
+}
+
+console.log('✅ Variables de entorno validadas correctamente');
+
 // Middlewares globales
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -27,6 +36,7 @@ app.use((req, res, next) => {
 // Configuración de archivos estáticos ANTES de las rutas
 app.use("/css", express.static(path.join(__dirname, "../css"), { maxAge: "1d" }));
 app.use("/scripts/frontend", express.static(path.join(__dirname, "./frontend"), { maxAge: "1d" }));
+app.use("/scripts/utils", express.static(path.join(__dirname, "./utils"), { maxAge: "1d" }));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/recursos", express.static(path.join(__dirname, "../recursos")));
 // app.use("/downloads", express.static(path.join(__dirname, "../downloads")));
@@ -53,12 +63,32 @@ app.get("/health", (req, res) => {
 
 // Página principal
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../html/Inicio.html"), (err) => {
-    if (err) {
-      console.error("Error al cargar la página principal:", err);
-      res.status(500).send("Error al cargar la página");
+  try {
+    const filePath = path.join(__dirname, "../html/Inicio.html");
+    console.log(`Intentando servir archivo: ${filePath}`);
+
+    // Verificar que el archivo existe antes de enviarlo
+    if (!fs.existsSync(filePath)) {
+      console.error(`Archivo no encontrado: ${filePath}`);
+      return res.status(404).send("Página no encontrada");
     }
-  });
+
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error("Error al cargar la página principal:", err);
+        if (!res.headersSent) {
+          res.status(500).send("Error al cargar la página");
+        }
+      } else {
+        console.log("Página principal servida correctamente");
+      }
+    });
+  } catch (error) {
+    console.error("Error en ruta principal:", error);
+    if (!res.headersSent) {
+      res.status(500).send("Error interno del servidor");
+    }
+  }
 });
 
 
@@ -288,6 +318,26 @@ app.get('/api/ping', (req, res) => {
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
   console.log(`Entorno: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Servidor escuchando en 0.0.0.0:${PORT}`);
+});
+
+// =================== Manejo de errores del servidor ===================
+server.on('error', (err) => {
+  console.error('Error del servidor:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Puerto ${PORT} ya está en uso`);
+  }
+});
+
+// =================== Manejo de errores no capturados ===================
+process.on('uncaughtException', (err) => {
+  console.error('Excepción no capturada:', err);
+  // No hacer exit aquí para evitar crashes
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Promesa rechazada no manejada:', reason);
+  // No hacer exit aquí para evitar crashes
 });
 
 // =================== Graceful shutdown ===================
