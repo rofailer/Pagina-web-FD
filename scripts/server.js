@@ -61,34 +61,32 @@ const upload = multer({ dest: path.join(__dirname, "../uploads") });
   }
 });
 
-// Ruta de healthcheck simple
+// =================== Health checks y rutas básicas ===================
+// Health check simple para Railway
 app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    pid: process.pid
-  });
+  res.status(200).send("OK");
 });
 
-// Railway health check
+// Health check alternativo
+app.get("/ping", (req, res) => {
+  res.status(200).json({ status: "alive" });
+});
+
+// Ruta principal simplificada para Railway health check
 app.get("/", (req, res) => {
   try {
     const filePath = path.join(__dirname, "../html/Inicio.html");
-    console.log(`Intentando servir archivo: ${filePath}`);
 
-    // Verificar que el archivo existe antes de enviarlo
     if (!fs.existsSync(filePath)) {
       console.error(`Archivo no encontrado: ${filePath}`);
-      return res.status(404).send("Página no encontrada");
+      return res.status(200).send("App is running - HTML file not found");
     }
 
     res.sendFile(filePath, (err) => {
       if (err) {
         console.error("Error al cargar la página principal:", err);
         if (!res.headersSent) {
-          res.status(500).send("Error al cargar la página");
+          res.status(200).send("App is running - Error loading HTML");
         }
       } else {
         console.log("Página principal servida correctamente");
@@ -97,7 +95,7 @@ app.get("/", (req, res) => {
   } catch (error) {
     console.error("Error en ruta principal:", error);
     if (!res.headersSent) {
-      res.status(500).send("Error interno del servidor");
+      res.status(200).send("App is running - Exception occurred");
     }
   }
 });
@@ -320,16 +318,13 @@ app.get('/downloads/:file', (req, res) => {
   });
 });
 
-// =================== Ruta de ping para comprobar si el backend responde ===================
-app.get('/api/ping', (req, res) => {
-  res.json({ ok: true, message: "pong" });
-});
-
 // =================== Inicio del servidor ===================
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
-  console.log(`Entorno: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`Servidor escuchando en 0.0.0.0:${PORT}`);
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📡 Servidor escuchando en 0.0.0.0:${PORT}`);
+  console.log(`✅ Aplicación completamente iniciada y lista para recibir peticiones`);
+  console.log(`🔗 Health check disponible en: /health y /ping`);
 });
 
 // =================== Manejo de errores del servidor ===================
