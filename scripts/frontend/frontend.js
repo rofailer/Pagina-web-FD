@@ -59,6 +59,21 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.keys(links).forEach((key) => {
         if (links[key]) {
             links[key].addEventListener("click", (event) => {
+                // Advertencia si hay datos en curso en verificación o firmado
+                if ((window.verificacionEnCurso && key !== "verificar") ||
+                    (window.firmaEnCurso && key !== "firmar")) {
+                    const salir = confirm("¿Seguro que desea salir? Perderá los datos ingresados.");
+                    if (!salir) {
+                        event.preventDefault();
+                        return;
+                    } else {
+                        if (window.limpiarFormulariosVerificar) window.limpiarFormulariosVerificar();
+                        if (window.limpiarFormulariosFirmar) window.limpiarFormulariosFirmar();
+                        window.verificacionEnCurso = false;
+                        window.firmaEnCurso = false;
+                    }
+                }
+
                 event.preventDefault();
 
                 // Validación de sesión para secciones protegidas
@@ -66,7 +81,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (window.showLoginModal) window.showLoginModal();
                     else alert("Debes iniciar sesión para usar esta función.");
                     window.location.hash = "inicio";
-                    // Opcional: fuerza visibilidad de inicio
                     if (document.getElementById("inicioSection")) document.getElementById("inicioSection").style.display = "";
                     if (document.getElementById("firmarSection")) document.getElementById("firmarSection").style.display = "none";
                     if (document.getElementById("verifySection")) document.getElementById("verifySection").style.display = "none";
@@ -74,7 +88,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 window.location.hash = key;
-                // Si navega a verificar, carga profesores
                 if (key === "verificar" && window.cargarProfesoresYMostrarPaso1) {
                     window.cargarProfesoresYMostrarPaso1();
                 }
@@ -303,4 +316,13 @@ document.addEventListener("DOMContentLoaded", () => {
 // --- Scroll arriba al cambiar de sección (por si acaso) ---
 window.addEventListener("hashchange", () => {
     window.scrollTo(0, 0);
+});
+
+window.verificacionEnCurso = false;
+
+window.addEventListener("beforeunload", function (e) {
+    if (window.verificacionEnCurso) {
+        e.preventDefault();
+        e.returnValue = "¿Seguro que desea salir? Perderá los datos ingresados.";
+    }
 });

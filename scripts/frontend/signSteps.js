@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Selecciona un archivo PDF primero.");
             return;
         }
+        window.firmaEnCurso = true; // Marcar proceso en curso
         showStep(2);
     };
 
@@ -63,9 +64,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         const data = await response.json();
                         downloadUrl = data.downloadUrl;
                         document.getElementById("signLoading").style.display = "none";
-                        // Al mostrar el paso 3 (después de firmar)
                         showStep(3);
                         document.getElementById("restartSignProcessBtn").style.display = "none";
+                        window.firmaEnCurso = false; // Proceso terminado
                     } else {
                         document.getElementById("signLoading").style.display = "none";
                         const error = await response.json();
@@ -75,11 +76,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             localStorage.removeItem("token");
                         }
                         showStep(1);
+                        window.firmaEnCurso = false;
                     }
                 } catch (err) {
                     document.getElementById("signLoading").style.display = "none";
                     alert("Error al firmar el documento.");
                     showStep(1);
+                    window.firmaEnCurso = false;
                 }
             }, 1200);
         });
@@ -104,9 +107,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("restartSignProcessBtn").style.display = "inline-block";
     };
 
-    document.getElementById("restartSignProcessBtn").onclick = () => {
+    function limpiarFormulariosFirmar() {
         document.getElementById("signForm").reset();
-        // Limpia el texto del input file
         const fileInput = document.getElementById("fileInput");
         if (fileInput) fileInput.value = "";
         const fileCustom = fileInput?.parentElement?.querySelector('.file-custom');
@@ -115,8 +117,17 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("signLoading").style.display = "none";
         downloadUrl = null;
         showStep(1);
-    };
+        window.firmaEnCurso = false;
+    }
+
+    document.getElementById("restartSignProcessBtn").onclick = limpiarFormulariosFirmar;
 
     // --- Estado inicial ---
     showStep(1);
+
+    // Hacer la función global para frontend.js
+    window.limpiarFormulariosFirmar = limpiarFormulariosFirmar;
 });
+
+window.firmaEnCurso = false;
+window.verificacionEnCurso = false;

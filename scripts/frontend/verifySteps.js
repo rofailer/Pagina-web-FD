@@ -62,6 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         selectedProfesorId = select.value;
+        window.verificacionEnCurso = true; // Marcar proceso en curso
         showStep(2);
     };
 
@@ -72,6 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Selecciona el archivo avalado (PDF firmado).");
             return;
         }
+        window.verificacionEnCurso = true;
         showStep(3);
     };
 
@@ -82,6 +84,8 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Selecciona el archivo original (PDF).");
             return;
         }
+
+        window.verificacionEnCurso = true;
 
         // Mostrar loader y texto "Verificando..." antes de hacer la petición
         showStep(4);
@@ -106,6 +110,8 @@ document.addEventListener("DOMContentLoaded", () => {
         formData.append("originalFile", originalFile);
         formData.append("profesorId", selectedProfesorId);
 
+        console.log("Enviando profesorId:", selectedProfesorId);
+
         fetch("/verify-document", {
             method: "POST",
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -121,7 +127,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (response.ok) {
                         const data = await response.json();
                         if (data.reason === "key_mismatch") {
-                            // Solo mostrar "Intentar con otro profesor"
                             resultElem.textContent = "❌ El profesor/tutor seleccionado NO avaló este documento.";
                             resultElem.style.color = "orange";
                             detailsElem.innerHTML = `
@@ -133,7 +138,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             retryKeyBtn.style.display = "inline-block";
                         }
                         else if (data.reason === "invalid_signature") {
-                            // Solo mostrar "Verificar otro documento"
                             resultElem.textContent = "⚠️ El profesor/tutor sí avaló el documento, pero el archivo original NO coincide.";
                             resultElem.style.color = "red";
                             detailsElem.innerHTML = `
@@ -145,7 +149,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             continueBtn.style.display = "inline-block";
                         }
                         else if (data.valid && data.professorMatch && data.signatureMatch) {
-                            // Solo mostrar "Volver a empezar"
                             resultElem.textContent = "✅ El profesor/tutor avaló el documento y la firma digital es válida.";
                             resultElem.style.color = "green";
                             detailsElem.innerHTML = `
@@ -161,10 +164,27 @@ document.addEventListener("DOMContentLoaded", () => {
                             resultElem.style.color = "red";
                             continueBtn.style.display = "inline-block";
                         }
+                        window.verificacionEnCurso = false; // Proceso terminado
                     } else {
-                        resultElem.textContent = "Error al verificar el documento.";
+                        // NUEVO: Mostrar mensaje específico si no se encuentra la llave
+                        let errorMsg = "Error al verificar el documento.";
+                        try {
+                            const errorData = await response.json();
+                            if (
+                                errorData.error &&
+                                errorData.error.toLowerCase().includes("no se encontró la llave pública")
+                            ) {
+                                errorMsg = "❌ No se encontró la llave pública del profesor/tutor seleccionado. Por favor, asegúrate de que el profesor tenga una llave generada y activa.";
+                            } else if (errorData.error) {
+                                errorMsg = errorData.error;
+                            }
+                        } catch (e) {
+                            // Si no es JSON, deja el mensaje por defecto
+                        }
+                        resultElem.textContent = errorMsg;
                         resultElem.style.color = "red";
                         continueBtn.style.display = "inline-block";
+                        window.verificacionEnCurso = false;
                     }
                 }, 1200);
             })
@@ -174,6 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     resultElem.style.color = "red";
                     continueBtn.style.display = "inline-block";
                     retryKeyBtn.style.display = "none";
+                    window.verificacionEnCurso = false;
                 }, 1200);
             });
     };
@@ -182,7 +203,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function limpiarFormulariosVerificar() {
         document.getElementById("verifyAvalForm").reset();
         document.getElementById("verifyOriginalForm").reset();
-        // Limpia los inputs file manualmente
         const signedFile = document.getElementById("signedFile");
         if (signedFile) signedFile.value = "";
         const signedCustom = signedFile?.parentElement?.querySelector('.file-custom');
@@ -195,6 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("verificationDetails").textContent = "";
         document.getElementById("continueVerifyBtn").style.display = "none";
         document.getElementById("retryKeyBtn").style.display = "none";
+        window.verificacionEnCurso = false;
     }
 
     document.getElementById("continueVerifyBtn").onclick = () => {
@@ -217,4 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Hacer la función global para frontend.js ---
     window.cargarProfesoresYMostrarPaso1 = cargarProfesoresYMostrarPaso1;
+    window.limpiarFormulariosVerificar = limpiarFormulariosVerificar;
+    window.verificacionEnCurso = false;
+    window.firmaEnCurso = false;
 });

@@ -103,9 +103,9 @@ document.addEventListener('DOMContentLoaded', () => {
         errorElement.textContent = '';
 
         // Validación en frontend antes de enviar
-        const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+        const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{4,}$/;
         if (!regex.test(password)) {
-            errorElement.textContent = "La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial.";
+            errorElement.textContent = "La contraseña debe tener al menos 4 caracteres, una mayúscula, un número y un carácter especial.";
             return;
         }
 
