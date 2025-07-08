@@ -17,10 +17,27 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
-app.use(express.static(__dirname));
+
+// Logging middleware para debug
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// Configuración de archivos estáticos ANTES de las rutas
+app.use("/css", express.static(path.join(__dirname, "../css"), { maxAge: "1d" }));
+app.use("/scripts/frontend", express.static(path.join(__dirname, "./frontend"), { maxAge: "1d" }));
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/recursos", express.static(path.join(__dirname, "../recursos")));
+// app.use("/downloads", express.static(path.join(__dirname, "../downloads")));
 
 // Configuración de multer para subir archivos
 const upload = multer({ dest: path.join(__dirname, "../uploads") });
+
+// Ruta de healthcheck simple
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
+});
 
 // Crear carpetas necesarias si no existen
 [
@@ -34,7 +51,7 @@ const upload = multer({ dest: path.join(__dirname, "../uploads") });
   }
 });
 
-// Página principal y archivos estáticos
+// Página principal
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../html/Inicio.html"), (err) => {
     if (err) {
@@ -43,11 +60,6 @@ app.get("/", (req, res) => {
     }
   });
 });
-app.use("/css", express.static(path.join(__dirname, "../css"), { maxAge: "1d" }));
-app.use("/scripts", express.static(path.join(__dirname, "../scripts"), { maxAge: "1d" }));
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-app.use("/recursos", express.static(path.join(__dirname, "../recursos")));
-//app.use("/downloads", express.static(path.join(__dirname, "../downloads")));
 
 
 // =================== Routers backend ===================
