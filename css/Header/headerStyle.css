@@ -120,10 +120,82 @@ header {
   align-items: center;
 }
 
+/* Botones de autenticación mejorados */
+#loginBtn,
+#registerBtn {
+  position: relative;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 9px 20px !important;
+  border-radius: 25px !important;
+  font-weight: 600 !important;
+  font-size: 0.95em !important;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  overflow: hidden;
+}
+
+#loginBtn::before,
+#registerBtn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.6s ease;
+}
+
+#loginBtn:hover,
+#registerBtn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+#loginBtn:hover::before,
+#registerBtn:hover::before {
+  left: 100%;
+}
+
+#loginBtn:active,
+#registerBtn:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Estilo específico para el botón de registro */
+#registerBtn {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  margin-left: 8px;
+}
+
+#registerBtn:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
 .header-right ul li a:hover,
 .header-right ul li button:hover {
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
+}
+
+/* Sobrescribir hover para botones de auth */
+#loginBtn:hover,
+#registerBtn:hover {
+  color: #fff !important;
 }
 
 .profile-avatar {

@@ -248,10 +248,17 @@ document.addEventListener("DOMContentLoaded", () => {
             const token = localStorage.getItem("token");
 
             if (token) {
+                // Usuario logueado: mostrar botón
                 menuBtn.classList.add("active-session");
                 menuBtn.style.display = "flex";
                 menuBtn.style.visibility = "visible";
                 menuBtn.style.pointerEvents = "auto";
+            } else {
+                // Usuario no logueado: ocultar botón completamente
+                menuBtn.classList.remove("active-session");
+                menuBtn.style.display = "none";
+                menuBtn.style.visibility = "hidden";
+                menuBtn.style.pointerEvents = "none";
             }
         }
     }
