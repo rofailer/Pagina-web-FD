@@ -39,7 +39,7 @@
                                 // Nombre
                                 const name = document.createElement("div");
                                 name.className = "key-name";
-                                name.textContent = key.nombre || `Llave ${key.id}`;
+                                name.textContent = key.key_name || `Llave ${key.id}`;
                                 li.appendChild(name);
                                 // Expiración
                                 const exp = document.createElement("div");
@@ -64,7 +64,7 @@
                                 btn.disabled = (activeKeyId === key.id);
                                 btn.onclick = () => {
                                     selectedKeyId = key.id;
-                                    selectedKeyName = key.nombre || `Llave ${key.id}`;
+                                    selectedKeyName = key.key_name || `Llave ${key.id}`;
                                     keyConfirmText.textContent = `¿Seguro que deseas usar la llave "${selectedKeyName}" para verificar este documento?`;
                                     keyConfirmSection.style.display = "block";
                                 };

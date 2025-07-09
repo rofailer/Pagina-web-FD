@@ -1,0 +1,610 @@
+/* =========================
+   MENÚ HAMBURGUESA MÓVIL - DISEÑO LIMPIO
+   ========================= */
+
+/* Botón hamburguesa */
+.header-menu-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 44px !important;
+  height: 44px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  cursor: pointer;
+  position: relative;
+  z-index: 9000 !important;
+  transition: all 0.3s ease !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  box-sizing: border-box !important;
+}
+
+.header-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: scale(1.05) !important;
+}
+
+.header-menu-btn span {
+  display: block !important;
+  width: 22px !important;
+  height: 2px !important;
+  background: white !important;
+  margin: 3px 0 !important;
+  border-radius: 2px !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  transform-origin: center !important;
+}
+
+/* Animación del botón hamburguesa cuando se activa */
+.header-menu-btn.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px) !important;
+}
+
+.header-menu-btn.active span:nth-child(2) {
+  opacity: 0 !important;
+  transform: scale(0) !important;
+}
+
+.header-menu-btn.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -6px) !important;
+}
+
+/* Backdrop - SIN BLUR, menos oscuro, z-index menor que el menú */
+.mobile-menu-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.3) !important; /* Menos oscuro */
+  z-index: 8000 !important; /* Backdrop - above header */
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important; /* Nunca interceptar clicks */
+  backdrop-filter: none !important; /* Sin blur */
+  -webkit-backdrop-filter: none !important; /* Sin blur en Safari */
+  filter: none !important; /* Sin filtros */
+
+  /* Animación más suave para el backdrop */
+  transition: opacity 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    visibility 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.mobile-menu-backdrop.active {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: none !important; /* Nunca interceptar clicks, incluso cuando activo */
+  z-index: 8000 !important; /* Backdrop - above header */
+}
+
+.mobile-menu-backdrop * {
+  pointer-events: none !important; /* Ningún elemento hijo puede interceptar clicks */
+}
+
+/* Menú principal */
+.header-mobile-menu {
+  position: fixed;
+  top: 0;
+  right: -350px;
+  width: 320px;
+  height: 100vh;
+  background: #ffffff !important; /* Fondo blanco sólido */
+  box-shadow: -5px 0 25px rgba(0, 0, 0, 0.2);
+  z-index: 9000 !important;
+  overflow-y: auto;
+  border-top-left-radius: 25px;
+  border-bottom-left-radius: 25px;
+  backdrop-filter: none !important; /* Sin blur en el menú */
+  -webkit-backdrop-filter: none !important;
+
+  /* Animaciones suaves */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(100%);
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition-property: right, opacity, visibility, transform;
+}
+
+.header-mobile-menu.active {
+  right: 0 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateX(0);
+  z-index: 9000 !important;
+}
+
+/* Botón cerrar - circular, lado izquierdo, perfectamente centrado */
+.mobile-menu-close {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  width: 35px !important;
+  height: 35px !important;
+  background: rgba(0, 0, 0, 0.05) !important; /* Fondo sutil */
+  border: none !important;
+  border-radius: 50% !important; /* Circular */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px !important;
+  color: #666 !important;
+  z-index: 8600 !important; /* Close button - above menu */
+  box-sizing: border-box !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-width: 35px !important;
+  max-width: 35px !important;
+  min-height: 35px !important;
+  max-height: 35px !important;
+
+  /* Animación de entrada del botón */
+  opacity: 0;
+  transform: scale(0.8) rotate(-90deg);
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition-delay: 0.2s;
+}
+
+.mobile-menu-close.animate-in {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+.mobile-menu-close:hover {
+  background: rgba(255, 149, 69, 0.1) !important; /* Fondo con color primario */
+  color: var(--primary-color) !important;
+  transform: scale(1.1) rotate(0deg) !important;
+}
+
+.mobile-menu-close::before {
+  content: "×";
+  font-size: 24px !important;
+  color: inherit !important;
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: center !important;
+}
+
+/* Header del menú */
+.mobile-menu-header {
+  padding: 60px 20px 20px;
+  text-align: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-top-left-radius: 25px;
+}
+
+.mobile-menu-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.mobile-menu-header p {
+  margin: 5px 0 0;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* Lista del menú */
+.header-mobile-menu ul {
+  list-style: none !important;
+  padding: 20px 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+}
+
+.mobile-menu-item {
+  opacity: 0 !important;
+  transform: translateX(30px) !important;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  background: transparent !important;
+}
+
+.mobile-menu-item.animate-in {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+}
+
+/* Delays escalonados para animación de entrada */
+.mobile-menu-item:nth-child(1) {
+  transition-delay: 0.1s !important;
+}
+
+.mobile-menu-item:nth-child(2) {
+  transition-delay: 0.15s !important;
+}
+
+.mobile-menu-item:nth-child(3) {
+  transition-delay: 0.2s !important;
+}
+
+.mobile-menu-item:nth-child(4) {
+  transition-delay: 0.25s !important;
+}
+
+.mobile-menu-item:nth-child(5) {
+  transition-delay: 0.3s !important;
+}
+
+.mobile-menu-item:nth-child(6) {
+  transition-delay: 0.35s !important;
+}
+
+.mobile-menu-item:nth-child(7) {
+  transition-delay: 0.4s !important;
+}
+
+.mobile-menu-item:nth-child(8) {
+  transition-delay: 0.45s !important;
+}
+
+/* Secciones del menú */
+.menu-section {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.menu-section a {
+  display: block !important;
+  padding: 16px 25px !important;
+  color: #333 !important; /* Color oscuro forzado */
+  text-decoration: none !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+  transition: all 0.3s ease !important;
+  position: relative;
+  background: transparent !important;
+}
+
+.menu-section a:hover {
+  background: color-mix(in srgb, var(--primary-color) 10%, #fff 90%) !important;
+  color: var(--primary-color) !important;
+  padding-left: 35px !important;
+}
+
+.menu-section a::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary-color);
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+
+.menu-section a:hover::before {
+  transform: scaleY(1);
+}
+
+/* Perfil del usuario */
+.profile-section .profile-name {
+  display: block;
+  padding: 20px 25px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  margin: 10px 20px;
+  border-radius: 15px;
+  border: none;
+}
+
+/* Divisores */
+.menu-divider {
+  margin: 15px 0;
+}
+
+.menu-divider hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
+  margin: 0 25px;
+}
+
+/* Sección de logout */
+.logout-section a {
+  color: #e53e3e;
+  background: rgba(229, 62, 62, 0.05);
+  border-bottom: none;
+  margin: 10px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.logout-section a:hover {
+  background: rgba(229, 62, 62, 0.1);
+  color: #c53030;
+  padding-left: 25px;
+}
+
+/* Iconos para los elementos del menú */
+.menu-section a[href="#inicio"]::after {
+  content: "🏠";
+}
+.menu-section a[href="#firmar"]::after {
+  content: "✍️";
+}
+.menu-section a[href="#verificar"]::after {
+  content: "✅";
+}
+.menu-section a[href="#contacto"]::after {
+  content: "📧";
+}
+.menu-section a[href="#perfil"]::after {
+  content: "👤";
+}
+.menu-section a[id*="Login"]::after {
+  content: "🔐";
+}
+.menu-section a[id*="Register"]::after {
+  content: "📝";
+}
+.menu-section a[id*="Admin"]::after {
+  content: "⚙️";
+}
+.logout-section a::after {
+  content: "🚪";
+}
+
+.menu-section a::after {
+  position: absolute;
+  right: 25px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  opacity: 0.7;
+}
+
+/* Elementos deshabilitados */
+.menu-section a.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.menu-section a.disabled::after {
+  content: "🔒";
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .header-mobile-menu {
+    width: 100vw;
+    right: -100vw;
+    border-radius: 0;
+  }
+
+  .mobile-menu-header {
+    border-radius: 0;
+  }
+}
+
+/* Mostrar botón cuando hay sesión activa */
+.header-menu-btn.active-session {
+  display: flex !important;
+}
+
+/* Responsive: comportamiento diferente para desktop y móvil */
+@media (min-width: 1101px) {
+  /* En desktop: mostrar botón solo si hay sesión, mantener menú normal */
+  .header-menu-btn.active-session {
+    display: flex !important;
+    margin-right: 15px;
+  }
+
+  /* Ajustar el header para que el botón se vea bien junto al menú normal */
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 1100px) {
+  /* En móvil: mostrar botón si hay sesión, ocultar menú normal */
+  .header-menu-btn.active-session {
+    display: flex !important;
+  }
+
+  .header-center,
+  #loginBtnLi,
+  #registerBtnLi,
+  #profileMenuLi {
+    display: none;
+  }
+}
+
+/* Forzar visibilidad del contenido del menú */
+.header-mobile-menu * {
+  color: #333 !important;
+  background: transparent !important;
+}
+
+.header-mobile-menu .profile-name {
+  color: #333 !important;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%) !important;
+}
+
+.header-mobile-menu .logout-section a {
+  color: #e53e3e !important;
+  background: rgba(229, 62, 62, 0.05) !important;
+}
+
+.header-mobile-menu .logout-section a:hover {
+  color: #c53030 !important;
+  background: rgba(229, 62, 62, 0.1) !important;
+}
+
+#mobileMenuList {
+  background: transparent !important;
+}
+
+#mobileMenuList * {
+  color: #333 !important;
+  background: transparent !important;
+}
+
+#mobileMenuList .logout-section a {
+  color: #e53e3e !important;
+  background: rgba(229, 62, 62, 0.05) !important;
+}
+
+/* Reglas adicionales para asegurar que el backdrop no interfiera */
+.mobile-menu-backdrop {
+  pointer-events: none !important; /* Nunca interceptar clicks */
+  z-index: 8000 !important; /* Backdrop - above header */
+}
+
+.mobile-menu-backdrop.active {
+  pointer-events: none !important; /* Nunca interceptar clicks, incluso cuando activo */
+  z-index: 8000 !important; /* Backdrop - above header */
+}
+
+/* Asegurar que el menú y sus elementos tengan pointer-events */
+.header-mobile-menu {
+  pointer-events: auto !important;
+  z-index: 8500 !important; /* Menu - above backdrop */
+}
+
+.header-mobile-menu * {
+  pointer-events: auto !important;
+}
+
+.mobile-menu-close {
+  pointer-events: auto !important;
+  z-index: 8600 !important; /* Close button - above menu */
+}
+
+/* Reglas específicas para forzar que el menú esté por encima del backdrop */
+#headerMobileMenu {
+  z-index: 8500 !important;
+  position: fixed !important;
+}
+
+#headerMobileMenu.active {
+  z-index: 8500 !important;
+  position: fixed !important;
+}
+
+#headerMobileMenu .mobile-menu-close {
+  z-index: 8600 !important;
+}
+
+/* Asegurar que el backdrop esté por debajo */
+.mobile-menu-backdrop,
+.mobile-menu-backdrop.active {
+  z-index: 8000 !important;
+}
+
+/* ===== SEPARACIÓN COMPLETA DEL MENÚ MÓVIL DEL HEADER ===== */
+
+/* Botón hamburguesa - completamente independiente */
+#headerMenuBtn {
+  position: relative !important;
+  z-index: 9000 !important; /* Muy alto para estar siempre visible */
+  display: flex !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  width: 44px !important;
+  height: 44px !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Backdrop del menú - completamente independiente */
+.mobile-menu-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  z-index: 8000 !important; /* Alto pero menor que el menú */
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: opacity 0.2s ease-out !important;
+}
+
+.mobile-menu-backdrop.active {
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 8000 !important;
+}
+
+/* Menú móvil - completamente independiente del header */
+#headerMobileMenu {
+  position: fixed !important;
+  top: 0 !important;
+  right: -350px !important;
+  width: 320px !important;
+  height: 100vh !important;
+  background: #ffffff !important;
+  box-shadow: -5px 0 25px rgba(0, 0, 0, 0.2) !important;
+  z-index: 8500 !important; /* Por encima del backdrop pero independiente */
+  transition: right 0.2s ease-out !important;
+  overflow-y: auto !important;
+  border-top-left-radius: 25px !important;
+  border-bottom-left-radius: 25px !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+#headerMobileMenu.active {
+  right: 0 !important;
+  z-index: 8500 !important;
+}
+
+/* Botón X - completamente independiente */
+#headerMobileMenu .mobile-menu-close {
+  position: absolute !important;
+  top: 15px !important;
+  left: 15px !important;
+  width: 35px !important;
+  height: 35px !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  cursor: pointer !important;
+  z-index: 8600 !important; /* Por encima del menú */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 20px !important;
+  color: #666 !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Lista del menú - independiente */
+#mobileMenuList {
+  background: transparent !important;
+  z-index: inherit !important;
+}
+
+#mobileMenuList * {
+  background: transparent !important;
+  z-index: inherit !important;
+}
+
+/* Animaciones eliminadas para evitar conflictos */

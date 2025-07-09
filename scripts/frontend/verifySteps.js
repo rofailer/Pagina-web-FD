@@ -110,8 +110,6 @@ document.addEventListener("DOMContentLoaded", () => {
         formData.append("originalFile", originalFile);
         formData.append("profesorId", selectedProfesorId);
 
-        console.log("Enviando profesorId:", selectedProfesorId);
-
         fetch("/verify-document", {
             method: "POST",
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },

@@ -1,7 +1,7 @@
 header {
   position: sticky;
   top: 0;
-  z-index: 2000;
+  z-index: 8000;
   width: 100%;
   height: 64px;
   min-height: 64px;
@@ -18,6 +18,27 @@ header {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   border-bottom: none;
   transition: background 0.2s;
+  position: relative;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  z-index: 1;
+}
+
+.header-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  z-index: 1;
 }
 
 .logo-link {
@@ -158,15 +179,33 @@ header {
 }
 
 @media (max-width: 700px) {
-  .header-left,
-  .header-center,
-  .header-right {
-    justify-content: center;
+  .header-center {
+    position: static;
+    transform: none;
+    order: 2;
     width: 100%;
-    min-width: 0;
-    margin: 0;
-    padding: 0;
+    display: flex;
+    justify-content: center;
   }
+
+  header {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 64px;
+    padding: 8px 10px;
+  }
+
+  .header-left {
+    order: 1;
+    flex: 1;
+  }
+
+  .header-right {
+    order: 3;
+    flex: 1;
+    justify-content: flex-end;
+  }
+
   .header-center ul {
     gap: 8px;
   }

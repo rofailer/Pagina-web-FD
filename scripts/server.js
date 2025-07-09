@@ -22,21 +22,18 @@ if (!process.env.JWT_SECRET) {
 
 console.log('✅ Variables de entorno validadas correctamente');
 
-// Logging adicional para Railway
-console.log('🔧 Configurando aplicación Express...');
-console.log(`📊 Memoria inicial: ${JSON.stringify(process.memoryUsage())}`);
-console.log(`🆔 Process ID: ${process.pid}`);
-
 // Middlewares globales
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
 
-// Logging middleware para debug
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
+// Logging middleware para debug (solo en desarrollo)
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+  });
+}
 
 // Configuración de archivos estáticos ANTES de las rutas
 app.use("/css", express.static(path.join(__dirname, "../css"), { maxAge: "1d" }));
@@ -57,7 +54,6 @@ const upload = multer({ dest: path.join(__dirname, "../uploads") });
 ].forEach((dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
-    console.log(`Carpeta creada: ${dir}`);
   }
 });
 
@@ -88,8 +84,6 @@ app.get("/", (req, res) => {
         if (!res.headersSent) {
           res.status(200).send("App is running - Error loading HTML");
         }
-      } else {
-        console.log("Página principal servida correctamente");
       }
     });
   } catch (error) {
@@ -322,9 +316,6 @@ app.get('/downloads/:file', (req, res) => {
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
   console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`📡 Servidor escuchando en 0.0.0.0:${PORT}`);
-  console.log(`✅ Aplicación completamente iniciada y lista para recibir peticiones`);
-  console.log(`🔗 Health check disponible en: /health y /ping`);
 });
 
 // =================== Manejo de errores del servidor ===================
@@ -349,8 +340,6 @@ process.on('unhandledRejection', (reason, promise) => {
 // =================== Graceful shutdown ===================
 process.on('SIGTERM', () => {
   console.log('🚨 SIGTERM recibido. Iniciando graceful shutdown...');
-  console.log(`📊 Memoria al cierre: ${JSON.stringify(process.memoryUsage())}`);
-  console.log(`⏰ Uptime: ${process.uptime()} segundos`);
 
   server.close((err) => {
     if (err) {

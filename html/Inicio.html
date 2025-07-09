@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/css/footerStyle.css" />
     <link rel="stylesheet" href="/css/authModal.css" />
     <link rel="stylesheet" href="/css/userKeysModal.css" />
+    <link rel="stylesheet" href="/css/noKeysmodal.css" />
     <link rel="stylesheet" href="/css/profileMenu.css" />
     <link rel="stylesheet" href="/css/tutorial.css" />
 
@@ -22,7 +23,7 @@
     <link rel="stylesheet" href="/css/sections/opcionesSection.css" />
 
     <link rel="stylesheet" href="/css/Header/headerStyle.css" />
-    <link rel="stylesheet" href="/css/Header/hHamburguer.css" />
+    <link rel="stylesheet" href="/css/Header/hHamburguer_new.css" />
 
     <script src="/scripts/frontend/theme.js"></script>
   </head>
@@ -54,22 +55,24 @@
           <li id="registerBtnLi">
             <a href="#" id="registerBtn">Registrarse</a>
           </li>
-          <!-- Botón hamburguesa -->
-          <img
-            src="../recursos/Hamburguer.png"
+          <!-- Botón hamburguesa moderno -->
+          <button
             id="headerMenuBtn"
             class="header-menu-btn"
-            alt="Abrir menú"
-          />
+            aria-label="Abrir menú de navegación"
+            aria-expanded="false"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
         </ul>
       </div>
-
-      <!-- Menú móvil -->
-      <nav id="headerMobileMenu" class="header-mobile-menu">
-        <ul id="mobileMenuList"></ul>
-      </nav>
     </header>
-
+    <!-- Menú móvil -->
+    <nav id="headerMobileMenu" class="header-mobile-menu" aria-hidden="true">
+      <ul id="mobileMenuList"></ul>
+    </nav>
     <!-- Botón de ayuda flotante -->
     <button id="showTutorialBtn" title="Ver tutorial de uso">?</button>
 
@@ -201,6 +204,28 @@
           <button type="submit" id="keyPasswordSubmitBtn">Aceptar</button>
         </form>
         <p id="keyPasswordError" style="color: red; display: none"></p>
+      </div>
+    </div>
+
+    <!-- Modal para guiar creación de llaves -->
+    <div id="createKeysGuideModal" class="auth-modal" style="display: none">
+      <div class="modal-content">
+        <h2>¡Bienvenido!</h2>
+        <div class="modal-icon">🔐</div>
+        <p class="modal-description">
+          <strong
+            >Para comenzar a usar el sistema de firmas digitales, necesitas
+            crear tus llaves criptográficas.</strong
+          >
+        </p>
+        <p class="modal-subdescription">
+          Las llaves son necesarias para firmar y verificar documentos de forma
+          segura.
+        </p>
+        <div class="modal-buttons">
+          <button id="goToCreateKeysBtn">Ir a crear llaves</button>
+          <button id="skipCreateKeysBtn">Recordar más tarde</button>
+        </div>
       </div>
     </div>
 
@@ -451,6 +476,21 @@
                   Aquí puedes ver, generar o eliminar tus llaves. Mantén tu
                   llave privada segura.
                 </p>
+
+                <!-- Campo para nombrar la nueva llave -->
+                <div class="key-name-form">
+                  <label for="keyNameInput"> Nombre de la nueva llave: </label>
+                  <input
+                    type="text"
+                    id="keyNameInput"
+                    placeholder="Ej: Llave para tesis, Llave personal... (opcional)"
+                  />
+                  <small class="help-text">
+                    Si se deja vacío, se asignará automáticamente (Key1, Key2,
+                    etc.)
+                  </small>
+                </div>
+
                 <button id="generateKeysButton" class="btn-secondary">
                   <span class="icon-plus">
                     <svg
@@ -481,31 +521,7 @@
                   Generar nueva llave
                 </button>
                 <ul id="keysList" class="keys-list">
-                  <!-- Ejemplo de llave -->
-                  <li class="key-item active">
-                    <span class="key-label">Llave activa</span>
-                    <span class="key-type">AES-256-CBC</span>
-                    <span class="key-date">Expira: 2025-12-31</span>
-                    <button class="btn-mini btn-danger">Eliminar</button>
-                  </li>
-                  <li class="key-item">
-                    <span class="key-label">Llave anterior</span>
-                    <span class="key-type">AES-192-CBC</span>
-                    <span class="key-date">Expirada</span>
-                    <button class="btn-mini btn-danger">Eliminar</button>
-                  </li>
-                  <li class="key-item">
-                    <span class="key-label">Llave anterior</span>
-                    <span class="key-type">AES-192-CBC</span>
-                    <span class="key-date">Expirada</span>
-                    <button class="btn-mini btn-danger">Eliminar</button>
-                  </li>
-                  <li class="key-item">
-                    <span class="key-label">Llave anterior</span>
-                    <span class="key-type">AES-192-CBC</span>
-                    <span class="key-date">Expirada</span>
-                    <button class="btn-mini btn-danger">Eliminar</button>
-                  </li>
+                  <!-- Las llaves del usuario se cargarán aquí dinámicamente -->
                 </ul>
               </div>
             </div>
@@ -540,16 +556,6 @@
       </section>
 
       <section id="opcionesSection">
-        <!-- Botón hamburguesa -->
-        <button
-          id="headerMenuBtn"
-          class="header-menu-btn"
-          aria-label="Abrir menú"
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
         <h2>Opciones de Personalización</h2>
         <form id="configForm">
           <!-- Cambiar logo -->
@@ -655,7 +661,7 @@
     <script src="/scripts/frontend/verifySteps.js"></script>
     <script src="/scripts/frontend/frontend.js" type="module"></script>
     <script src="/scripts/frontend/profileEncryption.frontend.js"></script>
-    <script src="/scripts/frontend/headerResponsive.frontend.js"></script>
+    <!-- <script src="/scripts/frontend/headerResponsive.frontend.js"></script> -->
     <script src="/scripts/frontend/mobileHamburger.frontend.js"></script>
     <script src="/scripts/utils/tutorial.js"></script>
   </body>

@@ -11,6 +11,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const profileName = document.getElementById("profileName");
     const adminMenuItem = document.getElementById("adminMenuItem");
 
+    // Nuevos elementos para el modal de guía de llaves
+    const createKeysGuideModal = document.getElementById('createKeysGuideModal');
+    const goToCreateKeysBtn = document.getElementById('goToCreateKeysBtn');
+    const skipCreateKeysBtn = document.getElementById('skipCreateKeysBtn');
+
     // Verificar autenticación al cargar
     checkAuthStatus();
 
@@ -22,6 +27,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (logoutBtn) {
         logoutBtn.addEventListener('click', logoutUser);
+    }
+
+    // Event listeners para el modal de guía de llaves
+    if (goToCreateKeysBtn) {
+        goToCreateKeysBtn.addEventListener('click', () => {
+            createKeysGuideModal.style.display = 'none';
+            // Navegar a la sección de perfil, tab de llaves
+            navigateToKeysSection();
+        });
+    }
+
+    if (skipCreateKeysBtn) {
+        skipCreateKeysBtn.addEventListener('click', () => {
+            createKeysGuideModal.style.display = 'none';
+            // Marcar que el usuario fue notificado para no mostrar el modal otra vez en esta sesión
+            localStorage.setItem('keysGuideShown', 'true');
+        });
     }
 
     // Cerrar modales
@@ -87,7 +109,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify({ nombre: data.nombre, rol: data.rol }));
-            window.location.href = '/';
+
+            // Verificar si el usuario tiene llaves después del login
+            checkUserKeysAfterLogin();
+
         } catch (err) {
             document.getElementById('loginError').textContent = "Error de conexión";
             console.error("Error en login:", err);
@@ -182,6 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('userRole');
         localStorage.removeItem('userName');
         localStorage.removeItem('user');
+        localStorage.removeItem('keysGuideShown'); // Limpiar la marca de guía mostrada
         window.location.reload(); // Recargar la página para aplicar cambios
     }
 
@@ -212,6 +238,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 passwordError.textContent = "";
             }
         });
+    }
+
+    // =================== NUEVAS FUNCIONES PARA GUÍA DE LLAVES ===================
+
+    async function checkUserKeysAfterLogin() {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            const response = await fetch('/api/user-keys', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Si no tiene llaves y no se ha mostrado la guía en esta sesión
+                if ((!data.keys || data.keys.length === 0) && !localStorage.getItem('keysGuideShown')) {
+                    // Esperar un momento para que se cierre el modal de login
+                    setTimeout(() => {
+                        showCreateKeysGuide();
+                    }, 500);
+                } else {
+                    // Si tiene llaves o ya se mostró la guía, ir a la página principal
+                    window.location.href = '/';
+                }
+            } else {
+                // Si hay error obteniendo las llaves, ir a la página principal
+                window.location.href = '/';
+            }
+        } catch (err) {
+            console.error("Error verificando llaves del usuario:", err);
+            // En caso de error, ir a la página principal
+            window.location.href = '/';
+        }
+    }
+
+    function showCreateKeysGuide() {
+        closeModals(); // Cerrar cualquier modal abierto
+        createKeysGuideModal.style.display = 'block';
+    }
+
+    function navigateToKeysSection() {
+        // Navegar a la página principal y luego al perfil
+        window.location.href = '/#perfil';
+
+        // Después de cargar, activar la pestaña de llaves
+        setTimeout(() => {
+            // Hacer clic en la sección perfil del menú
+            const perfilLink = document.querySelector('a[href="#perfil"]');
+            if (perfilLink) {
+                perfilLink.click();
+            }
+
+            // Activar la pestaña de llaves
+            setTimeout(() => {
+                const llavesTab = document.querySelector('.perfil-tab[data-tab="llaves"]');
+                if (llavesTab) {
+                    llavesTab.click();
+                }
+            }, 500);
+        }, 100);
     }
 
 });

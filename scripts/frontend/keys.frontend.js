@@ -39,7 +39,6 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             if (!response.ok) return;
             const keys = await response.json();
-            console.log(keys); // Pon esto justo después de recibir el array en loadKeys()
             if (!Array.isArray(keys)) return;
 
             // Obtener la llave activa para marcarla
@@ -97,19 +96,24 @@ document.addEventListener("DOMContentLoaded", () => {
     generateKeysButton.addEventListener("click", () => {
         window.showKeyPasswordModal(async (keyPassword) => {
             try {
-                const encryptionType = localStorage.getItem("encryptionType") || "aes-256-cbc";
+                const encryptionType = localStorage.getItem("encryptionType") || "aes-256-cbc"; const keyNameInput = document.getElementById("keyNameInput");
+                const keyName = keyNameInput ? keyNameInput.value.trim() : "";
+
                 const response = await fetch("/generate-keys", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         Authorization: `Bearer ${localStorage.getItem("token")}`,
                     },
-                    body: JSON.stringify({ keyPassword, encryptionType }),
+                    body: JSON.stringify({ keyPassword, encryptionType, keyName }),
                 });
                 const data = await response.json();
+
                 if (data.success) {
-                    alert("Llave generada correctamente.");
+                    alert(`Llave "${data.keyName}" generada correctamente.`);
                     if (typeof loadKeys === "function") loadKeys();
+                    // Limpiar el campo de nombre después de generar la llave
+                    if (keyNameInput) keyNameInput.value = "";
                 } else {
                     alert(data.error || "Error al generar la llave.");
                 }

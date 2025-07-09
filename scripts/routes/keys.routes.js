@@ -7,10 +7,31 @@ const pool = require('../db/pool');
 const authenticate = require('../middlewares/authenticate');
 const { encryptAES, encryptWithType } = require('../utils/crypto');
 
+// Ruta para obtener las llaves del usuario (para verificar si tiene llaves)
+router.get("/api/user-keys", authenticate, async (req, res) => {
+    const userId = req.userId;
+
+    try {
+        const [rows] = await pool.query(
+            "SELECT id, key_name, created_at, expiration_date, encryption_type FROM user_keys WHERE user_id = ? ORDER BY created_at DESC",
+            [userId]
+        );
+
+        res.json({
+            keys: rows,
+            hasKeys: rows.length > 0
+        });
+    } catch (err) {
+        console.error("Error al obtener llaves del usuario:", err);
+        res.status(500).json({ error: "Error al obtener las llaves del usuario" });
+    }
+});
+
 // Ruta para generar llaves (protegida)
 router.post("/generate-keys", authenticate, async (req, res) => {
     const userId = req.userId;
-    const { keyPassword, encryptionType = "aes-256-cbc" } = req.body;
+    const { keyPassword, encryptionType = "aes-256-cbc", keyName } = req.body;
+
     if (!keyPassword || keyPassword.length < 4) {
         return res.status(400).json({ error: "La contraseña es requerida y debe tener al menos 4 caracteres." });
     }
@@ -22,7 +43,13 @@ router.post("/generate-keys", authenticate, async (req, res) => {
     try {
         // Contar las llaves existentes para el usuario
         const [rows] = await pool.query("SELECT COUNT(*) AS count FROM user_keys WHERE user_id = ?", [userId]);
-        const keyCount = rows[0].count + 1;
+        const keyCount = rows[0].count + 1;        // Determinar el nombre de la llave
+        let finalKeyName;
+        if (keyName && keyName.trim()) {
+            finalKeyName = keyName.trim();
+        } else {
+            finalKeyName = `Key${keyCount}`;
+        }
 
         const privateKeyName = `key${keyCount}.pem`;
         const publicKeyName = `key${keyCount}.pub`;
@@ -63,7 +90,7 @@ router.post("/generate-keys", authenticate, async (req, res) => {
                 // Guarda la llave privada (cifrada), la pública y el tipo de cifrado en la base de datos
                 await pool.query(
                     "INSERT INTO user_keys (user_id, key_name, private_key, public_key, encryption_type, created_at, expiration_date) VALUES (?, ?, ?, ?, ?, NOW(), ?)",
-                    [userId, `key${keyCount}`, encryptedPrivateKey, encryptedPublicKey, encryptionType, expirationDate]
+                    [userId, finalKeyName, encryptedPrivateKey, encryptedPublicKey, encryptionType, expirationDate]
                 );
 
                 // Limpieza: elimina archivos temporales
@@ -72,7 +99,7 @@ router.post("/generate-keys", authenticate, async (req, res) => {
 
                 res.json({
                     success: true,
-                    keyName: `key${keyCount}`,
+                    keyName: finalKeyName,
                     expirationDate,
                     message: "Llaves generadas correctamente"
                 });
@@ -144,7 +171,7 @@ router.get("/user-keys", authenticate, async (req, res) => {
     const userId = req.userId;
     try {
         const [keys] = await pool.query(
-            "SELECT id, key_name AS nombre, created_at, expiration_date FROM user_keys WHERE user_id = ?",
+            "SELECT id, key_name, created_at, expiration_date FROM user_keys WHERE user_id = ?",
             [userId]
         );
         res.json({ keys });
