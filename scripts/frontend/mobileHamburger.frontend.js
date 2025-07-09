@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (mobileMenu) {
         mobileMenu.classList.remove("active");
         mobileMenu.setAttribute("aria-hidden", "true");
+        mobileMenu.setAttribute("inert", "");
     }
 
     if (menuBtn) {
@@ -108,7 +109,9 @@ document.addEventListener("DOMContentLoaded", () => {
         // Actualizar atributos de accesibilidad
         menuBtn.setAttribute("aria-expanded", "true");
         mobileMenu.setAttribute("aria-hidden", "false");
-        mobileMenu.removeAttribute("aria-hidden"); // Quitar aria-hidden para evitar conflictos
+
+        // Remover inert del menú para que sea accesible
+        mobileMenu.removeAttribute("inert");
 
         // Bloquear scroll del body
         document.body.style.overflow = "hidden";
@@ -131,6 +134,8 @@ document.addEventListener("DOMContentLoaded", () => {
             // Activar animación del botón de cerrar
             setTimeout(() => {
                 closeButton.classList.add("animate-in");
+                // Mover el foco al botón de cerrar para mejor accesibilidad
+                closeButton.focus();
             }, 100);
         }
 
@@ -150,6 +155,43 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!mobileMenu || !menuBtn) {
             return;
         }
+
+        // *** FIX CRÍTICO DE ACCESIBILIDAD ***
+        // PASO 1: Forzar el blur del botón X si tiene foco
+        if (closeButton && document.activeElement === closeButton) {
+            closeButton.blur();
+        }
+
+        // PASO 2: Hacer el botón hamburguesa visible y focusable PRIMERO
+        if (menuBtn) {
+            menuBtn.style.opacity = "1";
+            menuBtn.style.pointerEvents = "auto";
+            menuBtn.style.display = "flex";
+            menuBtn.style.visibility = "visible";
+        }
+
+        // PASO 3: Usar requestAnimationFrame para asegurar que el DOM se actualice
+        requestAnimationFrame(() => {
+            // PASO 4: Ahora mover el foco al botón hamburguesa
+            if (menuBtn) {
+                menuBtn.focus();
+            }
+
+            // PASO 5: Usar otro requestAnimationFrame para asegurar que el foco se haya movido
+            requestAnimationFrame(() => {
+                // PASO 6: Actualizar atributos de accesibilidad DESPUÉS del cambio de foco
+                if (menuBtn) {
+                    menuBtn.setAttribute("aria-expanded", "false");
+                }
+                if (mobileMenu) {
+                    mobileMenu.setAttribute("aria-hidden", "true");
+                    mobileMenu.setAttribute("inert", "");
+                }
+
+                // Actualizar estado inmediatamente
+                isMenuOpen = false;
+            });
+        });
 
         // Remover animaciones de entrada (animación de salida)
         const menuItems = mobileMenu.querySelectorAll('.mobile-menu-item');
@@ -177,30 +219,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 backdrop.style.zIndex = "8000"; // Backdrop - above header
             }
 
-            // Actualizar estado
-            isMenuOpen = false;
-
-            // Mostrar el botón hamburguesa nuevamente
-            if (menuBtn) {
-                menuBtn.style.opacity = "1";
-                menuBtn.style.pointerEvents = "auto";
-                menuBtn.style.display = "flex";
-                menuBtn.style.visibility = "visible";
-            }
-
             // Forzar el menú a estar cerrado
             mobileMenu.style.right = "-350px";
             mobileMenu.style.transform = "translateX(100%)";
 
-            // Actualizar atributos de accesibilidad
-            menuBtn.setAttribute("aria-expanded", "false");
-            mobileMenu.setAttribute("aria-hidden", "true");
-
             // Restaurar scroll del body
             document.body.style.overflow = "";
-
-            // Devolver foco al botón hamburguesa
-            if (menuBtn) menuBtn.focus();
 
         }, 100); // Delay para permitir que se vea la animación de salida
     }
@@ -243,42 +267,35 @@ document.addEventListener("DOMContentLoaded", () => {
         // Solo procesar si el menú está abierto
         if (!isMenuOpen) return;
 
-        console.log("🔍 Click detectado:", e.target, "isMenuOpen:", isMenuOpen);
-
         // NO procesar si es el botón X (ya tiene su propio listener)
         if (closeButton && (e.target === closeButton || closeButton.contains(e.target))) {
-            console.log("❌ Click en botón X - ignorar (tiene su propio listener)");
             return;
         }
 
         // NO cerrar si se hace click dentro del menú
         if (mobileMenu && mobileMenu.contains(e.target)) {
-            console.log("📋 Click dentro del menú - no cerrar");
             return;
         }
 
         // NO cerrar si se hace click en el botón hamburguesa (ya está oculto)
         if (menuBtn && menuBtn.contains(e.target)) {
-            console.log("🍔 Click en botón hamburguesa - ignorar (está oculto)");
             return;
         }
 
         // Cerrar si se hace click fuera del menú (en cualquier otro lugar)
-        console.log("🔘 Click fuera del menú - cerrando");
         e.preventDefault();
         e.stopPropagation();
         closeMobileMenu();
-    }, false); // Cambiar a false para usar bubbling normal
+    }, false);
 
     // Cerrar menú con tecla Escape
     document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && isMenuOpen) {
-            console.log("⌨️ ESC presionado - cerrando menú");
             e.preventDefault();
             e.stopPropagation();
             closeMobileMenu();
         }
-    }, false); // Cambiar a false para usar bubbling normal
+    }, false);
 
     // Función para renderizar el menú móvil
     function renderMobileMenu() {
@@ -443,16 +460,21 @@ document.addEventListener("DOMContentLoaded", () => {
             closeButton.removeEventListener('click', handleCloseButtonClick);
             // Añadir nuevo listener
             closeButton.addEventListener('click', handleCloseButtonClick, true);
-            console.log("❌ Event listener del botón X configurado");
         }
     }
 
     // Función para manejar clicks en el botón X
     function handleCloseButtonClick(e) {
-        console.log("❌ Click en botón X detectado");
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
         closeMobileMenu();
     }
+
+    // Accesibilidad: cerrar menú con Escape
+    document.addEventListener("keydown", (e) => {
+        if (isMenuOpen && e.key === "Escape") {
+            closeMobileMenu();
+        }
+    });
 });

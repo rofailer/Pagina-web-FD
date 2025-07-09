@@ -58,6 +58,23 @@ const upload = multer({ dest: path.join(__dirname, "../uploads") });
 });
 
 // =================== Health checks y rutas básicas ===================
+// Ruta para favicon
+app.get("/favicon.ico", (req, res) => {
+  const faviconPath = path.join(__dirname, "../favicon.ico");
+
+  if (fs.existsSync(faviconPath)) {
+    res.sendFile(faviconPath);
+  } else {
+    // Si no existe, usar el logotipo como fallback
+    const logoPath = path.join(__dirname, "../recursos/logotipo-de-github.png");
+    if (fs.existsSync(logoPath)) {
+      res.sendFile(logoPath);
+    } else {
+      res.status(204).send(); // No Content - evita el error 404
+    }
+  }
+});
+
 // Health check simple para Railway
 app.get("/health", (req, res) => {
   res.status(200).send("OK");
