@@ -16,8 +16,18 @@ document.addEventListener("DOMContentLoaded", () => {
         inicio: document.querySelector('a[href="#inicio"]'),
         firmar: document.querySelector('a[href="#firmar"]'),
         verificar: document.querySelector('a[href="#verificar"]'),
-        contacto: document.querySelector('a[href="#contacto"]')
+        contacto: document.querySelector('a[href="#contacto"]'),
+        perfil: document.querySelector('a[href="#perfil"]'),
+        opciones: document.querySelector('a[href="#opciones"]')
     };
+
+    // También capturar otros enlaces que pueden navegar (logos, etc.)
+    const additionalNavLinks = [
+        ...document.querySelectorAll('a[href^="#"]'),
+        ...document.querySelectorAll('[onclick*="showSection"]'),
+        document.querySelector('.navbar-brand'), // logo principal
+        document.querySelector('.logo') // cualquier otro logo
+    ].filter(Boolean);
 
     function hideAllSections() {
         Object.values(sections).forEach(section => {
@@ -47,9 +57,114 @@ document.addEventListener("DOMContentLoaded", () => {
         window.scrollTo(0, 0);
     }
 
+    // --- Variables de estado global ---
+    window.firmaEnCurso = false;
+    window.verificacionEnCurso = false;
+
+    // --- Sistema de confirmación de navegación ---
+    let pendingNavigation = null;
+    const confirmModal = document.getElementById('navigationConfirmModal');
+    const confirmBtn = document.getElementById('confirmNavigationBtn');
+    const cancelBtn = document.getElementById('cancelNavigationBtn');
+
+    function showNavigationConfirmModal(targetSection, processType) {
+        const modal = confirmModal;
+        const title = modal.querySelector('.navigation-confirm-title');
+        const message = modal.querySelector('.navigation-confirm-message');
+        const icon = modal.querySelector('.navigation-confirm-icon');
+
+        // Personalizar mensaje según el tipo de proceso
+        if (processType === 'firma') {
+            title.textContent = '¿Abandonar el proceso de firma?';
+            message.textContent = 'Tienes un documento seleccionado y/o una llave en proceso de firma. Si continúas, perderás todo el progreso.';
+            icon.textContent = '📝';
+        } else if (processType === 'verificacion') {
+            title.textContent = '¿Abandonar la verificación?';
+            message.textContent = 'Tienes archivos seleccionados en proceso de verificación. Si continúas, perderás todo el progreso.';
+            icon.textContent = '🔍';
+        } else {
+            title.textContent = '¿Estás seguro?';
+            message.textContent = 'Tienes un proceso en curso. Si continúas, perderás todos los cambios no guardados.';
+            icon.textContent = '⚠️';
+        }
+
+        pendingNavigation = targetSection;
+        modal.classList.add('show');
+
+        // Focus en cancelar por defecto (más seguro)
+        setTimeout(() => cancelBtn.focus(), 100);
+    }
+
+    function hideNavigationConfirmModal() {
+        confirmModal.classList.remove('show');
+        pendingNavigation = null;
+    }
+
+    // Event listeners para el modal
+    confirmBtn.addEventListener('click', () => {
+        if (pendingNavigation) {
+            // Limpiar procesos en curso
+            if (window.limpiarFormulariosVerificar) window.limpiarFormulariosVerificar();
+            if (window.limpiarFormulariosFirmar) window.limpiarFormulariosFirmar();
+            window.verificacionEnCurso = false;
+            window.firmaEnCurso = false;
+
+            // Navegar a la sección destino
+            const targetSection = pendingNavigation;
+            hideNavigationConfirmModal();
+
+            // Navegar directamente sin disparar eventos adicionales
+            showSection(targetSection);
+            window.history.replaceState(null, null, `#${targetSection}`);
+
+            if (targetSection === 'verificar' && window.cargarProfesoresYMostrarPaso1) {
+                window.cargarProfesoresYMostrarPaso1();
+            }
+        }
+    });
+
+    cancelBtn.addEventListener('click', hideNavigationConfirmModal);
+
+    // Cerrar modal con Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && confirmModal.classList.contains('show')) {
+            hideNavigationConfirmModal();
+        }
+    });
+
+    // Cerrar modal clickeando fuera
+    confirmModal.addEventListener('click', (e) => {
+        if (e.target === confirmModal) {
+            hideNavigationConfirmModal();
+        }
+    });
+
     function showSectionFromHash() {
         const hash = window.location.hash.replace("#", "");
         const sectionKey = hash && sections[hash] ? hash : "inicio";
+
+        // Verificar si hay procesos en curso antes de navegar
+        const hasProcessInProgress = window.verificacionEnCurso || window.firmaEnCurso;
+        const isLeavingCurrentProcess =
+            (window.verificacionEnCurso && sectionKey !== "verificar") ||
+            (window.firmaEnCurso && sectionKey !== "firmar");
+
+        if (hasProcessInProgress && isLeavingCurrentProcess) {
+            // Prevenir la navegación y mostrar modal
+            const currentSection = Object.keys(sections).find(key =>
+                sections[key] && sections[key].style.display !== "none"
+            ) || "inicio";
+
+            // Restaurar hash anterior temporalmente
+            window.history.replaceState(null, null, `#${currentSection}`);
+
+            // Mostrar modal de confirmación
+            const processType = window.firmaEnCurso ? 'firma' : 'verificacion';
+            showNavigationConfirmModal(sectionKey, processType);
+            return;
+        }
+
+        // Navegación normal
         showSection(sectionKey);
     }
 
@@ -59,22 +174,20 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.keys(links).forEach((key) => {
         if (links[key]) {
             links[key].addEventListener("click", (event) => {
-                // Advertencia si hay datos en curso en verificación o firmado
-                if ((window.verificacionEnCurso && key !== "verificar") ||
-                    (window.firmaEnCurso && key !== "firmar")) {
-                    const salir = confirm("¿Seguro que desea salir? Perderá los datos ingresados.");
-                    if (!salir) {
-                        event.preventDefault();
-                        return;
-                    } else {
-                        if (window.limpiarFormulariosVerificar) window.limpiarFormulariosVerificar();
-                        if (window.limpiarFormulariosFirmar) window.limpiarFormulariosFirmar();
-                        window.verificacionEnCurso = false;
-                        window.firmaEnCurso = false;
-                    }
-                }
-
                 event.preventDefault();
+
+                // Verificar si hay procesos en curso
+                const hasProcessInProgress = window.verificacionEnCurso || window.firmaEnCurso;
+                const isLeavingCurrentProcess =
+                    (window.verificacionEnCurso && key !== "verificar") ||
+                    (window.firmaEnCurso && key !== "firmar");
+
+                if (hasProcessInProgress && isLeavingCurrentProcess) {
+                    // Mostrar modal de confirmación personalizado
+                    const processType = window.firmaEnCurso ? 'firma' : 'verificacion';
+                    showNavigationConfirmModal(key, processType);
+                    return;
+                }
 
                 // Validación de sesión para secciones protegidas
                 if ((key === "firmar" || key === "verificar") && !localStorage.getItem("token")) {
@@ -87,9 +200,63 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
+                // Navegación normal
                 window.location.hash = key;
                 if (key === "verificar" && window.cargarProfesoresYMostrarPaso1) {
                     window.cargarProfesoresYMostrarPaso1();
+                }
+            });
+        }
+    });
+
+    // Función universal para verificar navegación
+    function checkNavigationConfirmation(targetSection, event) {
+        // Verificar si hay procesos en curso
+        const hasProcessInProgress = window.verificacionEnCurso || window.firmaEnCurso;
+        const isLeavingCurrentProcess =
+            (window.verificacionEnCurso && targetSection !== "verificar") ||
+            (window.firmaEnCurso && targetSection !== "firmar");
+
+        if (hasProcessInProgress && isLeavingCurrentProcess) {
+            event.preventDefault();
+            // Mostrar modal de confirmación personalizado
+            const processType = window.firmaEnCurso ? 'firma' : 'verificacion';
+            showNavigationConfirmModal(targetSection, processType);
+            return false;
+        }
+        return true;
+    }
+
+    // Listeners para enlaces adicionales (logos, etc.)
+    additionalNavLinks.forEach(link => {
+        if (link) {
+            link.addEventListener("click", (event) => {
+                const href = link.getAttribute('href');
+                const onclick = link.getAttribute('onclick');
+
+                let targetSection = 'inicio'; // default
+
+                if (href && href.startsWith('#')) {
+                    targetSection = href.replace('#', '') || 'inicio';
+                } else if (onclick && onclick.includes('showSection')) {
+                    // Extraer sección del onclick
+                    const match = onclick.match(/showSection\(['"]([^'"]+)['"]\)/);
+                    if (match) targetSection = match[1];
+                } else if (link.classList.contains('navbar-brand') || link.classList.contains('logo')) {
+                    targetSection = 'inicio';
+                }
+
+                // Verificar confirmación de navegación
+                if (!checkNavigationConfirmation(targetSection, event)) {
+                    return; // Detener navegación si se necesita confirmación
+                }
+
+                // Si llega aquí, navegar normalmente
+                if (targetSection && sections[targetSection]) {
+                    window.location.hash = targetSection;
+                    if (targetSection === "verificar" && window.cargarProfesoresYMostrarPaso1) {
+                        window.cargarProfesoresYMostrarPaso1();
+                    }
                 }
             });
         }

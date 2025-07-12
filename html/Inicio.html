@@ -297,27 +297,33 @@
           garantiza su autenticidad e integridad.
         </p>
         <div id="signStepIndicator" class="step-indicator">
-          <div class="step active" data-step="1">1. Seleccionar documento</div>
-          <div class="step" data-step="2">2. Firmar documento</div>
-          <div class="step" data-step="3">3. Descargar documento</div>
+          <div class="step active" data-step="1" data-label="Seleccionar"></div>
+          <div class="step" data-step="2" data-label="Firmar"></div>
+          <div class="step" data-step="3" data-label="Descargar"></div>
         </div>
 
-        <div id="signStep1">
+        <div id="signStep1" class="step-content">
           <!-- Firmar -->
           <form id="signForm">
             <p class="input-title">Selecciona el documento PDF a firmar:</p>
-            <div style="width: 100%; max-width: 350px">
-              <label class="file">
+            <div class="file-input-container">
+              <div class="file-input-wrapper">
                 <input
                   type="file"
                   id="fileInput"
-                  class="custom-file-input"
+                  class="file-input"
                   accept=".pdf"
                   aria-label="Seleccionar archivo PDF"
                   required
                 />
-                <span class="file-custom">Ningún archivo seleccionado</span>
-              </label>
+                <label for="fileInput" class="file-input-label">
+                  <span class="file-input-icon">📄</span>
+                  <span class="file-input-text"
+                    >Ningún archivo seleccionado</span
+                  >
+                  <span class="file-input-button">Elegir archivo</span>
+                </label>
+              </div>
             </div>
             <button type="button" id="acceptDocumentBtn">
               Aceptar documento
@@ -326,95 +332,159 @@
         </div>
 
         <!-- Paso 2: Firmar -->
-        <div id="signStep2" style="display: none">
+        <div id="signStep2" class="step-content" style="display: none">
+          <div class="key-selection-container">
+            <h3>Selecciona la llave para firmar:</h3>
+            <div id="keysList" class="keys-list">
+              <div class="loading-keys">
+                <span class="small-loader"></span>
+                <span>Cargando llaves...</span>
+              </div>
+            </div>
+          </div>
           <div class="loader-container">
-            <button id="signDocumentButton">Firmar documento</button>
+            <button id="signDocumentButton" style="display: none">
+              Firmar documento
+            </button>
             <div id="signLoading" style="display: none">
               <span class="loader"></span>
-              <div class="loader-text">Firmando...</div>
+              <div class="loader-text">Firmando documento...</div>
             </div>
           </div>
         </div>
 
-        <div id="signStep3" style="display: none">
-          <p>Documento firmado correctamente.</p>
+        <div id="signStep3" class="step-content" style="display: none">
+          <p>Documento firmado correctamente</p>
           <button id="downloadSignedBtn">Descargar documento avalado</button>
-          <button id="restartSignProcessBtn">Volver a empezar</button>
+          <button id="restartSignProcessBtn" style="display: none">
+            Volver a empezar
+          </button>
         </div>
       </section>
 
-      <!-- Solo la sección relevante de verificar -->
+      <!-- Sección de Verificar con diseño moderno -->
       <section id="verifySection">
         <h2>Verificar Aval</h2>
         <p class="section-desc">
           Verifica la autenticidad y la integridad de un documento PDF avalado
           digitalmente por un profesor o tutor.
         </p>
+
+        <!-- Indicador de pasos moderno -->
         <div id="verifyStepIndicator" class="step-indicator">
-          <div class="step active" data-step="1">1. Seleccionar profesor</div>
-          <div class="step" data-step="2">2. Seleccionar aval firmado</div>
-          <div class="step" data-step="3">3. Seleccionar original</div>
-          <div class="step" data-step="4">4. Resultado</div>
+          <div class="step active" data-step="1" data-label="Profesor"></div>
+          <div class="step" data-step="2" data-label="Aval firmado"></div>
+          <div class="step" data-step="3" data-label="Original"></div>
+          <div class="step" data-step="4" data-label="Resultado"></div>
         </div>
 
-        <div id="verifyStep1">
+        <!-- Paso 1: Selección de profesor -->
+        <div id="verifyStep1" class="step-content">
+          <div class="input-title">Selecciona el profesor o tutor</div>
           <form id="verifyProfesorForm">
-            <label for="profesorSelect">Profesor/Tutor:</label>
-            <select id="profesorSelect"></select>
-            <button type="button" id="acceptProfesorBtn">Aceptar</button>
+            <div class="select-container">
+              <select id="profesorSelect">
+                <option value="">Selecciona un profesor/tutor</option>
+              </select>
+              <div class="select-arrow">▼</div>
+            </div>
+            <button type="button" id="acceptProfesorBtn" class="btn-primary">
+              Continuar
+            </button>
           </form>
         </div>
 
-        <div id="verifyStep2" style="display: none">
+        <!-- Paso 2: Selección de archivo avalado -->
+        <div id="verifyStep2" class="step-content" style="display: none">
+          <div class="input-title">
+            Selecciona el archivo avalado (PDF firmado)
+          </div>
           <form id="verifyAvalForm">
-            <label for="signedFile">Archivo avalado (PDF firmado):</label>
-            <div style="width: 100%; max-width: 350px">
-              <label class="file">
+            <div class="file-input-container">
+              <div class="file-input-wrapper">
                 <input
                   type="file"
                   id="signedFile"
                   accept=".pdf"
-                  class="custom-file-input"
+                  class="file-input"
                   aria-label="Seleccionar archivo PDF firmado"
                   required
                 />
-                <span class="file-custom">Ningún archivo seleccionado</span>
-              </label>
+                <label for="signedFile" class="file-input-label">
+                  <span class="file-input-icon">📄</span>
+                  <span class="file-input-text"
+                    >Ningún archivo seleccionado</span
+                  >
+                  <span class="file-input-button">Elegir archivo</span>
+                </label>
+              </div>
             </div>
-            <button type="button" id="acceptAvalBtn">Aceptar</button>
+            <button type="button" id="acceptAvalBtn" class="btn-primary">
+              Continuar
+            </button>
           </form>
         </div>
 
-        <div id="verifyStep3" style="display: none">
+        <!-- Paso 3: Selección de archivo original -->
+        <div id="verifyStep3" class="step-content" style="display: none">
+          <div class="input-title">Selecciona el archivo original (PDF)</div>
           <form id="verifyOriginalForm">
-            <label for="originalFile">Archivo original (PDF):</label>
-            <div style="width: 100%; max-width: 350px">
-              <label class="file">
+            <div class="file-input-container">
+              <div class="file-input-wrapper">
                 <input
                   type="file"
                   id="originalFile"
                   accept=".pdf"
-                  class="custom-file-input"
+                  class="file-input"
                   aria-label="Seleccionar archivo PDF original"
                   required
                 />
-                <span class="file-custom">Ningún archivo seleccionado</span>
-              </label>
+                <label for="originalFile" class="file-input-label">
+                  <span class="file-input-icon">📄</span>
+                  <span class="file-input-text"
+                    >Ningún archivo seleccionado</span
+                  >
+                  <span class="file-input-button">Elegir archivo</span>
+                </label>
+              </div>
             </div>
-            <button type="button" id="acceptOriginalBtn">Verificar</button>
+            <button type="button" id="acceptOriginalBtn" class="btn-success">
+              Verificar documento
+            </button>
           </form>
         </div>
 
-        <div id="verifyStep4" style="display: none">
+        <!-- Paso 4: Resultado de verificación -->
+        <div id="verifyStep4" class="step-content" style="display: none">
           <div id="verificationResult"></div>
           <div id="verificationDetails"></div>
-          <button id="continueVerifyBtn" style="display: none">
-            Verificar otro documento
-          </button>
-          <button id="retryKeyBtn" style="display: none">
-            Intentar con otro profesor
-          </button>
-          <button id="restartVerifyProcessBtn">Volver a empezar</button>
+          <div
+            style="
+              margin-top: 20px;
+              display: flex;
+              gap: 12px;
+              justify-content: center;
+              flex-wrap: wrap;
+            "
+          >
+            <button
+              id="continueVerifyBtn"
+              class="btn-primary"
+              style="display: none"
+            >
+              Verificar otro documento
+            </button>
+            <button id="retryKeyBtn" class="btn-warning" style="display: none">
+              Intentar con otro profesor
+            </button>
+            <button
+              id="restartVerifyProcessBtn"
+              class="btn-secondary"
+              style="display: none"
+            >
+              Volver a empezar
+            </button>
+          </div>
         </div>
       </section>
 
@@ -647,6 +717,32 @@
         </form>
       </section>
     </main>
+
+    <!-- Modal de confirmación para navegación -->
+    <div id="navigationConfirmModal" class="navigation-confirm-modal">
+      <div class="navigation-confirm-content">
+        <span class="navigation-confirm-icon">⚠️</span>
+        <h3 class="navigation-confirm-title">¿Estás seguro?</h3>
+        <p class="navigation-confirm-message">
+          Tienes un proceso en curso. Si continúas, perderás todos los cambios
+          no guardados.
+        </p>
+        <div class="navigation-confirm-buttons">
+          <button
+            id="confirmNavigationBtn"
+            class="navigation-confirm-btn primary"
+          >
+            Sí, continuar
+          </button>
+          <button
+            id="cancelNavigationBtn"
+            class="navigation-confirm-btn secondary"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
 
     <footer class="fixed_footer">
       <p>&copy; 2025 Firmas Digitales FD. Todos los derechos reservados.</p>

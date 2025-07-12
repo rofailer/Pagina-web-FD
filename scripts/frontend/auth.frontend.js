@@ -110,7 +110,30 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify({ nombre: data.nombre, rol: data.rol }));
 
-            // Verificar si el usuario tiene llaves después del login
+            // PASO 1: Ocultar inmediatamente los botones de login/registro
+            if (loginBtn) {
+                loginBtn.style.visibility = "hidden";
+                loginBtn.style.pointerEvents = "none";
+            }
+            if (registerBtn) {
+                registerBtn.style.visibility = "hidden";
+                registerBtn.style.pointerEvents = "none";
+            }
+
+            // PASO 2: Actualizar la UI inmediatamente después del login
+            checkAuthStatus();
+
+            // PASO 3: Cerrar el modal de login
+            closeModals();
+
+            // PASO 4: Disparar evento personalizado para el menú hamburguesa con un pequeño delay
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('authStateChanged', {
+                    detail: { authenticated: true, user: { nombre: data.nombre, rol: data.rol } }
+                }));
+            }, 150);
+
+            // PASO 5: Verificar si el usuario tiene llaves después del login
             checkUserKeysAfterLogin();
 
         } catch (err) {
@@ -208,6 +231,12 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('userName');
         localStorage.removeItem('user');
         localStorage.removeItem('keysGuideShown'); // Limpiar la marca de guía mostrada
+
+        // Disparar evento personalizado para que otros scripts sepan del cambio de autenticación
+        window.dispatchEvent(new CustomEvent('authStateChanged', {
+            detail: { authenticated: false, user: null }
+        }));
+
         window.location.reload(); // Recargar la página para aplicar cambios
     }
 
@@ -260,22 +289,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Si no tiene llaves y no se ha mostrado la guía en esta sesión
                 if ((!data.keys || data.keys.length === 0) && !localStorage.getItem('keysGuideShown')) {
-                    // Esperar un momento para que se cierre el modal de login
+                    // Esperar un momento para que se complete la actualización de la UI
                     setTimeout(() => {
                         showCreateKeysGuide();
-                    }, 500);
-                } else {
-                    // Si tiene llaves o ya se mostró la guía, ir a la página principal
-                    window.location.href = '/';
+                    }, 800);
                 }
+                // Si tiene llaves o ya se mostró la guía, no hacer nada (el usuario ya está logueado en la página)
             } else {
-                // Si hay error obteniendo las llaves, ir a la página principal
-                window.location.href = '/';
+                console.error("Error obteniendo llaves del usuario");
             }
         } catch (err) {
             console.error("Error verificando llaves del usuario:", err);
-            // En caso de error, ir a la página principal
-            window.location.href = '/';
         }
     }
 

@@ -269,6 +269,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // También ejecutar cuando cambie el storage
     window.addEventListener("storage", forceButtonVisibility);
 
+    // Escuchar cambios en el estado de autenticación
+    window.addEventListener("authStateChanged", (e) => {
+        const { authenticated } = e.detail;
+
+        if (authenticated) {
+            // Si el usuario se autentica, esperar un poco más para mostrar el menú hamburguesa
+            setTimeout(forceButtonVisibility, 100);
+        } else {
+            // Si el usuario hace logout, ocultar inmediatamente
+            setTimeout(forceButtonVisibility, 10);
+        }
+    });
+
     // Event listeners globales para cerrar el menú
     document.addEventListener("click", (e) => {
         // Solo procesar si el menú está abierto

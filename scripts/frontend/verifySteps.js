@@ -54,6 +54,22 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
+    // --- Listener para el select de profesor para marcar proceso en curso ---
+    const profesorSelect = document.getElementById("profesorSelect");
+    if (profesorSelect) {
+        profesorSelect.addEventListener('change', function () {
+            if (this.value) {
+                window.verificacionEnCurso = true; // Marcar proceso en curso tan pronto como se selecciona
+            } else {
+                // Solo limpiar si no hay archivos seleccionados
+                if (!document.getElementById("signedFile")?.files?.length &&
+                    !document.getElementById("originalFile")?.files?.length) {
+                    window.verificacionEnCurso = false;
+                }
+            }
+        });
+    }
+
     // --- Paso 1: Seleccionar profesor ---
     document.getElementById("acceptProfesorBtn").onclick = () => {
         const select = document.getElementById("profesorSelect");
@@ -62,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         selectedProfesorId = select.value;
-        window.verificacionEnCurso = true; // Marcar proceso en curso
+        window.verificacionEnCurso = true; // Asegurar que está marcado
         showStep(2);
     };
 
@@ -73,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Selecciona el archivo avalado (PDF firmado).");
             return;
         }
-        window.verificacionEnCurso = true;
+        window.verificacionEnCurso = true; // Asegurar que está marcado
         showStep(3);
     };
 
@@ -201,19 +217,64 @@ document.addEventListener("DOMContentLoaded", () => {
     function limpiarFormulariosVerificar() {
         document.getElementById("verifyAvalForm").reset();
         document.getElementById("verifyOriginalForm").reset();
+
+        // Limpiar file inputs modernos
         const signedFile = document.getElementById("signedFile");
-        if (signedFile) signedFile.value = "";
-        const signedCustom = signedFile?.parentElement?.querySelector('.file-custom');
-        if (signedCustom) signedCustom.textContent = "Ningún archivo seleccionado";
+        if (signedFile) {
+            signedFile.value = "";
+            updateVerifyFileInputDisplay(signedFile);
+        }
+
         const originalFile = document.getElementById("originalFile");
-        if (originalFile) originalFile.value = "";
-        const originalCustom = originalFile?.parentElement?.querySelector('.file-custom');
-        if (originalCustom) originalCustom.textContent = "Ningún archivo seleccionado";
+        if (originalFile) {
+            originalFile.value = "";
+            updateVerifyFileInputDisplay(originalFile);
+        }
+
+        // Limpiar select de profesor
+        const profesorSelect = document.getElementById("profesorSelect");
+        if (profesorSelect) {
+            profesorSelect.value = "";
+        }
+
         document.getElementById("verificationResult").textContent = "";
         document.getElementById("verificationDetails").textContent = "";
         document.getElementById("continueVerifyBtn").style.display = "none";
         document.getElementById("retryKeyBtn").style.display = "none";
+        document.getElementById("restartVerifyProcessBtn").style.display = "none";
+
+        // Resetear variables de estado
+        selectedProfesorId = null;
         window.verificacionEnCurso = false;
+    }
+
+    // --- Función para actualizar la visualización del file input en verificar ---
+    function updateVerifyFileInputDisplay(input) {
+        const label = input.nextElementSibling;
+        const textSpan = label.querySelector('.file-input-text');
+        const iconSpan = label.querySelector('.file-input-icon');
+
+        if (input.files && input.files.length > 0) {
+            const file = input.files[0];
+            textSpan.textContent = file.name;
+            iconSpan.textContent = '✓';
+            label.classList.add('has-file');
+            label.classList.remove('error');
+            window.verificacionEnCurso = true; // Marcar proceso en curso cuando se selecciona archivo
+        } else {
+            textSpan.textContent = 'Ningún archivo seleccionado';
+            iconSpan.textContent = '📄';
+            label.classList.remove('has-file', 'error');
+
+            // Solo limpiar estado si no hay otros elementos que indiquen proceso en curso
+            const hasProfesor = document.getElementById("profesorSelect")?.value;
+            const hasSignedFile = document.getElementById("signedFile")?.files?.length > 0;
+            const hasOriginalFile = document.getElementById("originalFile")?.files?.length > 0;
+
+            if (!hasProfesor && !hasSignedFile && !hasOriginalFile) {
+                window.verificacionEnCurso = false;
+            }
+        }
     }
 
     document.getElementById("continueVerifyBtn").onclick = () => {
@@ -234,9 +295,26 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("retryKeyBtn").style.display = "none";
     showStep(1);
 
+    // --- Event listeners para file inputs ---
+    const signedFileInput = document.getElementById("signedFile");
+    const originalFileInput = document.getElementById("originalFile");
+
+    if (signedFileInput) {
+        signedFileInput.addEventListener('change', function () {
+            updateVerifyFileInputDisplay(this);
+        });
+    }
+
+    if (originalFileInput) {
+        originalFileInput.addEventListener('change', function () {
+            updateVerifyFileInputDisplay(this);
+        });
+    }
+
     // --- Hacer la función global para frontend.js ---
     window.cargarProfesoresYMostrarPaso1 = cargarProfesoresYMostrarPaso1;
     window.limpiarFormulariosVerificar = limpiarFormulariosVerificar;
+    window.updateVerifyFileInputDisplay = updateVerifyFileInputDisplay;
     window.verificacionEnCurso = false;
     window.firmaEnCurso = false;
 });

@@ -80,11 +80,6 @@ body {
   margin-top: 0;
 }
 
-.content > section p {
-  margin-bottom: 18px;
-  margin-top: 0;
-}
-
 .section-desc {
   color: #444;
   font-size: 1.05em;
@@ -100,14 +95,6 @@ body {
   margin-top: 16px;
   display: block;
   font-weight: 500;
-}
-
-#verifyAvalForm label,
-#verifyOriginalForm label,
-#signForm label {
-  text-align: center;
-  width: 100%;
-  margin-bottom: 70px;
 }
 
 #verifyAvalForm,
@@ -267,5 +254,134 @@ button:disabled,
   }
   .section-desc {
     font-size: 0.98em;
+  }
+}
+
+/* =========================
+   MODAL DE CONFIRMACIÓN PARA NAVEGACIÓN
+   ========================= */
+
+.navigation-confirm-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.navigation-confirm-modal.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.navigation-confirm-content {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 450px;
+  width: 90%;
+  margin: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  transform: scale(0.9) translateY(20px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.navigation-confirm-modal.show .navigation-confirm-content {
+  transform: scale(1) translateY(0);
+}
+
+.navigation-confirm-icon {
+  font-size: 48px;
+  text-align: center;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.navigation-confirm-title {
+  font-size: 1.4em;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.navigation-confirm-message {
+  color: #666;
+  font-size: 1em;
+  line-height: 1.5;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.navigation-confirm-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.navigation-confirm-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 100px;
+}
+
+.navigation-confirm-btn.primary {
+  background: #f44336;
+  color: white;
+}
+
+.navigation-confirm-btn.primary:hover {
+  background: #d32f2f;
+  transform: translateY(-1px);
+}
+
+.navigation-confirm-btn.secondary {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.navigation-confirm-btn.secondary:hover {
+  background: #d5d5d5;
+  transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .navigation-confirm-content {
+    padding: 24px;
+    margin: 16px;
+  }
+
+  .navigation-confirm-icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+  }
+
+  .navigation-confirm-title {
+    font-size: 1.2em;
+  }
+
+  .navigation-confirm-buttons {
+    flex-direction: column;
+  }
+
+  .navigation-confirm-btn {
+    width: 100%;
   }
 }

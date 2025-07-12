@@ -1,155 +1,729 @@
+/* =========================
+   SECCIÓN FIRMAR - DISEÑO MODERNO
+   ========================= */
+
 #firmarSection {
   background: linear-gradient(
-    -45deg,
-    #fff 60%,
-    color-mix(in srgb, var(--primary-color) 30%, #fff 70%) 100%
+    135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 149, 69, 0.08) 100%
   );
-  border-radius: 18px;
-  box-shadow: 0 6px 32px rgba(33, 150, 243, 0.13);
-  padding: 48px 32px 36px 32px;
+  border-radius: 24px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
+  padding: 40px 32px;
   text-align: center;
   position: relative;
   overflow: hidden;
-  max-width: 540px;
+  max-width: 600px;
   margin: 40px auto 0 auto;
-}
-
-#firmarSection::before {
-  position: absolute;
-  top: 24px;
-  left: 24px;
-  font-size: 2.2em;
-  opacity: 0.18;
-  pointer-events: none;
+  border: 1px solid rgba(255, 149, 69, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 #firmarSection h2 {
   color: var(--primary-color);
-  margin-bottom: 10px;
-  font-size: 2.1em;
-  letter-spacing: 1px;
+  margin-bottom: 12px;
+  font-size: 2.2em;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
 #firmarSection .section-desc {
-  color: #444;
-  font-size: 1.13em;
-  margin-bottom: 26px;
+  color: #555;
+  font-size: 1.1em;
+  margin-bottom: 32px;
   text-align: center;
+  line-height: 1.6;
 }
 
-/* Indicador de pasos */
+/* =========================
+   INDICADOR DE PASOS MEJORADO
+   ========================= */
+
 #signStepIndicator.step-indicator {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 22px;
-  gap: 8px;
-}
-#signStepIndicator .step {
-  flex: 1;
-  padding: 10px 4px;
-  border-radius: 7px;
-  background: #f3f3f3;
-  color: #888;
-  text-align: center;
-  font-size: 1em;
-  border: 1.5px solid #e0e0e0;
-  transition: background 0.2s, color 0.2s;
-}
-#signStepIndicator .step.active {
-  background: var(--primary-color);
-  color: #fff;
-  font-weight: bold;
-  border-color: var(--primary-color);
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 40px;
+  gap: 40px;
+  position: relative;
+  padding: 0 20px;
 }
 
-/* Formularios */
-#firmarSection form {
+/* Línea conectora entre pasos */
+#signStepIndicator::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 160px);
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    #e0e0e0 0%,
+    var(--primary-color) 0%,
+    var(--primary-color) 33%,
+    #e0e0e0 33%
+  );
+  z-index: 1;
+  transition: background 0.5s ease;
+}
+
+#signStepIndicator .step {
+  position: relative;
+  z-index: 2;
+  width: 60px !important;
+  height: 60px !important;
+  min-width: 60px !important;
+  min-height: 60px !important;
+  max-width: 60px !important;
+  max-height: 60px !important;
+  border-radius: 50% !important;
+  background: #f8f9fa;
+  color: #999;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.2em;
+  font-weight: 700;
+  border: 3px solid #e0e0e0;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: default;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#signStepIndicator .step::before {
+  content: attr(data-step);
+  position: relative;
+  font-size: 1.2em;
+  font-weight: 700;
+  line-height: 1;
+}
+
+#signStepIndicator .step::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.85em;
+  font-weight: 500;
+  white-space: nowrap;
+  color: #666;
+  transition: color 0.3s ease;
+}
+
+#signStepIndicator .step.active {
+  background: linear-gradient(135deg, var(--primary-color) 0%, #ff7b00 100%);
+  color: white;
+  border-color: var(--primary-color);
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(255, 149, 69, 0.3);
+}
+
+#signStepIndicator .step.active::after {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+#signStepIndicator .step.completed {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  border-color: #4caf50;
+}
+
+#signStepIndicator .step.completed::before {
+  content: "✓";
+  font-size: 1.4em;
+}
+
+/* =========================
+   CONTENIDO DE PASOS
+   ========================= */
+
+.step-content {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  padding: 32px 24px;
+  margin: 0 auto;
+  border: 1px solid rgba(255, 149, 69, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
-  margin-bottom: 10px;
-  max-width: 370px;
-  margin-left: auto;
-  margin-right: auto;
-}
-#firmarSection label {
-  font-weight: 500;
-  color: #222;
-  margin-bottom: 4px;
-  text-align: left;
-  width: 100%;
-  max-width: 350px;
-}
-#firmarSection input[type="file"] {
-  padding: 10px 8px;
-  border-radius: 8px;
-  border: 1.5px solid #ccc;
-  background: #faf9f7;
-  font-size: 1em;
-  margin-bottom: 8px;
-  transition: border-color 0.2s;
-  width: 100%;
-}
-#firmarSection input[type="file"]:focus {
-  border-color: var(--primary-color);
-  outline: none;
-}
-#firmarSection .file-custom {
-  color: #888;
-  font-size: 0.97em;
-  margin-left: 8px;
+  justify-content: center;
 }
 
-/* Loader y texto */
+.step-content:hover {
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Paso 1: Selección de archivo */
+#signStep1 {
+  animation: fadeInUp 0.5s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
+
+#signStep1 .input-title {
+  font-size: 1.2em;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+#signStep1 form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 500px;
+}
+
+#signStep1 button {
+  margin-top: 20px;
+}
+
+/* =========================
+   SELECCIÓN DE LLAVES EN PASO 2
+   ========================= */
+
+.key-selection-container {
+  margin-bottom: 24px;
+}
+
+.key-selection-container h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.keys-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.key-item {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.key-item:hover {
+  border-color: var(--primary-color);
+  background: rgba(255, 149, 69, 0.05);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(255, 149, 69, 0.1);
+}
+
+.key-item.selected {
+  border-color: var(--primary-color);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 149, 69, 0.1) 0%,
+    rgba(255, 255, 255, 0.9) 100%
+  );
+  box-shadow: 0 4px 20px rgba(255, 149, 69, 0.2);
+}
+
+.key-item.selected::before {
+  content: "✓";
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: var(--primary-color);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.key-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.key-algorithm {
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+.key-created {
+  font-size: 0.85em;
+  color: #999;
+}
+
+.loading-keys {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  color: #666;
+}
+
+.small-loader {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e0e0e0;
+  border-top: 2px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.no-keys-message {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+}
+
+.no-keys-message a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.no-keys-message a:hover {
+  text-decoration: underline;
+}
+
+.selected-key-info {
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 16px;
+}
+
+.selected-key-info p {
+  margin: 4px 0;
+  font-size: 0.95em;
+  color: #333;
+}
+
+/* Paso 2: Firma en proceso */
+#signStep2 {
+  animation: fadeInUp 0.5s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 .loader-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 180px;
-  margin-top: 40px;
+  min-height: 200px;
+  padding: 20px;
 }
+
+#signDocumentButton {
+  background: linear-gradient(135deg, var(--primary-color) 0%, #ff7b00 100%);
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  font-size: 1.2em;
+  font-weight: 600;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(255, 149, 69, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+#signDocumentButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(255, 149, 69, 0.4);
+}
+
+/* Loader mejorado */
 .loader {
   display: inline-block;
-  width: 32px;
-  height: 32px;
-  border: 4px solid #ccc;
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 149, 69, 0.2);
   border-top: 4px solid var(--primary-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
+
 .loader-text {
-  font-size: 1.1em;
-  color: #444;
-  margin-top: 8px;
+  font-size: 1.2em;
+  color: var(--primary-color);
+  font-weight: 600;
   text-align: center;
+  animation: pulse 2s infinite;
 }
 
-/* Resultado de firmado */
-#signStep3 p {
-  font-size: 1.18em;
-  color: #2e7d32;
-  margin-bottom: 16px;
-  font-weight: bold;
-}
-
-/* Responsive */
-@media (max-width: 700px) {
-  #firmarSection {
-    padding: 28px 6vw 24px 6vw;
-    max-width: 98vw;
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
   }
 }
 
-.no-bullets {
-  list-style: none;
-  padding-left: 0;
-  margin: 0;
+/* Paso 3: Descarga y reinicio */
+#signStep3 {
+  animation: fadeInUp 0.5s ease;
+  text-align: center;
+}
+
+#signStep3 p {
+  font-size: 1.3em;
+  color: #4caf50;
+  margin-bottom: 24px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+#downloadSignedBtn {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  font-size: 1.1em;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-right: 12px;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+#downloadSignedBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+#restartSignProcessBtn {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  font-size: 1.1em;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+#restartSignProcessBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+}
+
+/* =========================
+   ANIMACIONES
+   ========================= */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================
+   ANIMACIONES ADICIONALES Y NOTIFICACIONES
+   ========================= */
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+}
+
+/* Progreso dinámico en la línea conectora */
+#signStepIndicator[data-progress="1"]::before {
+  background: linear-gradient(
+    90deg,
+    var(--primary-color) 0%,
+    var(--primary-color) 0%,
+    #e0e0e0 0%
+  );
+}
+
+#signStepIndicator[data-progress="2"]::before {
+  background: linear-gradient(
+    90deg,
+    var(--primary-color) 0%,
+    var(--primary-color) 50%,
+    #e0e0e0 50%
+  );
+}
+
+#signStepIndicator[data-progress="3"]::before {
+  background: linear-gradient(
+    90deg,
+    var(--primary-color) 0%,
+    var(--primary-color) 100%
+  );
+}
+
+/* Efectos hover mejorados */
+.step-content:hover {
+  transform: translateY(-2px);
+}
+
+/* Transiciones suaves para cambios de estado */
+.step-content {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mejoras en botones */
+button[id*="accept"],
+button[id*="sign"],
+button[id*="download"],
+button[id*="restart"] {
+  transition: all 0.3s ease;
+}
+
+/* Estados de carga mejorados */
+#signLoading {
+  text-align: center;
+  padding: 20px;
+}
+
+/* Notificaciones personalizadas */
+.step-notification {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-left: 4px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ===========================================
+   FILE INPUT - DISEÑO LIMPIO Y MODERNO
+   =========================================== */
+
+.file-input-container {
+  width: 100%;
+  max-width: 450px;
+  margin: 24px auto;
+}
+
+.file-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.file-input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  cursor: pointer;
+}
+
+.file-input-label {
+  display: block;
+  width: 100%;
+  min-height: 70px;
+  padding: 20px;
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  background: #f9f9f9;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.file-input-label:hover {
+  border-color: var(--primary-color, #ff9545);
+  background: #fff7f0;
+  box-shadow: 0 2px 12px rgba(255, 149, 69, 0.15);
+}
+
+.file-input-icon {
+  font-size: 28px;
+  display: block;
+  margin-bottom: 8px;
+  opacity: 0.7;
+}
+
+.file-input-text {
+  display: block;
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 12px;
+  word-break: break-word;
+}
+
+.file-input-button {
+  display: inline-block;
+  background: var(--primary-color, #ff9545);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.file-input-label:hover .file-input-button {
+  background: #e8803d;
+}
+
+/* Estados del file input */
+.file-input-label.has-file {
+  border-color: #4caf50;
+  background: #f1f8e9;
+  border-style: solid;
+}
+
+.file-input-label.has-file .file-input-icon {
+  color: #4caf50;
+}
+
+.file-input-label.has-file .file-input-text {
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.file-input-label.has-file .file-input-button {
+  background: #4caf50;
+}
+
+.file-input-label.error {
+  border-color: #f44336;
+  background: #ffebee;
+}
+
+.file-input-label.error .file-input-icon {
+  color: #f44336;
+}
+
+.file-input-label.error .file-input-text {
+  color: #d32f2f;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .file-input-container {
+    max-width: 100%;
+    margin: 20px auto;
+  }
+
+  .file-input-label {
+    min-height: 65px;
+    padding: 18px;
+  }
+
+  .file-input-icon {
+    font-size: 24px;
+    margin-bottom: 6px;
+  }
+
+  .file-input-text {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+
+  .file-input-button {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}
+
+/* Centrado mejorado para todos los pasos */
+#signStep2,
+#signStep3 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+#signStep2 .key-selection-container {
+  width: 100%;
+  max-width: 600px;
+}
+
+#signStep2 h3 {
+  text-align: center;
+  margin-bottom: 20px;
 }

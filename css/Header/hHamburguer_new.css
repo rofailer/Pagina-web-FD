@@ -24,18 +24,34 @@
   box-sizing: border-box !important;
 }
 
-/* Estado cuando no hay sesión iniciada - oculto completamente */
-.header-menu-btn:not(.active-session) {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  min-width: 0 !important;
-  max-width: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
+/* En desktop: ocultar botón si no hay sesión */
+@media (min-width: 1101px) {
+  .header-menu-btn:not(.active-session) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+/* En móvil/tablet: siempre mostrar el botón hamburguesa */
+@media (max-width: 1100px) {
+  .header-menu-btn {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+  }
 }
 
 .header-menu-btn:hover {

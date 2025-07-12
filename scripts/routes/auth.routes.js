@@ -12,9 +12,9 @@ router.post("/api/register", async (req, res) => {
         return res.status(400).json({ error: "Faltan campos obligatorios." });
     }
     // Validación de contraseña fuerte
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{4,}$/;
     if (!passwordRegex.test(password)) {
-        return res.status(400).json({ error: "La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial." });
+        return res.status(400).json({ error: "La contraseña debe tener al menos 4 caracteres, una mayúscula, un número y un carácter especial." });
     }
     try {
         // Verificar si el usuario ya existe
