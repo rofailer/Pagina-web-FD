@@ -55,6 +55,28 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         setActiveLink(sectionKey);
         window.scrollTo(0, 0);
+
+        // Cargar datos específicos según la sección
+        if (sectionKey === 'firmar') {
+            // Cargar llaves para la sección de firmar
+            if (window.loadUserKeys) {
+                window.loadUserKeys();
+            }
+        } else if (sectionKey === 'verificar') {
+            // Cargar profesores automáticamente para la sección de verificar
+            if (window.cargarProfesoresYMostrarPaso1) {
+                console.log("🔄 Sección verificar mostrada, cargando profesores automáticamente...");
+                window.cargarProfesoresYMostrarPaso1();
+            }
+        } else if (sectionKey === 'perfil') {
+            // Cargar llaves para la sección de perfil
+            if (window.loadKeys) {
+                window.loadKeys();
+            }
+            if (window.loadActiveKey) {
+                window.loadActiveKey();
+            }
+        }
     }
 
     // --- Variables de estado global ---
@@ -116,10 +138,6 @@ document.addEventListener("DOMContentLoaded", () => {
             // Navegar directamente sin disparar eventos adicionales
             showSection(targetSection);
             window.history.replaceState(null, null, `#${targetSection}`);
-
-            if (targetSection === 'verificar' && window.cargarProfesoresYMostrarPaso1) {
-                window.cargarProfesoresYMostrarPaso1();
-            }
         }
     });
 
@@ -202,9 +220,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // Navegación normal
                 window.location.hash = key;
-                if (key === "verificar" && window.cargarProfesoresYMostrarPaso1) {
-                    window.cargarProfesoresYMostrarPaso1();
-                }
             });
         }
     });
@@ -254,9 +269,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Si llega aquí, navegar normalmente
                 if (targetSection && sections[targetSection]) {
                     window.location.hash = targetSection;
-                    if (targetSection === "verificar" && window.cargarProfesoresYMostrarPaso1) {
-                        window.cargarProfesoresYMostrarPaso1();
-                    }
                 }
             });
         }
@@ -339,38 +351,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --- Selección de llave activa ---
-    document.querySelectorAll(".select-key-btn").forEach((button) => {
-        button.addEventListener("click", async (event) => {
-            const keyId = event.target.dataset.keyId;
-            if (!keyId) {
-                console.error("El botón no tiene un atributo data-key-id");
-                return;
-            }
-            selectKey(keyId);
-        });
-    });
-
-    async function selectKey(keyId) {
-        try {
-            const response = await fetch("/select-key", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-                body: JSON.stringify({ keyId }),
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                alert("Llave activa actualizada correctamente");
-            } else {
-                alert(data.error || "Error al seleccionar la llave");
-            }
-        } catch (err) {
-            console.error("Error al seleccionar la llave:", err);
-        }
-    }
+    // Esta funcionalidad ahora se maneja en keys.frontend.js y signSteps.js
+    // para evitar conflictos entre archivos
 
     // --- Manejo de input de archivo para mostrar nombre y activar "X" (si usas este patrón) ---
     const fileInput = document.getElementById("fileInput");
@@ -419,20 +401,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Mostrar la página solo cuando todo está listo ---
     document.body.style.visibility = "visible";
 
-    // --- Mostrar/ocultar el botón hamburguesa según sesión ---
-    function updateHamburgerVisibility() {
+    // --- Actualizar visibilidad de botones de autenticación ---
+    function updateAuthButtonsVisibility() {
         const token = localStorage.getItem("token");
-        const hamburgerBtn = document.getElementById("headerMenuBtn");
-        if (hamburgerBtn) {
-            if (token) {
-                hamburgerBtn.classList.add("active-session");
-            } else {
-                hamburgerBtn.classList.remove("active-session");
-            }
-        }
+        const loginBtnLi = document.getElementById("loginBtnLi");
+        const registerBtnLi = document.getElementById("registerBtnLi");
+
+        // Los botones siempre están ocultos porque ahora están en el menú hamburguesa
+        if (loginBtnLi) loginBtnLi.classList.add("header-disabled");
+        if (registerBtnLi) registerBtnLi.classList.add("header-disabled");
     }
-    updateHamburgerVisibility();
-    window.addEventListener("storage", updateHamburgerVisibility);
+
+    updateAuthButtonsVisibility();
+    window.addEventListener("storage", updateAuthButtonsVisibility);
 
     // --- Tabs animados en sección de perfil ---
     const perfilTabs = document.querySelectorAll(".perfil-tab");
@@ -461,35 +442,19 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
-    // --- Actualizar visibilidad de botones de autenticación ---
-    function updateAuthButtonsVisibility() {
-        const token = localStorage.getItem("token");
-        const loginBtnLi = document.getElementById("loginBtnLi");
-        const registerBtnLi = document.getElementById("registerBtnLi");
+    // =========================
+    // FUNCIONES AUXILIARES
+    // =========================
 
-        if (token) {
-            if (loginBtnLi) loginBtnLi.classList.add("header-disabled");
-            if (registerBtnLi) registerBtnLi.classList.add("header-disabled");
-        } else {
-            if (loginBtnLi) loginBtnLi.classList.remove("header-disabled");
-            if (registerBtnLi) registerBtnLi.classList.remove("header-disabled");
+    // Función para obtener la sección actual
+    function getCurrentSection() {
+        const sections = ['inicio', 'firmar', 'verificar', 'perfil', 'opciones', 'contacto'];
+        for (const section of sections) {
+            const element = document.getElementById(`${section}Section`);
+            if (element && element.style.display !== 'none') {
+                return section;
+            }
         }
-    }
-
-    updateAuthButtonsVisibility();
-    window.addEventListener("storage", updateAuthButtonsVisibility);
-});
-
-// --- Scroll arriba al cambiar de sección (por si acaso) ---
-window.addEventListener("hashchange", () => {
-    window.scrollTo(0, 0);
-});
-
-window.verificacionEnCurso = false;
-
-window.addEventListener("beforeunload", function (e) {
-    if (window.verificacionEnCurso) {
-        e.preventDefault();
-        e.returnValue = "¿Seguro que desea salir? Perderá los datos ingresados.";
+        return 'inicio'; // default
     }
 });

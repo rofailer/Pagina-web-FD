@@ -2,194 +2,136 @@
    MENÚ HAMBURGUESA MÓVIL - DISEÑO LIMPIO
    ========================= */
 
-/* Botón hamburguesa */
+/* Estilos base del botón hamburguesa - OPTIMIZADO */
 .header-menu-btn {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: 44px !important;
-  height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   background: rgba(255, 255, 255, 0.1) !important;
-  border: none !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  cursor: pointer !important;
+  transition: transform 0.2s ease, background-color 0.2s ease !important;
+  z-index: 10 !important;
   border-radius: 50% !important;
-  cursor: pointer;
-  position: relative;
-  z-index: 9000 !important;
-  transition: all 0.3s ease !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  width: 48px !important;
+  height: 48px !important;
   padding: 0 !important;
   margin: 0 !important;
-  min-width: 44px !important;
-  max-width: 44px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
   box-sizing: border-box !important;
-}
-
-/* En desktop: ocultar botón si no hay sesión */
-@media (min-width: 1101px) {
-  .header-menu-btn:not(.active-session) {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    width: 0 !important;
-    height: 0 !important;
-    min-width: 0 !important;
-    max-width: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-}
-
-/* En móvil/tablet: siempre mostrar el botón hamburguesa */
-@media (max-width: 1100px) {
-  .header-menu-btn {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    width: 44px !important;
-    height: 44px !important;
-    min-width: 44px !important;
-    max-width: 44px !important;
-  }
+  will-change: transform !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
 .header-menu-btn:hover {
-  background: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
   transform: scale(1.05) !important;
 }
 
 .header-menu-btn span {
   display: block !important;
-  width: 22px !important;
+  width: 20px !important;
   height: 2px !important;
   background: white !important;
-  margin: 3px 0 !important;
-  border-radius: 2px !important;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  margin: 2px 0 !important;
+  border-radius: 1px !important;
+  transition: transform 0.2s ease !important;
   transform-origin: center !important;
 }
 
-/* Animación del botón hamburguesa cuando se activa */
-.header-menu-btn.active span:nth-child(1) {
-  transform: rotate(45deg) translate(5px, 5px) !important;
-}
+/* Botón hamburguesa sin animación cuando se activa */
 
-.header-menu-btn.active span:nth-child(2) {
-  opacity: 0 !important;
-  transform: scale(0) !important;
-}
-
-.header-menu-btn.active span:nth-child(3) {
-  transform: rotate(-45deg) translate(7px, -6px) !important;
-}
-
-/* Backdrop - SIN BLUR, menos oscuro, z-index menor que el menú */
+/* Backdrop - OPTIMIZADO */
 .mobile-menu-backdrop {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  background: rgba(0, 0, 0, 0.3) !important; /* Menos oscuro */
-  z-index: 8000 !important; /* Backdrop - above header */
+  background: rgba(0, 0, 0, 0.3) !important;
+  z-index: 8000 !important;
   opacity: 0 !important;
   visibility: hidden !important;
-  pointer-events: none !important; /* Nunca interceptar clicks */
-  backdrop-filter: none !important; /* Sin blur */
-  -webkit-backdrop-filter: none !important; /* Sin blur en Safari */
-  filter: none !important; /* Sin filtros */
-
-  /* Animación más suave para el backdrop */
-  transition: opacity 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
-    visibility 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  pointer-events: none !important;
+  transition: opacity 0.25s ease, visibility 0.25s ease !important;
+  will-change: opacity !important;
 }
 
 .mobile-menu-backdrop.active {
   opacity: 1 !important;
   visibility: visible !important;
-  pointer-events: none !important; /* Nunca interceptar clicks, incluso cuando activo */
-  z-index: 8000 !important; /* Backdrop - above header */
 }
 
-.mobile-menu-backdrop * {
-  pointer-events: none !important; /* Ningún elemento hijo puede interceptar clicks */
-}
-
-/* Menú principal */
+/* Menú móvil - OPTIMIZADO */
 .header-mobile-menu {
-  position: fixed;
-  top: 0;
-  right: -350px;
-  width: 320px;
-  height: 100vh;
-  background: #ffffff !important; /* Fondo blanco sólido */
-  box-shadow: -5px 0 25px rgba(0, 0, 0, 0.2);
-  z-index: 9000 !important;
-  overflow-y: auto;
-  border-top-left-radius: 25px;
-  border-bottom-left-radius: 25px;
-  backdrop-filter: none !important; /* Sin blur en el menú */
-  -webkit-backdrop-filter: none !important;
-
-  /* Animaciones suaves */
-  opacity: 0;
-  visibility: hidden;
-  transform: translateX(100%);
-  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
-  transition-property: right, opacity, visibility, transform;
+  position: fixed !important;
+  top: 0 !important;
+  right: -100% !important;
+  width: min(85vw, 400px) !important;
+  height: 100vh !important;
+  background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%) !important;
+  border-top-left-radius: 25px !important;
+  border-bottom-left-radius: 25px !important;
+  box-shadow: -8px 0 25px rgba(0, 0, 0, 0.15) !important;
+  z-index: 8500 !important;
+  transition: right 0.3s ease !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.2) !important;
+  will-change: transform !important;
 }
 
 .header-mobile-menu.active {
   right: 0 !important;
-  opacity: 1 !important;
   visibility: visible !important;
-  transform: translateX(0);
-  z-index: 9000 !important;
 }
 
-/* Botón cerrar - circular, lado izquierdo, perfectamente centrado */
+/* Botón cerrar - OPTIMIZADO */
 .mobile-menu-close {
   position: absolute;
-  top: 15px;
-  left: 15px;
-  width: 35px !important;
-  height: 35px !important;
-  background: rgba(0, 0, 0, 0.05) !important; /* Fondo sutil */
-  border: none !important;
-  border-radius: 50% !important; /* Circular */
+  top: 20px;
+  left: 20px;
+  width: 40px !important;
+  height: 40px !important;
+  background: rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 50% !important;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px !important;
-  color: #666 !important;
-  z-index: 8600 !important; /* Close button - above menu */
+  font-size: 22px !important;
+  color: #555 !important;
+  z-index: 8600 !important;
   box-sizing: border-box !important;
   line-height: 1 !important;
   padding: 0 !important;
-  margin: 0 !important;
-  min-width: 35px !important;
-  max-width: 35px !important;
-  min-height: 35px !important;
-  max-height: 35px !important;
-
-  /* Animación de entrada del botón */
+  margin: 0 0 15px 0 !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
   opacity: 0;
-  transform: scale(0.8) rotate(-90deg);
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-  transition-delay: 0.2s;
+  transform: scale(0.9);
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+  will-change: opacity, transform !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
 .mobile-menu-close.animate-in {
   opacity: 1;
-  transform: scale(1) rotate(0deg);
+  transform: scale(1);
 }
 
 .mobile-menu-close:hover {
-  background: rgba(255, 149, 69, 0.1) !important; /* Fondo con color primario */
+  background: rgba(255, 149, 69, 0.15) !important;
+  border-color: rgba(255, 149, 69, 0.3) !important;
   color: var(--primary-color) !important;
-  transform: scale(1.1) rotate(0deg) !important;
+  transform: scale(1.1) !important;
 }
 
 .mobile-menu-close::before {
@@ -212,38 +154,59 @@
 
 /* Header del menú */
 .mobile-menu-header {
-  padding: 60px 20px 20px;
+  padding: 80px 25px 25px;
   text-align: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  border-top-left-radius: 25px;
+  border-top-left-radius: 30px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mobile-menu-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
 }
 
 .mobile-menu-header h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .mobile-menu-header p {
-  margin: 5px 0 0;
+  margin: 8px 0 0;
   font-size: 14px;
   opacity: 0.9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Lista del menú */
 .header-mobile-menu ul {
   list-style: none !important;
-  padding: 20px 0 !important;
+  padding: 0 !important;
   margin: 0 !important;
   background: transparent !important;
 }
 
+/* Elementos del menú - OPTIMIZADO */
 .mobile-menu-item {
   opacity: 0 !important;
-  transform: translateX(30px) !important;
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  transform: translateX(20px) !important;
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
   background: transparent !important;
+  will-change: opacity, transform !important;
 }
 
 .mobile-menu-item.animate-in {
@@ -251,216 +214,401 @@
   transform: translateX(0) !important;
 }
 
-/* Delays escalonados para animación de entrada */
-.mobile-menu-item:nth-child(1) {
-  transition-delay: 0.1s !important;
-}
-
-.mobile-menu-item:nth-child(2) {
-  transition-delay: 0.15s !important;
-}
-
-.mobile-menu-item:nth-child(3) {
-  transition-delay: 0.2s !important;
-}
-
-.mobile-menu-item:nth-child(4) {
-  transition-delay: 0.25s !important;
-}
-
-.mobile-menu-item:nth-child(5) {
-  transition-delay: 0.3s !important;
-}
-
-.mobile-menu-item:nth-child(6) {
-  transition-delay: 0.35s !important;
-}
-
-.mobile-menu-item:nth-child(7) {
-  transition-delay: 0.4s !important;
-}
-
-.mobile-menu-item:nth-child(8) {
-  transition-delay: 0.45s !important;
-}
-
-/* Secciones del menú */
-.menu-section {
-  margin: 0 !important;
-  padding: 0 !important;
-  background: transparent !important;
-}
-
-.menu-section a {
+/* Enlaces del menú - OPTIMIZADO */
+.mobile-menu-item a {
   display: block !important;
-  padding: 16px 25px !important;
-  color: #333 !important; /* Color oscuro forzado */
+  padding: 18px 25px !important;
+  color: #333 !important;
   text-decoration: none !important;
   font-size: 16px !important;
   font-weight: 500 !important;
-  border-bottom: 1px solid #f0f0f0 !important;
-  transition: all 0.3s ease !important;
-  position: relative;
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  margin: 2px 8px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  border-left: 3px solid transparent !important;
+}
+
+/* Estilos para enlaces con acceso restringido - ACTUALIZADO */
+.mobile-menu-item a.restricted-access {
+  color: #6c757d !important; /* Gris en lugar de #999 */
+  opacity: 0.8 !important;
+  cursor: pointer !important;
+  position: relative !important;
+}
+
+.mobile-menu-item a.restricted-access::after {
+  content: "🔒" !important;
+  position: absolute !important;
+  right: 20px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  font-size: 14px !important;
+  opacity: 0.7 !important;
+}
+
+.mobile-menu-item a.restricted-access:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(108, 117, 125, 0.12) 0%,
+    rgba(108, 117, 125, 0.03) 100%
+  ) !important;
+  color: #495057 !important; /* Gris más oscuro al hover */
+  border-left-color: #6c757d !important; /* Línea lateral gris */
+  border-radius: 0 15px 15px 0 !important;
+  opacity: 1 !important;
+}
+
+.mobile-menu-item a:hover:not(.restricted-access) {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 149, 69, 0.12) 0%,
+    rgba(255, 149, 69, 0.03) 100%
+  ) !important;
+  color: var(--primary-color) !important;
+  border-left-color: var(--primary-color) !important;
+  border-radius: 0 15px 15px 0 !important;
+}
+
+/* Separadores simples y elegantes - SUTILES */
+.header-mobile-menu .menu-divider {
+  margin: 0 !important;
+  padding: 20px 0 !important;
+  background: transparent !important;
+  width: 100% !important;
+  display: block !important;
+  position: relative !important;
+  clear: both !important;
+  border: none !important;
+}
+
+.header-mobile-menu .divider-line {
+  height: 2px !important;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--primary-color) 50%,
+    transparent 100%
+  ) !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  opacity: 0.3 !important;
+  position: relative !important;
+  z-index: 10 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Forzar consistencia visual en todos los separadores */
+.header-mobile-menu .menu-divider:nth-of-type(1) .divider-line,
+.header-mobile-menu .menu-divider:nth-of-type(2) .divider-line,
+.header-mobile-menu .menu-divider:nth-of-type(3) .divider-line {
+  height: 2px !important;
+  opacity: 0.3 !important;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--primary-color) 50%,
+    transparent 100%
+  ) !important;
+  min-height: 2px !important;
+  display: block !important;
+  visibility: visible !important;
+  position: relative !important;
+  z-index: 15 !important;
+}
+
+/* Reset específico para separadores para evitar conflictos */
+.header-mobile-menu .menu-divider,
+.header-mobile-menu .menu-divider *,
+.header-mobile-menu .divider-line,
+.header-mobile-menu .divider-line * {
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  outline: none !important;
+  text-decoration: none !important;
   background: transparent !important;
 }
 
-.menu-section a:hover {
-  background: color-mix(in srgb, var(--primary-color) 10%, #fff 90%) !important;
+/* Forzar la visibilidad del separador con backup sutil */
+.header-mobile-menu .menu-divider .divider-line {
+  min-height: 2px !important;
+  opacity: 0.3 !important;
+  visibility: visible !important;
+  background-color: var(--primary-color) !important;
+}
+
+/* Fallback con color sutil si el gradiente no funciona */
+.header-mobile-menu .menu-divider .divider-line::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: var(--primary-color) !important;
+  opacity: 0.25 !important;
+  border-radius: 0 !important;
+  z-index: -1 !important;
+}
+
+/* Sección de navegación principal */
+.navigation-section {
+  background: transparent;
+  padding: 15px 0;
+}
+
+.navigation-section .mobile-menu-item a {
+  color: #333 !important;
+  font-weight: 500 !important;
+  padding: 20px 30px !important;
+  margin: 3px 10px !important;
+}
+
+/* Sección de opciones (Perfil/Admin) */
+.options-section {
+  background: rgba(0, 0, 0, 0.02);
+  padding: 15px 0;
+}
+
+.options-section .mobile-menu-item a {
+  color: #555 !important;
+  font-weight: 500 !important;
+  font-size: 15px !important;
+  padding: 18px 30px !important;
+  margin: 3px 10px !important;
+}
+
+.options-section .mobile-menu-item a[href*="perfil"] {
   color: var(--primary-color) !important;
-  padding-left: 35px !important;
 }
 
-.menu-section a::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--primary-color);
-  transform: scaleY(0);
-  transition: transform 0.3s ease;
+.options-section .mobile-menu-item a[href*="admin"] {
+  color: #dc3545 !important;
+  font-weight: 600 !important;
 }
 
-.menu-section a:hover::before {
-  transform: scaleY(1);
-}
-
-/* Perfil del usuario */
+/* Secciones especiales actualizadas */
 .profile-section .profile-name {
   display: block;
-  padding: 20px 25px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
+  padding: 22px 30px;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #333 !important;
   text-align: center;
-  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-  margin: 10px 20px;
-  border-radius: 15px;
-  border: none;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%) !important;
+  border-radius: 18px;
+  margin: 15px 20px 15px 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
-/* Divisores */
-.menu-divider {
-  margin: 15px 0;
+/* Sección de cerrar sesión - CONSISTENCIA MEJORADA */
+.logout-section {
+  background: rgba(229, 62, 62, 0.03);
+  padding: 15px 0;
+  border-top: 1px solid rgba(229, 62, 62, 0.1);
 }
 
-.menu-divider hr {
-  border: none;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
-  margin: 0 25px;
-}
-
-/* Sección de logout */
 .logout-section a {
-  color: #e53e3e;
-  background: rgba(229, 62, 62, 0.05);
-  border-bottom: none;
-  margin: 10px 20px;
-  border-radius: 12px;
-  font-weight: 600;
+  color: #e53e3e !important;
+  font-weight: 600 !important;
+  background: rgba(229, 62, 62, 0.08) !important;
+  border-radius: 15px !important;
+  margin: 5px 20px !important;
+  border-left: 3px solid #e53e3e !important;
+  padding: 16px 30px !important;
+  font-size: 16px !important;
 }
 
 .logout-section a:hover {
-  background: rgba(229, 62, 62, 0.1);
-  color: #c53030;
-  padding-left: 25px;
+  color: #c53030 !important;
+  background: rgba(229, 62, 62, 0.15) !important;
+  border-left-color: #c53030 !important; /* Línea lateral también roja al hover */
 }
 
-/* Botones de autenticación mejorados en el menú móvil */
-.nav-section a[id*="Login"],
-.nav-section a[id*="Register"] {
-  position: relative;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  color: #495057 !important;
+/* Auth buttons para usuarios sin sesión */
+.auth-section {
+  padding: 15px 0;
+  background: rgba(255, 149, 69, 0.03);
+  border-top: 1px solid rgba(255, 149, 69, 0.1);
+}
+
+.auth-section .mobile-menu-item a {
   font-weight: 600 !important;
+  color: var(--primary-color) !important;
+  border-left: 3px solid var(--primary-color) !important;
+  background: rgba(255, 149, 69, 0.08) !important;
   border-radius: 15px !important;
-  padding: 14px 25px !important;
-  margin: 8px 20px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  margin: 5px 20px !important;
+}
+
+.auth-section .mobile-menu-item a:hover {
+  background: rgba(255, 149, 69, 0.15) !important;
+}
+
+/* Ocultar botones de login/registro del header principal */
+#loginBtnLi,
+#registerBtnLi {
+  display: none !important;
+}
+
+/* Sección de perfil de usuario */
+.user-profile-section {
+  padding: 25px 20px;
+  text-align: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.user-profile-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  margin: 0 auto 15px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border: 3px solid white;
+  position: relative;
   overflow: hidden;
 }
 
-.nav-section a[id*="Login"]::before,
-.nav-section a[id*="Register"]::before {
+.user-profile-avatar img {
+  width: 30px;
+  height: 30px;
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
+}
+
+.user-profile-avatar::before {
   content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+  opacity: 0.9;
+}
+
+.user-profile-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  text-shadow: none;
+}
+
+.user-profile-status {
+  font-size: 13px;
+  color: #666;
+  margin: 5px 0 0;
+  opacity: 0.8;
+}
+
+/* Sección sin sesión iniciada */
+.no-session-section {
+  padding: 25px 20px;
+  text-align: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.no-session-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin: 0 auto 15px;
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(108, 117, 125, 0.2);
+  border: 3px solid white;
+  position: relative;
+  opacity: 0.8;
+}
+
+.no-session-icon::before {
+  content: "U";
+  font-size: 28px;
+  font-weight: bold;
+  color: #999;
+  opacity: 0.9;
+  font-family: Arial, sans-serif;
+}
+
+.no-session-message {
+  font-size: 16px;
+  font-weight: 500;
+  color: #666;
+  margin: 0;
+}
+
+.no-session-subtitle {
+  font-size: 12px;
+  color: #999;
+  margin: 5px 0 0;
+}
+
+/* Estilos para organización del menú */
+
+/* Estados especiales para elementos del menú */
+.mobile-menu-item.current a {
   background: linear-gradient(
     90deg,
-    transparent,
-    rgba(255, 255, 255, 0.6),
-    transparent
-  );
-  transition: left 0.6s ease;
+    rgba(255, 149, 69, 0.15) 0%,
+    rgba(255, 149, 69, 0.05) 100%
+  ) !important;
+  border-left-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
+  font-weight: 600 !important;
 }
 
-.nav-section a[id*="Login"]:hover,
-.nav-section a[id*="Register"]:hover {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
-  border-color: rgba(0, 0, 0, 0.2) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-  color: #343a40 !important;
+/* Mejoras de accesibilidad */
+.mobile-menu-item a:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
 }
 
-.nav-section a[id*="Login"]:hover::before,
-.nav-section a[id*="Register"]:hover::before {
-  left: 100%;
+/* Animaciones de entrada secuencial mejoradas */
+.header-mobile-menu.active .user-profile-section,
+.header-mobile-menu.active .no-session-section {
+  animation: slideInRight 0.4s ease-out forwards;
+  animation-delay: 0.1s;
+  opacity: 0;
 }
 
-.nav-section a[id*="Login"]:active,
-.nav-section a[id*="Register"]:active {
-  transform: translateY(0);
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+.header-mobile-menu.active .user-profile-section {
+  animation-delay: 0.15s;
 }
 
-/* Estilo específico para el botón de registro en móvil */
-.nav-section a[id*="Register"] {
-  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%) !important;
-  border-color: rgba(25, 118, 210, 0.2) !important;
-  color: #1976d2 !important;
+.header-mobile-menu.active .no-session-section {
+  animation-delay: 0.15s;
 }
 
-.nav-section a[id*="Register"]:hover {
-  background: linear-gradient(135deg, #bbdefb 0%, #e1bee7 100%) !important;
-  border-color: rgba(25, 118, 210, 0.3) !important;
-  color: #1565c0 !important;
-}
-
-/* Responsive */
-@media (max-width: 600px) {
-  .header-mobile-menu {
-    width: 100vw;
-    right: -100vw;
-    border-radius: 0;
-  }
-
-  .mobile-menu-header {
-    border-radius: 0;
-  }
-}
-
-/* Mostrar botón cuando hay sesión activa */
-.header-menu-btn.active-session {
-  display: flex !important;
-}
-
-/* Responsive: comportamiento diferente para desktop y móvil */
+/* Responsive: comportamiento para desktop y móvil */
 @media (min-width: 1101px) {
-  /* En desktop: mostrar botón solo si hay sesión, mantener menú normal */
-  .header-menu-btn.active-session {
+  .header-menu-btn {
     display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
     margin-right: 15px;
   }
 
-  /* Ajustar el header para que el botón se vea bien junto al menú normal */
   .header-right {
     display: flex;
     align-items: center;
@@ -469,14 +617,18 @@
 }
 
 @media (max-width: 1100px) {
-  /* En móvil: mostrar botón si hay sesión, ocultar menú normal */
-  .header-menu-btn.active-session {
+  .header-menu-btn {
     display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
   }
 
   .header-center,
-  #loginBtnLi,
-  #registerBtnLi,
   #profileMenuLi {
     display: none;
   }
@@ -501,6 +653,7 @@
 .header-mobile-menu .logout-section a:hover {
   color: #c53030 !important;
   background: rgba(229, 62, 62, 0.1) !important;
+  border-left-color: #c53030 !important; /* Consistencia en línea lateral */
 }
 
 #mobileMenuList {
@@ -514,145 +667,263 @@
 
 #mobileMenuList .logout-section a {
   color: #e53e3e !important;
-  background: rgba(229, 62, 62, 0.05) !important;
 }
 
-/* Reglas adicionales para asegurar que el backdrop no interfiera */
-.mobile-menu-backdrop {
-  pointer-events: none !important; /* Nunca interceptar clicks */
-  z-index: 8000 !important; /* Backdrop - above header */
+/* Efectos adicionales y mejoras visuales */
+
+/* Animación de entrada para items del menú */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-.mobile-menu-backdrop.active {
-  pointer-events: none !important; /* Nunca interceptar clicks, incluso cuando activo */
-  z-index: 8000 !important; /* Backdrop - above header */
+/* Efecto de ondas deshabilitado para evitar animaciones raras */
+
+/* Efecto de partículas en el header */
+.mobile-menu-header::after {
+  content: "";
+  position: absolute;
+  top: 10%;
+  left: 10%;
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  box-shadow: 20px 30px 0 -2px rgba(255, 255, 255, 0.4),
+    40px 60px 0 -4px rgba(255, 255, 255, 0.3),
+    60px 20px 0 -1px rgba(255, 255, 255, 0.5),
+    80px 80px 0 -3px rgba(255, 255, 255, 0.2),
+    100px 40px 0 -2px rgba(255, 255, 255, 0.4);
+  animation: float 6s ease-in-out infinite;
 }
 
-/* Asegurar que el menú y sus elementos tengan pointer-events */
-.header-mobile-menu {
-  pointer-events: auto !important;
-  z-index: 8500 !important; /* Menu - above backdrop */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
 }
 
-.header-mobile-menu * {
-  pointer-events: auto !important;
+/* Mejora del scroll del menú */
+.header-mobile-menu::-webkit-scrollbar {
+  width: 6px;
 }
 
-.mobile-menu-close {
-  pointer-events: auto !important;
-  z-index: 8600 !important; /* Close button - above menu */
+.header-mobile-menu::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
 }
 
-/* Reglas específicas para forzar que el menú esté por encima del backdrop */
-#headerMobileMenu {
-  z-index: 8500 !important;
-  position: fixed !important;
+.header-mobile-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 149, 69, 0.3);
+  border-radius: 3px;
 }
 
-#headerMobileMenu.active {
-  z-index: 8500 !important;
-  position: fixed !important;
+.header-mobile-menu::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 149, 69, 0.5);
 }
 
-#headerMobileMenu .mobile-menu-close {
-  z-index: 8600 !important;
+/* Sombras dinámicas deshabilitadas para mejor rendimiento */
+
+/* Indicador visual para sección activa */
+.mobile-menu-item.active a {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 149, 69, 0.15) 0%,
+    rgba(255, 149, 69, 0.05) 100%
+  ) !important;
+  border-left-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
+  font-weight: 600 !important;
 }
 
-/* Asegurar que el backdrop esté por debajo */
-.mobile-menu-backdrop,
-.mobile-menu-backdrop.active {
-  z-index: 8000 !important;
-}
-
-/* ===== SEPARACIÓN COMPLETA DEL MENÚ MÓVIL DEL HEADER ===== */
-
-/* Botón hamburguesa - completamente independiente */
-#headerMenuBtn {
-  position: relative !important;
-  z-index: 9000 !important; /* Muy alto para estar siempre visible */
-  display: flex !important;
-  background: rgba(255, 255, 255, 0.1) !important;
-  border: none !important;
-  border-radius: 50% !important;
-  width: 44px !important;
-  height: 44px !important;
-  cursor: pointer !important;
-  transition: all 0.3s ease !important;
-}
-
-/* Backdrop del menú - completamente independiente */
-.mobile-menu-backdrop {
+/* Modal de Acceso Restringido */
+.restricted-access-modal {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  background: rgba(0, 0, 0, 0.3) !important;
-  z-index: 8000 !important; /* Alto pero menor que el menú */
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-  transition: opacity 0.2s ease-out !important;
-}
-
-.mobile-menu-backdrop.active {
-  opacity: 1 !important;
-  visibility: visible !important;
-  z-index: 8000 !important;
-}
-
-/* Menú móvil - completamente independiente del header */
-#headerMobileMenu {
-  position: fixed !important;
-  top: 0 !important;
-  right: -350px !important;
-  width: 320px !important;
-  height: 100vh !important;
-  background: #ffffff !important;
-  box-shadow: -5px 0 25px rgba(0, 0, 0, 0.2) !important;
-  z-index: 8500 !important; /* Por encima del backdrop pero independiente */
-  transition: right 0.2s ease-out !important;
-  overflow-y: auto !important;
-  border-top-left-radius: 25px !important;
-  border-bottom-left-radius: 25px !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-#headerMobileMenu.active {
-  right: 0 !important;
-  z-index: 8500 !important;
-}
-
-/* Botón X - completamente independiente */
-#headerMobileMenu .mobile-menu-close {
-  position: absolute !important;
-  top: 15px !important;
-  left: 15px !important;
-  width: 35px !important;
-  height: 35px !important;
-  background: rgba(0, 0, 0, 0.05) !important;
-  border: none !important;
-  border-radius: 50% !important;
-  cursor: pointer !important;
-  z-index: 8600 !important; /* Por encima del menú */
+  z-index: 9999 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 20px !important;
+  animation: fadeIn 0.3s ease-out !important;
+}
+
+.restricted-access-backdrop {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  /* backdrop-filter deshabilitado para mejor rendimiento */
+}
+
+.restricted-access-content {
+  background: white !important;
+  border-radius: 20px !important;
+  padding: 40px 30px !important;
+  text-align: center !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+  max-width: 400px !important;
+  width: 90% !important;
+  position: relative !important;
+  z-index: 1 !important;
+  animation: slideUp 0.3s ease-out !important;
+}
+
+.restricted-access-icon {
+  font-size: 48px !important;
+  margin-bottom: 20px !important;
+  opacity: 0.8 !important;
+}
+
+.restricted-access-content h3 {
+  margin: 0 0 15px 0 !important;
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  color: #333 !important;
+}
+
+.restricted-access-content p {
+  margin: 0 0 30px 0 !important;
+  font-size: 16px !important;
   color: #666 !important;
+  line-height: 1.5 !important;
+}
+
+.restricted-access-buttons {
+  display: flex !important;
+  gap: 15px !important;
+  justify-content: center !important;
+  flex-wrap: wrap !important;
+}
+
+.restricted-access-buttons button {
+  padding: 12px 24px !important;
+  border: none !important;
+  border-radius: 25px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
   transition: all 0.3s ease !important;
+  min-width: 120px !important;
 }
 
-/* Lista del menú - independiente */
-#mobileMenuList {
-  background: transparent !important;
-  z-index: inherit !important;
+.btn-login-now {
+  background: linear-gradient(135deg, #ff9545 0%, #ff7a2d 100%) !important;
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(255, 149, 69, 0.3) !important;
 }
 
-#mobileMenuList * {
-  background: transparent !important;
-  z-index: inherit !important;
+.btn-login-now:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(255, 149, 69, 0.4) !important;
 }
 
-/* Animaciones eliminadas para evitar conflictos */
+.btn-cancel {
+  background: #f8f9fa !important;
+  color: #666 !important;
+  border: 2px solid #e9ecef !important;
+}
+
+.btn-cancel:hover {
+  background: #e9ecef !important;
+  color: #333 !important;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================
+   OPTIMIZACIONES DE RENDIMIENTO
+   ========================= */
+
+/* Forzar aceleración por hardware para elementos clave */
+.header-mobile-menu,
+.mobile-menu-backdrop,
+.header-menu-btn,
+.mobile-menu-close {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Deshabilitar animaciones complejas en dispositivos de baja potencia */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-menu-item {
+    transition: none !important;
+  }
+
+  .header-mobile-menu {
+    transition: right 0.1s ease !important;
+  }
+
+  .mobile-menu-backdrop {
+    transition: opacity 0.1s ease !important;
+  }
+}
+
+/* Optimización para pantallas pequeñas */
+@media (max-width: 480px) {
+  .header-mobile-menu {
+    width: 90vw !important;
+  }
+
+  .mobile-menu-item a {
+    padding: 15px 20px !important;
+    font-size: 15px !important;
+  }
+}
+
+/* =========================
+   ESQUEMA DE COLORES DEL MENÚ - ACTUALIZADO
+   ========================= */
+
+/*
+  🎨 CONSISTENCIA VISUAL:
+  
+  ✅ ELEMENTOS DISPONIBLES:
+  - Color primary (naranja): #ff9545 - Navegación normal y opciones
+  - Línea lateral: matching con el color del texto
+  
+  ✅ ELEMENTOS RESTRINGIDOS (sin sesión):
+  - Color gris: #6c757d - Firmar/Verificar bloqueados
+  - Hover gris oscuro: #495057
+  - Línea lateral gris: #6c757d
+  
+  ✅ CERRAR SESIÓN:
+  - Color rojo: #e53e3e - Acción de logout
+  - Hover rojo oscuro: #c53030
+  - Línea lateral roja: matching con el color
+*/

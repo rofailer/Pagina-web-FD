@@ -169,9 +169,9 @@ body {
   pointer-events: none;
 }
 
-/* Botones */
-button,
-.content > section button {
+/* Botones (excluimos .clear-btn y .change-btn-circular que tienen su propio estilo) */
+button:not(.clear-btn):not(.change-btn-circular),
+.content > section button:not(.clear-btn):not(.change-btn-circular) {
   background: linear-gradient(
     90deg,
     var(--primary-color),
@@ -191,8 +191,8 @@ button,
   min-width: 120px;
 }
 
-button:hover,
-.content > section button:hover {
+button:not(.clear-btn):not(.change-btn-circular):hover,
+.content > section button:not(.clear-btn):not(.change-btn-circular):hover {
   background: linear-gradient(
     90deg,
     color-mix(in srgb, var(--primary-color) 60%, #fff 40%),
@@ -202,21 +202,24 @@ button:hover,
   box-shadow: 0 4px 16px rgba(237, 112, 15, 0.15);
 }
 
-button:active,
-.content > section button:active {
+button:not(.clear-btn):not(.change-btn-circular):active,
+.content > section button:not(.clear-btn):not(.change-btn-circular):active {
   filter: brightness(1.08);
   transform: scale(0.98);
 }
 
-button:disabled,
-.content > section button:disabled {
+button:not(.clear-btn):not(.change-btn-circular):disabled,
+.content > section button:not(.clear-btn):not(.change-btn-circular):disabled {
   background: #aaa !important;
   color: #fff !important;
   cursor: not-allowed !important;
   opacity: 0.7;
 }
 
-.content > section button + button {
+.content
+  > section
+  button:not(.clear-btn):not(.change-btn-circular)
+  + button:not(.clear-btn):not(.change-btn-circular) {
   margin-left: 12px;
 }
 
@@ -384,4 +387,8 @@ button:disabled,
   .navigation-confirm-btn {
     width: 100%;
   }
+}
+
+#quickVerifyBtn:active {
+  transform: translateY(0);
 }

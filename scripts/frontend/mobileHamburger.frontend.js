@@ -131,74 +131,58 @@ document.addEventListener("DOMContentLoaded", () => {
             closeButton.style.visibility = "visible";
             closeButton.style.opacity = "1";
 
-            // Activar animación del botón de cerrar
+            // Activar animación del botón de cerrar - SIMPLIFICADO
             setTimeout(() => {
                 closeButton.classList.add("animate-in");
-                // Mover el foco al botón de cerrar para mejor accesibilidad
                 closeButton.focus();
-            }, 100);
+            }, 50);
         }
 
-        // Activar animaciones escalonadas de los elementos del menú
+        // Activar animaciones de los elementos del menú - OPTIMIZADO
         setTimeout(() => {
-            const menuItems = mobileMenu.querySelectorAll('.mobile-menu-item');
-            menuItems.forEach((item, index) => {
-                setTimeout(() => {
-                    item.classList.add('animate-in');
-                }, index * 50); // 50ms de delay entre cada elemento
+            const menuItems = mobileMenu.querySelectorAll(".mobile-menu-item");
+            menuItems.forEach(item => {
+                item.classList.add("animate-in");
             });
-        }, 200); // Empezar después de que el menú esté visible
+        }, 100);
     }
 
-    // Función para cerrar el menú
+    // Función para cerrar el menú - OPTIMIZADA
     function closeMobileMenu() {
         if (!mobileMenu || !menuBtn) {
             return;
         }
 
-        // *** FIX CRÍTICO DE ACCESIBILIDAD ***
         // PASO 1: Forzar el blur del botón X si tiene foco
         if (closeButton && document.activeElement === closeButton) {
             closeButton.blur();
         }
 
-        // PASO 2: Hacer el botón hamburguesa visible y focusable PRIMERO
+        // PASO 2: Hacer el botón hamburguesa visible y focusable
         if (menuBtn) {
             menuBtn.style.opacity = "1";
             menuBtn.style.pointerEvents = "auto";
             menuBtn.style.display = "flex";
             menuBtn.style.visibility = "visible";
+            menuBtn.focus();
         }
 
-        // PASO 3: Usar requestAnimationFrame para asegurar que el DOM se actualice
-        requestAnimationFrame(() => {
-            // PASO 4: Ahora mover el foco al botón hamburguesa
-            if (menuBtn) {
-                menuBtn.focus();
-            }
+        // PASO 3: Actualizar atributos y estado
+        if (menuBtn) {
+            menuBtn.setAttribute("aria-expanded", "false");
+        }
+        if (mobileMenu) {
+            mobileMenu.setAttribute("aria-hidden", "true");
+            mobileMenu.setAttribute("inert", "");
+        }
 
-            // PASO 5: Usar otro requestAnimationFrame para asegurar que el foco se haya movido
-            requestAnimationFrame(() => {
-                // PASO 6: Actualizar atributos de accesibilidad DESPUÉS del cambio de foco
-                if (menuBtn) {
-                    menuBtn.setAttribute("aria-expanded", "false");
-                }
-                if (mobileMenu) {
-                    mobileMenu.setAttribute("aria-hidden", "true");
-                    mobileMenu.setAttribute("inert", "");
-                }
+        // Actualizar estado inmediatamente
+        isMenuOpen = false;
 
-                // Actualizar estado inmediatamente
-                isMenuOpen = false;
-            });
-        });
-
-        // Remover animaciones de entrada (animación de salida)
-        const menuItems = mobileMenu.querySelectorAll('.mobile-menu-item');
-        menuItems.forEach((item, index) => {
-            setTimeout(() => {
-                item.classList.remove('animate-in');
-            }, index * 30); // Animación de salida más rápida
+        // Remover animaciones - SIMPLIFICADO
+        const menuItems = mobileMenu.querySelectorAll(".mobile-menu-item");
+        menuItems.forEach(item => {
+            item.classList.remove("animate-in");
         });
 
         // Remover animación del botón de cerrar
@@ -206,39 +190,32 @@ document.addEventListener("DOMContentLoaded", () => {
             closeButton.classList.remove("animate-in");
         }
 
-        // Remover clases activas con delay para que se vea la animación
+        // Remover clases activas - OPTIMIZADO
         setTimeout(() => {
             mobileMenu.classList.remove("active");
             menuBtn.classList.remove("active");
             if (backdrop) {
                 backdrop.classList.remove("active");
-                // Forzar el backdrop a estar completamente oculto
                 backdrop.style.opacity = "0";
                 backdrop.style.visibility = "hidden";
                 backdrop.style.pointerEvents = "none";
-                backdrop.style.zIndex = "8000"; // Backdrop - above header
+                backdrop.style.zIndex = "8000";
             }
 
             // Forzar el menú a estar cerrado
-            mobileMenu.style.right = "-350px";
-            mobileMenu.style.transform = "translateX(100%)";
+            mobileMenu.style.right = "-100%";
 
             // Restaurar scroll del body
             document.body.style.overflow = "";
-
-        }, 100); // Delay para permitir que se vea la animación de salida
+        }, 50); // Delay reducido
     }
 
-    // Event listener para el botón hamburguesa
+    // Event listener para el botón hamburguesa - OPTIMIZADO
     if (menuBtn) {
         menuBtn.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
-
-            // Pequeño delay para evitar conflictos
-            setTimeout(() => {
-                toggleMobileMenu();
-            }, 10);
+            toggleMobileMenu();
         });
     }
 
@@ -283,39 +260,50 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // Event listeners globales para cerrar el menú
-    document.addEventListener("click", (e) => {
-        // Solo procesar si el menú está abierto
-        if (!isMenuOpen) return;
+    document.addEventListener(
+        "click",
+        (e) => {
+            // Solo procesar si el menú está abierto
+            if (!isMenuOpen) return;
 
-        // NO procesar si es el botón X (ya tiene su propio listener)
-        if (closeButton && (e.target === closeButton || closeButton.contains(e.target))) {
-            return;
-        }
+            // NO procesar si es el botón X (ya tiene su propio listener)
+            if (
+                closeButton &&
+                (e.target === closeButton || closeButton.contains(e.target))
+            ) {
+                return;
+            }
 
-        // NO cerrar si se hace click dentro del menú
-        if (mobileMenu && mobileMenu.contains(e.target)) {
-            return;
-        }
+            // NO cerrar si se hace click dentro del menú
+            if (mobileMenu && mobileMenu.contains(e.target)) {
+                return;
+            }
 
-        // NO cerrar si se hace click en el botón hamburguesa (ya está oculto)
-        if (menuBtn && menuBtn.contains(e.target)) {
-            return;
-        }
+            // NO cerrar si se hace click en el botón hamburguesa (ya está oculto)
+            if (menuBtn && menuBtn.contains(e.target)) {
+                return;
+            }
 
-        // Cerrar si se hace click fuera del menú (en cualquier otro lugar)
-        e.preventDefault();
-        e.stopPropagation();
-        closeMobileMenu();
-    }, false);
-
-    // Cerrar menú con tecla Escape
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && isMenuOpen) {
+            // Cerrar si se hace click fuera del menú (en cualquier otro lugar)
             e.preventDefault();
             e.stopPropagation();
             closeMobileMenu();
-        }
-    }, false);
+        },
+        false,
+    );
+
+    // Cerrar menú con tecla Escape
+    document.addEventListener(
+        "keydown",
+        (e) => {
+            if (e.key === "Escape" && isMenuOpen) {
+                e.preventDefault();
+                e.stopPropagation();
+                closeMobileMenu();
+            }
+        },
+        false,
+    );
 
     // Función para renderizar el menú móvil
     function renderMobileMenu() {
@@ -329,53 +317,73 @@ document.addEventListener("DOMContentLoaded", () => {
         const userRole = user?.rol || null;
         const userName = user?.nombre || "";
 
-        // Detecta si la pantalla es móvil/tablet
-        const isMobile = window.innerWidth <= 1100;
+        let html = "";
 
-        // --- Sección 1: Nombre de usuario o vacío ---
-        let html = `<li class="menu-section profile-section mobile-menu-item">`;
+        // --- Sección 1: Perfil de usuario o estado sin sesión ---
         if (isLogged && userName) {
-            html += `<span class="profile-name">${userName}</span>`;
-        }
-        html += `</li>`;
-
-        html += `<li class="menu-divider mobile-menu-item"><hr></li>`;
-
-        // --- Sección 2: Perfil/Admin según rol ---
-        html += `<li class="menu-section nav-section mobile-menu-item">`;
-        if (!isLogged) {
             html += `
-                <a href="#" id="mobileLoginBtn">Iniciar Sesión</a>
-                <a href="#" id="mobileRegisterBtn">Registrarse</a>
+                <div class="user-profile-section">
+                    <div class="user-profile-avatar">
+                        <!-- Avatar usa CSS ::before para mostrar "?" -->
+                    </div>
+                    <div class="user-profile-name">${userName}</div>
+                    <div class="user-profile-status">Sesión activa</div>
+                </div>
             `;
         } else {
-            html += `<a href="#perfil" id="mobileGoToProfile">Perfil</a>`;
-            if (userRole === "owner") {
-                html += `<a href="#opciones" id="mobileGoToAdmin">Admin</a>`;
-            }
-        }
-        html += `</li>`;
+            html += `
+                <div class="no-session-section">
+                    <div class="no-session-icon"></div>
+                    <div class="no-session-message">Sin sesión iniciada</div>
+                    <div class="no-session-subtitle">Inicia sesión para acceder a todas las funciones</div>
+                </div>
+            `;
+        }        // --- SEPARADOR 1: Después del perfil/estado ---
+        html += `<div class="menu-divider"><div class="divider-line"></div></div>`;
 
-        html += `<li class="menu-divider mobile-menu-item"><hr></li>`;
+        // --- Sección 2: Navegación principal ---
+        html += `<div class="navigation-section">`;
+        html += `<li class="mobile-menu-item"><a href="#inicio">Inicio</a></li>`;
 
-        // --- Sección 3: Navegación general SOLO en móvil/tablet ---
-        if (isMobile) {
-            html += `<li class="menu-section general-section mobile-menu-item">`;
-            html += `<a href="#inicio">Inicio</a>`;
-            if (isLogged) {
-                html += `<a href="#firmar">Firmar</a>`;
-                html += `<a href="#verificar">Verificar</a>`;
-            } else {
-                html += `<a href="#" class="disabled" id="mobileFirmarDisabled" style="pointer-events:none;opacity:0.5;">Firmar</a>`;
-                html += `<a href="#" class="disabled" id="mobileVerificarDisabled" style="pointer-events:none;opacity:0.5;">Verificar</a>`;
-            }
-            html += `<a href="#contacto">Contacto</a>`;
-            html += `</li>`;
-        }
-
-        // --- Cerrar sesión siempre que esté logueado ---
         if (isLogged) {
-            html += `<li class="menu-section logout-section mobile-menu-item"><a href="#" id="mobileLogoutBtn">Cerrar sesión</a></li>`;
+            html += `<li class="mobile-menu-item"><a href="#firmar">Firmar</a></li>`;
+            html += `<li class="mobile-menu-item"><a href="#verificar">Verificar</a></li>`;
+        } else {
+            html += `<li class="mobile-menu-item"><a href="#" class="restricted-access" data-action="firmar">Firmar</a></li>`;
+            html += `<li class="mobile-menu-item"><a href="#" class="restricted-access" data-action="verificar">Verificar</a></li>`;
+        }
+
+        html += `<li class="mobile-menu-item"><a href="#contacto">Contacto</a></li>`;
+        html += `</div>`;
+
+        // --- SEPARADOR 2: Después de la navegación principal ---
+        if (isLogged) {
+            html += `<div class="menu-divider"><div class="divider-line"></div></div>`;
+
+            // --- Sección 3: Opciones (Perfil/Admin) ---
+            html += `<div class="options-section">`;
+            html += `<li class="mobile-menu-item"><a href="#perfil" id="mobileGoToProfile">Perfil</a></li>`;
+            if (userRole === "owner") {
+                html += `<li class="mobile-menu-item"><a href="#opciones" id="mobileGoToAdmin">Admin</a></li>`;
+            }
+            html += `</div>`;
+
+            // --- SEPARADOR 3: Antes de cerrar sesión ---
+            html += `<div class="menu-divider"><div class="divider-line"></div></div>`;
+
+            // --- Sección 4: Cerrar sesión ---
+            html += `<div class="logout-section">`;
+            html += `<li class="mobile-menu-item"><a href="#" id="mobileLogoutBtn">Cerrar sesión</a></li>`;
+            html += `</div>`;
+        } else {
+            // --- SEPARADOR 2: Antes de autenticación (sin sesión) ---
+            html += `<div class="menu-divider"><div class="divider-line"></div></div>`;
+
+            // --- Sección de autenticación para usuarios sin sesión ---
+            html += `<div class="auth-section">`;
+            html += `<li class="mobile-menu-item"><a href="#" id="mobileLoginBtn">Iniciar Sesión</a></li>`;
+            html += `<li class="mobile-menu-item"><a href="#" id="mobileRegisterBtn">Registrarse</a></li>`;
+            html += `</div>`;
         }
 
         mobileMenuList.innerHTML = html;
@@ -394,20 +402,54 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Eventos para login/registro/logout en menú móvil ---
     document.addEventListener("click", function (e) {
+        // Verificar que el elemento clickeado está dentro del menú móvil
+        if (!e.target.closest(".header-mobile-menu")) return;
+
         // Login
         if (e.target && e.target.id === "mobileLoginBtn") {
             e.preventDefault();
+            e.stopPropagation();
             closeMobileMenu();
-            if (window.showLoginModal) window.showLoginModal();
+            setTimeout(() => {
+                if (window.showLoginModal) {
+                    window.showLoginModal();
+                } else {
+                    console.error("showLoginModal no está disponible");
+                }
+            }, 100);
             return;
         }
+
         // Registro
         if (e.target && e.target.id === "mobileRegisterBtn") {
             e.preventDefault();
+            e.stopPropagation();
             closeMobileMenu();
-            if (window.showRegisterModal) window.showRegisterModal();
+            setTimeout(() => {
+                if (window.showRegisterModal) {
+                    window.showRegisterModal();
+                } else {
+                    console.error("showRegisterModal no está disponible");
+                }
+            }, 100);
             return;
         }
+
+        // Manejo de acceso restringido (Firmar/Verificar sin sesión)
+        if (e.target && e.target.classList.contains("restricted-access")) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const action = e.target.getAttribute("data-action");
+            closeMobileMenu();
+
+            setTimeout(() => {
+                showRestrictedAccessModal(action);
+            }, 300);
+
+            return;
+        }
+
         // Logout
         if (e.target && e.target.id === "mobileLogoutBtn") {
             e.preventDefault();
@@ -422,20 +464,13 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         // Navegación - cerrar menú al navegar
-        if (e.target && (
-            e.target.id === "mobileGoToProfile" ||
-            e.target.id === "mobileGoToAdmin" ||
-            e.target.href && e.target.href.includes("#")
-        )) {
-            closeMobileMenu();
-            return;
-        }
-        // Evita acción en Firmar/Verificar deshabilitados
         if (
-            (e.target && e.target.id === "mobileFirmarDisabled") ||
-            (e.target && e.target.id === "mobileVerificarDisabled")
+            e.target &&
+            (e.target.id === "mobileGoToProfile" ||
+                e.target.id === "mobileGoToAdmin" ||
+                (e.target.href && e.target.href.includes("#") && !e.target.classList.contains("restricted-access")))
         ) {
-            e.preventDefault();
+            closeMobileMenu();
             return;
         }
     });
@@ -455,18 +490,27 @@ document.addEventListener("DOMContentLoaded", () => {
         if (backdrop) {
             console.log("- backdrop classList:", backdrop.classList.toString());
             console.log("- backdrop style:", backdrop.style.cssText);
-            console.log("- backdrop zIndex:", window.getComputedStyle(backdrop).zIndex);
+            console.log(
+                "- backdrop zIndex:",
+                window.getComputedStyle(backdrop).zIndex,
+            );
         }
 
         if (mobileMenu) {
             console.log("- mobileMenu classList:", mobileMenu.classList.toString());
             console.log("- mobileMenu style:", mobileMenu.style.cssText);
-            console.log("- mobileMenu zIndex:", window.getComputedStyle(mobileMenu).zIndex);
+            console.log(
+                "- mobileMenu zIndex:",
+                window.getComputedStyle(mobileMenu).zIndex,
+            );
         }
 
         if (closeButton) {
             console.log("- closeButton style:", closeButton.style.cssText);
-            console.log("- closeButton zIndex:", window.getComputedStyle(closeButton).zIndex);
+            console.log(
+                "- closeButton zIndex:",
+                window.getComputedStyle(closeButton).zIndex,
+            );
         }
     }
 
@@ -477,9 +521,9 @@ document.addEventListener("DOMContentLoaded", () => {
     function setupCloseButtonListener() {
         if (closeButton) {
             // Remover listener previo si existe
-            closeButton.removeEventListener('click', handleCloseButtonClick);
+            closeButton.removeEventListener("click", handleCloseButtonClick);
             // Añadir nuevo listener
-            closeButton.addEventListener('click', handleCloseButtonClick, true);
+            closeButton.addEventListener("click", handleCloseButtonClick, true);
         }
     }
 
@@ -497,4 +541,74 @@ document.addEventListener("DOMContentLoaded", () => {
             closeMobileMenu();
         }
     });
+
+    // Función para mostrar modal de acceso restringido
+    function showRestrictedAccessModal(action) {
+        const actionText = action === "firmar" ? "firmar documentos" : "verificar documentos";
+
+        // Crear el modal
+        const modal = document.createElement('div');
+        modal.className = 'restricted-access-modal';
+        modal.innerHTML = `
+            <div class="restricted-access-backdrop"></div>
+            <div class="restricted-access-content">
+                <div class="restricted-access-icon">🔒</div>
+                <h3>Acceso Restringido</h3>
+                <p>Para <strong>${actionText}</strong> necesitas iniciar sesión en tu cuenta.</p>
+                <div class="restricted-access-buttons">
+                    <button class="btn-login-now">Iniciar Sesión</button>
+                    <button class="btn-cancel">Cancelar</button>
+                </div>
+            </div>
+        `;
+
+        // Añadir estilos inline para el modal
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+
+        document.body.appendChild(modal);
+
+        // Event listeners para los botones
+        const btnLogin = modal.querySelector('.btn-login-now');
+        const btnCancel = modal.querySelector('.btn-cancel');
+        const backdrop = modal.querySelector('.restricted-access-backdrop');
+
+        function closeModal() {
+            document.body.removeChild(modal);
+        }
+
+        btnLogin.addEventListener('click', () => {
+            closeModal();
+            setTimeout(() => {
+                if (window.showLoginModal) {
+                    window.showLoginModal();
+                } else {
+                    console.error("showLoginModal no está disponible");
+                }
+            }, 100);
+        });
+
+        btnCancel.addEventListener('click', closeModal);
+        backdrop.addEventListener('click', closeModal);
+
+        // Cerrar con Escape
+        function handleEscape(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', handleEscape);
+            }
+        }
+        document.addEventListener('keydown', handleEscape);
+    }
+
+    // Llama a la función al cargar y cada vez que cambie el estado de sesión
 });

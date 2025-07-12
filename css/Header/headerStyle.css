@@ -28,10 +28,7 @@ header {
 }
 
 .header-center {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  display: none !important;
   z-index: 0;
 }
 

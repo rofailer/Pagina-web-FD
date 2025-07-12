@@ -41,15 +41,7 @@
           <span id="tituloWeb">Firmas Digitales FD</span>
         </a>
       </div>
-      <!-- Botón hamburguesa aquí -->
-      <nav class="header-center">
-        <ul>
-          <li><a href="#inicio">Inicio</a></li>
-          <li><a href="#firmar">Firmar</a></li>
-          <li><a href="#verificar">Verificar</a></li>
-          <li><a href="#contacto">Contacto</a></li>
-        </ul>
-      </nav>
+      <!-- Navegación movida al menú hamburguesa -->
       <div class="header-right">
         <ul id="authMenu">
           <li id="loginBtnLi"><a href="#" id="loginBtn">Iniciar Sesión</a></li>
@@ -355,7 +347,12 @@
 
         <div id="signStep3" class="step-content" style="display: none">
           <p>Documento firmado correctamente</p>
-          <button id="downloadSignedBtn">Descargar documento avalado</button>
+          <div class="success-buttons-container">
+            <button id="downloadSignedBtn">Descargar documento avalado</button>
+            <button id="goToVerifyBtn" class="btn-secondary">
+              Verificar este documento
+            </button>
+          </div>
           <button id="restartSignProcessBtn" style="display: none">
             Volver a empezar
           </button>
@@ -382,13 +379,91 @@
         <div id="verifyStep1" class="step-content">
           <div class="input-title">Selecciona el profesor o tutor</div>
           <form id="verifyProfesorForm">
-            <div class="select-container">
-              <select id="profesorSelect">
-                <option value="">Selecciona un profesor/tutor</option>
-              </select>
-              <div class="select-arrow">▼</div>
+            <!-- Sistema de búsqueda y filtrado de profesores -->
+            <div class="professor-search-container">
+              <div class="search-controls">
+                <div class="search-input-wrapper">
+                  <input
+                    type="text"
+                    id="professorSearchInput"
+                    placeholder="Buscar profesor por nombre..."
+                    class="search-input"
+                  />
+                  <span class="search-icon">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <circle
+                        cx="11"
+                        cy="11"
+                        r="8"
+                        stroke="#9CA3AF"
+                        stroke-width="2"
+                      />
+                      <path
+                        d="m21 21-4.35-4.35"
+                        stroke="#9CA3AF"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </span>
+                </div>
+                <div class="filter-controls">
+                  <select id="sortOrder" class="sort-select">
+                    <option value="asc">A-Z</option>
+                    <option value="desc">Z-A</option>
+                  </select>
+                  <button
+                    type="button"
+                    id="clearSearch"
+                    class="clear-btn"
+                    title="Limpiar búsqueda"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              <!-- Lista de profesores -->
+              <div class="professors-list" id="professorsList">
+                <div class="loading-professors">
+                  <span class="loader-small"></span>
+                  <span>Cargando profesores...</span>
+                </div>
+              </div>
+
+              <!-- Profesor seleccionado -->
+              <div
+                class="selected-professor"
+                id="selectedProfessor"
+                style="display: none"
+              >
+                <div class="selected-label">Profesor seleccionado:</div>
+                <div class="selected-info">
+                  <span class="selected-name" id="selectedProfessorName"></span>
+                  <button
+                    type="button"
+                    id="changeProfessor"
+                    class="change-btn-circular"
+                    title="Cambiar profesor"
+                  >
+                    <img src="recursos/cambiar.png" alt="Cambiar" />
+                  </button>
+                </div>
+              </div>
             </div>
-            <button type="button" id="acceptProfesorBtn" class="btn-primary">
+
+            <button
+              type="button"
+              id="acceptProfesorBtn"
+              class="btn-primary"
+              disabled
+            >
               Continuar
             </button>
           </form>
@@ -457,7 +532,6 @@
         <!-- Paso 4: Resultado de verificación -->
         <div id="verifyStep4" class="step-content" style="display: none">
           <div id="verificationResult"></div>
-          <div id="verificationDetails"></div>
           <div
             style="
               margin-top: 20px;
@@ -591,7 +665,7 @@
                   </span>
                   Generar nueva llave
                 </button>
-                <ul id="keysList" class="keys-list">
+                <ul id="profileKeysList" class="keys-list">
                   <!-- Las llaves del usuario se cargarán aquí dinámicamente -->
                 </ul>
               </div>

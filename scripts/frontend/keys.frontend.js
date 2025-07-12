@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     // Referencias a elementos
     const generateKeysButton = document.getElementById("generateKeysButton");
-    const keysList = document.getElementById("keysList");
+    const keysList = document.getElementById("profileKeysList"); // Cambio aquí para usar el ID de perfil
     const activeKeyElement = document.getElementById("activeKey");
 
     // Función para cargar la llave activa
@@ -84,7 +84,14 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelectorAll(".select-key-btn").forEach(btn => {
                 btn.addEventListener("click", function () {
                     const keyId = this.getAttribute("data-key-id");
-                    if (keyId) selectKey(keyId);
+                    if (keyId) {
+                        // Usar la función centralizada en lugar de la local
+                        if (window.selectKey) {
+                            window.selectKey(parseInt(keyId));
+                        } else {
+                            selectKeyProfile(keyId);
+                        }
+                    }
                 });
             });
         } catch (err) {
@@ -123,8 +130,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Función para seleccionar una llave activa
-    window.selectKey = async (keyId) => {
+    // Función para seleccionar una llave activa - CENTRALIZADA
+    window.selectKeyProfile = async (keyId) => {
         try {
             const resp = await fetch('/select-key', {
                 method: 'POST',
@@ -137,8 +144,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await resp.json();
             if (data.success) {
                 alert("Llave activa actualizada correctamente");
+                // Recargar las llaves en perfil
                 if (typeof loadKeys === "function") loadKeys();
                 if (typeof loadActiveKey === "function") loadActiveKey();
+
+                // También notificar a la sección de firmar si existe
+                if (window.refreshSignKeys) {
+                    window.refreshSignKeys();
+                }
             } else {
                 alert(data.error || "Error al seleccionar la llave");
             }
@@ -151,5 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadKeys();
     loadActiveKey();
 
+    // Hacer funciones globales para coordinación entre archivos
     window.loadActiveKey = loadActiveKey;
+    window.loadKeys = loadKeys;
 });

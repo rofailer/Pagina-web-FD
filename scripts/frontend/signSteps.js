@@ -13,8 +13,9 @@ document.addEventListener("DOMContentLoaded", () => {
     ];
     const indicatorSteps = document.querySelectorAll("#signStepIndicator .step");
 
-    // --- Utilidad para mostrar el paso currente con animaciones ---
-    function showStep(step) {
+    // --- Utilidad para mostrar el paso actual con// Variables globales
+    window.firmaEnCurso = false;
+    window.verificacionEnCurso = false; function showStep(step) {
         // Actualizar contenido de pasos
         steps.forEach((div, i) => {
             if (i === step - 1) {
@@ -262,6 +263,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Función para cargar llaves del usuario ---
     async function loadUserKeys() {
         const keysListContainer = document.getElementById("keysList");
+
+        if (!keysListContainer) {
+            console.error("❌ No se encontró el contenedor keysList");
+            return;
+        }
+
         const token = localStorage.getItem("token");
 
         if (!token) {
@@ -274,7 +281,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const response = await fetch('/api/user-keys', {
+            const response = await fetch('/list-keys', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -283,8 +290,8 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                userKeys = data.keys || [];
+                const keys = await response.json();
+                userKeys = keys || [];
                 displayKeys(userKeys);
             } else {
                 throw new Error('Error al cargar las llaves');
@@ -301,6 +308,11 @@ document.addEventListener("DOMContentLoaded", () => {
     function displayKeys(keys) {
         const keysListContainer = document.getElementById("keysList");
 
+        if (!keysListContainer) {
+            console.error("❌ No se encontró el contenedor keysList");
+            return;
+        }
+
         if (!keys || keys.length === 0) {
             keysListContainer.innerHTML = `
                 <div class="no-keys-message">
@@ -311,47 +323,177 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const keysHTML = keys.map(key => {
-            const expDate = new Date(key.expiration_date);
-            const isExpired = expDate <= new Date();
-            const expStatus = isExpired ? 'Expirada' : `Expira: ${expDate.toLocaleDateString()}`;
-            const expClass = isExpired ? 'expired' : 'valid';
+        // Obtener la llave activa actual
+        let activeKeyId = null;
+        fetch('/active-key', {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.activeKey) {
+                    // Buscar el ID de la llave activa por nombre
+                    const activeKey = keys.find(key => key.key_name === data.activeKey);
+                    if (activeKey) {
+                        activeKeyId = activeKey.id;
+                        selectedKeyId = activeKeyId; // Establecer automáticamente
+                    }
+                }
 
-            return `
-                <div class="key-item ${isExpired ? 'disabled' : ''}" data-key-id="${key.id}" ${!isExpired ? `onclick="selectKey(${key.id})"` : ''}>
-                    <div class="key-name">${key.key_name || `Llave ${key.id}`}</div>
-                    <div class="key-algorithm">Cifrado: ${key.encryption_type || 'aes-256-cbc'}</div>
-                    <div class="key-created">Creada: ${new Date(key.created_at).toLocaleDateString()}</div>
-                    <div class="key-expiration ${expClass}">${expStatus}</div>
-                    ${isExpired ? '<div class="key-expired-label">EXPIRADA</div>' : ''}
-                </div>
-            `;
-        }).join('');
+                renderKeysList();
+            })
+            .catch(() => renderKeysList());
 
-        keysListContainer.innerHTML = keysHTML;
+        function renderKeysList() {
+            const keysHTML = keys.map(key => {
+                const expDate = new Date(key.expiration_date);
+                const isExpired = expDate <= new Date();
+                const expStatus = isExpired ? 'Expirada' : `Expira: ${expDate.toLocaleDateString()}`;
+                const expClass = isExpired ? 'expired' : 'valid';
+                const isSelected = activeKeyId === key.id;
+
+                return `
+                    <div class="key-item ${isExpired ? 'disabled' : ''} ${isSelected ? 'selected' : ''}" data-key-id="${key.id}">
+                        <div class="key-name">${key.key_name || `Llave ${key.id}`}</div>
+                        <div class="key-algorithm">Cifrado: ${key.encryption_type || 'aes-256-cbc'}</div>
+                        <div class="key-created">Creada: ${new Date(key.created_at).toLocaleDateString()}</div>
+                        <div class="key-expiration ${expClass}">${expStatus}</div>
+                        ${isSelected ? '<div class="key-active-label">ACTIVA</div>' : ''}
+                        ${isExpired ? '<div class="key-expired-label">EXPIRADA</div>' : ''}
+                    </div>
+                `;
+            }).join('');
+
+            keysListContainer.innerHTML = keysHTML;
+
+            // Agregar event listeners después de crear el HTML
+            attachKeyClickListeners();
+
+            // Si hay una llave activa, mostrar el botón de firmar
+            if (activeKeyId) {
+                const signButton = document.getElementById("signDocumentButton");
+                if (signButton) {
+                    signButton.style.display = "";
+                }
+            }
+        }
     }
 
-    // --- Función para seleccionar una llave ---
-    window.selectKey = function (keyId) {
-        // Remover selección anterior
-        document.querySelectorAll('.key-item').forEach(item => {
+    // --- Función para agregar event listeners a las llaves ---
+    function attachKeyClickListeners() {
+        const keyItems = document.querySelectorAll('.key-item:not(.disabled)');
+
+        keyItems.forEach(item => {
+            const keyId = item.getAttribute('data-key-id');
+
+            // Remover listeners anteriores para evitar duplicados
+            item.replaceWith(item.cloneNode(true));
+        });
+
+        // Volver a obtener los elementos después del clonado
+        const newKeyItems = document.querySelectorAll('.key-item:not(.disabled)');
+
+        newKeyItems.forEach(item => {
+            const keyId = item.getAttribute('data-key-id');
+
+            item.addEventListener('click', function (e) {
+                e.preventDefault();
+                console.log("🖱️ Click en llave:", keyId);
+                if (keyId) {
+                    selectKey(parseInt(keyId));
+                }
+            });
+
+            // Agregar cursor pointer para mejor UX
+            item.style.cursor = 'pointer';
+        });
+
+        console.log("🔗 Event listeners agregados a", newKeyItems.length, "llaves");
+    }
+
+    // --- Función CENTRALIZADA para seleccionar una llave ---
+    window.selectKey = async function (keyId) {
+        console.log("🔑 Seleccionando llave ID:", keyId);
+
+        try {
+            // Llamar al backend para establecer la llave activa
+            const response = await fetch('/select-key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ keyId })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                // Actualizar la selección visual en la sección de firmar
+                updateKeySelection(keyId);
+
+                // Establecer la llave seleccionada
+                selectedKeyId = keyId;
+
+                // Marcar proceso más avanzado en curso
+                window.firmaEnCurso = true;
+
+                // Mostrar botón de firmar
+                const signButton = document.getElementById("signDocumentButton");
+                if (signButton) {
+                    signButton.style.display = "";
+                }
+
+                showNotification(`Llave "${data.activeKeyName}" seleccionada correctamente`, "success");
+
+                // También actualizar la sección de perfil si las funciones existen
+                if (window.loadKeys) {
+                    setTimeout(() => window.loadKeys(), 100);
+                }
+                if (window.loadActiveKey) {
+                    setTimeout(() => window.loadActiveKey(), 100);
+                }
+            } else {
+                showNotification(data.error || "Error al seleccionar la llave", "error");
+            }
+        } catch (err) {
+            console.error('Error al seleccionar la llave:', err);
+            showNotification("Error al seleccionar la llave", "error");
+        }
+    };
+
+    // --- Función para refrescar llaves desde otras secciones ---
+    window.refreshSignKeys = function () {
+        console.log("🔄 Refrescando llaves en sección de firmar...");
+        if (currentStep === 2) {
+            loadUserKeys();
+        }
+    };
+
+    // --- Función para actualizar la selección visual ---
+    function updateKeySelection(keyId) {
+        console.log("🎨 Actualizando selección visual para llave:", keyId);
+
+        // Remover selección anterior de todos los elementos
+        const allKeyItems = document.querySelectorAll('.key-item');
+        allKeyItems.forEach(item => {
             item.classList.remove('selected');
+            console.log("Removiendo 'selected' de:", item.getAttribute('data-key-id'));
         });
 
         // Seleccionar nueva llave
         const selectedItem = document.querySelector(`[data-key-id="${keyId}"]`);
         if (selectedItem) {
             selectedItem.classList.add('selected');
-            selectedKeyId = keyId;
+            console.log("✅ Agregando 'selected' a llave:", keyId);
 
-            // Marcar proceso más avanzado en curso
-            window.firmaEnCurso = true;
-
-            // Mostrar botón de firmar
-            document.getElementById("signDocumentButton").style.display = "";
-            showNotification("Llave seleccionada correctamente", "success");
+            // Agregar efecto visual adicional
+            selectedItem.style.transform = 'scale(1.02)';
+            setTimeout(() => {
+                selectedItem.style.transform = '';
+            }, 200);
+        } else {
+            console.error("❌ No se encontró el elemento con data-key-id:", keyId);
         }
-    };
+    }
 
     // --- Función para navegar al perfil ---
     window.navigateToProfile = function () {
@@ -365,6 +507,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Event listeners ---
     document.getElementById("restartSignProcessBtn").onclick = limpiarFormulariosFirmar;
 
+    // --- Botón para ir a verificar después de firmar ---
+    document.getElementById("goToVerifyBtn").onclick = () => {
+        if (window.showSection) {
+            window.showSection('verificar');
+        } else {
+            // Fallback si showSection no está disponible
+            window.location.href = '#verificar';
+        }
+    };
+
     // File input listener
     const fileInput = document.getElementById("fileInput");
     if (fileInput) {
@@ -374,7 +526,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --- Estado inicial ---
-    showStep(1);    // --- Función para actualizar la visualización del file input ---
+    showStep(1);
+
+    // Cargar llaves al inicializar
+    loadUserKeys();    // --- Función para actualizar la visualización del file input ---
     function updateFileInputDisplay(input) {
         const label = input.nextElementSibling;
         const textSpan = label.querySelector('.file-input-text');
@@ -405,8 +560,24 @@ document.addEventListener("DOMContentLoaded", () => {
     // Hacer la función global para frontend.js
     window.limpiarFormulariosFirmar = limpiarFormulariosFirmar;
     window.updateFileInputDisplay = updateFileInputDisplay;
+    window.loadUserKeys = loadUserKeys;
 });
 
 // Variables globales
 window.firmaEnCurso = false;
-window.verificacionEnCurso = false;
+window.verificacionEnCurso = false;    // --- Botón para ir a verificar después de firmar ---
+document.getElementById("goToVerifyBtn").onclick = () => {
+    if (window.showSection) {
+        window.showSection('verificar');
+        // Iniciar verificación directa sin seleccionar profesor
+        setTimeout(() => {
+            if (window.startVerificationWithoutProfessor) {
+                window.startVerificationWithoutProfessor();
+                showNotification("� Listo para verificar tu documento", "success");
+            }
+        }, 200);
+    } else {
+        // Fallback si showSection no está disponible
+        window.location.href = '#verificar';
+    }
+};

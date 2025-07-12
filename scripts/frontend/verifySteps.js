@@ -2,6 +2,45 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Variables de estado ---
     let currentStep = 1;
     let selectedProfesorId = null;
+    let allProfessors = []; // Lista completa de profesores
+    let filteredProfessors = []; // Lista filtrada
+
+    // --- Función para crear mensajes estandarizados ---
+    function createStandardAlert(type, icon, title, content, details = null, suggestion = null) {
+        const alertClass = `alert-message ${type}`;
+
+        let detailsHtml = '';
+        if (details && details.length > 0) {
+            detailsHtml = `
+                <div class="alert-details">
+                    <ul>
+                        ${details.map(detail => `<li>${detail}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        let suggestionHtml = '';
+        if (suggestion) {
+            suggestionHtml = `
+                <div class="alert-suggestion">
+                    <strong>💡 Sugerencia:</strong> ${suggestion}
+                </div>
+            `;
+        }
+
+        return `
+            <div class="${alertClass}">
+                <div class="alert-title">
+                    <span class="alert-icon">${icon}</span>
+                    ${title}
+                </div>
+                <div class="alert-content">${content}</div>
+                ${detailsHtml}
+                ${suggestionHtml}
+            </div>
+        `;
+    }
 
     // --- Elementos de pasos y barra de progreso ---
     const steps = [
@@ -21,63 +60,316 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Cargar profesores y mostrar paso 1 ---
     function cargarProfesoresYMostrarPaso1() {
+        console.log("🚀 INICIO: cargarProfesoresYMostrarPaso1()");
+
         const token = localStorage.getItem("token");
+        console.log("🔐 Token obtenido del localStorage:", token ? "Existe" : "No existe");
+
         if (!token) {
+            console.log("❌ No hay token, mostrando modal de login");
             if (window.showLoginModal) window.showLoginModal();
-            else alert("Debes iniciar sesión para usar esta función.");
+            else showNotification("Debes iniciar sesión para usar esta función.", "error");
             return;
         }
+
+        // Verificar que existe el elemento professorsList
+        const professorsList = document.getElementById("professorsList");
+        console.log("📋 Elemento professorsList encontrado:", !!professorsList);
+
+        if (!professorsList) {
+            console.error("❌ No se encontró el elemento professorsList");
+            return;
+        }
+
+        // Mostrar loading
+        professorsList.innerHTML = `
+            <div class="loading-professors">
+                <span class="loader-small"></span>
+                <span>Cargando profesores...</span>
+            </div>
+        `;
+        console.log("⏳ Loading mostrado en professorsList");
+
+        console.log("🔍 Iniciando fetch a /api/profesores...");
+        console.log("🔑 Headers a enviar:", { Authorization: `Bearer ${token.substring(0, 20)}...` });
+
         fetch("/api/profesores", {
             headers: { Authorization: `Bearer ${token}` }
         })
             .then(async res => {
+                console.log("📡 Respuesta recibida del servidor:");
+                console.log("   - Status:", res.status);
+                console.log("   - StatusText:", res.statusText);
+                console.log("   - Headers:", res.headers);
+
                 if (!res.ok) {
-                    const data = await res.json();
+                    console.log("❌ Respuesta no exitosa, procesando error...");
+                    let errorData;
+                    try {
+                        errorData = await res.json();
+                        console.log("   - Error data:", errorData);
+                    } catch (parseError) {
+                        console.log("   - Error parseando JSON del error:", parseError);
+                        errorData = { error: "Error de comunicación con el servidor" };
+                    }
+
                     if (window.showLoginModal) window.showLoginModal();
-                    else alert(data.error || "Sesión expirada. Por favor, inicia sesión de nuevo.");
+                    else showNotification(errorData.error || "Sesión expirada. Por favor, inicia sesión de nuevo.", "error");
                     localStorage.removeItem("token");
                     return [];
                 }
+
+                console.log("✅ Respuesta exitosa, parseando JSON...");
                 return res.json();
             })
             .then(data => {
-                if (!Array.isArray(data)) return;
-                const select = document.getElementById("profesorSelect");
-                select.innerHTML = '<option value="">Selecciona un profesor/tutor</option>';
-                data.forEach(prof => {
-                    const option = document.createElement("option");
-                    option.value = prof.id;
-                    option.textContent = prof.nombre;
-                    select.appendChild(option);
-                });
-                showStep(1);
+                console.log("� Datos finales recibidos:");
+                console.log("   - Tipo:", typeof data);
+                console.log("   - Es array:", Array.isArray(data));
+                console.log("   - Longitud:", data?.length);
+                console.log("   - Contenido:", data);
+
+                if (!Array.isArray(data)) {
+                    console.error("❌ Los datos no son un array:", data);
+                    showNotification("Error al cargar la lista de profesores", "error");
+                    professorsList.innerHTML = `
+                        <div class="no-professors">
+                            <p>Error: Los datos recibidos no son válidos.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (data.length === 0) {
+                    console.log("⚠️ No se encontraron profesores en la base de datos");
+                    professorsList.innerHTML = `
+                        <div class="no-professors">
+                            <p>No hay profesores registrados en el sistema.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                console.log("✅ Profesores válidos recibidos, actualizando variables globales...");
+                allProfessors = data;
+                filteredProfessors = [...data];
+
+                console.log("🎨 Llamando a displayProfessors...");
+                displayProfessors(filteredProfessors);
+
+                console.log("🔧 Configurando search listeners...");
+                setupSearchListeners();
+
+                // Solo mostrar paso 1 si no estamos ya en él
+                if (currentStep !== 1) {
+                    console.log("📄 Mostrando paso 1...");
+                    showStep(1);
+                } else {
+                    console.log("📄 Ya estamos en el paso 1, no es necesario cambiar");
+                }
+
+                console.log("🎉 cargarProfesoresYMostrarPaso1() completado exitosamente");
+            })
+            .catch(error => {
+                console.error("💥 ERROR EN FETCH:");
+                console.error("   - Error object:", error);
+                console.error("   - Error message:", error.message);
+                console.error("   - Error stack:", error.stack);
+
+                showNotification("Error al cargar profesores", "error");
+                professorsList.innerHTML = `
+                    <div class="no-professors">
+                        <p>Error de conexión. Por favor, intenta de nuevo.</p>
+                        <p>Detalles: ${error.message}</p>
+                    </div>
+                `;
             });
     }
 
-    // --- Listener para el select de profesor para marcar proceso en curso ---
-    const profesorSelect = document.getElementById("profesorSelect");
-    if (profesorSelect) {
-        profesorSelect.addEventListener('change', function () {
-            if (this.value) {
-                window.verificacionEnCurso = true; // Marcar proceso en curso tan pronto como se selecciona
+    // --- Función para mostrar la lista de profesores ---
+    function displayProfessors(professors) {
+        const professorsList = document.getElementById("professorsList");
+
+        if (!professors || professors.length === 0) {
+            professorsList.innerHTML = `
+                <div class="no-professors">
+                    <p>No se encontraron profesores.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const professorsHTML = professors.map(prof => `
+            <div class="professor-item" data-professor-id="${prof.id}" data-professor-name="${prof.nombre}">
+                <span class="professor-name">${prof.nombre}</span>
+                <span class="professor-id">ID: ${prof.id}</span>
+            </div>
+        `).join('');
+
+        professorsList.innerHTML = professorsHTML;
+
+        // Agregar event listeners a los items
+        const professorItems = professorsList.querySelectorAll('.professor-item');
+        professorItems.forEach(item => {
+            item.addEventListener('click', () => {
+                selectProfessor(
+                    item.dataset.professorId,
+                    item.dataset.professorName
+                );
+            });
+        });
+    }
+
+    // --- Función para seleccionar un profesor ---
+    function selectProfessor(professorId, professorName) {
+        selectedProfesorId = professorId;
+
+        // Actualizar selección visual
+        const allItems = document.querySelectorAll('.professor-item');
+        allItems.forEach(item => item.classList.remove('selected'));
+
+        const selectedItem = document.querySelector(`[data-professor-id="${professorId}"]`);
+        if (selectedItem) {
+            selectedItem.classList.add('selected');
+        }
+
+        // Mostrar profesor seleccionado de forma compacta
+        const selectedProfessorDiv = document.getElementById('selectedProfessor');
+        const selectedProfessorName = document.getElementById('selectedProfessorName');
+
+        selectedProfessorName.textContent = professorName;
+        selectedProfessorDiv.style.display = 'block';
+
+        // Habilitar botón continuar
+        const acceptBtn = document.getElementById('acceptProfesorBtn');
+        acceptBtn.disabled = false;
+
+        // Marcar proceso en curso
+        window.verificacionEnCurso = true;
+
+        showNotification(`Profesor "${professorName}" seleccionado`, "success");
+    }
+
+    // --- Función para filtrar y ordenar profesores ---
+    function filterAndSortProfessors() {
+        const searchInput = document.getElementById('professorSearchInput');
+        const sortOrder = document.getElementById('sortOrder');
+
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const order = sortOrder.value;
+
+        // Filtrar por término de búsqueda
+        let filtered = allProfessors.filter(prof =>
+            prof.nombre.toLowerCase().includes(searchTerm)
+        );
+
+        // Ordenar
+        filtered.sort((a, b) => {
+            if (order === 'asc') {
+                return a.nombre.localeCompare(b.nombre);
             } else {
-                // Solo limpiar si no hay archivos seleccionados
-                if (!document.getElementById("signedFile")?.files?.length &&
-                    !document.getElementById("originalFile")?.files?.length) {
-                    window.verificacionEnCurso = false;
-                }
+                return b.nombre.localeCompare(a.nombre);
             }
         });
+
+        filteredProfessors = filtered;
+        displayProfessors(filteredProfessors);
+    }
+
+    // --- Event listeners para búsqueda y filtrado ---
+    function setupSearchListeners() {
+        const searchInput = document.getElementById('professorSearchInput');
+        const sortOrder = document.getElementById('sortOrder');
+        const clearSearch = document.getElementById('clearSearch');
+        const changeProfessor = document.getElementById('changeProfessor');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', filterAndSortProfessors);
+        }
+
+        if (sortOrder) {
+            sortOrder.addEventListener('change', filterAndSortProfessors);
+        }
+
+        if (clearSearch) {
+            clearSearch.addEventListener('click', () => {
+                if (searchInput) searchInput.value = '';
+                if (sortOrder) sortOrder.value = 'asc';
+                filterAndSortProfessors();
+            });
+        }
+
+        if (changeProfessor) {
+            changeProfessor.addEventListener('click', () => {
+                // Resetear selección
+                selectedProfesorId = null;
+                const selectedProfDiv = document.getElementById('selectedProfessor');
+                const acceptBtn = document.getElementById('acceptProfesorBtn');
+
+                if (selectedProfDiv) selectedProfDiv.style.display = 'none';
+                if (acceptBtn) acceptBtn.disabled = true;
+
+                // Limpiar selección visual
+                const allItems = document.querySelectorAll('.professor-item');
+                allItems.forEach(item => item.classList.remove('selected'));
+            });
+        }
+    }
+
+    // --- Función para mostrar notificaciones ---
+    function showNotification(message, type = "info") {
+        // Remover notificación anterior si existe
+        const existingNotification = document.querySelector('.step-notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+
+        const notification = document.createElement('div');
+        notification.className = `step-notification ${type}`;
+        notification.textContent = message;
+
+        // Estilos básicos para la notificación
+        Object.assign(notification.style, {
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            color: 'white',
+            fontWeight: '600',
+            fontSize: '14px',
+            zIndex: '10000',
+            animation: 'slideInRight 0.3s ease',
+            maxWidth: '300px',
+            wordWrap: 'break-word'
+        });
+
+        // Colores según el tipo
+        const colors = {
+            success: '#4caf50',
+            error: '#f44336',
+            warning: '#ff9800',
+            info: '#2196f3'
+        };
+        notification.style.background = colors[type] || colors.info;
+
+        document.body.appendChild(notification);
+
+        // Auto-remover después de 3 segundos
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, 3000);
     }
 
     // --- Paso 1: Seleccionar profesor ---
     document.getElementById("acceptProfesorBtn").onclick = () => {
-        const select = document.getElementById("profesorSelect");
-        if (!select.value) {
-            alert("Selecciona un profesor o tutor.");
+        if (!selectedProfesorId) {
+            showNotification("Selecciona un profesor o tutor.", "warning");
             return;
         }
-        selectedProfesorId = select.value;
         window.verificacionEnCurso = true; // Asegurar que está marcado
         showStep(2);
     };
@@ -106,15 +398,15 @@ document.addEventListener("DOMContentLoaded", () => {
         // Mostrar loader y texto "Verificando..." antes de hacer la petición
         showStep(4);
         const resultElem = document.getElementById("verificationResult");
-        const detailsElem = document.getElementById("verificationDetails");
         const continueBtn = document.getElementById("continueVerifyBtn");
         const retryKeyBtn = document.getElementById("retryKeyBtn");
 
         resultElem.innerHTML = `
-            <span class="loader" style="vertical-align: middle"></span>
-            <span style="margin-left: 10px;">Verificando...</span>
+            <div style="display: flex; align-items: center; justify-content: center; flex-direction: column; height: 100%; width: 100%;">
+                <span class="loader" style="margin-bottom: 16px;"></span>
+                <span style="font-size: 1.0em; color: var(--primary-color); font-weight: 500;">Verificando...</span>
+            </div>
         `;
-        detailsElem.textContent = "";
         continueBtn.style.display = "none";
         retryKeyBtn.style.display = "none";
         document.getElementById("restartVerifyProcessBtn").style.display = "none"; // Oculta siempre al entrar
@@ -122,8 +414,19 @@ document.addEventListener("DOMContentLoaded", () => {
         // --- Procesar verificación ---
         const signedFile = document.getElementById("signedFile").files[0];
         const formData = new FormData();
+
+        // Debug logs
+        console.log("=== FRONTEND DEBUG ===");
+        console.log("selectedProfesorId:", selectedProfesorId);
+        console.log("signedFile:", signedFile);
+        console.log("originalFile:", originalFile);
+        console.log("signedFile name:", signedFile?.name);
+        console.log("originalFile name:", originalFile?.name);
+
         formData.append("signedFile", signedFile);
         formData.append("originalFile", originalFile);
+
+        // Solo agregar profesorId (siempre requerido)
         formData.append("profesorId", selectedProfesorId);
 
         fetch("/verify-document", {
@@ -136,78 +439,243 @@ document.addEventListener("DOMContentLoaded", () => {
                     continueBtn.style.display = "none";
                     retryKeyBtn.style.display = "none";
                     document.getElementById("restartVerifyProcessBtn").style.display = "none";
-                    detailsElem.textContent = "";
 
                     if (response.ok) {
                         const data = await response.json();
                         if (data.reason === "key_mismatch") {
-                            resultElem.textContent = "❌ El profesor/tutor seleccionado NO avaló este documento.";
-                            resultElem.style.color = "orange";
-                            detailsElem.innerHTML = `
-<ul class="no-bullets">
-  <li>La llave pública del profesor/tutor seleccionado no coincide con la firma digital.</li>
-  <li>No se puede verificar la autenticidad del aval.</li>
-</ul>
-`;
+                            resultElem.innerHTML = createStandardAlert(
+                                'warning',
+                                '⚠️',
+                                'Profesor incorrecto',
+                                'El profesor/tutor seleccionado NO avaló este documento.',
+                                [
+                                    'La llave pública del profesor no coincide con la firma digital.',
+                                    'No se puede verificar la autenticidad del aval.',
+                                    'Es necesario seleccionar el profesor correcto.'
+                                ],
+                                'Intenta seleccionar otro profesor que pueda haber avalado este documento.'
+                            );
                             retryKeyBtn.style.display = "inline-block";
+                            showNotification("El profesor seleccionado no avaló este documento", "warning");
                         }
                         else if (data.reason === "invalid_signature") {
-                            resultElem.textContent = "⚠️ El profesor/tutor sí avaló el documento, pero el archivo original NO coincide.";
-                            resultElem.style.color = "red";
-                            detailsElem.innerHTML = `
-<ul class="no-bullets">
-  <li>La llave pública coincide con la firma digital.</li>
-  <li>El documento original ha sido modificado o no corresponde con el aval.</li>
-</ul>
-`;
+                            resultElem.innerHTML = createStandardAlert(
+                                'error',
+                                '❌',
+                                'Documento modificado',
+                                'El profesor/tutor sí avaló el documento, pero el archivo original NO coincide.',
+                                [
+                                    'La llave pública coincide con la firma digital.',
+                                    'El documento original ha sido modificado después del aval.',
+                                    'La integridad del documento está comprometida.'
+                                ],
+                                'Verifica que el archivo original sea exactamente el mismo que se firmó inicialmente.'
+                            );
                             continueBtn.style.display = "inline-block";
+                            showNotification("El archivo original no coincide con el documento avalado", "error");
                         }
                         else if (data.valid && data.professorMatch && data.signatureMatch) {
-                            resultElem.textContent = "✅ El profesor/tutor avaló el documento y la firma digital es válida.";
-                            resultElem.style.color = "green";
-                            detailsElem.innerHTML = `
-<ul class="no-bullets">
-  <li>La llave pública coincide con la firma digital.</li>
-  <li>El documento original no ha sido modificado.</li>
-</ul>
-`;
+                            resultElem.innerHTML = createStandardAlert(
+                                'success',
+                                '✅',
+                                'Verificación exitosa',
+                                'El profesor/tutor avaló el documento y la firma digital es válida.',
+                                [
+                                    'La llave pública coincide con la firma digital.',
+                                    'El documento original no ha sido modificado.',
+                                    'La integridad y autenticidad están garantizadas.'
+                                ]
+                            );
                             document.getElementById("restartVerifyProcessBtn").style.display = "inline-block";
+                            showNotification("Verificación exitosa: El documento es auténtico", "success");
                         }
                         else {
-                            resultElem.textContent = data.message || "Error al verificar el documento.";
-                            resultElem.style.color = "red";
+                            resultElem.innerHTML = `<div style="color: red;">${data.message || "Error al verificar el documento."}</div>`;
                             continueBtn.style.display = "inline-block";
+                            showNotification("Error en la verificación del documento", "error");
                         }
                         window.verificacionEnCurso = false; // Proceso terminado
                     } else {
-                        // NUEVO: Mostrar mensaje específico si no se encuentra la llave
+                        // Manejo mejorado de errores específicos
                         let errorMsg = "Error al verificar el documento.";
+                        let notificationMsg = "Error en la verificación";
+                        let notificationType = "error";
+
                         try {
                             const errorData = await response.json();
-                            if (
-                                errorData.error &&
-                                errorData.error.toLowerCase().includes("no se encontró la llave pública")
-                            ) {
-                                errorMsg = "❌ No se encontró la llave pública del profesor/tutor seleccionado. Por favor, asegúrate de que el profesor tenga una llave generada y activa.";
-                            } else if (errorData.error) {
-                                errorMsg = errorData.error;
+                            if (errorData.error) {
+                                const errorText = errorData.error.toLowerCase();
+
+                                if (errorText.includes("no se encontró la llave pública")) {
+                                    errorMsg = createStandardAlert(
+                                        'warning',
+                                        '⚠️',
+                                        'Profesor sin llaves',
+                                        'No se encontró la llave pública del profesor/tutor seleccionado.',
+                                        [
+                                            'El profesor no ha generado sus llaves digitales.',
+                                            'Es necesario que el profesor cree sus llaves primero.',
+                                            'Contacta al profesor para que genere sus llaves.'
+                                        ],
+                                        'Solicita al profesor que acceda a su perfil y genere sus llaves digitales.'
+                                    );
+                                    notificationMsg = "El profesor seleccionado no tiene llaves generadas";
+                                } else if (errorText.includes("mismo archivo") ||
+                                    errorText.includes("archivos idénticos") ||
+                                    errorText.includes("duplicado")) {
+                                    errorMsg = createStandardAlert(
+                                        'warning',
+                                        '⚠️',
+                                        'Archivos idénticos detectados',
+                                        'Has subido el mismo archivo como "avalado" y "original".',
+                                        [
+                                            'El archivo avalado debe ser el documento firmado digitalmente.',
+                                            'El archivo original debe ser el documento sin firmar.',
+                                            'Ambos archivos deben ser diferentes.'
+                                        ],
+                                        'Asegúrate de seleccionar el archivo avalado (que descargaste después de firmarlo) y el archivo original (antes de firmarlo).'
+                                    );
+                                    notificationMsg = "Los archivos subidos son idénticos";
+                                    notificationType = "warning";
+                                } else if (errorText.includes("archivo no válido") ||
+                                    errorText.includes("pdf") ||
+                                    errorText.includes("formato")) {
+                                    errorMsg = createStandardAlert(
+                                        'error',
+                                        '❌',
+                                        'Archivos PDF inválidos',
+                                        'Uno o ambos archivos no son PDFs válidos o están corruptos.',
+                                        [
+                                            'Los archivos deben ser PDFs válidos y completos.',
+                                            'Verifica que los archivos no estén dañados.',
+                                            'Intenta descargar los archivos nuevamente.'
+                                        ]
+                                    );
+                                    notificationMsg = "Archivos PDF inválidos";
+                                } else if (errorText.includes("avalado") ||
+                                    errorText.includes("firmado")) {
+                                    errorMsg = createStandardAlert(
+                                        'error',
+                                        '❌',
+                                        'Archivo avalado inválido',
+                                        'El archivo avalado no contiene una firma digital válida.',
+                                        [
+                                            'El archivo debe contener metadatos de firma digital.',
+                                            'Asegúrate de subir el archivo que descargaste después de firmarlo.',
+                                            'El archivo debe tener la extensión .pdf y estar completo.'
+                                        ]
+                                    );
+                                    notificationMsg = "El archivo avalado no es válido";
+                                } else if (errorText.includes("original")) {
+                                    errorMsg = createStandardAlert(
+                                        'error',
+                                        '❌',
+                                        'Archivo original inválido',
+                                        'El archivo original no es un PDF válido.',
+                                        [
+                                            'El archivo debe ser el documento antes de ser firmado.',
+                                            'Verifica que sea un PDF válido y completo.',
+                                            'El archivo no debe contener firmas digitales previas.'
+                                        ]
+                                    );
+                                    notificationMsg = "El archivo original no es válido";
+                                } else if (errorText.includes("profesor") ||
+                                    errorText.includes("tutor")) {
+                                    errorMsg = createStandardAlert(
+                                        'warning',
+                                        '⚠️',
+                                        'Error con el profesor seleccionado',
+                                        'Hubo un problema relacionado con el profesor/tutor seleccionado.',
+                                        [
+                                            'El profesor puede no tener llaves generadas.',
+                                            'Verifica que el profesor esté activo en el sistema.',
+                                            'Intenta seleccionar otro profesor.'
+                                        ]
+                                    );
+                                    notificationMsg = "Error con el profesor seleccionado";
+                                    notificationType = "warning";
+                                } else {
+                                    errorMsg = createStandardAlert(
+                                        'error',
+                                        '❌',
+                                        'Error en la verificación',
+                                        errorData.error || 'Error desconocido al verificar el documento.',
+                                        [
+                                            'Verifica que todos los archivos sean correctos.',
+                                            'Intenta realizar la verificación nuevamente.',
+                                            'Si el problema persiste, contacta al administrador.'
+                                        ]
+                                    );
+                                    notificationMsg = "Error en la verificación";
+                                }
                             }
                         } catch (e) {
-                            // Si no es JSON, deja el mensaje por defecto
+                            // Si no es JSON, usar mensaje genérico
+                            if (response.status === 400) {
+                                errorMsg = createStandardAlert(
+                                    'error',
+                                    '❌',
+                                    'Datos inválidos',
+                                    'Los archivos enviados no son válidos o están corruptos.',
+                                    [
+                                        'Verifica que ambos archivos sean PDFs válidos.',
+                                        'Los archivos no deben estar dañados o incompletos.',
+                                        'Intenta descargar y subir los archivos nuevamente.'
+                                    ]
+                                );
+                                notificationMsg = "Archivos no válidos";
+                            } else if (response.status === 404) {
+                                errorMsg = createStandardAlert(
+                                    'error',
+                                    '❌',
+                                    'Servicio no disponible',
+                                    'No se encontró el servicio de verificación.',
+                                    [
+                                        'El servidor puede estar en mantenimiento.',
+                                        'Verifica tu conexión a internet.',
+                                        'Intenta nuevamente en unos momentos.'
+                                    ]
+                                );
+                                notificationMsg = "Servicio no disponible";
+                            } else {
+                                errorMsg = createStandardAlert(
+                                    'error',
+                                    '❌',
+                                    'Error del servidor',
+                                    `Error del servidor (${response.status}).`,
+                                    [
+                                        'Hubo un problema en el servidor.',
+                                        'Este error es temporal.',
+                                        'Intenta realizar la verificación nuevamente.'
+                                    ]
+                                );
+                                notificationMsg = "Error del servidor";
+                            }
                         }
-                        resultElem.textContent = errorMsg;
-                        resultElem.style.color = "red";
+
+                        resultElem.innerHTML = errorMsg;
                         continueBtn.style.display = "inline-block";
+                        showNotification(notificationMsg, notificationType);
                         window.verificacionEnCurso = false;
                     }
                 }, 1200);
             })
-            .catch(() => {
+            .catch((error) => {
                 setTimeout(() => {
-                    resultElem.textContent = "Error al verificar el documento.";
-                    resultElem.style.color = "red";
+                    resultElem.innerHTML = createStandardAlert(
+                        'error',
+                        '❌',
+                        'Error de conexión',
+                        'No se pudo conectar con el servidor para verificar el documento.',
+                        [
+                            'Verifica tu conexión a internet.',
+                            'El servidor puede estar temporalmente no disponible.',
+                            'Intenta realizar la verificación nuevamente en unos momentos.'
+                        ]
+                    );
                     continueBtn.style.display = "inline-block";
                     retryKeyBtn.style.display = "none";
+                    showNotification("Error de conexión durante la verificación", "error");
                     window.verificacionEnCurso = false;
                 }, 1200);
             });
@@ -231,14 +699,34 @@ document.addEventListener("DOMContentLoaded", () => {
             updateVerifyFileInputDisplay(originalFile);
         }
 
-        // Limpiar select de profesor
-        const profesorSelect = document.getElementById("profesorSelect");
-        if (profesorSelect) {
-            profesorSelect.value = "";
+        // Limpiar búsqueda y selección de profesor
+        const searchInput = document.getElementById("professorSearchInput");
+        if (searchInput) {
+            searchInput.value = "";
         }
 
+        const sortOrder = document.getElementById("sortOrder");
+        if (sortOrder) {
+            sortOrder.value = "asc";
+        }
+
+        // Ocultar profesor seleccionado
+        const selectedProfessor = document.getElementById("selectedProfessor");
+        if (selectedProfessor) {
+            selectedProfessor.style.display = "none";
+        }
+
+        // Resetear botón continuar
+        const acceptBtn = document.getElementById("acceptProfesorBtn");
+        if (acceptBtn) {
+            acceptBtn.disabled = true;
+        }
+
+        // Limpiar selección visual
+        const allItems = document.querySelectorAll('.professor-item');
+        allItems.forEach(item => item.classList.remove('selected'));
+
         document.getElementById("verificationResult").textContent = "";
-        document.getElementById("verificationDetails").textContent = "";
         document.getElementById("continueVerifyBtn").style.display = "none";
         document.getElementById("retryKeyBtn").style.display = "none";
         document.getElementById("restartVerifyProcessBtn").style.display = "none";
@@ -246,6 +734,12 @@ document.addEventListener("DOMContentLoaded", () => {
         // Resetear variables de estado
         selectedProfesorId = null;
         window.verificacionEnCurso = false;
+
+        // Recargar y mostrar todos los profesores
+        if (allProfessors.length > 0) {
+            filteredProfessors = [...allProfessors];
+            displayProfessors(filteredProfessors);
+        }
     }
 
     // --- Función para actualizar la visualización del file input en verificar ---
@@ -311,10 +805,67 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // --- Event listeners para botones de modo ---
+    const quickModeBtn = document.getElementById('quickVerifyModeBtn');
+    const professorModeBtn = document.getElementById('professorVerifyModeBtn');
+
+    if (quickModeBtn) {
+        quickModeBtn.addEventListener('click', () => {
+            // Activar modo rápido
+            quickModeBtn.classList.add('active');
+            professorModeBtn.classList.remove('active');
+
+            // Iniciar verificación sin profesor
+            startVerificationWithoutProfessor();
+        });
+    }
+
+    if (professorModeBtn) {
+        professorModeBtn.addEventListener('click', () => {
+            // Activar modo con profesor
+            professorModeBtn.classList.add('active');
+            quickModeBtn.classList.remove('active');
+
+            // Resetear y cargar profesores
+            selectedProfesorId = null;
+
+            // Restaurar paso de profesor
+            const professorStep = document.querySelector('#verifyStepIndicator .step[data-step="1"]');
+            if (professorStep) {
+                professorStep.style.display = 'block';
+            }
+
+            // Restaurar numeración original
+            const steps = document.querySelectorAll('#verifyStepIndicator .step');
+            steps.forEach((stepEl) => {
+                const originalStep = stepEl.getAttribute('data-original-step') || stepEl.getAttribute('data-step');
+                const originalLabel = stepEl.getAttribute('data-original-label') || stepEl.getAttribute('data-label');
+                stepEl.setAttribute('data-step', originalStep);
+                stepEl.setAttribute('data-label', originalLabel);
+            });
+
+            cargarProfesoresYMostrarPaso1();
+        });
+    }
+
     // --- Hacer la función global para frontend.js ---
     window.cargarProfesoresYMostrarPaso1 = cargarProfesoresYMostrarPaso1;
     window.limpiarFormulariosVerificar = limpiarFormulariosVerificar;
     window.updateVerifyFileInputDisplay = updateVerifyFileInputDisplay;
     window.verificacionEnCurso = false;
     window.firmaEnCurso = false;
+
+    // --- Verificar si ya estamos en la sección verificar al cargar la página ---
+    function checkInitialSection() {
+        const currentHash = window.location.hash.replace("#", "");
+        const verifySection = document.getElementById("verifySection");
+
+        if (currentHash === "verificar" && verifySection && verifySection.style.display !== "none") {
+            console.log("🔄 Página cargada ya en sección verificar, cargando profesores...");
+            cargarProfesoresYMostrarPaso1();
+        }
+    }
+
+    // Verificar la sección inicial cuando el DOM esté listo
+    setTimeout(checkInitialSection, 100);
 });

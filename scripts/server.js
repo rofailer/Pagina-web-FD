@@ -214,7 +214,8 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
 
 app.get('/api/profesores', authenticate, async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT id, nombre FROM users WHERE rol IN ('profesor', 'tutor')");
+    const [rows] = await pool.query("SELECT id, nombre FROM users WHERE rol = 'profesor'");
+    console.log("Profesores encontrados:", rows); // Debug
     res.json(rows);
   } catch (err) {
     console.error("Error SQL profesores:", err);
@@ -227,8 +228,49 @@ app.post("/verify-document", authenticate, upload.fields([
   { name: "originalFile", maxCount: 1 }
 ]), async (req, res) => {
   const profesorId = req.body.profesorId;
+
+  console.log("=== VERIFY DOCUMENT REQUEST ===");
+  console.log("profesorId:", profesorId);
+  console.log("files:", req.files);
+  console.log("signedFile exists:", req.files?.signedFile?.[0] ? "YES" : "NO");
+  console.log("originalFile exists:", req.files?.originalFile?.[0] ? "YES" : "NO");
+
+  // Validaciones iniciales
+  if (!profesorId) {
+    console.log("ERROR: No profesorId provided");
+    return res.status(400).json({ error: "ID del profesor/tutor es requerido." });
+  }
+
+  if (!req.files || !req.files.signedFile || !req.files.signedFile[0]) {
+    console.log("ERROR: No signedFile provided");
+    return res.status(400).json({ error: "El archivo avalado es requerido." });
+  }
+
+  if (!req.files.originalFile || !req.files.originalFile[0]) {
+    console.log("ERROR: No originalFile provided");
+    return res.status(400).json({ error: "El archivo original es requerido." });
+  }
+
   try {
     const { signedFile, originalFile } = req.files;
+
+    // Verificar si los archivos son idénticos
+    if (signedFile[0].originalname === originalFile[0].originalname &&
+      signedFile[0].size === originalFile[0].size) {
+      console.log("WARNING: Files appear to be identical (same name and size)");
+
+      // Verificar contenido para confirmar
+      const signedContent = fs.readFileSync(signedFile[0].path);
+      const originalContent = fs.readFileSync(originalFile[0].path);
+
+      if (signedContent.equals(originalContent)) {
+        console.log("ERROR: Files are identical - same content");
+        return res.status(400).json({
+          error: "Los archivos subidos son idénticos. El archivo avalado debe ser diferente al archivo original."
+        });
+      }
+    }
+
     const [rows] = await pool.query(
       "SELECT public_key FROM user_keys WHERE user_id = (SELECT id FROM users WHERE id = ?) ORDER BY created_at DESC LIMIT 1",
       [profesorId]

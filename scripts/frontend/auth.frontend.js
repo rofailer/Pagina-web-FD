@@ -1,95 +1,99 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
     // Elementos del DOM
-    const loginBtn = document.getElementById('loginBtn');
-    const registerBtn = document.getElementById('registerBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const loginModal = document.getElementById('loginModal');
-    const registerModal = document.getElementById('registerModal');
-    const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
+    const loginBtn = document.getElementById("loginBtn");
+    const registerBtn = document.getElementById("registerBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const loginModal = document.getElementById("loginModal");
+    const registerModal = document.getElementById("registerModal");
+    const loginForm = document.getElementById("loginForm");
+    const registerForm = document.getElementById("registerForm");
     const profileMenuContainer = document.getElementById("profileMenuContainer");
     const profileName = document.getElementById("profileName");
     const adminMenuItem = document.getElementById("adminMenuItem");
 
     // Nuevos elementos para el modal de guía de llaves
-    const createKeysGuideModal = document.getElementById('createKeysGuideModal');
-    const goToCreateKeysBtn = document.getElementById('goToCreateKeysBtn');
-    const skipCreateKeysBtn = document.getElementById('skipCreateKeysBtn');
+    const createKeysGuideModal = document.getElementById("createKeysGuideModal");
+    const goToCreateKeysBtn = document.getElementById("goToCreateKeysBtn");
+    const skipCreateKeysBtn = document.getElementById("skipCreateKeysBtn");
 
     // Verificar autenticación al cargar
     checkAuthStatus();
 
     // Manejadores de eventos
-    loginBtn.addEventListener('click', showLoginModal);
-    registerBtn.addEventListener('click', showRegisterModal);
-    document.getElementById('showRegister').addEventListener('click', showRegisterModal);
-    document.getElementById('showLogin').addEventListener('click', showLoginModal);
+    loginBtn.addEventListener("click", showLoginModal);
+    registerBtn.addEventListener("click", showRegisterModal);
+    document
+        .getElementById("showRegister")
+        .addEventListener("click", showRegisterModal);
+    document
+        .getElementById("showLogin")
+        .addEventListener("click", showLoginModal);
 
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', logoutUser);
+        logoutBtn.addEventListener("click", logoutUser);
     }
 
     // Event listeners para el modal de guía de llaves
     if (goToCreateKeysBtn) {
-        goToCreateKeysBtn.addEventListener('click', () => {
-            createKeysGuideModal.style.display = 'none';
+        goToCreateKeysBtn.addEventListener("click", () => {
+            createKeysGuideModal.style.display = "none";
             // Navegar a la sección de perfil, tab de llaves
             navigateToKeysSection();
         });
     }
 
     if (skipCreateKeysBtn) {
-        skipCreateKeysBtn.addEventListener('click', () => {
-            createKeysGuideModal.style.display = 'none';
+        skipCreateKeysBtn.addEventListener("click", () => {
+            createKeysGuideModal.style.display = "none";
             // Marcar que el usuario fue notificado para no mostrar el modal otra vez en esta sesión
-            localStorage.setItem('keysGuideShown', 'true');
+            localStorage.setItem("keysGuideShown", "true");
         });
     }
 
     // Cerrar modales
-    document.querySelectorAll('.close-modal').forEach(btn => {
-        btn.addEventListener('click', closeModals);
+    document.querySelectorAll(".close-modal").forEach((btn) => {
+        btn.addEventListener("click", closeModals);
     });
 
     // Manejar envío de formularios
-    loginForm.addEventListener('submit', handleLogin);
-    registerForm.addEventListener('submit', handleRegister);
+    loginForm.addEventListener("submit", handleLogin);
+    registerForm.addEventListener("submit", handleRegister);
 
     // Funciones
     function showLoginModal(e) {
-        e.preventDefault();
+        if (e) e.preventDefault();
         if (isAuthenticated()) {
             logoutUser();
         } else {
             closeModals();
-            loginModal.style.display = 'block';
+            loginModal.style.display = "block";
         }
     }
 
     function showRegisterModal(e) {
-        e.preventDefault();
+        if (e) e.preventDefault();
         closeModals();
-        registerModal.style.display = 'block';
+        registerModal.style.display = "block";
     }
 
     function closeModals() {
-        loginModal.style.display = 'none';
-        registerModal.style.display = 'none';
+        loginModal.style.display = "none";
+        registerModal.style.display = "none";
     }
 
     async function handleLogin(e) {
         e.preventDefault();
-        const errorElement = document.getElementById('loginError');
-        errorElement.textContent = '';
+        const errorElement = document.getElementById("loginError");
+        errorElement.textContent = "";
 
         try {
-            const response = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const response = await fetch("/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    usuario: document.getElementById('loginUsuario').value,
-                    password: document.getElementById('loginPassword').value
-                })
+                    usuario: document.getElementById("loginUsuario").value,
+                    password: document.getElementById("loginPassword").value,
+                }),
             });
 
             // Siempre intenta parsear la respuesta como JSON
@@ -107,8 +111,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify({ nombre: data.nombre, rol: data.rol }));
+            localStorage.setItem("token", data.token);
+            localStorage.setItem(
+                "user",
+                JSON.stringify({ nombre: data.nombre, rol: data.rol }),
+            );
 
             // PASO 1: Ocultar inmediatamente los botones de login/registro
             if (loginBtn) {
@@ -128,53 +135,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // PASO 4: Disparar evento personalizado para el menú hamburguesa con un pequeño delay
             setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('authStateChanged', {
-                    detail: { authenticated: true, user: { nombre: data.nombre, rol: data.rol } }
-                }));
+                window.dispatchEvent(
+                    new CustomEvent("authStateChanged", {
+                        detail: {
+                            authenticated: true,
+                            user: { nombre: data.nombre, rol: data.rol },
+                        },
+                    }),
+                );
             }, 150);
 
             // PASO 5: Verificar si el usuario tiene llaves después del login
             checkUserKeysAfterLogin();
-
         } catch (err) {
-            document.getElementById('loginError').textContent = "Error de conexión";
+            document.getElementById("loginError").textContent = "Error de conexión";
             console.error("Error en login:", err);
         }
     }
 
     async function handleRegister(e) {
         e.preventDefault();
-        const nombre = document.getElementById('registerNombre').value;
-        const usuario = document.getElementById('registerUsuario').value;
-        const password = document.getElementById('registerPassword').value;
-        const errorElement = document.getElementById('registerError');
-        errorElement.textContent = '';
+        const nombre = document.getElementById("registerNombre").value;
+        const usuario = document.getElementById("registerUsuario").value;
+        const password = document.getElementById("registerPassword").value;
+        const errorElement = document.getElementById("registerError");
+        errorElement.textContent = "";
 
         // Validación en frontend antes de enviar
-        const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{4,}$/;
+        const regex =
+            /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{4,}$/;
         if (!regex.test(password)) {
-            errorElement.textContent = "La contraseña debe tener al menos 4 caracteres, una mayúscula, un número y un carácter especial.";
+            errorElement.textContent =
+                "La contraseña debe tener al menos 4 caracteres, una mayúscula, un número y un carácter especial.";
             return;
         }
 
         try {
-            const response = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre, usuario, password })
+            const response = await fetch("/api/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nombre, usuario, password }),
             });
 
             const data = await response.json();
 
             if (response.ok) {
                 errorElement.textContent = "";
-                showSuccess('Registro exitoso. Por favor inicia sesión.');
+                showSuccess("Registro exitoso. Por favor inicia sesión.");
                 showLoginModal({ preventDefault: () => { } });
             } else {
                 errorElement.textContent = data.error || "Error al registrar";
             }
         } catch (err) {
-            errorElement.textContent = 'Error de conexión';
+            errorElement.textContent = "Error de conexión";
         }
     }
 
@@ -226,28 +239,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function logoutUser() {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('user');
-        localStorage.removeItem('keysGuideShown'); // Limpiar la marca de guía mostrada
+        localStorage.removeItem("token");
+        localStorage.removeItem("userRole");
+        localStorage.removeItem("userName");
+        localStorage.removeItem("user");
+        localStorage.removeItem("keysGuideShown"); // Limpiar la marca de guía mostrada
 
         // Disparar evento personalizado para que otros scripts sepan del cambio de autenticación
-        window.dispatchEvent(new CustomEvent('authStateChanged', {
-            detail: { authenticated: false, user: null }
-        }));
+        window.dispatchEvent(
+            new CustomEvent("authStateChanged", {
+                detail: { authenticated: false, user: null },
+            }),
+        );
 
         window.location.reload(); // Recargar la página para aplicar cambios
     }
 
     function isAuthenticated() {
-        return !!localStorage.getItem('token');
+        return !!localStorage.getItem("token");
     }
 
     function showError(elementId, message) {
         const element = document.getElementById(elementId);
         element.textContent = message;
-        element.style.display = 'block';
+        element.style.display = "block";
     }
 
     function showSuccess(message) {
@@ -255,14 +270,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Validación en tiempo real de la contraseña de registro
-    const passwordInput = document.getElementById('registerPassword');
-    const passwordError = document.getElementById('registerError');
+    const passwordInput = document.getElementById("registerPassword");
+    const passwordError = document.getElementById("registerError");
     if (passwordInput) {
-        passwordInput.addEventListener('input', () => {
+        passwordInput.addEventListener("input", () => {
             const value = passwordInput.value;
-            const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{4,}$/;
+            const regex =
+                /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{4,}$/;
             if (!regex.test(value)) {
-                passwordError.textContent = "La contraseña debe tener al menos 4 caracteres, una mayúscula, un número y un carácter especial.";
+                passwordError.textContent =
+                    "La contraseña debe tener al menos 4 caracteres, una mayúscula, un número y un carácter especial.";
             } else {
                 passwordError.textContent = "";
             }
@@ -273,22 +290,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function checkUserKeysAfterLogin() {
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem("token");
             if (!token) return;
 
-            const response = await fetch('/api/user-keys', {
-                method: 'GET',
+            const response = await fetch("/api/user-keys", {
+                method: "GET",
                 headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
             });
 
             if (response.ok) {
                 const data = await response.json();
 
                 // Si no tiene llaves y no se ha mostrado la guía en esta sesión
-                if ((!data.keys || data.keys.length === 0) && !localStorage.getItem('keysGuideShown')) {
+                if (
+                    (!data.keys || data.keys.length === 0) &&
+                    !localStorage.getItem("keysGuideShown")
+                ) {
                     // Esperar un momento para que se complete la actualización de la UI
                     setTimeout(() => {
                         showCreateKeysGuide();
@@ -305,12 +325,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showCreateKeysGuide() {
         closeModals(); // Cerrar cualquier modal abierto
-        createKeysGuideModal.style.display = 'block';
+        createKeysGuideModal.style.display = "block";
     }
 
     function navigateToKeysSection() {
         // Navegar a la página principal y luego al perfil
-        window.location.href = '/#perfil';
+        window.location.href = "/#perfil";
 
         // Después de cargar, activar la pestaña de llaves
         setTimeout(() => {
@@ -322,7 +342,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Activar la pestaña de llaves
             setTimeout(() => {
-                const llavesTab = document.querySelector('.perfil-tab[data-tab="llaves"]');
+                const llavesTab = document.querySelector(
+                    '.perfil-tab[data-tab="llaves"]',
+                );
                 if (llavesTab) {
                     llavesTab.click();
                 }
@@ -330,4 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
     }
 
+    // Exponer funciones globalmente para el menú hamburguesa
+    window.showLoginModal = showLoginModal;
+    window.showRegisterModal = showRegisterModal;
 });
