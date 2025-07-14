@@ -56,6 +56,15 @@ document.addEventListener("DOMContentLoaded", () => {
         setActiveLink(sectionKey);
         window.scrollTo(0, 0);
 
+        // Manejo especial de clases CSS para la sección de inicio
+        if (sectionKey === 'inicio') {
+            document.body.setAttribute('data-current-section', 'inicio');
+            document.body.classList.add('home-section-active');
+        } else {
+            document.body.removeAttribute('data-current-section');
+            document.body.classList.remove('home-section-active');
+        }
+
         // Cargar datos específicos según la sección
         if (sectionKey === 'firmar') {
             // Cargar llaves para la sección de firmar
@@ -456,5 +465,12 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
         return 'inicio'; // default
+    }
+
+    // Aplicar clase inicial para la sección de inicio
+    const initialHash = window.location.hash.replace("#", "") || "inicio";
+    if (initialHash === "inicio") {
+        document.body.setAttribute('data-current-section', 'inicio');
+        document.body.classList.add('home-section-active');
     }
 });

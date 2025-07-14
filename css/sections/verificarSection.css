@@ -5,9 +5,10 @@
 #verifySection {
   background: linear-gradient(
     135deg,
-    #fff 60%,
-    color-mix(in srgb, var(--primary-color) 30%, #fff 70%) 100%
+    rgba(255, 255, 255, 0.9) 60%,
+    rgba(255, 149, 69, 0.15) 100%
   );
+  backdrop-filter: blur(10px);
   border-radius: 18px;
   box-shadow: 0 6px 32px rgba(33, 150, 243, 0.13);
   padding: 48px 32px 36px 32px;

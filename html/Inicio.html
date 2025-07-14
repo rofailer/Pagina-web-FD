@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -110,7 +110,7 @@
             </div>
           </li>
           <li>
-            <b>✍️ Paso 3: Firma un documento de prueba</b>
+            <b>✏️ Paso 3: Firma un documento de prueba</b>
             <div>
               Ve a <strong>"Firmar"</strong> y sube cualquier archivo PDF de
               prueba. El sistema generará un documento firmado y avalado que
@@ -145,7 +145,7 @@
           <p>
             <strong>💡 Consejo:</strong> Este es un entorno de prueba seguro con
             cifrado avanzado. Experimenta libremente - todos tus datos están
-            protegidos criptográficamente. <br /><strong>🔒 Privacidad:</strong>
+            protegidos criptográficamente. <br /><strong>🔑 Privacidad:</strong>
             El sistema usa cifrado AES-256 para proteger archivos y llaves. Tus
             documentos y datos personales están completamente seguros.
           </p>
@@ -173,7 +173,8 @@
         </form>
         <p id="loginError" class="error-message"></p>
         <p>
-          ¿No tienes cuenta? <a href="#" id="showRegister">Regístrate aquí</a>
+          ¿No tienes cuenta?
+          <a href="#" id="showRegister">Regístrate aquí</a>
         </p>
       </div>
     </div>
@@ -265,61 +266,281 @@
 
     <main class="content" role="main">
       <section id="inicioSection">
-        <div class="inicio-layout">
-          <div class="inicio-titulo">
-            <h2>
-              Bienvenido a <br /><span id="tituloWebInicio"
-                >Firmas Digitales</span
+        <!-- Hero Section Principal -->
+        <div class="hero-section">
+          <div class="hero-content">
+            <div class="hero-badge">
+              <span class="badge-icon">●</span>
+              <span class="badge-text"
+                >Certificación Digital de Investigación</span
               >
-            </h2>
+            </div>
+            <h1 class="hero-title">
+              Firmas Digitales
+              <span class="hero-highlight">Seguras y Confiables</span>
+            </h1>
+            <p class="hero-description">
+              Plataforma profesional para la autenticación criptográfica de
+              documentos de investigación. Protege la integridad de trabajos de
+              investigación, proyectos científicos y documentos profesionales
+              con tecnología de cifrado militar.
+            </p>
+            <div class="hero-buttons">
+              <button
+                class="hero-btn primary"
+                onclick="handleSignDocumentClick()"
+              >
+                <span class="btn-icon">✏️</span>
+                Firmar Documento
+              </button>
+              <button
+                class="hero-btn secondary"
+                onclick="window.location.hash='verificar'"
+              >
+                <span class="btn-icon">🔍</span>
+                Verificar Aval
+              </button>
+            </div>
+            <div class="hero-stats">
+              <div class="stat-item">
+                <span class="stat-number">256-bit</span>
+                <span class="stat-label">Cifrado AES</span>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <span class="stat-number">100%</span>
+                <span class="stat-label">Seguro</span>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <span class="stat-number">RSA</span>
+                <span class="stat-label">4096-bit</span>
+              </div>
+            </div>
           </div>
-          <div class="inicio-grid">
-            <div class="inicio-bloque">
-              <div class="icono">🔒</div>
-              <h3>¿Qué es?</h3>
-              <p>
-                Plataforma para
-                <strong>firmar y verificar documentos digitales</strong> de
-                forma segura y eficiente. Ideal para
-                <strong>trabajos de grado</strong> y
-                <strong>proyectos de investigación</strong>.
-              </p>
-            </div>
-            <div class="inicio-bloque">
-              <div class="icono">🛡️</div>
-              <h3>Integridad y Autenticidad</h3>
-              <p>
-                La <strong>firma digital</strong> garantiza que tus documentos
-                no sean alterados y que la autoría esté protegida, manteniendo
-                la confianza en procesos académicos y científicos.
-              </p>
-            </div>
-            <div class="inicio-bloque">
-              <div class="icono">⚖️</div>
-              <h3>¿Firma digital o electrónica?</h3>
-              <p>
-                <strong>Firma electrónica:</strong> cualquier dato digital usado
-                como firma.<br />
-                <strong>Firma digital:</strong> usa criptografía avanzada, es
-                única, segura y tiene validez legal.
-              </p>
-            </div>
-            <div class="inicio-bloque">
-              <div class="icono">💡</div>
-              <h3>¿Sabías que...?</h3>
-              <p>
-                La firma digital es usada en universidades y empresas para
-                <strong>evitar fraudes</strong>, agilizar trámites y asegurar la
-                trazabilidad de los documentos.
-              </p>
+          <div class="hero-visual">
+            <div class="floating-card">
+              <div class="card-header">
+                <span class="card-dot green"></span>
+                <span class="card-dot yellow"></span>
+                <span class="card-dot red"></span>
+                <span class="card-title">documento_firmado.pdf</span>
+              </div>
+              <div class="card-content">
+                <div class="signature-line">
+                  <span class="sig-icon">📋</span>
+                  <span class="sig-text">Documento Original</span>
+                  <span class="sig-status verified">✓</span>
+                </div>
+                <div class="signature-line">
+                  <span class="sig-icon">🔐</span>
+                  <span class="sig-text">Firma Digital</span>
+                  <span class="sig-status verified">✓</span>
+                </div>
+                <div class="signature-line">
+                  <span class="sig-icon">🛡️</span>
+                  <span class="sig-text">Cifrado AES-256</span>
+                  <span class="sig-status verified">✓</span>
+                </div>
+                <div class="signature-line">
+                  <span class="sig-icon"></span>
+                  <span class="sig-text">Verificación</span>
+                  <span class="sig-status processing">⏳</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        <div class="inicio-contacto">
-          <p>
-            Si tienes alguna pregunta, no dudes en
-            <a href="#contacto">contactarnos</a>.
-          </p>
+
+        <!-- Separador visual -->
+        <div class="section-separator">
+          <div class="separator-line"></div>
+          <div class="separator-icon">◆</div>
+          <div class="separator-line"></div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="features-section">
+          <div class="section-header">
+            <h2 class="section-title">¿Por qué elegir nuestro sistema?</h2>
+            <p class="section-subtitle">
+              Tecnología de vanguardia para la protección de documentos de
+              investigación y trabajos científicos
+            </p>
+          </div>
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon-container">
+                <span class="feature-icon">🔒</span>
+                <div class="feature-icon-bg"></div>
+              </div>
+              <h3 class="feature-title">Máxima Seguridad</h3>
+              <p class="feature-description">
+                Cifrado militar AES-256 y llaves RSA de 4096 bits. Tus
+                documentos están protegidos con la misma tecnología que usan
+                bancos y gobiernos.
+              </p>
+              <div class="feature-tech">
+                <span class="tech-badge">AES-256</span>
+                <span class="tech-badge">RSA-4096</span>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-container">
+                <span class="feature-icon">🔍</span>
+                <div class="feature-icon-bg"></div>
+              </div>
+              <h3 class="feature-title">Verificación Instantánea</h3>
+              <p class="feature-description">
+                Valida la autenticidad de cualquier documento en segundos.
+                Detecta alteraciones y confirma la identidad del firmante de
+                forma automática.
+              </p>
+              <div class="feature-tech">
+                <span class="tech-badge">Tiempo Real</span>
+                <span class="tech-badge">Automático</span>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-container">
+                <span class="feature-icon">🔬</span>
+                <div class="feature-icon-bg"></div>
+              </div>
+              <h3 class="feature-title">Enfoque Investigativo</h3>
+              <p class="feature-description">
+                Diseñado para la comunidad científica e investigativa. Protege
+                trabajos de investigación, estudios, papers, tesis y documentos
+                de investigación profesional.
+              </p>
+              <div class="feature-tech">
+                <span class="tech-badge">Investigativo</span>
+                <span class="tech-badge">Científico</span>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-container">
+                <span class="feature-icon">⚖️</span>
+                <div class="feature-icon-bg"></div>
+              </div>
+              <h3 class="feature-title">Validez Legal</h3>
+              <p class="feature-description">
+                Firmas digitales con validez jurídica completa. Cumple con
+                estándares internacionales y normativas de autenticación
+                digital.
+              </p>
+              <div class="feature-tech">
+                <span class="tech-badge">Legal</span>
+                <span class="tech-badge">Internacional</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Separador visual -->
+        <div class="section-separator">
+          <div class="separator-line"></div>
+          <div class="separator-icon">▲</div>
+          <div class="separator-line"></div>
+        </div>
+
+        <!-- Process Section -->
+        <div class="process-section">
+          <div class="section-header">
+            <h2 class="section-title">Proceso Simple y Seguro</h2>
+            <p class="section-subtitle">
+              En solo 3 pasos, protege tus documentos con tecnología de
+              vanguardia
+            </p>
+          </div>
+          <div class="process-steps">
+            <div class="process-step">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <h3 class="step-title">Genera tus Llaves</h3>
+                <p class="step-description">
+                  Crea tu par de llaves criptográficas únicas. Una llave privada
+                  (solo tuya) y una pública para verificación.
+                </p>
+              </div>
+            </div>
+
+            <div class="process-arrow">
+              <svg width="60" height="20" viewBox="0 0 60 20">
+                <path
+                  d="M5 10 L50 10 M45 5 L50 10 L45 15"
+                  stroke="var(--primary-color)"
+                  stroke-width="2"
+                  fill="none"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </div>
+
+            <div class="process-step">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <h3 class="step-title">Firma el Documento</h3>
+                <p class="step-description">
+                  Sube tu PDF y aplica tu firma digital. El sistema genera un
+                  hash único y lo cifra con tu llave privada.
+                </p>
+              </div>
+            </div>
+
+            <div class="process-arrow">
+              <svg width="60" height="20" viewBox="0 0 60 20">
+                <path
+                  d="M5 10 L50 10 M45 5 L50 10 L45 15"
+                  stroke="var(--primary-color)"
+                  stroke-width="2"
+                  fill="none"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </div>
+
+            <div class="process-step">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <h3 class="step-title">Verifica y Avala</h3>
+                <p class="step-description">
+                  Cualquiera puede verificar la autenticidad usando tu llave
+                  pública. El documento queda avalado y protegido contra
+                  alteraciones.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA Section -->
+        <div class="cta-section">
+          <div class="cta-content">
+            <h2 class="cta-title">¿Listo para proteger tus documentos?</h2>
+            <p class="cta-description">
+              Únete a la nueva era de la certificación digital de investigación.
+              Comienza a usar firmas digitales profesionales hoy mismo.
+            </p>
+            <div class="cta-buttons">
+              <button
+                class="cta-btn primary"
+                onclick="handleSignDocumentClick()"
+              >
+                <span class="btn-icon">✏️</span>
+                Firmar Documento
+              </button>
+              <button
+                class="cta-btn secondary"
+                onclick="handleCreateKeysClick()"
+              >
+                <span class="btn-icon">🔐</span>
+                Crear Llaves
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 

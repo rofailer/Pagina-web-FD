@@ -365,4 +365,37 @@ document.addEventListener("DOMContentLoaded", () => {
     // Exponer funciones globalmente para el menú hamburguesa
     window.showLoginModal = showLoginModal;
     window.showRegisterModal = showRegisterModal;
+
+    // Función global para mostrar el modal de creación de llaves
+    window.showCreateKeysGuide = function () {
+        if (createKeysGuideModal) {
+            createKeysGuideModal.style.display = "flex";
+        }
+    };
+
+    // Función global para manejar el clic del botón "Crear Llaves"
+    window.handleCreateKeysClick = function () {
+        const token = localStorage.getItem("token");
+
+        if (token) {
+            // Si está autenticado, ir directamente a perfil
+            navigateToKeysSection();
+        } else {
+            // Si no está autenticado, mostrar el modal de login
+            showLoginModal();
+        }
+    };
+
+    // Función global para manejar el clic del botón "Firmar Documento"
+    window.handleSignDocumentClick = function () {
+        const token = localStorage.getItem("token");
+
+        if (token) {
+            // Si está autenticado, ir directamente a la sección de firmar
+            window.location.hash = 'firmar';
+        } else {
+            // Si no está autenticado, mostrar el modal de login
+            showLoginModal();
+        }
+    };
 });
