@@ -85,9 +85,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 btn.addEventListener("click", function () {
                     const keyId = this.getAttribute("data-key-id");
                     if (keyId) {
-                        // Usar la función centralizada en lugar de la local
-                        if (window.selectKey) {
-                            window.selectKey(parseInt(keyId));
+                        // Usar la función específica de perfil en lugar de la global
+                        if (window.selectKeyProfile) {
+                            window.selectKeyProfile(parseInt(keyId));
                         } else {
                             selectKeyProfile(keyId);
                         }
@@ -119,6 +119,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.success) {
                     alert(`Llave "${data.keyName}" generada correctamente.`);
                     if (typeof loadKeys === "function") loadKeys();
+
+                    // Si es la primera llave, seleccionarla automáticamente
+                    if (data.isFirstKey) {
+                        setTimeout(async () => {
+                            try {
+                                // Obtener la lista actualizada de llaves para encontrar el ID de la nueva llave
+                                const response = await fetch("/list-keys", {
+                                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                                });
+                                if (response.ok) {
+                                    const keys = await response.json();
+                                    const newKey = keys.find(key => key.key_name === data.keyName);
+                                    if (newKey) {
+                                        // Seleccionar automáticamente la primera llave
+                                        window.selectKeyProfile(newKey.id);
+                                    }
+                                }
+                            } catch (err) {
+                                console.log("Error al seleccionar automáticamente la primera llave:", err);
+                            }
+                        }, 1000);
+                    }
+
                     // Limpiar el campo de nombre después de generar la llave
                     if (keyNameInput) keyNameInput.value = "";
                 } else {

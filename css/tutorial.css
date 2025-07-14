@@ -17,7 +17,7 @@
   padding: 30px;
   border-radius: 10px;
   width: 100%;
-  max-width: 400px;
+  max-width: 500px; /* Aumentar ancho para mejor legibilidad */
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   position: relative;
   animation: modalFadeIn 0.3s;
@@ -61,6 +61,57 @@
   margin-bottom: 10px;
   word-break: break-word;
   overflow-wrap: break-word;
+}
+
+/* Estilos para el tutorial mejorado */
+.tutorial-intro {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-left: 4px solid var(--primary-color);
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-size: 0.95em;
+}
+
+.tutorial-intro p {
+  margin: 0;
+  color: #1565c0;
+  font-weight: 500;
+}
+
+.tutorial-footer {
+  background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+  border-left: 4px solid #9c27b0;
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-top: 24px;
+  font-size: 0.9em;
+}
+
+.tutorial-footer p {
+  margin: 0;
+  color: #6a1b9a;
+  font-weight: 500;
+}
+
+.tutorial-modal-content ol li b {
+  color: var(--primary-color);
+  font-size: 1.05em;
+}
+
+.tutorial-modal-content ol li div {
+  margin-top: 8px;
+  line-height: 1.5;
+  color: #555;
+}
+
+.tutorial-modal-content ol li div em {
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-style: normal;
+  color: #333;
+  border: 1px solid #ddd;
 }
 
 #showTutorialBtn {

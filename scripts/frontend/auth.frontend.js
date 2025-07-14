@@ -245,6 +245,13 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.removeItem("user");
         localStorage.removeItem("keysGuideShown"); // Limpiar la marca de guía mostrada
 
+        // Limpiar estados de procesos en curso
+        window.firmaEnCurso = false;
+        window.verificacionEnCurso = false;
+
+        // Navegar a inicio antes de recargar
+        window.location.hash = "inicio";
+
         // Disparar evento personalizado para que otros scripts sepan del cambio de autenticación
         window.dispatchEvent(
             new CustomEvent("authStateChanged", {
@@ -252,7 +259,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }),
         );
 
-        window.location.reload(); // Recargar la página para aplicar cambios
+        // Pequeño delay para que se aplique la navegación antes del reload
+        setTimeout(() => {
+            window.location.reload(); // Recargar la página para aplicar cambios
+        }, 100);
     }
 
     function isAuthenticated() {

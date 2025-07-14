@@ -43,7 +43,8 @@ router.post("/generate-keys", authenticate, async (req, res) => {
     try {
         // Contar las llaves existentes para el usuario
         const [rows] = await pool.query("SELECT COUNT(*) AS count FROM user_keys WHERE user_id = ?", [userId]);
-        const keyCount = rows[0].count + 1;        // Determinar el nombre de la llave
+        const keyCount = rows[0].count + 1;
+        const isFirstKey = rows[0].count === 0; // Es la primera llave si count es 0        // Determinar el nombre de la llave
         let finalKeyName;
         if (keyName && keyName.trim()) {
             finalKeyName = keyName.trim();
@@ -101,6 +102,7 @@ router.post("/generate-keys", authenticate, async (req, res) => {
                     success: true,
                     keyName: finalKeyName,
                     expirationDate,
+                    isFirstKey: isFirstKey,
                     message: "Llaves generadas correctamente"
                 });
             });

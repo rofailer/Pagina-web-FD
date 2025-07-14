@@ -433,8 +433,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Establecer la llave seleccionada
                 selectedKeyId = keyId;
 
-                // Marcar proceso más avanzado en curso
-                window.firmaEnCurso = true;
+                // Solo marcar proceso en curso si estamos en la sección de firmar
+                const currentSection = window.location.hash.replace("#", "") || "inicio";
+                if (currentSection === "firmar") {
+                    // Marcar proceso más avanzado en curso
+                    window.firmaEnCurso = true;
+                }
 
                 // Mostrar botón de firmar
                 const signButton = document.getElementById("signDocumentButton");
