@@ -216,14 +216,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
-                // Validación de sesión para secciones protegidas
-                if ((key === "firmar" || key === "verificar") && !localStorage.getItem("token")) {
+                // Validación de sesión solo para la sección de firmar
+                if (key === "firmar" && !localStorage.getItem("token")) {
                     if (window.showLoginModal) window.showLoginModal();
-                    else alert("Debes iniciar sesión para usar esta función.");
+                    else alert("Debes iniciar sesión para firmar documentos.");
                     window.location.hash = "inicio";
                     if (document.getElementById("inicioSection")) document.getElementById("inicioSection").style.display = "";
                     if (document.getElementById("firmarSection")) document.getElementById("firmarSection").style.display = "none";
-                    if (document.getElementById("verifySection")) document.getElementById("verifySection").style.display = "none";
                     return;
                 }
 
@@ -291,7 +290,19 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.removeItem("userRole");
             localStorage.removeItem("userName");
             localStorage.removeItem("user");
-            window.location.reload();
+            localStorage.removeItem("keysGuideShown");
+
+            // Limpiar estados de procesos en curso
+            window.firmaEnCurso = false;
+            window.verificacionEnCurso = false;
+
+            // Redirigir a inicio
+            window.location.hash = "inicio";
+
+            // Recargar después de un pequeño delay
+            setTimeout(() => {
+                window.location.reload();
+            }, 100);
         });
     }
 

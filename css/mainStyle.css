@@ -419,5 +419,47 @@ body.home-section-active #inicioSection {
 }
 
 /* =========================
+   ICONOS SVG GLOBALES EN BOTONES
+   ========================= */
+
+/* Asegurar alineamiento correcto de iconos SVG en botones */
+button .btn-icon,
+.btn .btn-icon,
+a .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+button .btn-icon svg,
+.btn .btn-icon svg,
+a .btn-icon svg,
+button .btn-icon-right svg,
+.btn .btn-icon-right svg,
+a .btn-icon-right svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  stroke: white;
+  fill: none;
+}
+
+/* Iconos blancos en todos los botones */
+button .btn-icon svg,
+button .btn-icon-right svg,
+.btn .btn-icon svg,
+.btn .btn-icon-right svg,
+a .btn-icon svg,
+a .btn-icon-right svg,
+button.hero-btn .btn-icon svg,
+button.cta-btn .btn-icon svg,
+.btn-primary .btn-icon svg {
+  stroke: white !important;
+  fill: none !important;
+}
+
+/* =========================
    ESTILO GLOBAL PRINCIPAL
    ========================= */

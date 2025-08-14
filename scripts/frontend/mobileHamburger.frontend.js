@@ -347,16 +347,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (isLogged) {
             html += `<li class="mobile-menu-item"><a href="#firmar">Firmar</a></li>`;
-            html += `<li class="mobile-menu-item"><a href="#verificar">Verificar</a></li>`;
         } else {
             html += `<li class="mobile-menu-item"><a href="#" class="restricted-access" data-action="firmar">Firmar</a></li>`;
-            html += `<li class="mobile-menu-item"><a href="#" class="restricted-access" data-action="verificar">Verificar</a></li>`;
         }
 
-        html += `<li class="mobile-menu-item"><a href="#contacto">Contacto</a></li>`;
-        html += `</div>`;
+        // Verificar siempre libre
+        html += `<li class="mobile-menu-item"><a href="#verificar">Verificar</a></li>`;
 
-        // --- SEPARADOR 2: Después de la navegación principal ---
+        html += `<li class="mobile-menu-item"><a href="#contacto">Contacto</a></li>`;
+        html += `</div>`;        // --- SEPARADOR 2: Después de la navegación principal ---
         if (isLogged) {
             html += `<div class="menu-divider"><div class="divider-line"></div></div>`;
 
@@ -381,8 +380,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // --- Sección de autenticación para usuarios sin sesión ---
             html += `<div class="auth-section">`;
-            html += `<li class="mobile-menu-item"><a href="#" id="mobileLoginBtn">Iniciar Sesión</a></li>`;
-            html += `<li class="mobile-menu-item"><a href="#" id="mobileRegisterBtn">Registrarse</a></li>`;
+            html += `<li class="mobile-menu-item session-status">Sin sesión iniciada</li>`;
+            html += `<div class="auth-buttons-row">`;
+            html += `<li class="mobile-menu-item auth-button"><a href="#" id="mobileLoginBtn">Iniciar Sesión</a></li>`;
+            html += `<li class="mobile-menu-item auth-button"><a href="#" id="mobileRegisterBtn">Registrarse</a></li>`;
+            html += `</div>`;
             html += `</div>`;
         }
 
@@ -458,9 +460,22 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.removeItem("userName");
             localStorage.removeItem("user");
             localStorage.removeItem("keysGuideShown");
+
+            // Limpiar estados de procesos en curso
+            window.firmaEnCurso = false;
+            window.verificacionEnCurso = false;
+
+            // Redirigir a inicio
+            window.location.hash = "inicio";
+
             closeMobileMenu();
             renderMobileMenu();
-            window.location.reload();
+
+            // Recargar después de un pequeño delay para que se aplique la navegación
+            setTimeout(() => {
+                window.location.reload();
+            }, 100);
+
             return;
         }
         // Navegación - cerrar menú al navegar

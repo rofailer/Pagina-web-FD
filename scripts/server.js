@@ -190,10 +190,22 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
       }
       const signatureBinary = fs.readFileSync(signedFilePath);
       const signatureBase64 = signatureBinary.toString("base64").trim();
+
+      // Obtener información del firmante para los metadatos
+      const [userInfo] = await pool.query(
+        "SELECT id, nombre, usuario FROM users WHERE id = ?",
+        [userId]
+      );
+
       const pdfDoc = await PDFDocument.create();
       const page = pdfDoc.addPage([600, 400]);
       page.drawText(`DOCUMENTO AVALADO: ${req.file.originalname}`, { x: 50, y: 300, size: 20 });
+      page.drawText(`Firmado por: ${userInfo[0].nombre}`, { x: 50, y: 270, size: 14 });
+      page.drawText(`Fecha: ${new Date().toLocaleString()}`, { x: 50, y: 240, size: 14 });
+
+      // Guardar firma en subject y información del firmante en author
       pdfDoc.setSubject(signatureBase64);
+      pdfDoc.setAuthor(`${userInfo[0].id}|${userInfo[0].nombre}|${userInfo[0].usuario}`);
       pdfDoc.setTitle("Documento Avalado");
       pdfDoc.setKeywords(["firma digital", "avalado", "documento"]);
       pdfDoc.setCreator("Firmas Digitales FD");
@@ -212,10 +224,99 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
   }
 });
 
-app.get('/api/profesores', authenticate, async (req, res) => {
+// Ruta para extraer metadatos del documento firmado
+app.post("/extract-signer-info", authenticate, upload.single("signedFile"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No se proporcionó archivo firmado." });
+    }
+
+    console.log("=== EXTRACTING SIGNER INFO ===");
+    console.log("File:", req.file.originalname);
+
+    const signedFile = req.file;
+    const pdfBytes = fs.readFileSync(signedFile.path);
+
+    // Usar pdf-lib para leer metadatos
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const author = pdfDoc.getAuthor();
+    const subject = pdfDoc.getSubject();
+
+    console.log("Author metadata:", author);
+    console.log("Subject metadata:", subject);
+
+    // Limpiar archivo temporal
+    fs.unlinkSync(signedFile.path);
+
+    if (!author || !author.includes('|')) {
+      return res.json({
+        success: false,
+        message: "El documento no contiene información del firmante válida."
+      });
+    }
+
+    // Parsear información del firmante (formato: id|nombre|usuario)
+    const [signerUserId, signerName, signerUsername] = author.split('|');
+
+    // Verificar que el firmante existe en la base de datos
+    const [userRows] = await pool.query(
+      "SELECT id, nombre, usuario FROM users WHERE id = ? AND rol = 'profesor'",
+      [signerUserId]
+    );
+
+    if (userRows.length === 0) {
+      return res.json({
+        success: false,
+        message: "El firmante del documento no se encuentra en el sistema o no es un profesor."
+      });
+    }
+
+    res.json({
+      success: true,
+      signer: {
+        id: parseInt(signerUserId),
+        nombre: signerName,
+        usuario: signerUsername
+      },
+      message: `Documento firmado por: ${signerName}`
+    });
+
+  } catch (error) {
+    console.error("Error al extraer información del firmante:", error);
+
+    // Limpiar archivo temporal en caso de error
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (e) {
+        console.error("Error al limpiar archivo temporal:", e);
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Error al procesar el documento firmado."
+    });
+  }
+});
+
+// Endpoint público para obtener profesores (sin autenticación requerida)
+app.get('/api/profesores', async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT id, nombre FROM users WHERE rol = 'profesor'");
-    console.log("Profesores encontrados:", rows); // Debug
+    console.log("Profesores encontrados (acceso público):", rows); // Debug
+    res.json(rows);
+  } catch (err) {
+    console.error("Error SQL profesores:", err);
+    res.status(500).json({ error: "Error al obtener profesores/tutores" });
+  }
+});
+
+// Endpoint con autenticación para profesores (mantener por compatibilidad)
+app.get('/api/profesores-auth', authenticate, async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT id, nombre FROM users WHERE rol = 'profesor'");
+    console.log("Profesores encontrados (con auth):", rows); // Debug
     res.json(rows);
   } catch (err) {
     console.error("Error SQL profesores:", err);

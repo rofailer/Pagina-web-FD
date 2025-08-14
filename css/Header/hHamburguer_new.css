@@ -453,6 +453,36 @@
   background: rgba(255, 149, 69, 0.15) !important;
 }
 
+/* Estilo para "Sin sesión iniciada" */
+.session-status {
+  color: #6c757d !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+  padding: 10px 20px !important;
+  font-size: 14px !important;
+  margin-bottom: 10px !important;
+}
+
+/* Contenedor para botones de auth en fila */
+.auth-buttons-row {
+  display: flex !important;
+  gap: 10px !important;
+  padding: 0 20px !important;
+}
+
+.auth-buttons-row .mobile-menu-item.auth-button {
+  flex: 1 !important;
+  margin: 0 !important;
+}
+
+.auth-buttons-row .mobile-menu-item.auth-button a {
+  margin: 0 !important;
+  text-align: center !important;
+  font-size: 14px !important;
+  padding: 12px 8px !important;
+  border-radius: 12px !important;
+}
+
 /* Ocultar botones de login/registro del header principal */
 #loginBtnLi,
 #registerBtnLi {

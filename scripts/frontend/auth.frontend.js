@@ -36,9 +36,17 @@ document.addEventListener("DOMContentLoaded", () => {
     // Event listeners para el modal de guía de llaves
     if (goToCreateKeysBtn) {
         goToCreateKeysBtn.addEventListener("click", () => {
+            // Cerrar el modal de guía si está abierto
             createKeysGuideModal.style.display = "none";
-            // Navegar a la sección de perfil, tab de llaves
-            navigateToKeysSection();
+
+            // Verificar si hay token de autenticación
+            if (!localStorage.getItem("token")) {
+                // Si no hay token, mostrar modal de autenticación requerida
+                showKeysAuthRequiredModal();
+            } else {
+                // Si hay token, navegar a la sección de perfil
+                navigateToKeysSection();
+            }
         });
     }
 
@@ -53,6 +61,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // Cerrar modales
     document.querySelectorAll(".close-modal").forEach((btn) => {
         btn.addEventListener("click", closeModals);
+    });
+
+    // Cerrar modales al hacer clic fuera del contenido
+    loginModal.addEventListener("click", (e) => {
+        if (e.target === loginModal) {
+            closeModals();
+        }
+    });
+
+    registerModal.addEventListener("click", (e) => {
+        if (e.target === registerModal) {
+            closeModals();
+        }
     });
 
     // Manejar envío de formularios
@@ -373,16 +394,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // Función global para mostrar el modal de autenticación requerida para llaves
+    window.showKeysAuthRequiredModal = showKeysAuthRequiredModal;
+
     // Función global para manejar el clic del botón "Crear Llaves"
     window.handleCreateKeysClick = function () {
-        const token = localStorage.getItem("token");
-
-        if (token) {
-            // Si está autenticado, ir directamente a perfil
-            navigateToKeysSection();
+        // Verificar si hay token de autenticación
+        if (!localStorage.getItem("token")) {
+            // Si no hay token, mostrar modal de autenticación requerida
+            showKeysAuthRequiredModal();
         } else {
-            // Si no está autenticado, mostrar el modal de login
-            showLoginModal();
+            // Si hay token, navegar a la sección de perfil
+            navigateToKeysSection();
         }
     };
 
@@ -394,8 +417,84 @@ document.addEventListener("DOMContentLoaded", () => {
             // Si está autenticado, ir directamente a la sección de firmar
             window.location.hash = 'firmar';
         } else {
-            // Si no está autenticado, mostrar el modal de login
-            showLoginModal();
+            // Si no está autenticado, mostrar el modal personalizado de autenticación requerida
+            showSignAuthRequiredModal();
         }
     };
+
+    // Función para mostrar el modal de autenticación requerida para firmar
+    function showSignAuthRequiredModal() {
+        const modal = document.getElementById('signAuthRequiredModal');
+        const title = document.getElementById('signAuthTitle');
+        const description = document.getElementById('signAuthDescription');
+        const subdescription = document.getElementById('signAuthSubdescription');
+
+        if (modal && title && description && subdescription) {
+            // Restaurar el contenido original para firmar
+            title.textContent = 'Autenticación Requerida';
+            description.innerHTML = '<strong>Para acceder a la sección de firmar documentos necesitas iniciar sesión.</strong>';
+            subdescription.textContent = 'La funcionalidad de firma requiere autenticación para garantizar la seguridad e identidad del firmante, protegiendo así la integridad del proceso criptográfico y la validez legal de las firmas digitales.';
+
+            modal.style.display = 'flex';
+        }
+    }
+
+    // Función para mostrar el modal de autenticación requerida para crear llaves
+    function showKeysAuthRequiredModal() {
+        const modal = document.getElementById('signAuthRequiredModal');
+        const title = document.getElementById('signAuthTitle');
+        const description = document.getElementById('signAuthDescription');
+        const subdescription = document.getElementById('signAuthSubdescription');
+
+        if (modal && title && description && subdescription) {
+            // Cambiar el contenido para llaves
+            title.textContent = 'Acceso Restringido';
+            description.innerHTML = '<strong>Para crear y gestionar llaves digitales necesitas iniciar sesión</strong>';
+            subdescription.textContent = 'Las llaves digitales están vinculadas a tu identidad personal. Solo tú puedes generar y gestionar tus propias llaves para garantizar la seguridad y privacidad de tus credenciales.';
+
+            modal.style.display = 'flex';
+        }
+    }
+
+    // Event listeners para el modal de autenticación requerida
+    const signAuthModal = document.getElementById('signAuthRequiredModal');
+    const closeSignAuthModal = document.getElementById('closeSignAuthModal');
+    const signAuthLoginBtn = document.getElementById('signAuthLoginBtn');
+    const signAuthRegisterBtn = document.getElementById('signAuthRegisterBtn');
+
+    // Cerrar modal con X
+    if (closeSignAuthModal) {
+        closeSignAuthModal.addEventListener('click', function () {
+            signAuthModal.style.display = 'none';
+        });
+    }
+
+    // Botón de login
+    if (signAuthLoginBtn) {
+        signAuthLoginBtn.addEventListener('click', function () {
+            signAuthModal.style.display = 'none';
+            if (window.showLoginModal) {
+                window.showLoginModal();
+            }
+        });
+    }
+
+    // Botón de registro
+    if (signAuthRegisterBtn) {
+        signAuthRegisterBtn.addEventListener('click', function () {
+            signAuthModal.style.display = 'none';
+            if (window.showRegisterModal) {
+                window.showRegisterModal();
+            }
+        });
+    }
+
+    // Cerrar modal haciendo clic fuera
+    if (signAuthModal) {
+        signAuthModal.addEventListener('click', function (e) {
+            if (e.target === signAuthModal) {
+                signAuthModal.style.display = 'none';
+            }
+        });
+    }
 });

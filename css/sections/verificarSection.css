@@ -33,6 +33,360 @@
   text-align: center;
 }
 
+/* Iconos CSS personalizados */
+.auto-detect-container h4 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #007bff;
+  margin-bottom: 8px;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+.auto-detect-container h4 .section-icon {
+  width: 20px;
+  height: 20px;
+  color: #007bff;
+}
+
+.auto-detect-container {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9f4ff 100%);
+  border: 2px dashed #007bff;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.auto-detect-container h4 {
+  color: #007bff;
+  margin-bottom: 8px;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+.auto-detect-description {
+  color: #6c757d;
+  font-size: 0.95em;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.auto-detect-result {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+  color: #155724;
+}
+
+.auto-detect-result.success {
+  background: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.auto-detect-result.error {
+  background: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+.auto-detect-result.loading {
+  background: #fff3cd;
+  border-color: #ffeaa7;
+  color: #856404;
+}
+
+.auto-detect-result .detected-signer {
+  font-weight: 600;
+  font-size: 1.1em;
+  margin-bottom: 8px;
+}
+
+.auto-detect-result .detected-info {
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.option-separator {
+  display: flex;
+  align-items: center;
+  margin: 32px 0;
+  gap: 16px;
+}
+
+.option-separator .separator-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #ddd, transparent);
+}
+
+.option-separator .separator-text {
+  color: #6c757d;
+  font-size: 0.9em;
+  font-weight: 500;
+  padding: 0 16px;
+  background: white;
+  white-space: nowrap;
+}
+
+/* Estado especial para archivos auto-detectados */
+.file-input-label.auto-detected {
+  border-color: #28a745;
+  background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+}
+
+.file-input-label.auto-detected .file-input-text {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.file-input-label.auto-detected .file-input-icon {
+  color: #28a745;
+}
+
+/* ===========================================
+   RESULTADOS DE VERIFICACIÓN MODERNOS
+   =========================================== */
+
+.alert-message {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 20px 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.alert-message::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: currentColor;
+}
+
+.alert-message.success {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.alert-message.error {
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+.alert-message.warning {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  color: #856404;
+  border-left: 4px solid #ffc107;
+}
+
+.alert-message.info {
+  background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+  color: #0c5460;
+  border-left: 4px solid #17a2b8;
+}
+
+.alert-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.alert-icon {
+  font-size: 1.2em;
+  margin-right: 4px;
+  font-weight: bold;
+}
+
+/* Iconos personalizados para cada tipo de alerta */
+.alert-message.success .alert-icon::before {
+  content: "✓";
+}
+
+.alert-message.error .alert-icon::before {
+  content: "×";
+}
+
+.alert-message.warning .alert-icon::before {
+  content: "!";
+}
+
+.alert-message.info .alert-icon::before {
+  content: "i";
+}
+
+.alert-content {
+  font-size: 0.95em;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.alert-details {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.alert-details ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.alert-details li {
+  margin: 4px 0;
+  font-size: 0.9em;
+}
+
+.alert-suggestion {
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  font-size: 0.9em;
+  border-left: 3px solid currentColor;
+}
+
+/* Resultados específicos de verificación */
+.verification-result-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin: 20px 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.verification-result-card.success {
+  border-left: 6px solid #28a745;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fff9 100%);
+}
+
+.verification-result-card.error {
+  border-left: 6px solid #dc3545;
+  background: linear-gradient(135deg, #ffffff 0%, #fff8f8 100%);
+}
+
+.verification-result-card.warning {
+  border-left: 6px solid #ffc107;
+  background: linear-gradient(135deg, #ffffff 0%, #fffef7 100%);
+}
+
+.verification-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.verification-status-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4em;
+  font-weight: bold;
+}
+
+.verification-status-icon::before {
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.verification-status-icon.success::before {
+  content: "✓";
+}
+
+.verification-status-icon.error::before {
+  content: "×";
+}
+
+.verification-status-icon.warning::before {
+  content: "!";
+}
+
+.verification-status-icon.success {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+}
+
+.verification-status-icon.error {
+  background: linear-gradient(135deg, #dc3545, #e74c3c);
+  color: white;
+}
+
+.verification-status-icon.warning {
+  background: linear-gradient(135deg, #ffc107, #f39c12);
+  color: white;
+}
+
+.verification-title {
+  font-size: 1.3em;
+  font-weight: 600;
+  margin: 0;
+  color: #2c3e50;
+}
+
+.verification-subtitle {
+  font-size: 0.9em;
+  color: #6c757d;
+  margin: 4px 0 0 0;
+}
+
+.verification-details {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.verification-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.verification-detail-item:last-child {
+  border-bottom: none;
+}
+
+.verification-detail-label {
+  font-weight: 500;
+  color: #495057;
+}
+
+.verification-detail-value {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.verification-detail-value.success {
+  color: #28a745;
+}
+
+.verification-detail-value.error {
+  color: #dc3545;
+}
+
 /* ===========================================
    STEPPER MODERNO PARA VERIFICAR
    =========================================== */
@@ -331,10 +685,29 @@
 }
 
 .file-input-icon {
-  font-size: 28px;
+  width: 32px;
+  height: 32px;
   display: block;
-  margin-bottom: 8px;
+  margin: 0 auto 8px auto;
   opacity: 0.7;
+  color: #666;
+  transition: all 0.3s ease;
+}
+
+.file-input-label:hover .file-input-icon {
+  opacity: 1;
+  color: var(--primary-color, #ff9545);
+  transform: translateY(-2px);
+}
+
+.file-input-label.has-file .file-input-icon {
+  opacity: 1;
+  color: #4caf50;
+}
+
+.file-input-label.auto-detected .file-input-icon {
+  opacity: 1;
+  color: #28a745;
 }
 
 .file-input-text {

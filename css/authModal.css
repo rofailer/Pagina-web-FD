@@ -1,7 +1,8 @@
+/* ===== MODAL DE AUTENTICACIÓN BASE ===== */
 .auth-modal {
   display: none;
   position: fixed;
-  z-index: 1000;
+  z-index: 9999;
   left: 0;
   top: 0;
   width: 100%;
@@ -10,18 +11,76 @@
   backdrop-filter: blur(3px);
 }
 
-.modal-content {
+/* ===== ESTILOS PARA MODALES DE AUTENTICACIÓN BÁSICA ===== */
+/* Contenedor principal para login, registro y password */
+.auth-modal .modal-content {
   background-color: #fff;
   margin: 10% auto;
   padding: 30px;
   border-radius: 10px;
-  width: 100%;
+  width: auto;
   max-width: 400px;
+  min-width: 320px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   position: relative;
   animation: modalFadeIn 0.3s;
 }
 
+/* Títulos de modales de autenticación */
+.auth-modal h2 {
+  color: #333;
+  margin-bottom: 30px;
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  position: relative;
+}
+
+/* Línea decorativa naranja debajo de los títulos */
+.auth-modal h2::after {
+  content: "";
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 4px;
+  background: linear-gradient(135deg, var(--primary-color, #ff9545), #ff8533);
+  border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(255, 149, 69, 0.3);
+}
+
+/* Borde superior naranja para modales de autenticación básica */
+#loginModal .modal-content,
+#registerModal .modal-content,
+#keyPasswordModal .modal-content {
+  border-top: 4px solid var(--primary-color, #ff9545);
+}
+
+/* Botones de submit para modales de autenticación */
+.auth-modal button[type="submit"],
+.auth-modal button[type="button"] {
+  background: linear-gradient(135deg, var(--primary-color, #ff9545), #ff8533);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px rgba(255, 149, 69, 0.3);
+  width: 100%;
+}
+
+.auth-modal button[type="submit"]:hover,
+.auth-modal button[type="button"]:hover {
+  background: linear-gradient(135deg, #e8843e, #ed700f);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(255, 149, 69, 0.4);
+}
+
+/* ===== ESTILOS GENERALES DE MODAL ===== */
 @keyframes modalFadeIn {
   from {
     opacity: 0;
@@ -33,6 +92,30 @@
   }
 }
 
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes iconPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+/* Botón de cerrar modal */
 .close-modal {
   position: absolute;
   top: 15px;
@@ -47,14 +130,8 @@
   color: #333;
 }
 
-.modal-content h2 {
-  margin-top: 0;
-  color: #2c3e50;
-  text-align: center;
-  margin-bottom: 25px;
-}
-
-.modal-content input {
+/* Estilos de inputs para modales de autenticación */
+.auth-modal input {
   width: 100%;
   padding: 12px 15px;
   margin-bottom: 15px;
@@ -62,26 +139,28 @@
   border-radius: 6px;
   font-size: 16px;
   transition: border-color 0.3s;
+  box-sizing: border-box;
 }
 
-.modal-content input:focus {
-  border-color: #3498db;
+.auth-modal input:focus {
+  border-color: var(--primary-color, #ff9545);
   outline: none;
+  box-shadow: 0 0 8px rgba(255, 149, 69, 0.2);
 }
 
-.modal-content button {
-  width: 100%;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  transition: filter 0.3s;
-  margin-top: 10px;
+/* Enlaces en modales */
+.auth-modal a {
+  color: var(--primary-color, #ff9545);
+  text-decoration: none;
+  transition: filter 0.2s;
 }
 
-.modal-content button:hover {
+.auth-modal a:hover {
   filter: brightness(0.85);
+  text-decoration: underline;
 }
 
+/* Mensajes de error */
 .error-message {
   color: #e74c3c;
   margin: 10px 0;
@@ -89,63 +168,149 @@
   text-align: center;
 }
 
-.modal-content p {
+/* Estilos para párrafos en modales de autenticación */
+.auth-modal p {
   text-align: center;
   margin-top: 20px;
 }
 
-.modal-content a {
-  color: var(--primary-color);
-  text-decoration: none;
-  transition: filter 0.2s;
-}
-
-.modal-content a:hover {
-  filter: brightness(0.85);
-  text-decoration: underline;
-}
-
-.auth-modal {
+/* ===== MODAL DE AUTENTICACIÓN REQUERIDA (signAuthRequiredModal) ===== */
+#signAuthRequiredModal {
   display: none;
   position: fixed;
   z-index: 9999;
   left: 0;
   top: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.4);
-}
-.auth-modal .modal-content {
-  background: #fff;
-  margin: 10% auto;
-  padding: 30px 25px;
-  border-radius: 8px;
   width: 100%;
-  max-width: 350px;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
-  position: relative;
-}
-.auth-modal .close-modal {
-  position: absolute;
-  right: 18px;
-  top: 12px;
-  font-size: 1.5em;
-  cursor: pointer;
-}
-#keyPasswordError {
-  margin-top: 10px;
-}
-#generateKeysButton:disabled,
-.key-password-btn:disabled {
-  background: #aaa !important;
-  color: #fff !important;
-  cursor: not-allowed !important;
-  opacity: 0.7;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  align-items: center;
+  justify-content: center;
 }
 
+#signAuthRequiredModal[style*="flex"] {
+  display: flex;
+}
+
+#signAuthRequiredModal .modal-content {
+  background-color: #fefefe;
+  margin: 0;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 500px;
+  text-align: center;
+  animation: modalSlideIn 0.3s ease-out;
+  position: relative;
+}
+
+#signAuthRequiredModal h2 {
+  color: #333;
+  margin-bottom: 20px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+#signAuthRequiredModal .modal-icon {
+  font-size: 56px;
+  margin-bottom: 15px;
+  display: block;
+  animation: iconPulse 2s infinite;
+  color: var(--primary-color, #ff9545);
+}
+
+#signAuthRequiredModal .modal-description {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #495057;
+  margin-bottom: 15px;
+  font-weight: 500;
+}
+
+#signAuthRequiredModal .modal-description strong {
+  color: #333;
+}
+
+#signAuthRequiredModal .modal-subdescription {
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 25px;
+}
+
+#signAuthRequiredModal .modal-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+#signAuthRequiredModal .modal-buttons button {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  min-width: 140px;
+}
+
+#signAuthLoginBtn {
+  background: linear-gradient(135deg, #ed700f, #ff8533);
+  color: white;
+  box-shadow: 0 4px 15px rgba(237, 112, 15, 0.3);
+}
+
+#signAuthLoginBtn:hover {
+  background: linear-gradient(135deg, #d65f0c, #ed700f);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(237, 112, 15, 0.4);
+}
+
+#signAuthRegisterBtn {
+  background: #f8f9fa;
+  color: #6c757d;
+  border: 2px solid var(--primary-color, #ff9545);
+  box-shadow: 0 3px 10px rgba(255, 149, 69, 0.2);
+}
+
+#signAuthRegisterBtn:hover {
+  background: #e9ecef;
+  border-color: #ed700f;
+  color: #495057;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(255, 149, 69, 0.3);
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 700px) {
   .auth-modal .modal-content {
-    margin: 50% auto;
-    width: 80%;
+    margin: 25% auto;
+    width: 85%;
+    max-width: 320px;
+    min-width: 280px;
+    padding: 25px;
+  }
+
+  .auth-modal h2::after {
+    width: 65%;
+  }
+
+  #signAuthRequiredModal .modal-content {
+    width: 95%;
+    padding: 25px;
+  }
+
+  #signAuthRequiredModal .modal-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #signAuthRequiredModal .modal-buttons button {
+    min-width: auto;
+    width: 100%;
   }
 }

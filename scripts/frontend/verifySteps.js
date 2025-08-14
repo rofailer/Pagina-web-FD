@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedProfesorId = null;
     let allProfessors = []; // Lista completa de profesores
     let filteredProfessors = []; // Lista filtrada
+    let autoDetectedSigner = null; // Información del firmante detectado automáticamente
 
     // --- Función para crear mensajes estandarizados ---
     function createStandardAlert(type, icon, title, content, details = null, suggestion = null) {
@@ -42,6 +43,127 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     }
 
+    // --- Función para detección automática del firmante ---
+    async function detectSignerFromDocument(file) {
+        const autoDetectResult = document.getElementById("autoDetectResult");
+
+        // Mostrar estado de carga
+        autoDetectResult.style.display = "block";
+        autoDetectResult.className = "auto-detect-result loading";
+        autoDetectResult.innerHTML = `
+            <div class="detected-signer">Analizando documento...</div>
+            <div class="detected-info">Extrayendo información del firmante</div>
+        `;
+
+        try {
+            const formData = new FormData();
+            formData.append('signedFile', file);
+
+            const response = await fetch('/extract-signer-info', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Detección exitosa
+                autoDetectedSigner = result.signer;
+                autoDetectResult.className = "auto-detect-result success";
+                autoDetectResult.innerHTML = `
+                    <div class="detected-signer">Firmante detectado: ${result.signer.nombre}</div>
+                    <div class="detected-info">Usuario: ${result.signer.usuario} | ID: ${result.signer.id}</div>
+                    <div class="detected-info">El documento firmado se utilizará automáticamente en el paso 2</div>
+                `;
+
+                // Guardar archivo para uso en paso 2
+                window.autoDetectedFile = file;
+
+                // Seleccionar automáticamente al profesor en la lista
+                selectProfessorAutomatically(result.signer.id);
+
+                // Habilitar el botón continuar
+                const acceptBtn = document.getElementById("acceptProfesorBtn");
+                if (acceptBtn) {
+                    acceptBtn.disabled = false;
+                }
+
+                // Mostrar notificación de éxito
+                if (window.showNotification) {
+                    window.showNotification(`Firmante detectado automáticamente: ${result.signer.nombre}`, "success");
+                }
+
+            } else {
+                // Error en la detección
+                autoDetectedSigner = null;
+                window.autoDetectedFile = null;
+                autoDetectResult.className = "auto-detect-result error";
+                autoDetectResult.innerHTML = `
+                    <div class="detected-signer">No se pudo detectar el firmante</div>
+                    <div class="detected-info">${result.message}</div>
+                `;
+
+                // Mostrar notificación de error
+                if (window.showNotification) {
+                    window.showNotification(result.message, "warning");
+                }
+            }
+
+        } catch (error) {
+            console.error("Error en detección automática:", error);
+            autoDetectedSigner = null;
+            window.autoDetectedFile = null;
+            autoDetectResult.className = "auto-detect-result error";
+            autoDetectResult.innerHTML = `
+                <div class="detected-signer">Error de conexión</div>
+                <div class="detected-info">No se pudo procesar el documento</div>
+            `;
+
+            if (window.showNotification) {
+                window.showNotification("Error al procesar el documento", "error");
+            }
+        }
+    }
+
+    // --- Función para seleccionar profesor automáticamente ---
+    function selectProfessorAutomatically(professorId) {
+        // Buscar al profesor en la lista
+        const professorElement = document.querySelector(`[data-professor-id="${professorId}"]`);
+
+        if (professorElement) {
+            // Limpiar selecciones previas
+            document.querySelectorAll('.professor-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+
+            // Seleccionar el profesor detectado
+            professorElement.classList.add('selected');
+            selectedProfesorId = professorId;
+
+            // Actualizar la información del profesor seleccionado
+            const selectedProfessor = document.getElementById("selectedProfessor");
+            const selectedProfessorName = document.getElementById("selectedProfessorName");
+
+            if (selectedProfessor && selectedProfessorName) {
+                selectedProfessorName.textContent = autoDetectedSigner.nombre;
+                selectedProfessor.style.display = "block";
+            }
+
+            // Ocultar la lista de profesores
+            const professorsList = document.getElementById("professorsList");
+            if (professorsList) {
+                professorsList.style.display = "none";
+            }
+
+            console.log(`✅ Profesor seleccionado automáticamente: ${autoDetectedSigner.nombre} (ID: ${professorId})`);
+        } else {
+            console.warn(`⚠️ No se encontró elemento de profesor con ID: ${professorId}`);
+        }
+    }
+
     // --- Elementos de pasos y barra de progreso ---
     const steps = [
         document.getElementById("verifyStep1"),
@@ -56,21 +178,44 @@ document.addEventListener("DOMContentLoaded", () => {
         steps.forEach((div, i) => div.style.display = (i === step - 1) ? "" : "none");
         indicatorSteps.forEach((el, i) => el.classList.toggle("active", i === step - 1));
         currentStep = step;
+
+        // Si estamos en el paso 2 y hay un archivo auto-detectado, pre-llenarlo
+        if (step === 2 && window.autoDetectedFile) {
+            const signedFileInput = document.getElementById("signedFile");
+            const signedFileLabel = document.querySelector('label[for="signedFile"]');
+            const signedFileText = document.querySelector('label[for="signedFile"] .file-input-text');
+
+            if (signedFileInput && signedFileLabel && signedFileText) {
+                // Crear un nuevo FileList con el archivo auto-detectado
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(window.autoDetectedFile);
+                signedFileInput.files = dataTransfer.files;
+
+                // Actualizar la etiqueta visual
+                signedFileText.textContent = `${window.autoDetectedFile.name} (auto-detectado)`;
+
+                // Agregar clase especial para el estilo
+                signedFileLabel.classList.add('auto-detected');
+
+                // Habilitar el botón de continuar
+                const acceptAvalBtn = document.getElementById("acceptAvalBtn");
+                if (acceptAvalBtn) {
+                    acceptAvalBtn.disabled = false;
+                }
+
+                // Mostrar información adicional
+                if (window.showNotification) {
+                    window.showNotification("Archivo firmado cargado automáticamente", "info");
+                }
+
+                console.log(`✅ Archivo auto-detectado cargado en paso 2: ${window.autoDetectedFile.name}`);
+            }
+        }
     }
 
     // --- Cargar profesores y mostrar paso 1 ---
     function cargarProfesoresYMostrarPaso1() {
         console.log("🚀 INICIO: cargarProfesoresYMostrarPaso1()");
-
-        const token = localStorage.getItem("token");
-        console.log("🔐 Token obtenido del localStorage:", token ? "Existe" : "No existe");
-
-        if (!token) {
-            console.log("❌ No hay token, mostrando modal de login");
-            if (window.showLoginModal) window.showLoginModal();
-            else showNotification("Debes iniciar sesión para usar esta función.", "error");
-            return;
-        }
 
         // Verificar que existe el elemento professorsList
         const professorsList = document.getElementById("professorsList");
@@ -91,10 +236,22 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("⏳ Loading mostrado en professorsList");
 
         console.log("🔍 Iniciando fetch a /api/profesores...");
-        console.log("🔑 Headers a enviar:", { Authorization: `Bearer ${token.substring(0, 20)}...` });
+
+        // Crear headers - con token si existe, sin token si no existe
+        const token = localStorage.getItem("token");
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+            console.log("🔑 Headers con token a enviar:", { Authorization: `Bearer ${token.substring(0, 20)}...` });
+        } else {
+            console.log("🔑 Headers sin token (acceso público)");
+        }
 
         fetch("/api/profesores", {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: headers
         })
             .then(async res => {
                 console.log("📡 Respuesta recibida del servidor:");
@@ -113,9 +270,16 @@ document.addEventListener("DOMContentLoaded", () => {
                         errorData = { error: "Error de comunicación con el servidor" };
                     }
 
-                    if (window.showLoginModal) window.showLoginModal();
-                    else showNotification(errorData.error || "Sesión expirada. Por favor, inicia sesión de nuevo.", "error");
-                    localStorage.removeItem("token");
+                    // Solo mostrar modal de login si tenemos token (sesión expirada) 
+                    // No mostrar si no hay token (acceso público)
+                    if (token) {
+                        if (window.showLoginModal) window.showLoginModal();
+                        else showNotification(errorData.error || "Sesión expirada. Por favor, inicia sesión de nuevo.", "error");
+                        localStorage.removeItem("token");
+                    } else {
+                        // Error en acceso público, mostrar mensaje sin modal de login
+                        showNotification("Error al cargar la lista de profesores. Por favor, intenta de nuevo.", "error");
+                    }
                     return [];
                 }
 
@@ -176,11 +340,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.error("   - Error message:", error.message);
                 console.error("   - Error stack:", error.stack);
 
-                showNotification("Error al cargar profesores", "error");
+                showNotification("Error de conexión al cargar profesores", "error");
                 professorsList.innerHTML = `
                     <div class="no-professors">
-                        <p>Error de conexión. Por favor, intenta de nuevo.</p>
-                        <p>Detalles: ${error.message}</p>
+                        <p>Error de conexión. No se pudo conectar con el servidor.</p>
+                        <p>Verifica que el servidor esté funcionando e intenta de nuevo.</p>
                     </div>
                 `;
             });
@@ -461,7 +625,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         else if (data.reason === "invalid_signature") {
                             resultElem.innerHTML = createStandardAlert(
                                 'error',
-                                '❌',
+                                '×',
                                 'Documento modificado',
                                 'El profesor/tutor sí avaló el documento, pero el archivo original NO coincide.',
                                 [
@@ -477,7 +641,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         else if (data.valid && data.professorMatch && data.signatureMatch) {
                             resultElem.innerHTML = createStandardAlert(
                                 'success',
-                                '✅',
+                                '✓',
                                 'Verificación exitosa',
                                 'El profesor/tutor avaló el documento y la firma digital es válida.',
                                 [
@@ -691,6 +855,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (signedFile) {
             signedFile.value = "";
             updateVerifyFileInputDisplay(signedFile);
+            // Remover clase auto-detected
+            const signedFileLabel = document.querySelector('label[for="signedFile"]');
+            if (signedFileLabel) {
+                signedFileLabel.classList.remove('auto-detected');
+            }
         }
 
         const originalFile = document.getElementById("originalFile");
@@ -698,6 +867,23 @@ document.addEventListener("DOMContentLoaded", () => {
             originalFile.value = "";
             updateVerifyFileInputDisplay(originalFile);
         }
+
+        // Limpiar detección automática
+        const autoDetectFile = document.getElementById("autoDetectFile");
+        if (autoDetectFile) {
+            autoDetectFile.value = "";
+        }
+
+        const autoDetectResult = document.getElementById("autoDetectResult");
+        if (autoDetectResult) {
+            autoDetectResult.style.display = "none";
+            autoDetectResult.className = "auto-detect-result";
+            autoDetectResult.innerHTML = "";
+        }
+
+        // Resetear variables de estado de detección automática
+        autoDetectedSigner = null;
+        window.autoDetectedFile = null;
 
         // Limpiar búsqueda y selección de profesor
         const searchInput = document.getElementById("professorSearchInput");
@@ -854,6 +1040,34 @@ document.addEventListener("DOMContentLoaded", () => {
     window.updateVerifyFileInputDisplay = updateVerifyFileInputDisplay;
     window.verificacionEnCurso = false;
     window.firmaEnCurso = false;
+
+    // --- Event listener para detección automática ---
+    const autoDetectFile = document.getElementById("autoDetectFile");
+    if (autoDetectFile) {
+        autoDetectFile.addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validar que sea un PDF
+                if (file.type !== 'application/pdf') {
+                    if (window.showNotification) {
+                        window.showNotification("Por favor, selecciona un archivo PDF válido", "error");
+                    }
+                    return;
+                }
+
+                // Validar tamaño del archivo (máximo 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    if (window.showNotification) {
+                        window.showNotification("El archivo es demasiado grande. Máximo 10MB permitido", "error");
+                    }
+                    return;
+                }
+
+                console.log(`🔍 Iniciando detección automática para: ${file.name}`);
+                detectSignerFromDocument(file);
+            }
+        });
+    }
 
     // --- Verificar si ya estamos en la sección verificar al cargar la página ---
     function checkInitialSection() {
