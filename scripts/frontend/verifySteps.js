@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let autoDetectedSigner = null; // Información del firmante detectado automáticamente
 
     // --- Función para crear mensajes estandarizados ---
-    function createStandardAlert(type, icon, title, content, details = null, suggestion = null) {
+    function createStandardAlert(type, title, content, details = null, suggestion = null) {
         const alertClass = `alert-message ${type}`;
 
         let detailsHtml = '';
@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return `
             <div class="${alertClass}">
                 <div class="alert-title">
-                    <span class="alert-icon">${icon}</span>
+                    <span class="alert-icon"></span>
                     ${title}
                 </div>
                 <div class="alert-content">${content}</div>
@@ -609,7 +609,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (data.reason === "key_mismatch") {
                             resultElem.innerHTML = createStandardAlert(
                                 'warning',
-                                '⚠️',
                                 'Profesor incorrecto',
                                 'El profesor/tutor seleccionado NO avaló este documento.',
                                 [
@@ -625,7 +624,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         else if (data.reason === "invalid_signature") {
                             resultElem.innerHTML = createStandardAlert(
                                 'error',
-                                '×',
                                 'Documento modificado',
                                 'El profesor/tutor sí avaló el documento, pero el archivo original NO coincide.',
                                 [
@@ -641,7 +639,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         else if (data.valid && data.professorMatch && data.signatureMatch) {
                             resultElem.innerHTML = createStandardAlert(
                                 'success',
-                                '✓',
                                 'Verificación exitosa',
                                 'El profesor/tutor avaló el documento y la firma digital es válida.',
                                 [
@@ -673,7 +670,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                 if (errorText.includes("no se encontró la llave pública")) {
                                     errorMsg = createStandardAlert(
                                         'warning',
-                                        '⚠️',
                                         'Profesor sin llaves',
                                         'No se encontró la llave pública del profesor/tutor seleccionado.',
                                         [
@@ -689,7 +685,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                     errorText.includes("duplicado")) {
                                     errorMsg = createStandardAlert(
                                         'warning',
-                                        '⚠️',
                                         'Archivos idénticos detectados',
                                         'Has subido el mismo archivo como "avalado" y "original".',
                                         [
@@ -706,7 +701,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                     errorText.includes("formato")) {
                                     errorMsg = createStandardAlert(
                                         'error',
-                                        '❌',
                                         'Archivos PDF inválidos',
                                         'Uno o ambos archivos no son PDFs válidos o están corruptos.',
                                         [
@@ -720,7 +714,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                     errorText.includes("firmado")) {
                                     errorMsg = createStandardAlert(
                                         'error',
-                                        '❌',
                                         'Archivo avalado inválido',
                                         'El archivo avalado no contiene una firma digital válida.',
                                         [
@@ -733,7 +726,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                 } else if (errorText.includes("original")) {
                                     errorMsg = createStandardAlert(
                                         'error',
-                                        '❌',
                                         'Archivo original inválido',
                                         'El archivo original no es un PDF válido.',
                                         [
@@ -747,7 +739,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                     errorText.includes("tutor")) {
                                     errorMsg = createStandardAlert(
                                         'warning',
-                                        '⚠️',
                                         'Error con el profesor seleccionado',
                                         'Hubo un problema relacionado con el profesor/tutor seleccionado.',
                                         [
@@ -761,7 +752,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                 } else {
                                     errorMsg = createStandardAlert(
                                         'error',
-                                        '❌',
                                         'Error en la verificación',
                                         errorData.error || 'Error desconocido al verificar el documento.',
                                         [
@@ -791,7 +781,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             } else if (response.status === 404) {
                                 errorMsg = createStandardAlert(
                                     'error',
-                                    '❌',
                                     'Servicio no disponible',
                                     'No se encontró el servicio de verificación.',
                                     [
@@ -804,7 +793,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             } else {
                                 errorMsg = createStandardAlert(
                                     'error',
-                                    '❌',
                                     'Error del servidor',
                                     `Error del servidor (${response.status}).`,
                                     [
@@ -828,7 +816,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 setTimeout(() => {
                     resultElem.innerHTML = createStandardAlert(
                         'error',
-                        '❌',
                         'Error de conexión',
                         'No se pudo conectar con el servidor para verificar el documento.',
                         [
@@ -846,7 +833,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // --- Acciones finales ---
-    function limpiarFormulariosVerificar() {
+    function limpiarFormulariosVerificar(showNotificationFlag = false) {
         document.getElementById("verifyAvalForm").reset();
         document.getElementById("verifyOriginalForm").reset();
 
@@ -921,6 +908,11 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedProfesorId = null;
         window.verificacionEnCurso = false;
 
+        // Solo mostrar notificación si se especifica explícitamente
+        if (showNotificationFlag) {
+            showNotification("Proceso reiniciado", "info");
+        }
+
         // Recargar y mostrar todos los profesores
         if (allProfessors.length > 0) {
             filteredProfessors = [...allProfessors];
@@ -958,15 +950,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     document.getElementById("continueVerifyBtn").onclick = () => {
-        limpiarFormulariosVerificar();
+        limpiarFormulariosVerificar(true); // true = mostrar notificación
         showStep(1);
     };
     document.getElementById("retryKeyBtn").onclick = () => {
-        limpiarFormulariosVerificar();
+        limpiarFormulariosVerificar(true); // true = mostrar notificación
         showStep(1);
     };
     document.getElementById("restartVerifyProcessBtn").onclick = () => {
-        limpiarFormulariosVerificar();
+        limpiarFormulariosVerificar(true); // true = mostrar notificación
         showStep(1);
     };
 

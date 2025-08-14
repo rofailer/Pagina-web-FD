@@ -268,6 +268,50 @@
   font-weight: bold;
 }
 
+/* Estilos para llaves expiradas */
+.key-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.5);
+  border: 2px solid #ffcdd2;
+}
+
+.key-item.disabled:hover {
+  border-color: #f44336;
+  background: rgba(244, 67, 54, 0.05);
+  transform: none;
+  box-shadow: none;
+}
+
+.key-item.disabled .key-name {
+  color: #999;
+}
+
+.key-item.disabled .key-algorithm {
+  color: #bbb;
+}
+
+.key-expiration {
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-top: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.key-expiration.valid {
+  color: #2e7d32;
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.key-expiration.expired {
+  color: #d32f2f;
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
 .key-active-label {
   position: absolute;
   top: 10px;

@@ -47,7 +47,130 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Función para verificar si un proceso ha terminado completamente
+    function isProcessCompleted(processType) {
+        if (processType === 'firma') {
+            // El proceso de firma está completo si estamos en el paso 3 y hay URL de descarga
+            const currentStep = getCurrentSignStep();
+            return currentStep === 3 && window.downloadUrl;
+        } else if (processType === 'verificacion') {
+            // El proceso de verificación está completo si estamos en el paso 4 y se mostró un resultado
+            const currentStep = getCurrentVerifyStep();
+            const hasResult = document.getElementById('verificationResult')?.innerHTML?.includes('alert-message');
+            return currentStep === 4 && hasResult;
+        }
+        return false;
+    }
+
+    // Función para obtener el paso actual de firma
+    function getCurrentSignStep() {
+        const steps = ['signStep1', 'signStep2', 'signStep3'];
+        for (let i = 0; i < steps.length; i++) {
+            const step = document.getElementById(steps[i]);
+            if (step && step.style.display !== 'none') {
+                return i + 1;
+            }
+        }
+        return 1;
+    }
+
+    // Función para obtener el paso actual de verificación
+    function getCurrentVerifyStep() {
+        const steps = ['verifyStep1', 'verifyStep2', 'verifyStep3', 'verifyStep4'];
+        for (let i = 0; i < steps.length; i++) {
+            const step = document.getElementById(steps[i]);
+            if (step && step.style.display !== 'none') {
+                return i + 1;
+            }
+        }
+        return 1;
+    }
+
+    // Función mejorada para limpiar formularios automáticamente
+    function autoCleanFormsOnSectionChange(newSection) {
+        console.log(`🔄 Evaluando limpieza automática al cambiar a sección: ${newSection}`);
+
+        const currentProcesses = {
+            firma: window.firmaEnCurso,
+            verificacion: window.verificacionEnCurso
+        };
+
+        // Limpiar formularios de secciones inactivas SOLO si hay progreso real
+        Object.keys(currentProcesses).forEach(processType => {
+            const isProcessActive = currentProcesses[processType];
+            const processCompleted = isProcessCompleted(processType);
+            const hasProgress = hasRealProgress(processType);
+            const isLeavingProcessSection =
+                (processType === 'firma' && newSection !== 'firmar') ||
+                (processType === 'verificacion' && newSection !== 'verificar');
+
+            // CRITERIO ESTRICTO: Solo limpiar si HAY PROGRESO REAL y estamos saliendo de la sección
+            // Y además el proceso está completo O no está activo
+            const shouldCleanWithProgress = isLeavingProcessSection && hasProgress &&
+                (processCompleted || !isProcessActive);
+
+            if (shouldCleanWithProgress) {
+                console.log(`🧹 Limpiando proceso de ${processType} con progreso real`);
+
+                if (processType === 'firma') {
+                    // Limpiar con notificación porque había progreso real
+                    if (window.limpiarFormulariosFirmar) {
+                        window.limpiarFormulariosFirmar(true); // true = mostrar notificación
+                    }
+                    window.firmaEnCurso = false;
+                    window.selectedKeyId = null;
+
+                    // Reset file input visual state
+                    const fileInput = document.getElementById('fileInput');
+                    if (fileInput) {
+                        fileInput.value = '';
+                        const label = fileInput.nextElementSibling;
+                        if (label) {
+                            const textSpan = label.querySelector('.file-input-text');
+                            const iconSpan = label.querySelector('.file-input-icon');
+                            if (textSpan) textSpan.textContent = 'Seleccionar archivo PDF';
+                            if (iconSpan) iconSpan.textContent = '+';
+                            label.classList.remove('has-file', 'error');
+                        }
+                    }
+                } else if (processType === 'verificacion') {
+                    // Limpiar con notificación porque había progreso real
+                    if (window.limpiarFormulariosVerificar) {
+                        window.limpiarFormulariosVerificar(true); // true = mostrar notificación
+                    }
+                    window.verificacionEnCurso = false;
+                    window.selectedProfesorId = null;
+
+                    // Reset file inputs visual state
+                    const signedFileInput = document.getElementById('signedFileInput');
+                    const originalFileInput = document.getElementById('originalFileInput');
+
+                    [signedFileInput, originalFileInput].forEach(input => {
+                        if (input) {
+                            input.value = '';
+                            const label = input.nextElementSibling;
+                            if (label) {
+                                const textSpan = label.querySelector('.file-input-text');
+                                const iconSpan = label.querySelector('.file-input-icon');
+                                if (textSpan) textSpan.textContent = 'Seleccionar archivo PDF';
+                                if (iconSpan) iconSpan.textContent = '+';
+                                label.classList.remove('has-file', 'error');
+                            }
+                        }
+                    });
+                }
+            } else if (isLeavingProcessSection && !hasProgress) {
+                console.log(`ℹ️ No se limpia ${processType} porque no hay progreso real que conservar`);
+            } else if (isLeavingProcessSection && hasProgress) {
+                console.log(`⚠️ No se limpia ${processType} porque tiene progreso real y está activo`);
+            }
+        });
+    }
+
     function showSection(sectionKey) {
+        // Ejecutar limpieza automática antes de cambiar de sección
+        autoCleanFormsOnSectionChange(sectionKey);
+
         hideAllSections();
         if (sections[sectionKey]) {
             sections[sectionKey].style.display = "block";
@@ -86,11 +209,95 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.loadActiveKey();
             }
         }
+        return false;
     }
 
     // --- Variables de estado global ---
     window.firmaEnCurso = false;
     window.verificacionEnCurso = false;
+
+    // Función mejorada para detectar progreso real en procesos
+    function hasRealProgress(processType) {
+        if (processType === 'firma') {
+            const currentStep = getCurrentSignStep();
+            const fileInput = document.getElementById('fileInput');
+            const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+            const hasSelectedKey = window.selectedKeyId !== null;
+            const isInProgress = window.firmaEnCurso;
+            const isCompleted = isProcessCompleted('firma');
+
+            // Hay progreso si:
+            // 1. Está en proceso activo, O
+            // 2. Tiene archivo y llave seleccionada (paso 2), O
+            // 3. Está en paso 3 (resultado mostrado)
+            return isInProgress || (hasFile && hasSelectedKey && currentStep >= 2) || currentStep === 3 || isCompleted;
+        } else if (processType === 'verificacion') {
+            const currentStep = getCurrentVerifyStep();
+            const signedFileInput = document.getElementById('signedFileInput');
+            const originalFileInput = document.getElementById('originalFileInput');
+            const hasSignedFile = signedFileInput && signedFileInput.files && signedFileInput.files.length > 0;
+            const hasOriginalFile = originalFileInput && originalFileInput.files && originalFileInput.files.length > 0;
+            const hasSelectedProfesor = window.selectedProfesorId !== null;
+            const isInProgress = window.verificacionEnCurso;
+            const isCompleted = isProcessCompleted('verificacion');
+
+            // Hay progreso si:
+            // 1. Está en proceso activo, O
+            // 2. Tiene ambos archivos y profesor (paso 3), O
+            // 3. Está en paso 4 (resultado mostrado), O
+            // 4. Tiene al menos un archivo subido
+            return isInProgress || (hasSignedFile && hasOriginalFile && hasSelectedProfesor && currentStep >= 3) ||
+                currentStep === 4 || isCompleted || hasSignedFile || hasOriginalFile;
+        }
+        return false;
+    }
+
+    // Función para obtener detalles específicos del progreso
+    function getProgressDetails(processType) {
+        if (processType === 'firma') {
+            const currentStep = getCurrentSignStep();
+            const fileInput = document.getElementById('fileInput');
+            const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+            const hasSelectedKey = window.selectedKeyId !== null;
+            const isCompleted = isProcessCompleted('firma');
+
+            if (isCompleted) {
+                return 'proceso de firma completado';
+            } else if (currentStep === 3) {
+                return 'resultado de firma generado';
+            } else if (hasFile && hasSelectedKey) {
+                return 'archivo y llave seleccionados';
+            } else if (hasFile) {
+                return 'archivo seleccionado para firmar';
+            } else if (hasSelectedKey) {
+                return 'llave digital seleccionada';
+            }
+            return 'configuración en progreso';
+        } else if (processType === 'verificacion') {
+            const currentStep = getCurrentVerifyStep();
+            const signedFileInput = document.getElementById('signedFileInput');
+            const originalFileInput = document.getElementById('originalFileInput');
+            const hasSignedFile = signedFileInput && signedFileInput.files && signedFileInput.files.length > 0;
+            const hasOriginalFile = originalFileInput && originalFileInput.files && originalFileInput.files.length > 0;
+            const hasSelectedProfesor = window.selectedProfesorId !== null;
+            const isCompleted = isProcessCompleted('verificacion');
+
+            if (isCompleted) {
+                return 'proceso de verificación completado';
+            } else if (currentStep === 4) {
+                return 'resultado de verificación generado';
+            } else if (hasSignedFile && hasOriginalFile && hasSelectedProfesor) {
+                return 'archivos y profesor seleccionados';
+            } else {
+                const progressParts = [];
+                if (hasSignedFile) progressParts.push('documento firmado');
+                if (hasOriginalFile) progressParts.push('documento original');
+                if (hasSelectedProfesor) progressParts.push('profesor seleccionado');
+                return progressParts.length > 0 ? progressParts.join(' y ') : 'configuración en progreso';
+            }
+        }
+        return 'proceso en progreso';
+    }
 
     // --- Sistema de confirmación de navegación ---
     let pendingNavigation = null;
@@ -104,19 +311,33 @@ document.addEventListener("DOMContentLoaded", () => {
         const message = modal.querySelector('.navigation-confirm-message');
         const icon = modal.querySelector('.navigation-confirm-icon');
 
-        // Personalizar mensaje según el tipo de proceso
+        // Verificar si realmente hay progreso que perder
+        const hasProgress = hasRealProgress(processType);
+        const progressDetails = getProgressDetails(processType);
+
         if (processType === 'firma') {
             title.textContent = '¿Abandonar el proceso de firma?';
-            message.textContent = 'Tienes un documento seleccionado y/o una llave en proceso de firma. Si continúas, perderás todo el progreso.';
+            message.textContent = hasProgress ?
+                `Tienes ${progressDetails}. Si continúas, perderás todo el progreso.` :
+                'No hay progreso que perder.';
             icon.textContent = '📝';
         } else if (processType === 'verificacion') {
             title.textContent = '¿Abandonar la verificación?';
-            message.textContent = 'Tienes archivos seleccionados en proceso de verificación. Si continúas, perderás todo el progreso.';
+            message.textContent = hasProgress ?
+                `Tienes ${progressDetails}. Si continúas, perderás todo el progreso.` :
+                'No hay progreso que perder.';
             icon.textContent = '🔍';
-        } else {
-            title.textContent = '¿Estás seguro?';
-            message.textContent = 'Tienes un proceso en curso. Si continúas, perderás todos los cambios no guardados.';
-            icon.textContent = '⚠️';
+        }
+
+        // Solo mostrar el modal si realmente hay progreso que perder
+        if (!hasProgress) {
+            // No hay progreso real, navegar directamente y limpiar
+            autoCleanFormsOnSectionChange(targetSection);
+            window.verificacionEnCurso = false;
+            window.firmaEnCurso = false;
+            showSection(targetSection);
+            window.history.replaceState(null, null, `#${targetSection}`);
+            return;
         }
 
         pendingNavigation = targetSection;
@@ -134,14 +355,61 @@ document.addEventListener("DOMContentLoaded", () => {
     // Event listeners para el modal
     confirmBtn.addEventListener('click', () => {
         if (pendingNavigation) {
-            // Limpiar procesos en curso
-            if (window.limpiarFormulariosVerificar) window.limpiarFormulariosVerificar();
-            if (window.limpiarFormulariosFirmar) window.limpiarFormulariosFirmar();
-            window.verificacionEnCurso = false;
-            window.firmaEnCurso = false;
-
-            // Navegar a la sección destino
             const targetSection = pendingNavigation;
+
+            // Limpiar procesos según la sección que se está abandonando
+            const currentSection = getCurrentSection();
+
+            if (currentSection === 'firmar') {
+                console.log('🧹 Limpiando proceso de firma por confirmación del usuario');
+                if (window.limpiarFormulariosFirmar) {
+                    window.limpiarFormulariosFirmar(true); // true = mostrar notificación porque el usuario confirmó
+                }
+                window.firmaEnCurso = false;
+                window.selectedKeyId = null;
+
+                // Limpiar file input
+                const fileInput = document.getElementById('fileInput');
+                if (fileInput) {
+                    fileInput.value = '';
+                    // Actualizar visualización del input
+                    const label = fileInput.nextElementSibling;
+                    if (label) {
+                        const textSpan = label.querySelector('.file-input-text');
+                        const iconSpan = label.querySelector('.file-input-icon');
+                        if (textSpan) textSpan.textContent = 'Seleccionar archivo PDF';
+                        if (iconSpan) iconSpan.textContent = '+';
+                        label.classList.remove('has-file', 'error');
+                    }
+                }
+            } else if (currentSection === 'verificar') {
+                console.log('🧹 Limpiando proceso de verificación por confirmación del usuario');
+                if (window.limpiarFormulariosVerificar) {
+                    window.limpiarFormulariosVerificar(true); // true = mostrar notificación porque el usuario confirmó
+                }
+                window.verificacionEnCurso = false;
+                window.selectedProfesorId = null;
+
+                // Limpiar file inputs
+                const signedFileInput = document.getElementById('signedFileInput');
+                const originalFileInput = document.getElementById('originalFileInput');
+
+                [signedFileInput, originalFileInput].forEach(input => {
+                    if (input) {
+                        input.value = '';
+                        // Actualizar visualización del input
+                        const label = input.nextElementSibling;
+                        if (label) {
+                            const textSpan = label.querySelector('.file-input-text');
+                            const iconSpan = label.querySelector('.file-input-icon');
+                            if (textSpan) textSpan.textContent = 'Seleccionar archivo PDF';
+                            if (iconSpan) iconSpan.textContent = '+';
+                            label.classList.remove('has-file', 'error');
+                        }
+                    }
+                });
+            }
+
             hideNavigationConfirmModal();
 
             // Navegar directamente sin disparar eventos adicionales

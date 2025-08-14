@@ -336,6 +336,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="no-session-icon"></div>
                     <div class="no-session-message">Sin sesión iniciada</div>
                     <div class="no-session-subtitle">Inicia sesión para acceder a todas las funciones</div>
+                    <div class="auth-buttons-row">
+                        <li class="mobile-menu-item auth-button"><a href="#" id="mobileLoginBtn">Iniciar Sesión</a></li>
+                        <li class="mobile-menu-item auth-button"><a href="#" id="mobileRegisterBtn">Registrarse</a></li>
+                    </div>
                 </div>
             `;
         }        // --- SEPARADOR 1: Después del perfil/estado ---
@@ -375,17 +379,8 @@ document.addEventListener("DOMContentLoaded", () => {
             html += `<li class="mobile-menu-item"><a href="#" id="mobileLogoutBtn">Cerrar sesión</a></li>`;
             html += `</div>`;
         } else {
-            // --- SEPARADOR 2: Antes de autenticación (sin sesión) ---
-            html += `<div class="menu-divider"><div class="divider-line"></div></div>`;
-
-            // --- Sección de autenticación para usuarios sin sesión ---
-            html += `<div class="auth-section">`;
-            html += `<li class="mobile-menu-item session-status">Sin sesión iniciada</li>`;
-            html += `<div class="auth-buttons-row">`;
-            html += `<li class="mobile-menu-item auth-button"><a href="#" id="mobileLoginBtn">Iniciar Sesión</a></li>`;
-            html += `<li class="mobile-menu-item auth-button"><a href="#" id="mobileRegisterBtn">Registrarse</a></li>`;
-            html += `</div>`;
-            html += `</div>`;
+            // Sin sección de autenticación adicional al final
+            // Los botones ya están en la sección superior
         }
 
         mobileMenuList.innerHTML = html;

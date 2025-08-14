@@ -586,7 +586,39 @@
 .no-session-subtitle {
   font-size: 12px;
   color: #999;
-  margin: 5px 0 0;
+  margin: 5px 0 15px;
+}
+
+/* Contenedor para botones de auth dentro de no-session-section */
+.no-session-section .auth-buttons-row {
+  display: flex !important;
+  gap: 10px !important;
+  padding: 0 !important;
+  margin-top: 15px !important;
+}
+
+.no-session-section .auth-buttons-row .mobile-menu-item.auth-button {
+  flex: 1 !important;
+  margin: 0 !important;
+}
+
+.no-session-section .auth-buttons-row .mobile-menu-item.auth-button a {
+  margin: 0 !important;
+  text-align: center !important;
+  font-size: 14px !important;
+  padding: 12px 16px !important;
+  border-radius: 12px !important;
+  color: var(--primary-color) !important;
+  border-left: none !important;
+  background: rgba(255, 149, 69, 0.1) !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+}
+
+.no-session-section .auth-buttons-row .mobile-menu-item.auth-button a:hover {
+  background: rgba(255, 149, 69, 0.2) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(255, 149, 69, 0.3) !important;
 }
 
 /* Estilos para organización del menú */

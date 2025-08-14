@@ -92,6 +92,41 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 300);
     };
 
+    // --- Función para validar archivo antes de envío ---
+    function validateFileForUpload(file) {
+        if (!file) {
+            showNotification("No se ha seleccionado ningún archivo.", "error");
+            return false;
+        }
+
+        if (file.type !== 'application/pdf') {
+            showNotification("El archivo debe ser un PDF.", "error");
+            return false;
+        }
+
+        // Verificar si el archivo ha sido modificado
+        const lastModified = file.lastModified;
+        const fileSize = file.size;
+
+        // Almacenar información del archivo para verificación posterior
+        window.currentFileInfo = {
+            lastModified,
+            size: fileSize,
+            name: file.name
+        };
+
+        return true;
+    }
+
+    // --- Función para verificar si el archivo cambió ---
+    function hasFileChanged(file) {
+        if (!window.currentFileInfo || !file) return true;
+
+        return file.lastModified !== window.currentFileInfo.lastModified ||
+            file.size !== window.currentFileInfo.size ||
+            file.name !== window.currentFileInfo.name;
+    }
+
     // --- Paso 2: Firmar documento ---
     document.getElementById("signDocumentButton").onclick = () => {
         const token = localStorage.getItem("token");
@@ -107,14 +142,30 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         window.showKeyPasswordModal(async (keyPassword) => {
+            const fileInput = document.getElementById("fileInput");
+            const file = fileInput.files[0];
+
+            // Validar archivo antes de proceder
+            if (!validateFileForUpload(file)) {
+                return;
+            }
+
+            // Verificar si el archivo cambió desde la selección inicial
+            if (hasFileChanged(file)) {
+                showNotification("El archivo ha sido modificado. Por favor, selecciona nuevamente el archivo.", "error");
+                // Limpiar el input y volver al paso 1
+                fileInput.value = "";
+                updateFileInputDisplay(fileInput);
+                showStep(1);
+                return;
+            }
+
             // Mostrar loading con animación
             document.getElementById("signDocumentButton").style.display = "none";
             const loadingEl = document.getElementById("signLoading");
             loadingEl.style.display = "";
             loadingEl.style.animation = "fadeInDown 0.3s ease";
 
-            const fileInput = document.getElementById("fileInput");
-            const file = fileInput.files[0];
             const formData = new FormData();
             formData.append("document", file);
             formData.append("keyPassword", keyPassword);
@@ -190,7 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
             showNotification("Error al descargar el documento.", "error");
         }
     };    // --- Función para limpiar formularios ---
-    function limpiarFormulariosFirmar() {
+    function limpiarFormulariosFirmar(showNotificationFlag = true) {
         document.getElementById("signForm").reset();
         const fileInput = document.getElementById("fileInput");
         if (fileInput) {
@@ -206,7 +257,10 @@ document.addEventListener("DOMContentLoaded", () => {
         userKeys = [];
         window.firmaEnCurso = false;
 
-        showNotification("Proceso reiniciado", "info");
+        // Solo mostrar notificación si se especifica explícitamente
+        if (showNotificationFlag) {
+            showNotification("Proceso reiniciado", "info");
+        }
         setTimeout(() => {
             showStep(1);
         }, 300);
@@ -355,10 +409,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="key-item ${isExpired ? 'disabled' : ''} ${isSelected ? 'selected' : ''}" data-key-id="${key.id}">
                         <div class="key-name">${key.key_name || `Llave ${key.id}`}</div>
                         <div class="key-algorithm">Cifrado: ${key.encryption_type || 'aes-256-cbc'}</div>
-                        <div class="key-created">Creada: ${new Date(key.created_at).toLocaleDateString()}</div>
                         <div class="key-expiration ${expClass}">${expStatus}</div>
                         ${isSelected ? '<div class="key-active-label">ACTIVA</div>' : ''}
-                        ${isExpired ? '<div class="key-expired-label">EXPIRADA</div>' : ''}
                     </div>
                 `;
             }).join('');
@@ -541,13 +593,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (input.files && input.files.length > 0) {
             const file = input.files[0];
-            textSpan.textContent = file.name;
-            iconSpan.textContent = '✓';
-            label.classList.add('has-file');
-            label.classList.remove('error');
 
-            // Marcar proceso en curso tan pronto como se selecciona un archivo
-            window.firmaEnCurso = true;
+            // Validar y almacenar información del archivo
+            if (validateFileForUpload(file)) {
+                textSpan.textContent = file.name;
+                iconSpan.textContent = '✓';
+                label.classList.add('has-file');
+                label.classList.remove('error');
+
+                // Marcar proceso en curso tan pronto como se selecciona un archivo válido
+                window.firmaEnCurso = true;
+            } else {
+                // Archivo inválido, limpiar
+                input.value = "";
+                textSpan.textContent = 'Archivo inválido seleccionado';
+                iconSpan.textContent = '❌';
+                label.classList.add('error');
+                label.classList.remove('has-file');
+                window.firmaEnCurso = false;
+            }
         } else {
             textSpan.textContent = 'Ningún archivo seleccionado';
             iconSpan.textContent = '📄';
@@ -557,6 +621,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Solo limpiamos si estamos en el paso 1 y no hay archivos
             if (currentStep === 1) {
                 window.firmaEnCurso = false;
+                window.currentFileInfo = null; // Limpiar información del archivo
             }
         }
     }

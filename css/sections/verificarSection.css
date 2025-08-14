@@ -164,16 +164,6 @@
   overflow: hidden;
 }
 
-.alert-message::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: currentColor;
-}
-
 .alert-message.success {
   background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
   color: #155724;
