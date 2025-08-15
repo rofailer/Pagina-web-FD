@@ -1,7 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     // Referencias a elementos
-    const generateKeysButton = document.getElementById("generateKeysButton");
-    const keysList = document.getElementById("profileKeysList"); // Cambio aquí para usar el ID de perfil
+    const keysList = document.getElementById("profileKeysList");
     const activeKeyElement = document.getElementById("activeKey");
 
     // Función para cargar la llave activa
@@ -41,6 +40,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const keys = await response.json();
             if (!Array.isArray(keys)) return;
 
+            // Debug temporal: ver estructura de las llaves
+            console.log('Estructura de llaves recibidas:', keys);
+            if (keys.length > 0) {
+                console.log('Primera llave ejemplo:', keys[0]);
+                console.log('Campos disponibles:', Object.keys(keys[0]));
+            }
+
             // Obtener la llave activa para marcarla
             let activeKeyName = null;
             try {
@@ -51,112 +57,105 @@ document.addEventListener("DOMContentLoaded", () => {
                     const activeData = await activeResp.json();
                     activeKeyName = activeData.activeKey;
                 }
-            } catch { }
+            } catch (err) {
+                // Continuar sin marcar la llave activa
+            }
 
-            keysList.innerHTML = "";
+            // Actualizar contador de llaves
+            const keysCountElement = document.getElementById("keysCount");
+            if (keysCountElement) {
+                keysCountElement.textContent = keys.length;
+            }
 
-            keys.forEach((key) => {
-                const expirationDate = new Date(key.expiration_date);
-                const now = new Date();
-                const timeRemaining = expirationDate - now;
-                const isActive = activeKeyName === key.key_name;
+            // Actualizar información de llave activa
+            const activeKeyInfo = document.getElementById("activeKeyInfo");
+            const activeKeyNameElement = document.getElementById("activeKeyName");
+            if (activeKeyName && activeKeyInfo && activeKeyNameElement) {
+                activeKeyInfo.style.display = "flex";
+                activeKeyNameElement.textContent = activeKeyName;
+            } else if (activeKeyInfo) {
+                activeKeyInfo.style.display = "none";
+            }
 
-                const listItem = document.createElement("li");
-                listItem.className = "key-item" + (isActive ? " active" : "");
+            // Solo actualizar si existe el contenedor
+            if (keysList) {
+                keysList.innerHTML = "";
+                keys.forEach(key => {
+                    // Usar expiration_date directamente del servidor
+                    const expirationDate = new Date(key.expiration_date);
+                    const now = new Date();
+                    const isExpired = key.expired || now > expirationDate;
+                    const isActive = key.key_name === activeKeyName;
 
-                listItem.innerHTML = `
-                    <span class="key-label">${key.key_name}</span>
-                    <span class="key-cipher" style="display:block; color:#0078d7; font-weight:500; margin-bottom:4px;">
-                        🔒 Cifrado: ${key.encryption_type ? key.encryption_type.toUpperCase() : 'No especificado'}
-                    </span>
-                    <span class="key-date">
-                        Expira el: ${expirationDate.toLocaleDateString()} 
-                        (${timeRemaining > 0 ? `${Math.ceil(timeRemaining / (1000 * 60 * 60 * 24))} días restantes` : "Expirada"})
-                    </span>
-                    ${isActive ? '<span class="key-type" style="color:green;font-weight:600;">Llave activa</span>' :
-                        `<button class="select-key-btn btn-mini" data-key-id="${key.id}">
-                            <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Seleccionar
-                         </button>`
+                    // Calcular días hasta expiración usando timeRemaining del servidor
+                    const daysUntilExpiration = Math.ceil(key.timeRemaining / (1000 * 60 * 60 * 24));
+
+                    let expirationText = '';
+                    let expirationClass = 'normal';
+
+                    if (isExpired) {
+                        expirationText = `Fecha de expiración: ${expirationDate.toLocaleDateString('es-ES')} (Expirada)`;
+                        expirationClass = 'normal';
+                    } else if (daysUntilExpiration <= 30) {
+                        expirationText = `Fecha de expiración: ${expirationDate.toLocaleDateString('es-ES')} (${daysUntilExpiration} día${daysUntilExpiration !== 1 ? 's' : ''} restante${daysUntilExpiration !== 1 ? 's' : ''})`;
+                        expirationClass = 'normal';
+                    } else {
+                        expirationText = `Fecha de expiración: ${expirationDate.toLocaleDateString('es-ES')} (${daysUntilExpiration} días restantes)`;
+                        expirationClass = 'normal';
                     }
-                `;
-                keysList.appendChild(listItem);
-            });
 
-            // Asigna eventos a los botones de seleccionar
-            document.querySelectorAll(".select-key-btn").forEach(btn => {
-                btn.addEventListener("click", function () {
-                    const keyId = this.getAttribute("data-key-id");
-                    if (keyId) {
-                        // Usar la función específica de perfil en lugar de la global
-                        if (window.selectKeyProfile) {
-                            window.selectKeyProfile(parseInt(keyId));
-                        } else {
-                            selectKeyProfile(keyId);
+                    const listItem = document.createElement("div");
+                    let itemClass = "key-item";
+                    if (isActive) itemClass += " active";
+                    if (isExpired) itemClass += " expired";
+                    listItem.className = itemClass;
+
+                    listItem.innerHTML = `
+                        <div class="key-info">
+                            <div class="key-details-container">
+                                <div class="key-name">
+                                    ${key.key_name}
+                                    ${isActive ? '<span class="active-badge">ACTIVA</span>' : ''}
+                                </div>
+                                <div class="key-details">
+                                    <span>${key.encryption_type || 'RSA-2048'}</span>
+                                    <span class="expiration-status ${expirationClass}">${expirationText}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="key-actions">
+                            <button class="key-action-btn key-download-btn clear-btn" onclick="downloadKey('${key.key_name}')" title="Descargar llave">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </button>
+                            <button class="key-action-btn key-delete-btn clear-btn" onclick="deleteKey('${key.key_name}')" title="Eliminar llave">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                                    <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+
+                    listItem.addEventListener("click", () => {
+                        if (typeof window.selectKeyProfile === "function") {
+                            window.selectKeyProfile(key.id);
                         }
-                    }
+                    });
+
+                    keysList.appendChild(listItem);
                 });
-            });
+            }
         } catch (err) {
             // Puedes omitir el error si no hay sesión
         }
     }
 
-    // Función para generar nuevas llaves 
-    generateKeysButton.addEventListener("click", () => {
-        window.showKeyPasswordModal(async (keyPassword) => {
-            try {
-                const encryptionType = localStorage.getItem("encryptionType") || "aes-256-cbc"; const keyNameInput = document.getElementById("keyNameInput");
-                const keyName = keyNameInput ? keyNameInput.value.trim() : "";
-
-                const response = await fetch("/generate-keys", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                    body: JSON.stringify({ keyPassword, encryptionType, keyName }),
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                    alert(`Llave "${data.keyName}" generada correctamente.`);
-                    if (typeof loadKeys === "function") loadKeys();
-
-                    // Si es la primera llave, seleccionarla automáticamente
-                    if (data.isFirstKey) {
-                        setTimeout(async () => {
-                            try {
-                                // Obtener la lista actualizada de llaves para encontrar el ID de la nueva llave
-                                const response = await fetch("/list-keys", {
-                                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-                                });
-                                if (response.ok) {
-                                    const keys = await response.json();
-                                    const newKey = keys.find(key => key.key_name === data.keyName);
-                                    if (newKey) {
-                                        // Seleccionar automáticamente la primera llave
-                                        window.selectKeyProfile(newKey.id);
-                                    }
-                                }
-                            } catch (err) {
-                                console.log("Error al seleccionar automáticamente la primera llave:", err);
-                            }
-                        }, 1000);
-                    }
-
-                    // Limpiar el campo de nombre después de generar la llave
-                    if (keyNameInput) keyNameInput.value = "";
-                } else {
-                    alert(data.error || "Error al generar la llave.");
-                }
-            } catch (err) {
-                alert("Error al generar la llave.");
-            }
-        });
-    });
+    // La función para generar nuevas llaves ahora está en profile.frontend.js
+    // mediante showCreateKeyModal()
 
     // Función para seleccionar una llave activa - CENTRALIZADA
     window.selectKeyProfile = async (keyId) => {
@@ -175,13 +174,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Recargar las llaves en perfil
                 if (typeof loadKeys === "function") loadKeys();
                 if (typeof loadActiveKey === "function") loadActiveKey();
-
-                // También notificar a la sección de firmar si existe
-                if (window.refreshSignKeys) {
-                    window.refreshSignKeys();
-                }
             } else {
-                alert(data.error || "Error al seleccionar la llave");
+                alert("Error al seleccionar la llave");
             }
         } catch (err) {
             alert("Error al seleccionar la llave");

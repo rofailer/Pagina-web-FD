@@ -8,7 +8,6 @@
 *:after {
   font-family: "Poppins", sans-serif;
   box-sizing: border-box;
-  color: #333;
   padding: 0;
   margin: 0;
   user-select: none;
@@ -92,12 +91,6 @@ body {
 /* =========================
    ESTILO DE BOTONES Y FORMULARIOS 
    ========================= */
-
-.content > section label {
-  margin-top: 16px;
-  display: block;
-  font-weight: 500;
-}
 
 #verifyAvalForm,
 #verifyOriginalForm,
