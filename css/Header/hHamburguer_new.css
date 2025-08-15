@@ -81,7 +81,6 @@
   transition: right 0.3s ease !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.2) !important;
   will-change: transform !important;
 }
 
@@ -90,22 +89,22 @@
   visibility: visible !important;
 }
 
-/* Botón cerrar - OPTIMIZADO */
+/* Botón cerrar - OPTIMIZADO CON ALTA ESPECIFICIDAD */
 .mobile-menu-close {
-  position: absolute;
-  top: 20px;
-  left: 20px;
+  position: absolute !important;
+  top: 20px !important;
+  left: 20px !important;
   width: 40px !important;
   height: 40px !important;
-  background: rgba(0, 0, 0, 0.08) !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  border-radius: 50% !important;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   font-size: 22px !important;
-  color: #555 !important;
+  color: #999 !important;
   z-index: 8600 !important;
   box-sizing: border-box !important;
   line-height: 1 !important;
@@ -115,28 +114,45 @@
   max-width: 40px !important;
   min-height: 40px !important;
   max-height: 40px !important;
-  opacity: 0;
-  transform: scale(0.9);
-  transition: opacity 0.2s ease, transform 0.2s ease !important;
+  opacity: 1 !important;
+  transform: scale(1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   will-change: opacity, transform !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  text-decoration: none !important;
+  user-select: none !important;
 }
 
 .mobile-menu-close.animate-in {
-  opacity: 1;
-  transform: scale(1);
+  opacity: 1 !important;
+  transform: scale(1) !important;
 }
 
 .mobile-menu-close:hover {
-  background: rgba(255, 149, 69, 0.15) !important;
-  border-color: rgba(255, 149, 69, 0.3) !important;
-  color: var(--primary-color) !important;
-  transform: scale(1.1) !important;
+  background: transparent !important;
+  border: none !important;
+  color: #555 !important;
+  transform: scale(1.2) rotate(90deg) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+/* Sobreescribir específicamente cualquier regla global */
+.mobile-menu.open .mobile-menu-close:hover {
+  background: transparent !important;
+  border: none !important;
+  color: #555 !important;
+  transform: scale(1.2) rotate(90deg) !important;
+  border-radius: 0 !important;
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
 }
 
 .mobile-menu-close::before {
-  content: "×";
-  font-size: 24px !important;
+  content: "×" !important;
+  font-size: 22px !important;
   color: inherit !important;
   line-height: 1 !important;
   display: flex !important;
@@ -148,8 +164,46 @@
   top: 0 !important;
   left: 0 !important;
   margin: 0 !important;
+  font-weight: 300 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Protección específica contra reglas globales de botones */
+.mobile-menu .mobile-menu-close,
+.mobile-menu-close.mobile-menu-close {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: #666 !important;
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
   padding: 0 !important;
-  text-align: center !important;
+  margin: 0 0 15px 0 !important;
+  font-size: 28px !important;
+  gap: 0 !important;
+  opacity: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: none !important;
+}
+
+.mobile-menu .mobile-menu-close:hover,
+.mobile-menu-close.mobile-menu-close:hover {
+  background: transparent !important;
+  border: none !important;
+  color: #333 !important;
+  transform: scale(1.2) rotate(90deg) !important;
+  border-radius: 0 !important;
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  box-shadow: none !important;
 }
 
 /* Header del menú */
@@ -200,18 +254,11 @@
   background: transparent !important;
 }
 
-/* Elementos del menú - OPTIMIZADO */
+/* Elementos del menú - SIN ANIMACIÓN DE DESPLAZAMIENTO */
 .mobile-menu-item {
-  opacity: 0 !important;
-  transform: translateX(20px) !important;
-  transition: opacity 0.2s ease, transform 0.2s ease !important;
-  background: transparent !important;
-  will-change: opacity, transform !important;
-}
-
-.mobile-menu-item.animate-in {
   opacity: 1 !important;
   transform: translateX(0) !important;
+  background: transparent !important;
 }
 
 /* Enlaces del menú - OPTIMIZADO */
@@ -240,12 +287,17 @@
 }
 
 .mobile-menu-item a.restricted-access::after {
-  content: "🔒" !important;
+  content: "";
   position: absolute !important;
   right: 20px !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
-  font-size: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236c757d'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'/%3E%3C/svg%3E") !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
   opacity: 0.7 !important;
 }
 
@@ -256,7 +308,7 @@
     rgba(108, 117, 125, 0.03) 100%
   ) !important;
   color: #495057 !important; /* Gris más oscuro al hover */
-  border-left-color: #6c757d !important; /* Línea lateral gris */
+  border-left: 4px solid #6c757d !important; /* Borde izquierdo gris */
   border-radius: 0 15px 15px 0 !important;
   opacity: 1 !important;
 }
@@ -268,7 +320,7 @@
     rgba(255, 149, 69, 0.03) 100%
   ) !important;
   color: var(--primary-color) !important;
-  border-left-color: var(--primary-color) !important;
+  border-left: 4px solid var(--primary-color) !important;
   border-radius: 0 15px 15px 0 !important;
 }
 
@@ -308,11 +360,11 @@
 .header-mobile-menu .menu-divider:nth-of-type(2) .divider-line,
 .header-mobile-menu .menu-divider:nth-of-type(3) .divider-line {
   height: 2px !important;
-  opacity: 0.3 !important;
+  opacity: 0.5 !important;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    var(--primary-color) 50%,
+    #ddd 50%,
     transparent 100%
   ) !important;
   min-height: 2px !important;
@@ -339,9 +391,9 @@
 /* Forzar la visibilidad del separador con backup sutil */
 .header-mobile-menu .menu-divider .divider-line {
   min-height: 2px !important;
-  opacity: 0.3 !important;
+  opacity: 0.5 !important;
   visibility: visible !important;
-  background-color: var(--primary-color) !important;
+  background-color: #ddd !important;
 }
 
 /* Fallback con color sutil si el gradiente no funciona */
@@ -352,8 +404,8 @@
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  background: var(--primary-color) !important;
-  opacity: 0.25 !important;
+  background: #ddd !important;
+  opacity: 0.4 !important;
   border-radius: 0 !important;
   z-index: -1 !important;
 }
@@ -430,7 +482,8 @@
 .logout-section a:hover {
   color: #c53030 !important;
   background: rgba(229, 62, 62, 0.15) !important;
-  border-left-color: #c53030 !important; /* Línea lateral también roja al hover */
+  border-left: 4px solid #c53030 !important; /* Borde izquierdo rojo */
+  border-radius: 0 15px 15px 0 !important;
 }
 
 /* Auth buttons para usuarios sin sesión */
@@ -450,7 +503,14 @@
 }
 
 .auth-section .mobile-menu-item a:hover {
-  background: rgba(255, 149, 69, 0.15) !important;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 149, 69, 0.12) 0%,
+    rgba(255, 149, 69, 0.03) 100%
+  ) !important;
+  color: var(--primary-color) !important;
+  border-left: 4px solid var(--primary-color) !important;
+  border-radius: 0 15px 15px 0 !important;
 }
 
 /* Estilo para "Sin sesión iniciada" */
@@ -550,6 +610,18 @@
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   position: relative;
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+  transition: none !important;
+}
+
+/* Asegurar que TODOS los elementos de no-session no tengan animaciones */
+.no-session-section *,
+.no-session-section .mobile-menu-item,
+.no-session-section .auth-button {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+  transition: none !important;
 }
 
 .no-session-icon {
@@ -600,6 +672,9 @@
 .no-session-section .auth-buttons-row .mobile-menu-item.auth-button {
   flex: 1 !important;
   margin: 0 !important;
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+  transition: none !important;
 }
 
 .no-session-section .auth-buttons-row .mobile-menu-item.auth-button a {
@@ -612,13 +687,17 @@
   border-left: none !important;
   background: rgba(255, 149, 69, 0.1) !important;
   font-weight: 600 !important;
-  transition: all 0.3s ease !important;
 }
 
 .no-session-section .auth-buttons-row .mobile-menu-item.auth-button a:hover {
-  background: rgba(255, 149, 69, 0.2) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 2px 8px rgba(255, 149, 69, 0.3) !important;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 149, 69, 0.12) 0%,
+    rgba(255, 149, 69, 0.03) 100%
+  ) !important;
+  color: var(--primary-color) !important;
+  border-left: 4px solid var(--primary-color) !important;
+  border-radius: 0 15px 15px 0 !important;
 }
 
 /* Estilos para organización del menú */

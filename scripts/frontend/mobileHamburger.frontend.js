@@ -566,8 +566,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 <h3>Acceso Restringido</h3>
                 <p>Para <strong>${actionText}</strong> necesitas iniciar sesión en tu cuenta.</p>
                 <div class="restricted-access-buttons">
-                    <button class="btn-login-now">Iniciar Sesión</button>
-                    <button class="btn-cancel">Cancelar</button>
+                    <button class="btn-login-now">
+                        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <polyline points="10,17 15,12 10,7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="15" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Iniciar Sesión
+                    </button>
+                    <button class="btn-cancel btn-secondary">
+                        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Cancelar
+                    </button>
                 </div>
             </div>
         `;

@@ -173,15 +173,15 @@ body:not([data-current-section]) .content {
 
 .hero-btn.secondary {
   background: rgba(255, 255, 255, 0.8);
-  color: #334155;
+  color: #334155 !important;
   border: 2px solid #e2e8f0;
   backdrop-filter: blur(10px);
 }
 
 .hero-btn.secondary:hover {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: var(--primary-color);
-  color: var(--primary-color);
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: white !important;
   transform: translateY(-1px);
 }
 
@@ -202,6 +202,14 @@ body:not([data-current-section]) .content {
 /* Iconos de botones blancos en botones hero */
 .hero-btn .btn-icon svg {
   stroke: white;
+}
+
+.hero-btn.secondary .btn-icon svg {
+  stroke: #334155;
+}
+
+.hero-btn.secondary:hover .btn-icon svg {
+  stroke: white !important;
 }
 
 /* Iconos de botones CTA */

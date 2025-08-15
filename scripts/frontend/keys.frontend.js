@@ -74,7 +74,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         (${timeRemaining > 0 ? `${Math.ceil(timeRemaining / (1000 * 60 * 60 * 24))} días restantes` : "Expirada"})
                     </span>
                     ${isActive ? '<span class="key-type" style="color:green;font-weight:600;">Llave activa</span>' :
-                        `<button class="select-key-btn btn-mini" data-key-id="${key.id}">Seleccionar</button>`
+                        `<button class="select-key-btn btn-mini" data-key-id="${key.id}">
+                            <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Seleccionar
+                         </button>`
                     }
                 `;
                 keysList.appendChild(listItem);

@@ -171,58 +171,83 @@ body {
   pointer-events: none;
 }
 
-/* Botones (excluimos .clear-btn y .change-btn-circular que tienen su propio estilo) */
-button:not(.clear-btn):not(.change-btn-circular),
-.content > section button:not(.clear-btn):not(.change-btn-circular) {
-  background: linear-gradient(
-    90deg,
-    var(--primary-color),
-    color-mix(in srgb, var(--primary-color) 60%, #fff 40%)
-  );
-  color: #fff;
+/* =========================
+   SISTEMA DE BOTONES ESTÁNDAR
+   ========================= */
+
+/* Reset base para todos los botones */
+button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) {
+  /* Reset básico */
+  margin: 0;
+  padding: 0;
   border: none;
-  padding: 12px 32px;
-  font-size: 1.1em;
-  border-radius: 24px;
+  background: none;
+  font-family: inherit;
   cursor: pointer;
-  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 8px rgba(237, 112, 15, 0.08);
-  font-weight: 300;
-  margin-top: 10px;
-  margin-bottom: 8px;
-  min-width: 120px;
+  outline: none;
+  user-select: none;
+
+  /* Estilo base estándar */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  /* Dimensiones semi-cuadradas compactas */
+  padding: 10px 16px;
+  min-height: 40px;
+  border-radius: 6px;
+
+  /* Tipografía */
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+
+  /* Colores por defecto (primario) */
+  background: #ff9545;
+  color: white !important;
+
+  /* Efectos visuales */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Prevenir selección de texto */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
-button:not(.clear-btn):not(.change-btn-circular):hover,
-.content > section button:not(.clear-btn):not(.change-btn-circular):hover {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--primary-color) 60%, #fff 40%),
-    var(--primary-color)
-  );
-  transform: translateY(-2px) scale(1.04);
-  box-shadow: 0 4px 16px rgba(237, 112, 15, 0.15);
+/* Feedback visual en hover */
+button:not(.clear-btn):not(.change-btn-circular):not(
+    .mobile-menu-close
+  ):hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  background: #e5834a;
+  color: white !important;
+  filter: brightness(1.05);
 }
 
-button:not(.clear-btn):not(.change-btn-circular):active,
-.content > section button:not(.clear-btn):not(.change-btn-circular):active {
-  filter: brightness(1.08);
-  transform: scale(0.98);
+/* Feedback visual en active/click */
+button:not(.clear-btn):not(.change-btn-circular):not(
+    .mobile-menu-close
+  ):active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  background: #d4742c;
+  color: white !important;
 }
 
-button:not(.clear-btn):not(.change-btn-circular):disabled,
-.content > section button:not(.clear-btn):not(.change-btn-circular):disabled {
-  background: #aaa !important;
-  color: #fff !important;
+/* Estado deshabilitado */
+button:not(.clear-btn):not(.change-btn-circular):not(
+    .mobile-menu-close
+  ):disabled {
+  background: #9ca3af !important;
+  color: #f3f4f6 !important;
   cursor: not-allowed !important;
-  opacity: 0.7;
-}
-
-.content
-  > section
-  button:not(.clear-btn):not(.change-btn-circular)
-  + button:not(.clear-btn):not(.change-btn-circular) {
-  margin-left: 12px;
+  transform: none !important;
+  box-shadow: none !important;
+  opacity: 0.6;
 }
 
 /* =========================
@@ -353,7 +378,9 @@ button:not(.clear-btn):not(.change-btn-circular):disabled,
 
 .navigation-confirm-btn.primary:hover {
   background: #d32f2f;
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 12px rgba(244, 67, 54, 0.3);
+  filter: brightness(1.1);
 }
 
 .navigation-confirm-btn.secondary {
@@ -363,7 +390,9 @@ button:not(.clear-btn):not(.change-btn-circular):disabled,
 
 .navigation-confirm-btn.secondary:hover {
   background: #d5d5d5;
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 12px rgba(224, 224, 224, 0.4);
+  filter: brightness(0.95);
 }
 
 /* Responsive */
@@ -419,45 +448,387 @@ body.home-section-active #inicioSection {
 }
 
 /* =========================
-   ICONOS SVG GLOBALES EN BOTONES
+   VARIANTES DE BOTONES POR CONTEXTO
    ========================= */
 
-/* Asegurar alineamiento correcto de iconos SVG en botones */
+/* Botón secundario/gris */
+.btn-secondary {
+  background: #6b7280 !important;
+  color: white !important;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #4b5563 !important;
+  color: white !important;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 12px rgba(107, 114, 128, 0.3);
+  filter: brightness(1.1);
+}
+
+.btn-secondary:active:not(:disabled) {
+  background: #374151 !important;
+  color: white !important;
+}
+
+/* Botón de éxito/verde */
+.btn-success {
+  background: #10b981 !important;
+  color: white !important;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #059669 !important;
+  color: white !important;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
+  filter: brightness(1.1);
+}
+
+.btn-success:active:not(:disabled) {
+  background: #047857 !important;
+  color: white !important;
+}
+
+/* Botón de advertencia/amarillo */
+.btn-warning {
+  background: #f59e0b !important;
+  color: white !important;
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: #d97706 !important;
+  color: white !important;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 12px rgba(245, 158, 11, 0.3);
+  filter: brightness(1.1);
+}
+
+.btn-warning:active:not(:disabled) {
+  background: #b45309 !important;
+  color: white !important;
+}
+
+/* Botón de peligro/rojo */
+.btn-danger {
+  background: #ef4444 !important;
+  color: white !important;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626 !important;
+  color: white !important;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 12px rgba(239, 68, 68, 0.3);
+  filter: brightness(1.1);
+}
+
+.btn-danger:active:not(:disabled) {
+  background: #b91c1c !important;
+  color: white !important;
+}
+
+/* =========================
+   ICONOS EN BOTONES
+   ========================= */
+
+/* Contenedores de iconos */
 button .btn-icon,
-.btn .btn-icon,
-a .btn-icon {
+button .btn-icon-right {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
+/* SVGs en botones */
 button .btn-icon svg,
-.btn .btn-icon svg,
-a .btn-icon svg,
-button .btn-icon-right svg,
-.btn .btn-icon-right svg,
-a .btn-icon-right svg {
-  display: block;
-  width: 20px;
-  height: 20px;
-  stroke: white;
-  fill: none;
-}
-
-/* Iconos blancos en todos los botones */
-button .btn-icon svg,
-button .btn-icon-right svg,
-.btn .btn-icon svg,
-.btn .btn-icon-right svg,
-a .btn-icon svg,
-a .btn-icon-right svg,
-button.hero-btn .btn-icon svg,
-button.cta-btn .btn-icon svg,
-.btn-primary .btn-icon svg {
+button .btn-icon-right svg {
+  width: 16px;
+  height: 16px;
   stroke: white !important;
   fill: none !important;
+  stroke-width: 2;
+  transition: transform 0.2s ease;
+}
+
+/* Forzar color blanco en TODOS los iconos y texto */
+button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) *,
+button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) svg,
+button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) path,
+button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) circle,
+button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) line,
+button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close)
+  polyline {
+  color: white !important;
+  stroke: white !important;
+  fill: none !important;
+}
+
+/* Animación de iconos en hover */
+button:hover:not(:disabled) .btn-icon svg,
+button:hover:not(:disabled) .btn-icon-right svg {
+  transform: scale(1.1);
+  stroke: white !important;
+}
+
+/* =========================
+   ESPACIADO Y LAYOUT
+   ========================= */
+
+/* Espaciado entre botones */
+button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close)
+  + button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) {
+  margin-left: 8px;
+}
+
+/* Botones en contenedores flex */
+.button-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.button-group button {
+  margin: 0 !important;
+}
+
+/* =========================
+   OVERRIDE PARA BOTONES ESPECIALES
+   ========================= */
+
+/* Botones de confirmación de navegación */
+.navigation-confirm-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 10px 16px !important;
+  min-height: 40px !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.navigation-confirm-btn.primary {
+  background: #ef4444 !important;
+  color: white !important;
+}
+
+.navigation-confirm-btn.primary:hover:not(:disabled) {
+  background: #dc2626 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.navigation-confirm-btn.secondary {
+  background: #6b7280 !important;
+  color: white !important;
+}
+
+.navigation-confirm-btn.secondary:hover:not(:disabled) {
+  background: #4b5563 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Botón de tutorial */
+.close-tutorial-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 12px 20px !important;
+  min-height: 44px !important;
+  border-radius: 6px !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  background: #ff9545 !important;
+  color: white !important;
+}
+
+.close-tutorial-btn:hover:not(:disabled) {
+  background: #e5834a !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* =========================
+   BOTONES ESPECIALES Y MINI
+   ========================= */
+
+/* Botones mini para llaves */
+.btn-mini,
+.select-key-btn {
+  padding: 6px 12px !important;
+  min-height: 32px !important;
+  font-size: 12px !important;
+  gap: 6px !important;
+}
+
+/* Botones específicos en modales de acceso restringido */
+.btn-login-now,
+.btn-cancel {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 10px 16px !important;
+  min-height: 40px !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  color: white !important;
+}
+
+.btn-login-now {
+  background: #ff9545 !important;
+}
+
+.btn-login-now:hover:not(:disabled) {
+  background: #e5834a !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 6px 12px rgba(255, 149, 69, 0.3) !important;
+  filter: brightness(1.1) !important;
+}
+
+/* Forzar iconos blancos en botones dinámicos */
+.btn-login-now svg,
+.btn-cancel svg,
+.btn-mini svg,
+.select-key-btn svg,
+.restricted-access-buttons button svg,
+.hero-btn svg,
+.cta-btn svg,
+button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) svg {
+  stroke: white !important;
+  fill: none !important;
+}
+
+/* Forzar texto blanco en TODOS los botones */
+.hero-btn,
+.cta-btn,
+.hero-btn *,
+.cta-btn *,
+button:not(.clear-btn):not(.change-btn-circular):not(.hero-btn):not(
+    .btn-restart
+  ):not(.mobile-menu-close),
+button:not(.clear-btn):not(.change-btn-circular):not(.hero-btn):not(
+    .btn-restart
+  ):not(.mobile-menu-close)
+  * {
+  color: white !important;
+}
+
+/* Excepciones específicas para botones especiales */
+.hero-btn.secondary {
+  color: #334155 !important;
+}
+
+.hero-btn.secondary * {
+  color: #334155 !important;
+}
+
+.btn-restart,
+.btn-restart * {
+  color: #6b7280 !important;
+}
+
+/* Excepciones para estados hover en botones específicos */
+.hero-btn.secondary:hover {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: white !important;
+}
+
+.hero-btn.secondary:hover * {
+  color: white !important;
+}
+
+.hero-btn.secondary:hover svg {
+  stroke: white !important;
+}
+
+/* =========================
+   BOTÓN RESTART ESPECIAL
+   ========================= */
+
+.btn-restart {
+  background: #f8fafc !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 10px 16px !important;
+  min-height: 40px !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.btn-restart:hover:not(:disabled) {
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+  border-color: #94a3b8 !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 6px 12px rgba(71, 85, 105, 0.15) !important;
+  filter: brightness(1.05) !important;
+}
+
+.btn-restart:active:not(:disabled) {
+  background: #cbd5e1 !important;
+  color: #1e293b !important;
+  transform: translateY(0) !important;
+}
+
+.btn-restart,
+.btn-restart * {
+  color: #475569 !important;
+}
+
+.btn-restart:hover,
+.btn-restart:hover * {
+  color: #334155 !important;
+}
+
+.btn-restart:active,
+.btn-restart:active * {
+  color: #1e293b !important;
+}
+
+.btn-restart svg {
+  stroke: #475569 !important;
+  fill: none !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.btn-restart:hover svg {
+  stroke: #334155 !important;
+}
+
+.btn-restart:active svg {
+  stroke: #1e293b !important;
 }
 
 /* =========================

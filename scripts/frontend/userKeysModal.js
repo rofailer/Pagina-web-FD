@@ -60,8 +60,24 @@
                                 li.appendChild(exp);
                                 // Botón seleccionar
                                 const btn = document.createElement("button");
-                                btn.textContent = (activeKeyId === key.id) ? "Llave activa" : "Seleccionar";
-                                btn.disabled = (activeKeyId === key.id);
+                                if (activeKeyId === key.id) {
+                                    btn.innerHTML = `
+                                        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                            <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        Llave activa
+                                    `;
+                                    btn.disabled = true;
+                                    btn.className = "btn-success";
+                                } else {
+                                    btn.innerHTML = `
+                                        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                            <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        Seleccionar
+                                    `;
+                                    btn.className = "btn-primary";
+                                }
                                 btn.onclick = () => {
                                     selectedKeyId = key.id;
                                     selectedKeyName = key.key_name || `Llave ${key.id}`;

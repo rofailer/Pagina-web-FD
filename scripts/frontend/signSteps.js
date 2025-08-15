@@ -407,10 +407,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 return `
                     <div class="key-item ${isExpired ? 'disabled' : ''} ${isSelected ? 'selected' : ''}" data-key-id="${key.id}">
-                        <div class="key-name">${key.key_name || `Llave ${key.id}`}</div>
-                        <div class="key-algorithm">Cifrado: ${key.encryption_type || 'aes-256-cbc'}</div>
-                        <div class="key-expiration ${expClass}">${expStatus}</div>
-                        ${isSelected ? '<div class="key-active-label">ACTIVA</div>' : ''}
+                        <div class="key-info">
+                            <div class="key-name">${key.key_name || `Llave ${key.id}`} ${isSelected ? '<span class="key-active-label">ACTIVA</span>' : ''}</div>
+                            <div class="key-algorithm">Cifrado: ${key.encryption_type || 'aes-256-cbc'}</div>
+                            <div class="key-expiration ${expClass}">${expStatus}</div>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -437,16 +438,6 @@ document.addEventListener("DOMContentLoaded", () => {
         keyItems.forEach(item => {
             const keyId = item.getAttribute('data-key-id');
 
-            // Remover listeners anteriores para evitar duplicados
-            item.replaceWith(item.cloneNode(true));
-        });
-
-        // Volver a obtener los elementos después del clonado
-        const newKeyItems = document.querySelectorAll('.key-item:not(.disabled)');
-
-        newKeyItems.forEach(item => {
-            const keyId = item.getAttribute('data-key-id');
-
             item.addEventListener('click', function (e) {
                 e.preventDefault();
                 console.log("🖱️ Click en llave:", keyId);
@@ -459,7 +450,7 @@ document.addEventListener("DOMContentLoaded", () => {
             item.style.cursor = 'pointer';
         });
 
-        console.log("🔗 Event listeners agregados a", newKeyItems.length, "llaves");
+        console.log("🔗 Event listeners agregados a", keyItems.length, "llaves");
     }
 
     // --- Función CENTRALIZADA para seleccionar una llave ---
