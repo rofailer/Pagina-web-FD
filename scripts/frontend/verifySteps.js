@@ -480,53 +480,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- Función para mostrar notificaciones ---
-    function showNotification(message, type = "info") {
-        // Remover notificación anterior si existe
-        const existingNotification = document.querySelector('.step-notification');
-        if (existingNotification) {
-            existingNotification.remove();
-        }
-
-        const notification = document.createElement('div');
-        notification.className = `step-notification ${type}`;
-        notification.textContent = message;
-
-        // Estilos básicos para la notificación
-        Object.assign(notification.style, {
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            padding: '12px 20px',
-            borderRadius: '8px',
-            color: 'white',
-            fontWeight: '600',
-            fontSize: '14px',
-            zIndex: '10000',
-            animation: 'slideInRight 0.3s ease',
-            maxWidth: '300px',
-            wordWrap: 'break-word'
-        });
-
-        // Colores según el tipo
-        const colors = {
-            success: '#4caf50',
-            error: '#f44336',
-            warning: '#ff9800',
-            info: '#2196f3'
-        };
-        notification.style.background = colors[type] || colors.info;
-
-        document.body.appendChild(notification);
-
-        // Auto-remover después de 3 segundos
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.style.animation = 'slideOutRight 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }
-        }, 3000);
-    }
+    // Las notificaciones ahora se manejan con el sistema global de notifications.js
 
     // --- Paso 1: Seleccionar profesor ---
     document.getElementById("acceptProfesorBtn").onclick = () => {

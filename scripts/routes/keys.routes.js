@@ -5,7 +5,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const pool = require('../db/pool');
 const authenticate = require('../middlewares/authenticate');
-const { encryptAES, encryptWithType } = require('../utils/crypto');
+const { encryptAES, encryptWithType, decryptWithType } = require('../utils/crypto');
 
 // Ruta para obtener las llaves del usuario (para verificar si tiene llaves)
 router.get("/api/user-keys", authenticate, async (req, res) => {
@@ -178,6 +178,84 @@ router.get("/user-keys", authenticate, async (req, res) => {
         );
         res.json({ keys });
     } catch (err) {
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
+// Eliminar llave del usuario
+router.delete("/delete-key", authenticate, async (req, res) => {
+    const userId = req.userId;
+    const { keyName, password } = req.body;
+
+    // Validaciones básicas
+    if (!keyName || !password) {
+        return res.status(400).json({ error: "Nombre de llave y contraseña son requeridos" });
+    }
+
+    if (password.length < 4) {
+        return res.status(400).json({ error: "La contraseña debe tener al menos 4 caracteres" });
+    }
+
+    try {
+        // Verificar que la llave existe y pertenece al usuario
+        const [keyRows] = await pool.query(
+            "SELECT id, private_key, encryption_type FROM user_keys WHERE user_id = ? AND key_name = ?",
+            [userId, keyName]
+        );
+
+        if (keyRows.length === 0) {
+            return res.status(404).json({ error: "Llave no encontrada" });
+        }
+
+        const key = keyRows[0];
+        const encryptedPrivateKey = key.private_key;
+        const encryptionType = key.encryption_type;
+
+        // Verificar la contraseña intentando descifrar la llave privada
+        try {
+            const decryptedPrivateKey = decryptWithType(encryptedPrivateKey, password, encryptionType);
+
+            // Si llegamos aquí, la contraseña es correcta
+            console.log(`🗑️ Contraseña verificada para llave: ${keyName}`);
+
+        } catch (decryptError) {
+            console.log(`❌ Contraseña incorrecta para llave: ${keyName}`);
+            return res.status(401).json({ error: "Contraseña incorrecta" });
+        }
+
+        // Verificar si es la llave activa del usuario
+        const [userRows] = await pool.query(
+            "SELECT active_key_id FROM users WHERE id = ?",
+            [userId]
+        );
+
+        const isActiveKey = userRows.length > 0 && userRows[0].active_key_id === key.id;
+
+        // Si es la llave activa, desactivarla
+        if (isActiveKey) {
+            await pool.query(
+                "UPDATE users SET active_key_id = NULL WHERE id = ?",
+                [userId]
+            );
+            console.log(`🔄 Llave activa ${keyName} desactivada antes de eliminar`);
+        }
+
+        // Eliminar la llave de la base de datos
+        await pool.query(
+            "DELETE FROM user_keys WHERE id = ? AND user_id = ?",
+            [key.id, userId]
+        );
+
+        console.log(`✅ Llave ${keyName} eliminada exitosamente para usuario ${userId}`);
+
+        res.json({
+            success: true,
+            message: `Llave "${keyName}" eliminada correctamente`,
+            wasActiveKey: isActiveKey
+        });
+
+    } catch (err) {
+        console.error("Error al eliminar llave:", err);
         res.status(500).json({ error: "Error interno del servidor" });
     }
 });

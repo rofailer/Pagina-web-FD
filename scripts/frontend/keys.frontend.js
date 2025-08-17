@@ -61,20 +61,63 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Continuar sin marcar la llave activa
             }
 
-            // Actualizar contador de llaves
-            const keysCountElement = document.getElementById("keysCount");
-            if (keysCountElement) {
-                keysCountElement.textContent = keys.length;
-            }
+            // Calcular estadísticas de llaves
+            const totalKeys = keys.length;
+            let activeKeys = 0;
+            let expiredKeys = 0;
+
+            keys.forEach(key => {
+                const expirationDate = new Date(key.expiration_date);
+                const now = new Date();
+                const isExpired = key.expired || now > expirationDate;
+
+                if (isExpired) {
+                    expiredKeys++;
+                } else {
+                    activeKeys++;
+                }
+            });
+
+            // Actualizar contadores en la interfaz
+            const totalKeysElement = document.getElementById("totalKeysCount");
+            const activeKeysElement = document.getElementById("activeKeysCount");
+            const expiredKeysElement = document.getElementById("expiredKeysCount");
+
+            if (totalKeysElement) totalKeysElement.textContent = totalKeys;
+            if (activeKeysElement) activeKeysElement.textContent = activeKeys;
+            if (expiredKeysElement) expiredKeysElement.textContent = expiredKeys;
 
             // Actualizar información de llave activa
             const activeKeyInfo = document.getElementById("activeKeyInfo");
             const activeKeyNameElement = document.getElementById("activeKeyName");
-            if (activeKeyName && activeKeyInfo && activeKeyNameElement) {
-                activeKeyInfo.style.display = "flex";
-                activeKeyNameElement.textContent = activeKeyName;
-            } else if (activeKeyInfo) {
-                activeKeyInfo.style.display = "none";
+            const activeKeyIndicator = document.getElementById("activeKeyIndicator");
+
+            if (activeKeyInfo && activeKeyNameElement) {
+                // Limpiar clases anteriores
+                activeKeyInfo.classList.remove("no-active-key", "expired-key");
+
+                if (activeKeyName) {
+                    // Verificar si la llave activa está expirada
+                    const activeKey = keys.find(key => key.key_name === activeKeyName);
+                    let isActiveKeyExpired = false;
+
+                    if (activeKey) {
+                        const expirationDate = new Date(activeKey.expiration_date);
+                        const now = new Date();
+                        isActiveKeyExpired = activeKey.expired || now > expirationDate;
+                    }
+
+                    activeKeyNameElement.textContent = activeKeyName;
+
+                    if (isActiveKeyExpired) {
+                        activeKeyInfo.classList.add("expired-key");
+                    }
+                    // Si no está expirada, no agregamos ninguna clase especial (estado normal)
+                } else {
+                    // No hay llave activa
+                    activeKeyInfo.classList.add("no-active-key");
+                    activeKeyNameElement.textContent = "No hay llave activa";
+                }
             }
 
             // Solo actualizar si existe el contenedor
@@ -131,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                     <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                                 </svg>
                             </button>
-                            <button class="key-action-btn key-delete-btn clear-btn" onclick="deleteKey('${key.key_name}')" title="Eliminar llave">
+                            <button class="key-action-btn key-delete-btn clear-btn" onclick="event.stopPropagation(); deleteKey('${key.key_name}')" title="Eliminar llave">
                                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                                     <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -170,15 +213,30 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await resp.json();
             if (data.success) {
-                alert("Llave activa actualizada correctamente");
+                // Usar el sistema de notificaciones de la página
+                if (typeof showNotification === 'function') {
+                    showNotification("Llave activa actualizada correctamente", "success");
+                } else {
+                    alert("Llave activa actualizada correctamente");
+                }
                 // Recargar las llaves en perfil
                 if (typeof loadKeys === "function") loadKeys();
                 if (typeof loadActiveKey === "function") loadActiveKey();
             } else {
-                alert("Error al seleccionar la llave");
+                // Usar el sistema de notificaciones de la página
+                if (typeof showNotification === 'function') {
+                    showNotification("Error al seleccionar la llave", "error");
+                } else {
+                    alert("Error al seleccionar la llave");
+                }
             }
         } catch (err) {
-            alert("Error al seleccionar la llave");
+            // Usar el sistema de notificaciones de la página
+            if (typeof showNotification === 'function') {
+                showNotification("Error al seleccionar la llave", "error");
+            } else {
+                alert("Error al seleccionar la llave");
+            }
         }
     };
 

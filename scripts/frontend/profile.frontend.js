@@ -2,6 +2,12 @@
 // PERFIL - JAVASCRIPT FUNCTIONS
 // ===========================
 
+// Función temporal para evitar errores mientras se migra la funcionalidad a keys.frontend.js
+function updateKeysCount() {
+    console.log('updateKeysCount: función temporal - la funcionalidad real está en keys.frontend.js');
+    // No hacer nada por ahora para evitar errores de elementos null
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     initializeProfile();
     initializeTabs();
@@ -34,7 +40,7 @@ function initializeTabs() {
             // Efectos adicionales según la pestaña
             switch (targetTab) {
                 case 'gestion-llaves':
-                    updateKeysCount();
+                    // updateKeysCount(); // Comentado temporalmente - manejado por keys.frontend.js
                     loadUserKeys();
                     break;
                 case 'configuracion-cifrado':
@@ -59,7 +65,7 @@ function initializeProfile() {
     setupPdfTemplates();
     loadUserData();
     loadUserKeys();
-    updateKeysCount();
+    // updateKeysCount(); // Comentado temporalmente - manejado por keys.frontend.js
     loadAdvancedSettings();
 }
 
@@ -127,31 +133,53 @@ function saveUserData() {
 // ===========================
 function updateKeysCount() {
     const keysList = document.getElementById('profileKeysList');
-    const keysCountElement = document.getElementById('keysCount');
 
-    if (keysList && keysCountElement) {
+    if (keysList) {
         const count = keysList.children.length;
-        keysCountElement.textContent = count;
+
+        // Actualizar los nuevos elementos de estadísticas
+        const totalKeysElement = document.getElementById('totalKeysCount');
+        const activeKeysElement = document.getElementById('activeKeysCount');
+        const expiredKeysElement = document.getElementById('expiredKeysCount');
+
+        if (totalKeysElement) totalKeysElement.textContent = count;
+        // Por ahora mostrar count en activas hasta que se implemente la lógica completa
+        if (activeKeysElement) activeKeysElement.textContent = count;
+        if (expiredKeysElement) expiredKeysElement.textContent = '0';
     }
 }
 
-function loadUserKeys() {
-    // Esta función se conectará con el sistema existente de llaves
+async function loadUserKeys() {
     const keysList = document.getElementById('profileKeysList');
-
     if (!keysList) return;
 
-    // Ejemplo de estructura para mostrar llaves
-    const exampleKeys = [
-        { name: 'Llave Principal', date: '2024-01-15', type: 'RSA-2048' },
-        { name: 'Llave Tesis', date: '2024-01-20', type: 'RSA-2048' }
-    ];
+    try {
+        const response = await fetch('/list-keys', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
 
-    keysList.innerHTML = '';
-    exampleKeys.forEach(key => {
-        const keyElement = createKeyElement(key);
-        keysList.appendChild(keyElement);
-    });
+        if (response.ok) {
+            const keys = await response.json();
+            keysList.innerHTML = '';
+
+            if (keys.length === 0) {
+                keysList.innerHTML = '<p class="no-keys-message">No tienes llaves generadas aún.</p>';
+            } else {
+                keys.forEach(key => {
+                    const keyElement = createKeyElement(key);
+                    keysList.appendChild(keyElement);
+                });
+            }
+        } else {
+            keysList.innerHTML = '<p class="error-message">Error al cargar las llaves.</p>';
+        }
+    } catch (error) {
+        console.error('Error al cargar llaves:', error);
+        keysList.innerHTML = '<p class="error-message">Error de conexión.</p>';
+    }
 
     updateKeysCount();
 }
@@ -170,15 +198,15 @@ function createKeyElement(key) {
                 </svg>
             </div>
             <div class="key-details-container">
-                <div class="key-name">${key.name}</div>
+                <div class="key-name">${key.key_name}</div>
                 <div class="key-details">
-                    <span>${key.type}</span>
-                    <span>Creada: ${key.date}</span>
+                    <span>${key.encryption_type || 'AES-256-CBC'}</span>
+                    <span>Creada: ${new Date(key.created_at).toLocaleDateString()}</span>
                 </div>
             </div>
         </div>
         <div class="key-actions">
-            <button class="key-action-btn key-download-btn" onclick="downloadKey('${key.name}')">
+            <button class="key-action-btn key-download-btn" onclick="event.stopPropagation(); downloadKey('${key.key_name}')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -186,7 +214,7 @@ function createKeyElement(key) {
                 </svg>
                 Descargar
             </button>
-            <button class="key-action-btn key-delete-btn" onclick="deleteKey('${key.name}')">
+            <button class="key-action-btn key-delete-btn" onclick="event.stopPropagation(); deleteKey('${key.key_name}')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -199,64 +227,147 @@ function createKeyElement(key) {
 }
 
 function showCreateKeyModal() {
-    // Enfocar el campo de nombre de llave
+    console.log('showCreateKeyModal llamada - iniciando proceso de creación de llave');
+
+    // Verificar el campo de nombre de llave primero
     const keyNameInput = document.getElementById('keyNameInput');
-    if (keyNameInput) {
+    if (!keyNameInput) {
+        console.warn('keyNameInput no encontrado');
+        alert('Error: Campo de nombre de llave no encontrado');
+        return;
+    }
+
+    const keyName = keyNameInput.value.trim();
+    if (!keyName) {
+        // Resaltar el campo y mostrar mensaje de error
+        keyNameInput.style.border = '2px solid #f44336';
+        keyNameInput.style.boxShadow = '0 0 5px rgba(244, 67, 54, 0.5)';
         keyNameInput.focus();
         keyNameInput.scrollIntoView({ behavior: 'smooth' });
+
+        // Mostrar mensaje de error
+        alert('Por favor, ingresa un nombre para la nueva llave');
+
+        // Restaurar estilo después de un tiempo
+        setTimeout(() => {
+            keyNameInput.style.border = '';
+            keyNameInput.style.boxShadow = '';
+        }, 3000);
+
+        return;
     }
 
-    // Mostrar el modal de contraseña para generar la llave
-    if (typeof window.showKeyPasswordModal === 'function') {
-        window.showKeyPasswordModal(async (keyPassword) => {
-            try {
-                const encryptionType = localStorage.getItem("encryptionType") || "aes-256-cbc";
-                const keyName = keyNameInput ? keyNameInput.value.trim() : "";
+    // Si hay nombre, continuar con el proceso
+    keyNameInput.focus();
+    keyNameInput.scrollIntoView({ behavior: 'smooth' });
 
-                const response = await fetch("/generate-keys", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                    body: JSON.stringify({ keyPassword, encryptionType, keyName }),
-                });
-                const data = await response.json();
+    // Dar un pequeño delay para asegurar que todos los scripts estén cargados
+    setTimeout(() => {
+        // Mostrar el modal de contraseña para generar la llave
+        console.log('Verificando si existe showKeyPasswordModal:', typeof window.showKeyPasswordModal);
+        if (typeof window.showKeyPasswordModal === 'function') {
+            console.log('Mostrando modal de contraseña');
+            window.showKeyPasswordModal(async (keyPassword) => {
+                try {
+                    const encryptionType = localStorage.getItem("encryptionType") || "aes-256-cbc";
+                    const keyName = keyNameInput ? keyNameInput.value.trim() : "";
 
-                if (data.success) {
-                    alert(`Llave "${data.keyName}" generada correctamente.`);
+                    console.log('Enviando solicitud de generación de llave:', { keyName, encryptionType });
 
-                    // Recargar las llaves
-                    if (typeof window.loadKeys === "function") {
-                        window.loadKeys();
+                    const response = await fetch("/generate-keys", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${localStorage.getItem("token")}`,
+                        },
+                        body: JSON.stringify({ keyPassword, encryptionType, keyName }),
+                    });
+
+                    console.log('Respuesta del servidor:', response.status, response.statusText);
+
+                    const data = await response.json();
+                    console.log('Datos recibidos:', data);
+
+                    if (data.success) {
+                        console.log('Llave creada exitosamente');
+
+                        // Usar el sistema de notificaciones de la página
+                        if (typeof showNotification === 'function') {
+                            showNotification(`Llave "${data.keyName}" generada correctamente`, 'success');
+                        } else {
+                            alert(`Llave "${data.keyName}" generada correctamente.`);
+                        }
+
+                        // Limpiar el campo de nombre después de generar la llave
+                        if (keyNameInput) {
+                            keyNameInput.value = "";
+                            // Restaurar estilo del input
+                            keyNameInput.style.border = '';
+                            keyNameInput.style.boxShadow = '';
+                        }
+
+                        // Recargar las llaves - con manejo de errores
+                        try {
+                            if (typeof window.loadKeys === "function") {
+                                console.log('Recargando llaves con window.loadKeys');
+                                window.loadKeys();
+                            }
+                        } catch (loadError) {
+                            console.warn('Error al recargar con window.loadKeys:', loadError);
+                        }
+
+                        try {
+                            console.log('Intentando recargar llaves del perfil');
+                            if (typeof loadProfileKeys === "function") {
+                                loadProfileKeys();
+                            }
+                        } catch (profileError) {
+                            console.warn('Error al recargar llaves del perfil:', profileError);
+                        }
+
+                    } else {
+                        console.error('Error en la respuesta del servidor:', data.error);
+
+                        // Usar el sistema de notificaciones de la página
+                        if (typeof showNotification === 'function') {
+                            showNotification(data.error || "Error al generar la llave", 'error');
+                        } else {
+                            alert(data.error || "Error al generar la llave.");
+                        }
                     }
-                    loadProfileKeys(); // Recargar en el perfil
+                } catch (err) {
+                    console.error('Error completo en la generación de llave:', err);
 
-                    // Limpiar el campo de nombre después de generar la llave
-                    if (keyNameInput) keyNameInput.value = "";
-                } else {
-                    alert(data.error || "Error al generar la llave.");
+                    // Usar el sistema de notificaciones de la página
+                    if (typeof showNotification === 'function') {
+                        showNotification(`Error al generar la llave: ${err.message}`, 'error');
+                    } else {
+                        alert(`Error al generar la llave: ${err.message}`);
+                    }
                 }
-            } catch (err) {
-                alert("Error al generar la llave.");
+            });
+        } else {
+            console.error('showKeyPasswordModal no está disponible. Tipo:', typeof window.showKeyPasswordModal);
+
+            // Usar el sistema de notificaciones de la página
+            if (typeof showNotification === 'function') {
+                showNotification('Error: No se puede mostrar el modal de contraseña. Verifica que todos los scripts estén cargados.', 'error');
+            } else {
+                alert('Error: No se puede mostrar el modal de contraseña. Verifica que todos los scripts estén cargados.');
             }
-        });
-    } else {
-        alert('Por favor, inicia sesión para generar llaves.');
-    }
+        }
+    }, 100); // Fin del setTimeout
 }
+
+// Hacer la función disponible globalmente para el onclick en HTML
+window.showCreateKeyModal = showCreateKeyModal;
 
 function downloadKey(keyName) {
     showNotification(`Descargando llave: ${keyName}`, 'info');
     // Aquí se conectará con la funcionalidad existente de descarga
 }
 
-function deleteKey(keyName) {
-    if (confirm(`¿Estás seguro de que quieres eliminar la llave "${keyName}"?`)) {
-        showNotification(`Llave "${keyName}" eliminada`, 'success');
-        loadUserKeys(); // Recargar la lista
-    }
-}
+// deleteKey function removed - now handled by deleteKey.frontend.js module
 
 // ===========================
 // CONFIGURACIÓN DE CIFRADO
@@ -434,52 +545,7 @@ function resetAllSettings() {
 // ===========================
 // UTILIDADES
 // ===========================
-function showNotification(message, type = 'info') {
-    // Crear elemento de notificación
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
-        color: white;
-        padding: 15px 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        z-index: 1000;
-        font-weight: 500;
-        max-width: 300px;
-        animation: slideIn 0.3s ease;
-    `;
-    notification.textContent = message;
-
-    document.body.appendChild(notification);
-
-    // Remover después de 3 segundos
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
-}
-
-// Agregar estilos para las animaciones de notificación
-const notificationStyles = document.createElement('style');
-notificationStyles.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-`;
-document.head.appendChild(notificationStyles);
+// Las notificaciones ahora se manejan con el sistema global de notifications.js
 
 // ===========================
 // DATOS PERSONALES
@@ -532,8 +598,20 @@ function saveUserData() {
 // ===========================
 function updateKeysCount() {
     const keysList = document.getElementById('profileKeysList');
-    const count = keysList.children.length;
-    document.getElementById('keysCount').textContent = count;
+
+    if (keysList) {
+        const count = keysList.children.length;
+
+        // Actualizar los nuevos elementos de estadísticas
+        const totalKeysElement = document.getElementById('totalKeysCount');
+        const activeKeysElement = document.getElementById('activeKeysCount');
+        const expiredKeysElement = document.getElementById('expiredKeysCount');
+
+        if (totalKeysElement) totalKeysElement.textContent = count;
+        // Por ahora mostrar count en activas hasta que se implemente la lógica completa
+        if (activeKeysElement) activeKeysElement.textContent = count;
+        if (expiredKeysElement) expiredKeysElement.textContent = '0';
+    }
 }
 
 function loadUserKeys() {
@@ -555,66 +633,25 @@ function loadUserKeys() {
     updateKeysCount();
 }
 
-function createKeyElement(key) {
-    const keyDiv = document.createElement('div');
-    keyDiv.className = 'key-item';
-    keyDiv.innerHTML = `
-        <div class="key-info">
-            <div class="key-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <rect x="8" y="6" width="13" height="12" rx="1" stroke="currentColor" stroke-width="2"/>
-                    <circle cx="10" cy="12" r="1" fill="currentColor"/>
-                    <path d="M3 15a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1z" stroke="currentColor" stroke-width="2"/>
-                    <path d="M7 15h1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-            </div>
-            <div class="key-details-container">
-                <div class="key-name">${key.name}</div>
-                <div class="key-details">
-                    <span>${key.type}</span>
-                    <span>Creada: ${key.date}</span>
-                </div>
-            </div>
-        </div>
-        <div class="key-actions">
-            <button class="key-action-btn key-download-btn" onclick="downloadKey('${key.name}')">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                Descargar
-            </button>
-            <button class="key-action-btn key-delete-btn" onclick="deleteKey('${key.name}')">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Eliminar
-            </button>
-        </div>
-    `;
-    return keyDiv;
-}
+// createKeyElement function removed - duplicate function eliminated
 
+// Esta función está duplicada - comentada para evitar conflictos
+// La función principal está arriba con toda la lógica
+/*
 function showCreateKeyModal() {
     // Mostrar el campo de nombre de llave
     const keyNameInput = document.getElementById('keyNameInput');
     keyNameInput.focus();
     keyNameInput.scrollIntoView({ behavior: 'smooth' });
 }
+*/
 
 function downloadKey(keyName) {
     showNotification(`Descargando llave: ${keyName}`, 'info');
     // Aquí se conectará con la funcionalidad existente de descarga
 }
 
-function deleteKey(keyName) {
-    if (confirm(`¿Estás seguro de que quieres eliminar la llave "${keyName}"?`)) {
-        showNotification(`Llave "${keyName}" eliminada`, 'success');
-        loadUserKeys(); // Recargar la lista
-    }
-}
+// deleteKey function removed - now handled by deleteKey.frontend.js module
 
 // ===========================
 // CONFIGURACIÓN DE CIFRADO
@@ -759,55 +796,7 @@ function resetAllSettings() {
 // ===========================
 // UTILIDADES
 // ===========================
-function showNotification(message, type = 'info') {
-    // Crear elemento de notificación
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
-        color: white;
-        padding: 15px 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        z-index: 1000;
-        font-weight: 500;
-        max-width: 300px;
-        animation: slideIn 0.3s ease;
-    `;
-    notification.textContent = message;
-
-    document.body.appendChild(notification);
-
-    // Remover después de 3 segundos
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
-}
-
-// Agregar estilos para las animaciones de notificación si no existen
-if (!document.getElementById('profile-notification-styles')) {
-    const notificationStyles = document.createElement('style');
-    notificationStyles.id = 'profile-notification-styles';
-    notificationStyles.textContent = `
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(100%); opacity: 0; }
-        }
-    `;
-    document.head.appendChild(notificationStyles);
-}
+// Las notificaciones ahora se manejan con el sistema global de notifications.js
 
 // ===== HISTORIAL DE FIRMA FUNCTIONS =====
 function loadHistorialFirma() {
