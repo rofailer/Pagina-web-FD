@@ -2514,7 +2514,30 @@
             </div>
 
             <div class="perfil-tab-btn" data-tab="personalizacion-pdf">
-              <div class="tab-icon">�</div>
+              <div class="tab-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <polyline
+                    points="14,2 14,8 20,8"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M16 13H8M16 17H8M10 9H8"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </div>
               <div class="tab-info">
                 <div class="tab-title">Personalización PDF</div>
                 <div class="tab-desc">Plantillas y logos</div>
@@ -3355,117 +3378,350 @@
                       stroke-linecap="round"
                       stroke-linejoin="round"
                     />
-                    <circle
-                      cx="10"
-                      cy="13"
-                      r="2"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
                     <path
-                      d="M14 13h4"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                    <path
-                      d="M14 17h4"
+                      d="M16 13H8M16 17H8M10 9H8"
                       stroke="currentColor"
                       stroke-width="2"
                       stroke-linecap="round"
                     />
                   </svg>
-                  Personalización PDF
+                  Plantilla PDF de Aval
                 </h3>
-                <p>Personaliza la apariencia de tus documentos firmados</p>
+                <p>
+                  Configura el documento PDF que se usará como aval para todas
+                  las firmas
+                </p>
               </div>
 
-              <div class="pdf-customization">
-                <div class="pdf-section">
-                  <h4>Logo Personalizado</h4>
-                  <div class="pdf-preview">
-                    <div class="pdf-preview-placeholder">
+              <div class="pdf-template-manager">
+                <!-- Estado actual de la plantilla -->
+                <div class="current-template-status">
+                  <div class="status-header">
+                    <span>Estado de la Plantilla</span>
+                  </div>
+                  <div class="status-content" id="templateStatus">
+                    <div class="template-status status-none">
+                      <div class="status-icon">
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          />
+                          <path
+                            d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                          <path
+                            d="M12 17h.01"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                      </div>
+                      <div class="status-text">
+                        <div class="status-title">
+                          Sin plantilla configurada
+                        </div>
+                        <div class="status-desc">
+                          Se está usando el PDF en blanco por defecto
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Subir nueva plantilla -->
+                <div class="template-upload-section">
+                  <h4>Importar Nueva Plantilla PDF</h4>
+
+                  <div class="upload-area-container">
+                    <div class="upload-area" id="pdfUploadArea">
+                      <div class="upload-content">
+                        <div class="upload-icon">
+                          <svg
+                            width="48"
+                            height="48"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                          >
+                            <path
+                              d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                            <polyline
+                              points="16,13 12,9 8,13"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                            <line
+                              x1="12"
+                              y1="9"
+                              x2="12"
+                              y2="16"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                            />
+                          </svg>
+                        </div>
+                        <div class="upload-text">
+                          <div class="upload-title">
+                            Arrastra tu PDF aquí o haz clic para seleccionar
+                          </div>
+                          <div class="upload-subtitle">
+                            Solo archivos PDF • Máximo 10MB
+                          </div>
+                        </div>
+                      </div>
+                      <input
+                        type="file"
+                        id="templatePdfInput"
+                        accept=".pdf"
+                        style="display: none"
+                      />
+                    </div>
+
+                    <div
+                      class="upload-progress"
+                      id="uploadProgress"
+                      style="display: none"
+                    >
+                      <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                      </div>
+                      <div class="progress-text" id="progressText">
+                        Subiendo... 0%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Control de aplicación -->
+                <div class="template-control-panel">
+                  <div class="control-header">
+                    <div class="control-icon">
                       <svg
-                        width="40"
-                        height="40"
+                        width="20"
+                        height="20"
                         viewBox="0 0 24 24"
                         fill="none"
                       >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="3"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        />
                         <path
-                          d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
                           stroke="currentColor"
                           stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                        <polyline
-                          points="14,2 14,8 20,8"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                        <line
-                          x1="16"
-                          y1="13"
-                          x2="8"
-                          y2="13"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                        <line
-                          x1="16"
-                          y1="17"
-                          x2="8"
-                          y2="17"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
                         />
                       </svg>
-                      <div style="font-size: 14px; margin-top: 10px">
-                        Vista previa
-                      </div>
+                    </div>
+                    <div class="control-info">
+                      <h4>Control de Plantillas</h4>
+                      <p>Gestiona la aplicación de la configuración actual</p>
                     </div>
                   </div>
 
-                  <div class="pdf-upload-area" onclick="selectLogo()">
-                    <div class="pdf-upload-icon">📤</div>
-                    <div class="pdf-upload-text">Subir logo personalizado</div>
-                    <div class="pdf-upload-hint">PNG, JPG hasta 2MB</div>
+                  <div class="control-actions">
+                    <button
+                      class="control-btn primary"
+                      id="applyTemplateChangesBtn"
+                    >
+                      <span class="btn-icon">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <path
+                            d="M20 6L9 17l-5-5"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                      </span>
+                      <span class="btn-text">Aplicar Configuración</span>
+                    </button>
+
+                    <button class="control-btn secondary" id="resetTemplateBtn">
+                      <span class="btn-icon">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <path
+                            d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                          <path
+                            d="M3 3v5h5"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                      </span>
+                      <span class="btn-text">Restablecer</span>
+                    </button>
                   </div>
-                  <input
-                    type="file"
-                    id="logoInput"
-                    accept="image/*"
-                    style="display: none"
-                    onchange="handleLogo(event)"
-                  />
+
+                  <div class="control-status" id="controlStatus">
+                    <div class="status-indicator inactive">
+                      <div class="indicator-dot"></div>
+                      <span>Esperando configuración</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="pdf-section">
-                  <h4>Plantillas de Diseño</h4>
-                  <div class="pdf-template-options">
-                    <div class="pdf-template selected" data-template="formal">
-                      <div class="pdf-template-name">Formal</div>
-                      <div class="pdf-template-desc">
-                        Profesional y elegante
+                <!-- Instrucciones -->
+                <div class="template-instructions">
+                  <h4>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    Cómo Funciona
+                  </h4>
+                  <div class="instructions-list">
+                    <div class="instruction-item">
+                      <div class="instruction-number">1</div>
+                      <div class="instruction-text">
+                        <strong>Importa tu PDF:</strong> Sube el documento que
+                        quieres usar como plantilla de aval
                       </div>
                     </div>
-                    <div class="pdf-template" data-template="modern">
-                      <div class="pdf-template-name">Moderno</div>
-                      <div class="pdf-template-desc">
-                        Contemporáneo y limpio
+                    <div class="instruction-item">
+                      <div class="instruction-number">2</div>
+                      <div class="instruction-text">
+                        <strong>Configuración automática:</strong> El sistema
+                        configurará este PDF como plantilla para todos los
+                        usuarios
                       </div>
                     </div>
-                    <div class="pdf-template" data-template="minimal">
-                      <div class="pdf-template-name">Minimalista</div>
-                      <div class="pdf-template-desc">Simple y directo</div>
+                    <div class="instruction-item">
+                      <div class="instruction-number">3</div>
+                      <div class="instruction-text">
+                        <strong>Aplicación universal:</strong> Todos los
+                        documentos firmados usarán esta plantilla en lugar del
+                        PDF en blanco
+                      </div>
+                    </div>
+                    <div class="instruction-item">
+                      <div class="instruction-number">4</div>
+                      <div class="instruction-text">
+                        <strong>Verificación compatible:</strong> Los documentos
+                        se verificarán correctamente con esta plantilla
+                      </div>
                     </div>
                   </div>
+                </div>
+
+                <!-- Acciones -->
+                <div
+                  class="template-actions"
+                  id="templateActions"
+                  style="display: none"
+                >
+                  <button class="btn-secondary" id="previewTemplateBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="3"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                    </svg>
+                    Vista Previa
+                  </button>
+                  <button class="btn-secondary" id="downloadTemplateBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <polyline
+                        points="7,10 12,15 17,10"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <line
+                        x1="12"
+                        y1="15"
+                        x2="12"
+                        y2="3"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                    Descargar
+                  </button>
+                  <button class="btn-danger" id="deleteTemplateBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <polyline
+                        points="3,6 5,6 21,6"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    Eliminar Plantilla
+                  </button>
                 </div>
               </div>
             </div>

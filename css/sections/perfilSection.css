@@ -2024,3 +2024,590 @@
   box-shadow: 0 0 10px rgba(231, 76, 60, 0.3) !important;
   background-color: #fdf2f2 !important;
 }
+
+/* =========================
+   PLANTILLA PDF DE AVAL
+   ========================= */
+
+.pdf-template-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+/* Estado actual de la plantilla */
+.current-template-status {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.status-header svg {
+  color: #28a745;
+}
+
+.status-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  transition: all 0.3s ease;
+}
+
+.status-item.active {
+  border-color: #28a745;
+  background: #f8fff9;
+}
+
+.status-item.inactive {
+  border-color: #ffc107;
+  background: #fffdf7;
+}
+
+.status-icon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.status-text {
+  flex: 1;
+}
+
+.status-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 4px;
+}
+
+.status-desc {
+  font-size: 13px;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+/* Sección de subida */
+.template-upload-section {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  border: 1px solid #dee2e6;
+  min-height: 300px;
+  position: relative;
+}
+
+.template-upload-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  color: #495057;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Contenedor para centrar área de subida */
+.upload-area-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  min-height: 220px;
+  gap: 20px;
+}
+
+/* Área de subida */
+.upload-area,
+#pdfUploadArea {
+  border: 2px dashed #dee2e6;
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fafbfc;
+  width: 100%;
+  max-width: 500px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  position: relative;
+  min-height: 200px;
+}
+
+.upload-area:hover,
+#pdfUploadArea:hover {
+  border-color: var(--primary-color);
+  background: #fff5eb;
+}
+
+.upload-area.dragover,
+#pdfUploadArea.dragover {
+  border-color: var(--primary-color);
+  background: #fff5eb;
+  transform: scale(1.02);
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  width: 100%;
+}
+
+.upload-icon {
+  color: #6c757d;
+  transition: color 0.3s ease;
+}
+
+.upload-area:hover .upload-icon {
+  color: var(--primary-color);
+}
+
+.upload-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  text-align: center;
+}
+
+.upload-title {
+  font-weight: 600;
+  color: #495057;
+  font-size: 16px;
+  text-align: center;
+  width: 100%;
+}
+
+.upload-subtitle {
+  color: #6c757d;
+  font-size: 14px;
+  text-align: center;
+  width: 100%;
+}
+
+/* Barra de progreso */
+.upload-progress {
+  margin: 20px auto;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  background: #e9ecef;
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 0 auto 15px auto;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), #ff7b1a);
+  border-radius: 5px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  text-align: center;
+  font-size: 14px;
+  color: #495057;
+  font-weight: 600;
+}
+
+/* Instrucciones */
+.template-instructions {
+  background: #f1f3f4;
+  border-radius: 12px;
+  padding: 25px;
+}
+
+.template-instructions h4 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  color: #495057;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.instructions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.instruction-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.instruction-number {
+  width: 28px;
+  height: 28px;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.instruction-text {
+  color: #495057;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.instruction-text strong {
+  color: #343a40;
+}
+
+/* Acciones de plantilla */
+.template-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+}
+
+/* Panel de control de plantillas */
+.template-control-panel {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 16px;
+  padding: 24px;
+  margin: 25px 0;
+  color: #495057;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid #dee2e6;
+  position: relative;
+  overflow: hidden;
+}
+
+.template-control-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="%23495057" opacity="0.03"/><circle cx="80" cy="20" r="1" fill="%23495057" opacity="0.03"/><circle cx="40" cy="60" r="1.5" fill="%23495057" opacity="0.03"/><circle cx="90" cy="70" r="1" fill="%23495057" opacity="0.03"/><circle cx="10" cy="80" r="1" fill="%23495057" opacity="0.03"/></svg>');
+  pointer-events: none;
+}
+
+.control-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.control-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(73, 80, 87, 0.1);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(73, 80, 87, 0.2);
+}
+
+.control-icon svg {
+  color: #495057;
+}
+
+.control-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #495057;
+}
+
+.control-info p {
+  margin: 0;
+  font-size: 14px;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+.control-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.control-btn.primary {
+  background: var(--primary-color);
+  color: white;
+  box-shadow: 0 4px 16px rgba(255, 136, 62, 0.3);
+}
+
+.control-btn.primary:hover {
+  background: #e67e22;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 136, 62, 0.4);
+}
+
+.control-btn.secondary {
+  background: #6c757d;
+  color: white;
+  box-shadow: 0 4px 16px rgba(108, 117, 125, 0.3);
+}
+
+.control-btn.secondary:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+}
+
+.control-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-text {
+  font-weight: 600;
+}
+
+.control-status {
+  position: relative;
+  z-index: 1;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #495057;
+}
+
+.indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6c757d;
+  transition: all 0.3s ease;
+}
+
+.status-indicator.active .indicator-dot {
+  background: #4ade80;
+  box-shadow: 0 0 12px rgba(74, 222, 128, 0.6);
+  animation: pulse 2s infinite;
+}
+
+.status-indicator.processing .indicator-dot {
+  background: #fbbf24;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Estados de plantilla con SVG */
+.template-status {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  transition: all 0.3s ease;
+}
+
+.template-status.status-success {
+  border-color: #28a745;
+  background: #f8fff9;
+}
+
+.template-status.status-success .status-icon svg {
+  color: #28a745;
+}
+
+.template-status.status-error {
+  border-color: #dc3545;
+  background: #fff5f5;
+}
+
+.template-status.status-error .status-icon svg {
+  color: #dc3545;
+}
+
+.template-status.status-uploading {
+  border-color: #ffc107;
+  background: #fffdf7;
+}
+
+.template-status.status-uploading .status-icon svg {
+  color: #ffc107;
+}
+
+.template-status.status-none {
+  border-color: #6c757d;
+  background: #f8f9fa;
+}
+
+.template-status.status-none .status-icon svg {
+  color: #6c757d;
+}
+
+.template-actions button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pdf-template-manager {
+    gap: 20px;
+  }
+
+  .template-upload-section,
+  .template-instructions {
+    padding: 20px;
+  }
+
+  .upload-area,
+  #pdfUploadArea {
+    padding: 30px 15px;
+  }
+
+  .template-actions {
+    flex-direction: column;
+  }
+
+  .instruction-item {
+    gap: 12px;
+  }
+
+  .template-control-panel {
+    padding: 20px;
+    margin: 20px 0;
+  }
+
+  .control-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .control-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .control-btn {
+    justify-content: center;
+    padding: 14px 20px;
+  }
+
+  .control-info h4 {
+    font-size: 16px;
+  }
+
+  .control-info p {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .template-control-panel {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .control-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .control-btn {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+}

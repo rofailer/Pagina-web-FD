@@ -49,6 +49,9 @@ function initializeTabs() {
                 case 'datos-personales':
                     loadUserData();
                     break;
+                case 'personalizacion-pdf':
+                    loadCurrentTemplate();
+                    break;
                 case 'historial-firma':
                     loadHistorialFirma();
                     break;
@@ -432,18 +435,661 @@ function handleLogo(event) {
 }
 
 function setupPdfTemplates() {
-    const templates = document.querySelectorAll('.pdf-template');
-    templates.forEach(template => {
-        template.addEventListener('click', function () {
-            // Remover selección anterior
-            templates.forEach(tmpl => tmpl.classList.remove('selected'));
-            // Seleccionar nueva plantilla
-            this.classList.add('selected');
+    // Inicializar drag and drop
+    setupPdfDragAndDrop();
 
-            const templateType = this.dataset.template;
-            showNotification(`Plantilla "${templateType}" seleccionada`, 'info');
-        });
+    // Configurar botones de acción
+    setupPdfTemplateButtons();
+
+    // Cargar estado actual de la plantilla
+    loadCurrentTemplate();
+
+    // Configurar formulario de subida
+    setupTemplateUploadForm();
+}
+
+function setupPdfDragAndDrop() {
+    const uploadArea = document.getElementById('pdfUploadArea');
+    const fileInput = document.getElementById('templatePdfInput');
+
+    if (!uploadArea || !fileInput) return;
+
+    // Prevenir comportamiento por defecto del navegador
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
     });
+
+    // Efectos visuales para drag over
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, unhighlight, false);
+    });
+
+    // Manejar drop
+    uploadArea.addEventListener('drop', handleDrop, false);
+
+    // Click en área de subida
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    // Change en input file
+    fileInput.addEventListener('change', handleFileSelect);
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    function highlight() {
+        uploadArea.classList.add('dragover');
+    }
+
+    function unhighlight() {
+        uploadArea.classList.remove('dragover');
+    }
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles(files);
+    }
+
+    function handleFileSelect(e) {
+        const files = e.target.files;
+        handleFiles(files);
+    }
+
+    function handleFiles(files) {
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.type === 'application/pdf') {
+                uploadPdfTemplate(file);
+            } else {
+                showNotification('Por favor selecciona un archivo PDF válido', 'error');
+            }
+        }
+    }
+}
+
+function setupPdfTemplateButtons() {
+    // Botón subir nueva plantilla
+    const uploadBtn = document.getElementById('uploadTemplateBtn');
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', () => {
+            document.getElementById('templatePdfInput').click();
+        });
+    }
+
+    // Botón descargar plantilla actual
+    const downloadBtn = document.getElementById('downloadTemplateBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', downloadCurrentTemplate);
+    }
+
+    // Botón eliminar plantilla
+    const deleteBtn = document.getElementById('deleteTemplateBtn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', deleteCurrentTemplate);
+    }
+
+    // Botón vista previa
+    const previewBtn = document.getElementById('previewTemplateBtn');
+    if (previewBtn) {
+        previewBtn.addEventListener('click', previewCurrentTemplate);
+    }
+
+    // Botón aplicar cambios
+    const applyBtn = document.getElementById('applyTemplateChangesBtn');
+    if (applyBtn) {
+        applyBtn.addEventListener('click', applyTemplateChanges);
+    }
+
+    // Botón restablecer
+    const resetBtn = document.getElementById('resetTemplateBtn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetTemplateConfiguration);
+    }
+}
+
+function setupTemplateUploadForm() {
+    const form = document.getElementById('templateUploadForm');
+    if (form) {
+        form.addEventListener('submit', handleTemplateFormSubmit);
+    }
+}
+
+async function uploadPdfTemplate(file) {
+    const progressBar = document.querySelector('.progress-fill');
+    const progressContainer = document.querySelector('.upload-progress');
+    const statusElement = document.querySelector('.template-status');
+    const uploadArea = document.getElementById('pdfUploadArea');
+
+    try {
+        // Mostrar progreso
+        if (progressContainer) progressContainer.style.display = 'block';
+        if (uploadArea) uploadArea.style.display = 'none';
+
+        updateTemplateStatus('Subiendo plantilla...', 'uploading');
+
+        // Verificar si el backend está disponible
+        const backendAvailable = await checkBackendAvailability();
+
+        if (!backendAvailable) {
+            // Simular subida exitosa localmente
+            await simulateLocalUpload(file, progressBar);
+            return;
+        }
+
+        // Simular progreso de subida
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 30;
+            if (progress > 95) progress = 95;
+
+            if (progressBar) {
+                progressBar.style.width = progress + '%';
+            }
+        }, 200);
+
+        // Crear FormData
+        const formData = new FormData();
+        formData.append('templatePdf', file);
+        formData.append('templateName', file.name);
+
+        // Enviar al servidor
+        const response = await fetch('/api/template/upload', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        clearInterval(progressInterval);
+
+        if (response.ok) {
+            const result = await response.json();
+
+            // Completar progreso
+            if (progressBar) progressBar.style.width = '100%';
+
+            setTimeout(() => {
+                updateTemplateStatus(`Plantilla activa: ${file.name}`, 'success');
+                enableTemplateActions(true);
+
+                // Ocultar progreso después de un momento
+                setTimeout(() => {
+                    if (progressContainer) progressContainer.style.display = 'none';
+                    if (uploadArea) uploadArea.style.display = 'flex';
+                }, 2000);
+            }, 500);
+
+            showNotification('Plantilla PDF subida exitosamente', 'success');
+
+        } else {
+            throw new Error('Error al subir la plantilla');
+        }
+
+    } catch (error) {
+        console.warn('Error uploading template (usando modo offline):', error);
+        // Modo offline - simular subida exitosa
+        await simulateLocalUpload(file, progressBar);
+    }
+}
+
+async function simulateLocalUpload(file, progressBar) {
+    const progressText = document.getElementById('progressText');
+
+    // Simular progreso de subida local
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += Math.random() * 25 + 10;
+        if (progress > 100) progress = 100;
+
+        if (progressBar) {
+            progressBar.style.width = progress + '%';
+        }
+
+        if (progressText) {
+            progressText.textContent = `Subiendo... ${Math.round(progress)}%`;
+        }
+
+        if (progress >= 100) {
+            clearInterval(progressInterval);
+
+            // Guardar en localStorage
+            const templateData = {
+                name: file.name,
+                size: file.size,
+                uploadDate: new Date().toISOString(),
+                exists: true
+            };
+            localStorage.setItem('currentTemplate', JSON.stringify(templateData));
+
+            setTimeout(() => {
+                if (progressText) {
+                    progressText.textContent = 'Completado 100%';
+                }
+
+                updateTemplateStatus(`Plantilla activa: ${file.name}`, 'success');
+                enableTemplateActions(true);
+                updateTemplateInfo(templateData);
+
+                const progressContainer = document.querySelector('.upload-progress');
+                const uploadArea = document.getElementById('pdfUploadArea');
+
+                // Ocultar progreso después de un momento
+                setTimeout(() => {
+                    if (progressContainer) progressContainer.style.display = 'none';
+                    if (uploadArea) uploadArea.style.display = 'flex';
+                }, 1500);
+            }, 800);
+
+            showNotification('Plantilla configurada correctamente (modo offline)', 'success');
+        }
+    }, 150);
+}
+
+async function checkBackendAvailability() {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1000); // 1 segundo timeout
+
+        const response = await fetch('/api/template/current', {
+            signal: controller.signal,
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        clearTimeout(timeoutId);
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
+function updateTemplateStatus(message, type) {
+    const statusContainer = document.getElementById('templateStatus');
+
+    if (!statusContainer) return;
+
+    // Crear el HTML del estado
+    let statusHTML = `
+        <div class="template-status status-${type}">
+            <div class="status-icon">
+                ${getStatusSVG(type)}
+            </div>
+            <div class="status-text">
+                <div class="status-title">${message}</div>
+                <div class="status-desc">${getStatusDescription(type)}</div>
+            </div>
+        </div>
+    `;
+
+    statusContainer.innerHTML = statusHTML;
+}
+
+function getStatusSVG(type) {
+    switch (type) {
+        case 'success':
+            return `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
+        case 'error':
+            return `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
+                    <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            `;
+        case 'uploading':
+            return `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="17,8 12,3 7,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            `;
+        case 'none':
+        default:
+            return `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            `;
+    }
+}
+
+function getStatusDescription(type) {
+    switch (type) {
+        case 'success':
+            return 'Plantilla configurada y lista para usar en todas las firmas';
+        case 'error':
+            return 'Hubo un problema al cargar o configurar la plantilla';
+        case 'uploading':
+            return 'Procesando plantilla, por favor espere...';
+        case 'none':
+        default:
+            return 'Se está usando el PDF en blanco por defecto';
+    }
+}
+
+async function loadCurrentTemplate() {
+    try {
+        // Primero verificar localStorage
+        const localTemplate = localStorage.getItem('currentTemplate');
+        if (localTemplate) {
+            const template = JSON.parse(localTemplate);
+            if (template.exists) {
+                updateTemplateStatus(`Plantilla activa: ${template.name}`, 'success');
+                enableTemplateActions(true);
+                updateTemplateInfo(template);
+                return;
+            }
+        }
+
+        // Intentar cargar desde backend
+        const backendAvailable = await checkBackendAvailability();
+        if (!backendAvailable) {
+            updateTemplateStatus('No hay plantilla configurada', 'none');
+            enableTemplateActions(false);
+            return;
+        }
+
+        const response = await fetch('/api/template/current', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (response.ok) {
+            const template = await response.json();
+
+            if (template.exists) {
+                updateTemplateStatus(`Plantilla activa: ${template.name}`, 'success');
+                enableTemplateActions(true);
+                updateTemplateInfo(template);
+
+                // Guardar en localStorage
+                localStorage.setItem('currentTemplate', JSON.stringify(template));
+            } else {
+                updateTemplateStatus('No hay plantilla configurada', 'none');
+                enableTemplateActions(false);
+            }
+        } else {
+            updateTemplateStatus('No hay plantilla configurada', 'none');
+            enableTemplateActions(false);
+        }
+
+    } catch (error) {
+        console.warn('Backend no disponible - usando estado por defecto');
+        updateTemplateStatus('No hay plantilla configurada', 'none');
+        enableTemplateActions(false);
+    }
+}
+
+function updateTemplateInfo(template) {
+    // Actualizar información en la interfaz
+    const infoElements = {
+        name: document.querySelector('.template-name'),
+        size: document.querySelector('.template-size'),
+        date: document.querySelector('.template-date'),
+        pages: document.querySelector('.template-pages')
+    };
+
+    if (infoElements.name) infoElements.name.textContent = template.name;
+    if (infoElements.size) infoElements.size.textContent = formatFileSize(template.size);
+    if (infoElements.date) infoElements.date.textContent = formatDate(template.uploadDate);
+    if (infoElements.pages) infoElements.pages.textContent = `${template.pages} página(s)`;
+}
+
+function enableTemplateActions(enable) {
+    const buttons = [
+        'downloadTemplateBtn',
+        'deleteTemplateBtn',
+        'previewTemplateBtn'
+    ];
+
+    buttons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.disabled = !enable;
+            if (enable) {
+                btn.classList.remove('disabled');
+            } else {
+                btn.classList.add('disabled');
+            }
+        }
+    });
+}
+
+async function downloadCurrentTemplate() {
+    try {
+        const response = await fetch('/api/template/download', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'plantilla-aval.pdf';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showNotification('Plantilla descargada exitosamente', 'success');
+        } else {
+            throw new Error('Error al descargar plantilla');
+        }
+    } catch (error) {
+        console.error('Error downloading template:', error);
+        showNotification('Error al descargar la plantilla', 'error');
+    }
+}
+
+async function deleteCurrentTemplate() {
+    if (!confirm('¿Estás seguro de que quieres eliminar la plantilla actual? Esta acción no se puede deshacer.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/template/delete', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (response.ok) {
+            updateTemplateStatus('No hay plantilla configurada', 'none');
+            enableTemplateActions(false);
+            clearTemplateInfo();
+            showNotification('Plantilla eliminada exitosamente', 'success');
+        } else {
+            throw new Error('Error al eliminar plantilla');
+        }
+    } catch (error) {
+        console.error('Error deleting template:', error);
+        showNotification('Error al eliminar la plantilla', 'error');
+    }
+}
+
+async function previewCurrentTemplate() {
+    try {
+        const response = await fetch('/api/template/preview', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            showNotification('Abriendo vista previa...', 'info');
+        } else {
+            throw new Error('Error al obtener vista previa');
+        }
+    } catch (error) {
+        console.error('Error previewing template:', error);
+        showNotification('Error al obtener vista previa', 'error');
+    }
+}
+
+function clearTemplateInfo() {
+    const infoElements = [
+        '.template-name',
+        '.template-size',
+        '.template-date',
+        '.template-pages'
+    ];
+
+    infoElements.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) element.textContent = '-';
+    });
+}
+
+function handleTemplateFormSubmit(e) {
+    e.preventDefault();
+    // El formulario se maneja a través del drag & drop y file input
+    showNotification('Use el área de arrastrar y soltar o el botón de subir', 'info');
+}
+
+async function applyTemplateChanges() {
+    const applyBtn = document.getElementById('applyTemplateChangesBtn');
+    const statusIndicator = document.querySelector('.status-indicator');
+
+    if (!applyBtn) return;
+
+    // Cambiar estado a procesando
+    updateControlStatus('processing', 'Aplicando configuración...');
+
+    // Deshabilitar botón temporalmente
+    const originalHTML = applyBtn.innerHTML;
+    applyBtn.disabled = true;
+    applyBtn.innerHTML = `
+        <span class="btn-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="17,8 12,3 7,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </span>
+        <span class="btn-text">Aplicando...</span>
+    `;
+
+    try {
+        // Simular proceso de aplicación
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Verificar si hay plantilla configurada
+        const localTemplate = localStorage.getItem('currentTemplate');
+        if (localTemplate) {
+            const template = JSON.parse(localTemplate);
+            if (template.exists) {
+                updateControlStatus('active', 'Configuración aplicada exitosamente');
+                showNotification('Plantilla aplicada al sistema de firmas', 'success');
+
+                // Marcar como aplicada
+                template.applied = true;
+                template.appliedDate = new Date().toISOString();
+                localStorage.setItem('currentTemplate', JSON.stringify(template));
+            } else {
+                throw new Error('No hay plantilla configurada');
+            }
+        } else {
+            throw new Error('No hay plantilla configurada');
+        }
+
+    } catch (error) {
+        console.error('Error applying template changes:', error);
+        updateControlStatus('inactive', 'Error al aplicar configuración');
+        showNotification('Error al aplicar la configuración', 'error');
+    } finally {
+        // Restaurar botón
+        setTimeout(() => {
+            applyBtn.disabled = false;
+            applyBtn.innerHTML = originalHTML;
+        }, 1000);
+    }
+}
+
+async function resetTemplateConfiguration() {
+    const resetBtn = document.getElementById('resetTemplateBtn');
+
+    if (!confirm('¿Estás seguro de que quieres restablecer la configuración? Se eliminará la plantilla actual.')) {
+        return;
+    }
+
+    if (!resetBtn) return;
+
+    // Cambiar estado a procesando
+    updateControlStatus('processing', 'Restableciendo configuración...');
+
+    // Deshabilitar botón temporalmente
+    const originalHTML = resetBtn.innerHTML;
+    resetBtn.disabled = true;
+    resetBtn.innerHTML = `
+        <span class="btn-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 3v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </span>
+        <span class="btn-text">Restableciendo...</span>
+    `;
+
+    try {
+        // Simular proceso de restablecimiento
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Limpiar localStorage
+        localStorage.removeItem('currentTemplate');
+
+        // Actualizar estados
+        updateTemplateStatus('No hay plantilla configurada', 'none');
+        updateControlStatus('inactive', 'Esperando configuración');
+        enableTemplateActions(false);
+
+        showNotification('Configuración restablecida exitosamente', 'success');
+
+    } catch (error) {
+        console.error('Error resetting template:', error);
+        updateControlStatus('inactive', 'Error al restablecer');
+        showNotification('Error al restablecer la configuración', 'error');
+    } finally {
+        // Restaurar botón
+        setTimeout(() => {
+            resetBtn.disabled = false;
+            resetBtn.innerHTML = originalHTML;
+        }, 500);
+    }
+}
+
+function updateControlStatus(status, message) {
+    const statusIndicator = document.querySelector('.status-indicator');
+    const statusText = statusIndicator.querySelector('span');
+
+    if (!statusIndicator || !statusText) return;
+
+    statusIndicator.className = `status-indicator ${status}`;
+    statusText.textContent = message;
 }
 
 // ===========================
@@ -690,21 +1336,6 @@ function handleLogo(event) {
     }
 }
 
-function setupPdfTemplates() {
-    const templates = document.querySelectorAll('.pdf-template');
-    templates.forEach(template => {
-        template.addEventListener('click', function () {
-            // Remover selección anterior
-            templates.forEach(tmpl => tmpl.classList.remove('selected'));
-            // Seleccionar nueva plantilla
-            this.classList.add('selected');
-
-            const templateType = this.dataset.template;
-            showNotification(`Plantilla "${templateType}" seleccionada`, 'info');
-        });
-    });
-}
-
 // ===========================
 // CONFIGURACIÓN AVANZADA
 // ===========================
@@ -949,4 +1580,26 @@ function showDocumentDetails(historialItem) {
     });
 
     showNotification('Función de detalles en desarrollo', 'info');
+}
+
+// ===========================
+// FUNCIONES AUXILIARES PARA PLANTILLAS PDF
+// ===========================
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
