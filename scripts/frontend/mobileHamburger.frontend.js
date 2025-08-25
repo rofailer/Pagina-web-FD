@@ -179,18 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Actualizar estado inmediatamente
         isMenuOpen = false;
 
-        // Remover animaciones - SIMPLIFICADO
-        const menuItems = mobileMenu.querySelectorAll(".mobile-menu-item");
-        menuItems.forEach(item => {
-            item.classList.remove("animate-in");
-        });
-
-        // Remover animación del botón de cerrar
-        if (closeButton) {
-            closeButton.classList.remove("animate-in");
-        }
-
-        // Remover clases activas - OPTIMIZADO
+        // Remover clases activas 
         setTimeout(() => {
             mobileMenu.classList.remove("active");
             menuBtn.classList.remove("active");
@@ -227,16 +216,15 @@ document.addEventListener("DOMContentLoaded", () => {
             if (token) {
                 // Usuario logueado: mostrar botón
                 menuBtn.classList.add("active-session");
-                menuBtn.style.display = "flex";
-                menuBtn.style.visibility = "visible";
-                menuBtn.style.pointerEvents = "auto";
             } else {
-                // Usuario no logueado: ocultar botón completamente
+                // Usuario no logueado: también mostrar botón para acceder al login
                 menuBtn.classList.remove("active-session");
-                menuBtn.style.display = "none";
-                menuBtn.style.visibility = "hidden";
-                menuBtn.style.pointerEvents = "none";
             }
+
+            // El botón hamburguesa siempre debe estar visible
+            menuBtn.style.display = "flex";
+            menuBtn.style.visibility = "visible";
+            menuBtn.style.pointerEvents = "auto";
         }
     }
 
@@ -328,6 +316,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                     <div class="user-profile-name">${userName}</div>
                     <div class="user-profile-status">Sesión activa</div>
+                    <div class="auth-buttons-row">
+                        <li class="mobile-menu-item auth-button"><a href="#perfil" id="mobileGoToProfile">Perfil</a></li>
+                    </div>
                 </div>
             `;
         } else {
@@ -338,12 +329,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="no-session-subtitle">Inicia sesión para acceder a todas las funciones</div>
                     <div class="auth-buttons-row">
                         <li class="mobile-menu-item auth-button"><a href="#" id="mobileLoginBtn">Iniciar Sesión</a></li>
-                        <li class="mobile-menu-item auth-button"><a href="#" id="mobileRegisterBtn">Registrarse</a></li>
                     </div>
                 </div>
             `;
-        }        // --- SEPARADOR 1: Después del perfil/estado ---
-        html += `<div class="menu-divider"><div class="divider-line"></div></div>`;
+        }
 
         // --- Sección 2: Navegación principal ---
         html += `<div class="navigation-section">`;
@@ -359,22 +348,11 @@ document.addEventListener("DOMContentLoaded", () => {
         html += `<li class="mobile-menu-item"><a href="#verificar">Verificar</a></li>`;
 
         html += `<li class="mobile-menu-item"><a href="#contacto">Contacto</a></li>`;
-        html += `</div>`;        // --- SEPARADOR 2: Después de la navegación principal ---
+        html += `</div>`;
+
+        // --- Secciones adicionales cuando hay sesión ---
         if (isLogged) {
-            html += `<div class="menu-divider"><div class="divider-line"></div></div>`;
-
-            // --- Sección 3: Opciones (Perfil/Admin) ---
-            html += `<div class="options-section">`;
-            html += `<li class="mobile-menu-item"><a href="#perfil" id="mobileGoToProfile">Perfil</a></li>`;
-            if (userRole === "owner") {
-                html += `<li class="mobile-menu-item"><a href="#opciones" id="mobileGoToAdmin">Admin</a></li>`;
-            }
-            html += `</div>`;
-
-            // --- SEPARADOR 3: Antes de cerrar sesión ---
-            html += `<div class="menu-divider"><div class="divider-line"></div></div>`;
-
-            // --- Sección 4: Cerrar sesión ---
+            // --- Sección de cerrar sesión ---
             html += `<div class="logout-section">`;
             html += `<li class="mobile-menu-item"><a href="#" id="mobileLogoutBtn">Cerrar sesión</a></li>`;
             html += `</div>`;
@@ -397,7 +375,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Vuelve a renderizar el menú si cambia el tamaño de la ventana
     window.addEventListener("resize", renderMobileMenu);
 
-    // --- Eventos para login/registro/logout en menú móvil ---
+    // --- Eventos para login/logout en menú móvil ---
     document.addEventListener("click", function (e) {
         // Verificar que el elemento clickeado está dentro del menú móvil
         if (!e.target.closest(".header-mobile-menu")) return;
@@ -412,21 +390,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     window.showLoginModal();
                 } else {
                     console.error("showLoginModal no está disponible");
-                }
-            }, 100);
-            return;
-        }
-
-        // Registro
-        if (e.target && e.target.id === "mobileRegisterBtn") {
-            e.preventDefault();
-            e.stopPropagation();
-            closeMobileMenu();
-            setTimeout(() => {
-                if (window.showRegisterModal) {
-                    window.showRegisterModal();
-                } else {
-                    console.error("showRegisterModal no está disponible");
                 }
             }, 100);
             return;
@@ -477,7 +440,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             e.target &&
             (e.target.id === "mobileGoToProfile" ||
-                e.target.id === "mobileGoToAdmin" ||
                 (e.target.href && e.target.href.includes("#") && !e.target.classList.contains("restricted-access")))
         ) {
             closeMobileMenu();
@@ -562,26 +524,11 @@ document.addEventListener("DOMContentLoaded", () => {
         modal.innerHTML = `
             <div class="restricted-access-backdrop"></div>
             <div class="restricted-access-content">
-                <div class="restricted-access-icon">🔒</div>
+                <button class="restricted-access-close"></button>
+                <div class="restricted-access-icon"></div>
                 <h3>Acceso Restringido</h3>
                 <p>Para <strong>${actionText}</strong> necesitas iniciar sesión en tu cuenta.</p>
-                <div class="restricted-access-buttons">
-                    <button class="btn-login-now">
-                        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <polyline points="10,17 15,12 10,7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <line x1="15" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        Iniciar Sesión
-                    </button>
-                    <button class="btn-cancel btn-secondary">
-                        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        Cancelar
-                    </button>
-                </div>
+                <button class="restricted-access-login-btn">Iniciar Sesión</button>
             </div>
         `;
 
@@ -601,8 +548,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.appendChild(modal);
 
         // Event listeners para los botones
-        const btnLogin = modal.querySelector('.btn-login-now');
-        const btnCancel = modal.querySelector('.btn-cancel');
+        const btnLogin = modal.querySelector('.restricted-access-login-btn');
+        const btnClose = modal.querySelector('.restricted-access-close');
         const backdrop = modal.querySelector('.restricted-access-backdrop');
 
         function closeModal() {
@@ -620,7 +567,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 100);
         });
 
-        btnCancel.addEventListener('click', closeModal);
+        btnClose.addEventListener('click', closeModal);
         backdrop.addEventListener('click', closeModal);
 
         // Cerrar con Escape

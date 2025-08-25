@@ -7,7 +7,6 @@
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(3px);
   overflow: hidden;
 }
 
@@ -114,40 +113,7 @@
   border: 1px solid #ddd;
 }
 
-#showTutorialBtn {
-  position: fixed;
-  bottom: 40px;
-  right: 10px;
-  z-index: 1000;
-  background: linear-gradient(
-    135deg,
-    var(--primary-color) 60%,
-    color-mix(in srgb, var(--primary-color) 30%, #fff 70%) 100%
-  );
-  color: #fff;
-  border: none;
-  border-radius: 100%;
-  min-width: 52px;
-  width: 52px;
-  height: 52px;
-  font-size: 1.5em;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.13);
-  cursor: pointer;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 0;
-  transition: background 0.18s;
-}
-
-#showTutorialBtn:hover {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--primary-color) 80%, #fff 20%) 60%,
-    color-mix(in srgb, var(--primary-color) 10%, #fff 90%) 100%
-  );
-}
+/* Estilos del antiguo botón de ayuda (#showTutorialBtn) eliminados */
 
 @media (max-width: 700px) {
   .tutorial-modal-content {
@@ -155,14 +121,7 @@
     padding: 16px;
     margin: 10% auto;
   }
-  #showTutorialBtn {
-    bottom: 55px;
-    right: 20px;
-    width: 42px;
-    min-width: 32px;
-    height: 42px;
-    font-size: 1.2em;
-  }
+  /* antiguo botón eliminado */
 }
 
 @media (max-width: 500px) {
@@ -176,12 +135,5 @@
     max-height: 80vh;
     overflow-y: auto;
   }
-  #showTutorialBtn {
-    bottom: 55px;
-    right: 20px;
-    width: 42px;
-    min-width: 32px;
-    height: 42px;
-    font-size: 1.2em;
-  }
+  /* antiguo botón eliminado */
 }

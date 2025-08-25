@@ -2,47 +2,153 @@
   left: 0;
   bottom: 0;
   width: 100%;
-  height: 35px;
-  padding: 0;
+  padding: 40px 20px 10px; /* espacio para CTA arriba, copyright abajo */
   position: relative;
   text-align: center;
   background: linear-gradient(
-    90deg,
-    var(--primary-color) 70%,
-    color-mix(in srgb, var(--primary-color) 60%, #fff 40%) 100%
+    135deg,
+    rgba(30, 41, 59, 0.96) 0%,
+    rgba(51, 65, 85, 0.96) 100%
   );
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.12);
+  display: grid;
+  justify-items: center; /* centrar todo el contenido */
+  gap: 16px; /* controlar el espacio entre bloques con gap */
   z-index: 100;
 
-  backdrop-filter: blur(2px);
+  /* sin blur para mejor rendimiento */
   transition: background 0.25s;
 }
 
 .fixed_footer p {
   color: #fff;
-  font-size: 0.9em;
+  font-size: 0.95em;
   margin: 0;
-  padding: 0 18px;
-  letter-spacing: 0.7px;
+  padding: 0 18px; /* sin padding inferior, usamos gap */
+  letter-spacing: 0.3px;
   font-weight: 500;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   opacity: 0.97;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 100%;
+  overflow-wrap: anywhere; /* permitir saltos de línea en palabras largas */
+  white-space: normal; /* permitir saltos de línea */
+}
+
+/* CTA migrada al footer */
+.fixed_footer .footer-cta {
+  max-width: 900px;
+  margin: 0 auto; /* sin margen inferior, usamos gap */
+  text-align: center;
+  display: grid; /* centrar hijos */
+  justify-items: center; /* centra todo horizontalmente */
+  gap: 15px;
+}
+
+.fixed_footer .cta-title {
+  font-size: 2em;
+  font-weight: 700;
+  color: #fff;
+  margin: 0; /* el espacio lo maneja el gap del contenedor */
+  line-height: 1.2;
+}
+
+.fixed_footer .cta-description {
+  font-size: 1.05em;
+  line-height: 1.6;
+  color: #cbd5e1;
+  margin: 0; /* el espacio lo maneja el gap */
+  max-width: 100%;
+  text-align: center;
+  overflow-wrap: anywhere; /* permitir saltos de línea en palabras largas */
+}
+
+.fixed_footer .cta-buttons {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Estilos base del botón CTA en footer */
+.fixed_footer .cta-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+  color: #fff;
+}
+.fixed_footer .cta-btn.primary {
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--secondary-color) 100%
+  );
+  box-shadow: 0 8px 25px
+    color-mix(in srgb, var(--primary-color) 30%, transparent);
+}
+
+.fixed_footer .cta-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px
+    color-mix(in srgb, var(--primary-color) 40%, transparent);
+}
+
+.fixed_footer .cta-meta {
+  color: #cbd5e1;
+  font-size: 0.92em;
+  display: inline-flex; /* centra icono + texto */
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+/* Normalizar alineación del ícono en la nota de privacidad */
+.fixed_footer .cta-meta svg {
+  vertical-align: middle !important;
+  margin-right: 6px !important;
+}
+
+.fixed_footer .footer-divider {
+  height: 4px; /* más gruesa */
+  width: 100%;
+  max-width: 90vw;
+  margin: 0 auto; /* usamos gap del contenedor */
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--primary-color) 55%, transparent) 20%,
+    color-mix(in srgb, var(--secondary-color) 55%, transparent) 80%,
+    transparent 100%
+  );
+  border-radius: 3px;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--primary-color) 22%, transparent)
+      inset,
+    0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 @media (max-width: 700px) {
   .fixed_footer {
-    font-size: 0.92em;
-    height: 44px;
-    padding: 0 2vw;
+    padding: 26px 14px 8px;
+    gap: 12px; /* menor separación en móvil */
+  }
+  .fixed_footer .cta-title {
+    font-size: 1.45em;
+  }
+  .fixed_footer .cta-description {
+    font-size: 0.98em;
+  }
+  .fixed_footer .cta-btn {
+    padding: 11px 18px;
+    font-size: 0.98em;
   }
   .fixed_footer p {
-    font-size: 0.98em;
-    padding: 0 6px;
+    font-size: 0.92em;
+    padding-bottom: 0;
   }
 }

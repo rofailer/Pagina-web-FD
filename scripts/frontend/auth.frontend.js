@@ -19,15 +19,24 @@ document.addEventListener("DOMContentLoaded", () => {
     // Verificar autenticación al cargar
     checkAuthStatus();
 
-    // Manejadores de eventos
-    loginBtn.addEventListener("click", showLoginModal);
-    registerBtn.addEventListener("click", showRegisterModal);
-    document
-        .getElementById("showRegister")
-        .addEventListener("click", showRegisterModal);
-    document
-        .getElementById("showLogin")
-        .addEventListener("click", showLoginModal);
+    // Manejadores de eventos - verificar que los elementos existan
+    if (loginBtn) {
+        loginBtn.addEventListener("click", showLoginModal);
+    }
+    if (registerBtn) {
+        registerBtn.addEventListener("click", showRegisterModal);
+    }
+
+    // Event listeners para elementos del modal que siempre deben existir
+    const showRegisterElement = document.getElementById("showRegister");
+    const showLoginElement = document.getElementById("showLogin");
+
+    if (showRegisterElement) {
+        showRegisterElement.addEventListener("click", showRegisterModal);
+    }
+    if (showLoginElement) {
+        showLoginElement.addEventListener("click", showLoginModal);
+    }
 
     if (logoutBtn) {
         logoutBtn.addEventListener("click", logoutUser);
@@ -413,13 +422,16 @@ document.addEventListener("DOMContentLoaded", () => {
     window.handleSignDocumentClick = function () {
         const token = localStorage.getItem("token");
 
-        if (token) {
+        // TEMPORAL: Para pruebas con Live Server, ir directo a firmar
+        window.location.hash = 'firmar';
+
+        /*if (token) {
             // Si está autenticado, ir directamente a la sección de firmar
             window.location.hash = 'firmar';
         } else {
             // Si no está autenticado, mostrar el modal personalizado de autenticación requerida
             showSignAuthRequiredModal();
-        }
+        }*/
     };
 
     // Función para mostrar el modal de autenticación requerida para firmar

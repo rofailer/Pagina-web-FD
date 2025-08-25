@@ -18,7 +18,6 @@ header {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   border-bottom: none;
   transition: background 0.2s;
-  position: relative;
 }
 
 .header-left {
@@ -48,16 +47,13 @@ header {
 .logo-img {
   height: 38px;
   width: 38px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 #tituloWeb {
   color: #fff;
   font-weight: 700;
-  font-size: 1.3em;
+  font-size: 1.5em;
   letter-spacing: 1px;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 1px 0 rgba(0, 0, 0, 0.08);
 }
 
 .header-center ul {
@@ -99,133 +95,6 @@ header {
 .header-right ul li {
   margin: 0;
   position: relative;
-}
-
-.header-right ul li a,
-.header-right ul li button {
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 1.08em;
-  font-weight: 500;
-  padding: 7px 16px;
-  border-radius: 18px;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-}
-
-/* Botones de autenticación mejorados */
-#loginBtn,
-#registerBtn {
-  position: relative;
-  background: rgba(255, 255, 255, 0.1) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  padding: 9px 20px !important;
-  border-radius: 25px !important;
-  font-weight: 600 !important;
-  font-size: 0.95em !important;
-  letter-spacing: 0.3px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  overflow: hidden;
-}
-
-#loginBtn::before,
-#registerBtn::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-  transition: left 0.6s ease;
-}
-
-#loginBtn:hover,
-#registerBtn:hover {
-  background: rgba(255, 255, 255, 0.2) !important;
-  border-color: rgba(255, 255, 255, 0.4) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-}
-
-#loginBtn:hover::before,
-#registerBtn:hover::before {
-  left: 100%;
-}
-
-#loginBtn:active,
-#registerBtn:active {
-  transform: translateY(0);
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
-}
-
-/* Estilo específico para el botón de registro */
-#registerBtn {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-  margin-left: 8px;
-}
-
-#registerBtn:hover {
-  background: rgba(255, 255, 255, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.5) !important;
-}
-
-.header-right ul li a:hover,
-.header-right ul li button:hover {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-}
-
-/* Sobrescribir hover para botones de auth */
-#loginBtn:hover,
-#registerBtn:hover {
-  color: #fff !important;
-}
-
-.profile-avatar {
-  border: none;
-  outline: none;
-  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s;
-  cursor: pointer;
-  box-shadow: none;
-}
-
-.profile-avatar:hover {
-  transform: scale(1.08);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.13);
-}
-
-.profile-avatar:active {
-  transform: scale(0.97);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-#profileName {
-  color: var(--primary-color, #ff9545);
-}
-#logoutBtn {
-  background: var(--primary-color, #f1554a);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 7px 18px;
-  font-weight: 600;
-  cursor: pointer;
-  width: 100%;
-  transition: background 0.18s;
 }
 
 /* Responsive */
@@ -289,8 +158,27 @@ header {
   }
 }
 
-.header-disabled {
-  visibility: hidden !important;
-  pointer-events: none !important;
-  user-select: none !important;
+/* Botón de Iniciar Sesión */
+.login-btn {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  margin-right: 12px !important;
+}
+
+.login-btn:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.login-btn:active {
+  transform: translateY(0) !important;
 }

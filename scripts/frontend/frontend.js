@@ -127,9 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         const label = fileInput.nextElementSibling;
                         if (label) {
                             const textSpan = label.querySelector('.file-input-text');
-                            const iconSpan = label.querySelector('.file-input-icon');
                             if (textSpan) textSpan.textContent = 'Seleccionar archivo PDF';
-                            if (iconSpan) iconSpan.textContent = '+';
                             label.classList.remove('has-file', 'error');
                         }
                     }
@@ -151,9 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             const label = input.nextElementSibling;
                             if (label) {
                                 const textSpan = label.querySelector('.file-input-text');
-                                const iconSpan = label.querySelector('.file-input-icon');
                                 if (textSpan) textSpan.textContent = 'Seleccionar archivo PDF';
-                                if (iconSpan) iconSpan.textContent = '+';
                                 label.classList.remove('has-file', 'error');
                             }
                         }
@@ -376,9 +372,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const label = fileInput.nextElementSibling;
                     if (label) {
                         const textSpan = label.querySelector('.file-input-text');
-                        const iconSpan = label.querySelector('.file-input-icon');
                         if (textSpan) textSpan.textContent = 'Seleccionar archivo PDF';
-                        if (iconSpan) iconSpan.textContent = '+';
                         label.classList.remove('has-file', 'error');
                     }
                 }
@@ -401,9 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         const label = input.nextElementSibling;
                         if (label) {
                             const textSpan = label.querySelector('.file-input-text');
-                            const iconSpan = label.querySelector('.file-input-icon');
                             if (textSpan) textSpan.textContent = 'Seleccionar archivo PDF';
-                            if (iconSpan) iconSpan.textContent = '+';
                             label.classList.remove('has-file', 'error');
                         }
                     }

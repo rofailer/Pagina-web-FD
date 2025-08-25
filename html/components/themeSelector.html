@@ -1,0 +1,111 @@
+<!-- ========================================
+     SELECTOR DE TEMAS DINÁMICOS
+     ======================================== -->
+
+<!-- 
+  INSTRUCCIONES DE USO:
+  
+  1. Agregar este HTML donde quieras que aparezca el selector
+  2. Incluir los archivos CSS y JS correspondientes
+  3. El selector se posicionará relativamente al contenedor padre
+  
+  ARCHIVOS REQUERIDOS:
+  - css/themeSelector.css
+  - scripts/utils/themeManager.js
+-->
+
+<li class="theme-selector-container">
+  <!-- Botón principal del selector -->
+  <button id="themeBtn" class="theme-btn" title="Cambiar tema de la página">
+    <div class="theme-icon">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <circle cx="12" cy="12" r="5" />
+        <path
+          d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+        />
+      </svg>
+    </div>
+  </button>
+
+  <!-- Dropdown con opciones de temas -->
+  <div id="themeDropdown" class="theme-dropdown">
+    <div class="theme-option" data-theme="orange">
+      <div class="theme-color" style="background: #ff9545"></div>
+      <span>Naranja</span>
+    </div>
+    <div class="theme-option" data-theme="blue">
+      <div class="theme-color" style="background: #3b82f6"></div>
+      <span>Azul</span>
+    </div>
+    <div class="theme-option" data-theme="green">
+      <div class="theme-color" style="background: #10b981"></div>
+      <span>Verde</span>
+    </div>
+    <div class="theme-option" data-theme="purple">
+      <div class="theme-color" style="background: #8b5cf6"></div>
+      <span>Morado</span>
+    </div>
+    <div class="theme-option" data-theme="red">
+      <div class="theme-color" style="background: #ef4444"></div>
+      <span>Rojo</span>
+    </div>
+    <div class="theme-option" data-theme="teal">
+      <div class="theme-color" style="background: #14b8a6"></div>
+      <span>Teal</span>
+    </div>
+  </div>
+</li>
+
+<!-- 
+  EJEMPLOS DE UBICACIÓN:
+  
+  1. En el header (como está actualmente):
+     Dentro de <ul id="authMenu">
+  
+  2. En la barra lateral:
+     <aside class="sidebar">
+       <div class="theme-selector-container">...</div>
+     </aside>
+  
+  3. En un modal de configuración:
+     <div class="settings-modal">
+       <div class="theme-selector-container">...</div>
+     </div>
+  
+  4. Como botón flotante:
+     <div class="floating-theme-selector">
+       <div class="theme-selector-container">...</div>
+     </div>
+-->
+
+<!-- ========================================
+     VERSIÓN SIMPLIFICADA (Solo botón)
+     ======================================== -->
+
+<!-- 
+  Si prefieres solo un botón que cicle entre temas:
+  
+  <button id="cycleThemeBtn" class="cycle-theme-btn" title="Cambiar tema">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="5"/>
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  </button>
+  
+  Y agregar este JavaScript:
+  
+  document.getElementById('cycleThemeBtn')?.addEventListener('click', () => {
+    const themes = ['orange', 'blue', 'green', 'purple', 'red', 'teal'];
+    const current = window.getCurrentTheme();
+    const currentIndex = themes.indexOf(current);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    window.changeTheme(themes[nextIndex]);
+  });
+-->

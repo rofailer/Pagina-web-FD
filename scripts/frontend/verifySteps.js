@@ -883,13 +883,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (input.files && input.files.length > 0) {
             const file = input.files[0];
             textSpan.textContent = file.name;
-            iconSpan.textContent = '✓';
             label.classList.add('has-file');
             label.classList.remove('error');
             window.verificacionEnCurso = true; // Marcar proceso en curso cuando se selecciona archivo
         } else {
             textSpan.textContent = 'Ningún archivo seleccionado';
-            iconSpan.textContent = '📄';
             label.classList.remove('has-file', 'error');
 
             // Solo limpiar estado si no hay otros elementos que indiquen proceso en curso

@@ -1,12 +1,10 @@
 /* =========================
-   MENÚ HAMBURGUESA MÓVIL - DISEÑO LIMPIO
+   MENÚ HAMBURGUESA MÓVIL 
    ========================= */
 
-/* Estilos base del botón hamburguesa - OPTIMIZADO */
+/* Estilos base del botón hamburguesa */
 .header-menu-btn {
   display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
   background: rgba(255, 255, 255, 0.1) !important;
   border: 2px solid rgba(255, 255, 255, 0.3) !important;
   cursor: pointer !important;
@@ -17,18 +15,13 @@
   gap: 3px !important;
   width: 48px !important;
   height: 48px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  min-width: 48px !important;
-  max-width: 48px !important;
-  box-sizing: border-box !important;
-  will-change: transform !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .header-menu-btn:hover {
   background: rgba(255, 255, 255, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.5) !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
   transform: scale(1.05) !important;
 }
 
@@ -43,697 +36,311 @@
   transform-origin: center !important;
 }
 
-/* Botón hamburguesa sin animación cuando se activa */
-
-/* Backdrop - OPTIMIZADO */
-.mobile-menu-backdrop {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  background: rgba(0, 0, 0, 0.3) !important;
-  z-index: 8000 !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-  transition: opacity 0.25s ease, visibility 0.25s ease !important;
-  will-change: opacity !important;
-}
-
-.mobile-menu-backdrop.active {
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-/* Menú móvil - OPTIMIZADO */
+/* Menú móvil */
 .header-mobile-menu {
-  position: fixed !important;
-  top: 0 !important;
-  right: -100% !important;
-  width: min(85vw, 400px) !important;
-  height: 100vh !important;
-  background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%) !important;
-  border-top-left-radius: 25px !important;
-  border-bottom-left-radius: 25px !important;
-  box-shadow: -8px 0 25px rgba(0, 0, 0, 0.15) !important;
-  z-index: 8500 !important;
-  transition: right 0.3s ease !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  will-change: transform !important;
+  position: fixed;
+  top: 0;
+  right: -100%;
+  width: min(85vw, 400px);
+  height: 100vh;
+  background: #ffffff;
+  border-top-left-radius: 25px;
+  border-bottom-left-radius: 25px;
+  z-index: 8500;
+  transition: right 0.3s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+  will-change: transform;
 }
 
-.header-mobile-menu.active {
-  right: 0 !important;
-  visibility: visible !important;
-}
-
-/* Botón cerrar - OPTIMIZADO CON ALTA ESPECIFICIDAD */
+/* Botón cerrar */
 .mobile-menu-close {
-  position: absolute !important;
-  top: 20px !important;
-  left: 20px !important;
-  width: 40px !important;
-  height: 40px !important;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 0 !important;
-  cursor: pointer !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-size: 22px !important;
-  color: #999 !important;
-  z-index: 8600 !important;
-  box-sizing: border-box !important;
-  line-height: 1 !important;
-  padding: 0 !important;
-  margin: 0 0 15px 0 !important;
-  min-width: 40px !important;
-  max-width: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
-  opacity: 1 !important;
-  transform: scale(1) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  will-change: opacity, transform !important;
-  box-shadow: none !important;
-  outline: none !important;
-  text-decoration: none !important;
-  user-select: none !important;
-}
-
-.mobile-menu-close.animate-in {
-  opacity: 1 !important;
-  transform: scale(1) !important;
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #666;
+  z-index: 8600;
 }
 
 .mobile-menu-close:hover {
-  background: transparent !important;
-  border: none !important;
-  color: #555 !important;
-  transform: scale(1.2) rotate(90deg) !important;
-  box-shadow: none !important;
-  opacity: 1 !important;
-}
-
-/* Sobreescribir específicamente cualquier regla global */
-.mobile-menu.open .mobile-menu-close:hover {
-  background: transparent !important;
-  border: none !important;
-  color: #555 !important;
-  transform: scale(1.2) rotate(90deg) !important;
-  border-radius: 0 !important;
-  width: 40px !important;
-  height: 40px !important;
-  padding: 0 !important;
-}
-
-.mobile-menu-close::before {
-  content: "×" !important;
-  font-size: 22px !important;
-  color: inherit !important;
-  line-height: 1 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 100% !important;
-  height: 100% !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  margin: 0 !important;
-  font-weight: 300 !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-/* Protección específica contra reglas globales de botones */
-.mobile-menu .mobile-menu-close,
-.mobile-menu-close.mobile-menu-close {
-  background: transparent !important;
-  border: none !important;
-  border-radius: 0 !important;
-  color: #666 !important;
-  width: 40px !important;
-  height: 40px !important;
-  min-width: 40px !important;
-  max-width: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
-  padding: 0 !important;
-  margin: 0 0 15px 0 !important;
-  font-size: 28px !important;
-  gap: 0 !important;
-  opacity: 1 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-shadow: none !important;
-}
-
-.mobile-menu .mobile-menu-close:hover,
-.mobile-menu-close.mobile-menu-close:hover {
-  background: transparent !important;
-  border: none !important;
-  color: #333 !important;
-  transform: scale(1.2) rotate(90deg) !important;
-  border-radius: 0 !important;
-  width: 40px !important;
-  height: 40px !important;
-  padding: 0 !important;
-  gap: 0 !important;
-  box-shadow: none !important;
+  color: #333;
+  transform: scale(1.2);
 }
 
 /* Header del menú */
-.mobile-menu-header {
-  padding: 80px 25px 25px;
-  text-align: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-top-left-radius: 30px;
-  position: relative;
-  overflow: hidden;
-}
 
-.mobile-menu-header::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    transparent 50%
-  );
-  pointer-events: none;
-}
-
-.mobile-menu-header h3 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.mobile-menu-header p {
-  margin: 8px 0 0;
-  font-size: 14px;
-  opacity: 0.9;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* Lista del menú */
 .header-mobile-menu ul {
-  list-style: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  background: transparent !important;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
 }
 
-/* Elementos del menú - SIN ANIMACIÓN DE DESPLAZAMIENTO */
-.mobile-menu-item {
-  opacity: 1 !important;
-  transform: translateX(0) !important;
-  background: transparent !important;
-}
-
-/* Enlaces del menú - OPTIMIZADO */
+/* Enlaces del menú - BASE SIMPLE */
 .mobile-menu-item a {
-  display: block !important;
-  padding: 18px 25px !important;
-  color: #333 !important;
-  text-decoration: none !important;
-  font-size: 16px !important;
-  font-weight: 500 !important;
-  transition: background-color 0.15s ease, color 0.15s ease !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  margin: 2px 8px !important;
-  position: relative !important;
-  overflow: hidden !important;
-  border-left: 3px solid transparent !important;
+  display: block;
+  padding: 16px 25px;
+  color: #333;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-radius: 14px;
+  background: transparent;
+  margin: 12px 8px;
 }
 
-/* Estilos para enlaces con acceso restringido - ACTUALIZADO */
+/* Hover general */
+.mobile-menu-item a:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-left: 3px solid var(--primary-color);
+}
+
+/* Enlaces con acceso restringido */
 .mobile-menu-item a.restricted-access {
-  color: #6c757d !important; /* Gris en lugar de #999 */
-  opacity: 0.8 !important;
-  cursor: pointer !important;
-  position: relative !important;
+  color: #999;
+  opacity: 0.6;
+  position: relative;
 }
 
 .mobile-menu-item a.restricted-access::after {
   content: "";
-  position: absolute !important;
-  right: 20px !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  width: 14px !important;
-  height: 14px !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236c757d'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'/%3E%3C/svg%3E") !important;
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-  opacity: 0.7 !important;
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23999'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 .mobile-menu-item a.restricted-access:hover {
-  background: linear-gradient(
-    90deg,
-    rgba(108, 117, 125, 0.12) 0%,
-    rgba(108, 117, 125, 0.03) 100%
-  ) !important;
-  color: #495057 !important; /* Gris más oscuro al hover */
-  border-left: 4px solid #6c757d !important; /* Borde izquierdo gris */
-  border-radius: 0 15px 15px 0 !important;
-  opacity: 1 !important;
+  color: #777;
+  background: rgba(0, 0, 0, 0.03);
+  border-left: 3px solid #999;
 }
 
-.mobile-menu-item a:hover:not(.restricted-access) {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 149, 69, 0.12) 0%,
-    rgba(255, 149, 69, 0.03) 100%
-  ) !important;
-  color: var(--primary-color) !important;
-  border-left: 4px solid var(--primary-color) !important;
-  border-radius: 0 15px 15px 0 !important;
+.mobile-menu-item a.restricted-access:hover::after {
+  filter: brightness(0.8);
 }
 
-/* Separadores simples y elegantes - SUTILES */
-.header-mobile-menu .menu-divider {
-  margin: 0 !important;
-  padding: 20px 0 !important;
-  background: transparent !important;
-  width: 100% !important;
-  display: block !important;
-  position: relative !important;
-  clear: both !important;
-  border: none !important;
-}
-
-.header-mobile-menu .divider-line {
-  height: 2px !important;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--primary-color) 50%,
-    transparent 100%
-  ) !important;
-  margin: 0 !important;
-  border-radius: 0 !important;
-  display: block !important;
-  width: 100% !important;
-  opacity: 0.3 !important;
-  position: relative !important;
-  z-index: 10 !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-/* Forzar consistencia visual en todos los separadores */
-.header-mobile-menu .menu-divider:nth-of-type(1) .divider-line,
-.header-mobile-menu .menu-divider:nth-of-type(2) .divider-line,
-.header-mobile-menu .menu-divider:nth-of-type(3) .divider-line {
-  height: 2px !important;
-  opacity: 0.5 !important;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    #ddd 50%,
-    transparent 100%
-  ) !important;
-  min-height: 2px !important;
-  display: block !important;
-  visibility: visible !important;
-  position: relative !important;
-  z-index: 15 !important;
-}
-
-/* Reset específico para separadores para evitar conflictos */
-.header-mobile-menu .menu-divider,
-.header-mobile-menu .menu-divider *,
-.header-mobile-menu .divider-line,
-.header-mobile-menu .divider-line * {
-  box-sizing: border-box !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  outline: none !important;
-  text-decoration: none !important;
-  background: transparent !important;
-}
-
-/* Forzar la visibilidad del separador con backup sutil */
-.header-mobile-menu .menu-divider .divider-line {
-  min-height: 2px !important;
-  opacity: 0.5 !important;
-  visibility: visible !important;
-  background-color: #ddd !important;
-}
-
-/* Fallback con color sutil si el gradiente no funciona */
-.header-mobile-menu .menu-divider .divider-line::before {
-  content: "" !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  background: #ddd !important;
-  opacity: 0.4 !important;
-  border-radius: 0 !important;
-  z-index: -1 !important;
-}
-
-/* Sección de navegación principal */
-.navigation-section {
-  background: transparent;
-  padding: 15px 0;
-}
-
-.navigation-section .mobile-menu-item a {
-  color: #333 !important;
-  font-weight: 500 !important;
-  padding: 20px 30px !important;
-  margin: 3px 10px !important;
-}
-
-/* Sección de opciones (Perfil/Admin) */
-.options-section {
-  background: rgba(0, 0, 0, 0.02);
-  padding: 15px 0;
-}
-
-.options-section .mobile-menu-item a {
-  color: #555 !important;
-  font-weight: 500 !important;
-  font-size: 15px !important;
-  padding: 18px 30px !important;
-  margin: 3px 10px !important;
-}
-
-.options-section .mobile-menu-item a[href*="perfil"] {
-  color: var(--primary-color) !important;
-}
-
-.options-section .mobile-menu-item a[href*="admin"] {
-  color: #dc3545 !important;
-  font-weight: 600 !important;
-}
-
-/* Secciones especiales actualizadas */
-.profile-section .profile-name {
-  display: block;
-  padding: 22px 30px;
-  font-size: 18px !important;
-  font-weight: 600 !important;
-  color: #333 !important;
-  text-align: center;
-  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%) !important;
-  border-radius: 18px;
-  margin: 15px 20px 15px 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-}
-
-/* Sección de cerrar sesión - CONSISTENCIA MEJORADA */
-.logout-section {
-  background: rgba(229, 62, 62, 0.03);
-  padding: 15px 0;
-  border-top: 1px solid rgba(229, 62, 62, 0.1);
-}
-
+/* Sección de logout */
 .logout-section a {
   color: #e53e3e !important;
   font-weight: 600 !important;
   background: rgba(229, 62, 62, 0.08) !important;
-  border-radius: 15px !important;
-  margin: 5px 20px !important;
+  border-radius: 8px !important;
+  margin: 5px 15px !important;
   border-left: 3px solid #e53e3e !important;
-  padding: 16px 30px !important;
-  font-size: 16px !important;
+  padding: 16px 25px !important;
+  text-align: center !important;
+  display: block !important;
 }
 
 .logout-section a:hover {
   color: #c53030 !important;
   background: rgba(229, 62, 62, 0.15) !important;
-  border-left: 4px solid #c53030 !important; /* Borde izquierdo rojo */
-  border-radius: 0 15px 15px 0 !important;
+  border-left: 3px solid #c53030 !important;
 }
 
-/* Auth buttons para usuarios sin sesión */
-.auth-section {
-  padding: 15px 0;
-  background: rgba(255, 149, 69, 0.03);
-  border-top: 1px solid rgba(255, 149, 69, 0.1);
+.auth-buttons-row .mobile-menu-item a {
+  color: #ffffff;
+  background: var(--primary-color);
+  font-weight: 600;
+  border-left: none !important;
 }
 
-.auth-section .mobile-menu-item a {
-  font-weight: 600 !important;
-  color: var(--primary-color) !important;
-  border-left: 3px solid var(--primary-color) !important;
-  background: rgba(255, 149, 69, 0.08) !important;
-  border-radius: 15px !important;
-  margin: 5px 20px !important;
+.auth-buttons-row .mobile-menu-item a:hover {
+  background: color-mix(in srgb, var(--primary-color) 80%, black 20%);
+  border-left: none !important;
 }
 
-.auth-section .mobile-menu-item a:hover {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 149, 69, 0.12) 0%,
-    rgba(255, 149, 69, 0.03) 100%
-  ) !important;
-  color: var(--primary-color) !important;
-  border-left: 4px solid var(--primary-color) !important;
-  border-radius: 0 15px 15px 0 !important;
-}
-
-/* Estilo para "Sin sesión iniciada" */
-.session-status {
-  color: #6c757d !important;
-  font-weight: 500 !important;
-  text-align: center !important;
-  padding: 10px 20px !important;
-  font-size: 14px !important;
-  margin-bottom: 10px !important;
-}
-
-/* Contenedor para botones de auth en fila */
-.auth-buttons-row {
-  display: flex !important;
-  gap: 10px !important;
-  padding: 0 20px !important;
-}
-
-.auth-buttons-row .mobile-menu-item.auth-button {
-  flex: 1 !important;
-  margin: 0 !important;
-}
-
-.auth-buttons-row .mobile-menu-item.auth-button a {
-  margin: 0 !important;
-  text-align: center !important;
-  font-size: 14px !important;
-  padding: 12px 8px !important;
-  border-radius: 12px !important;
-}
-
-/* Ocultar botones de login/registro del header principal */
-#loginBtnLi,
-#registerBtnLi {
-  display: none !important;
-}
-
-/* Sección de perfil de usuario */
+/* Sección de perfil de usuario - DISEÑO MEJORADO */
 .user-profile-section {
-  padding: 25px 20px;
+  padding: 30px 25px;
   text-align: center;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  position: relative;
-}
-
-.user-profile-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  margin: 0 auto 15px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  border: 3px solid white;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary-color) 8%, #ffffff 92%) 0%,
+    color-mix(in srgb, var(--primary-color) 4%, #f8f9fa 96%) 100%
+  );
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--primary-color) 15%, transparent 85%);
   position: relative;
   overflow: hidden;
 }
 
-.user-profile-avatar img {
-  width: 30px;
-  height: 30px;
-  filter: brightness(0) invert(1);
-  opacity: 0.9;
+.user-profile-section::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--primary-color) 15%, transparent 85%) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  z-index: 0;
 }
 
+.user-profile-section::after {
+  content: "";
+  position: absolute;
+  bottom: -30px;
+  left: -30px;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--secondary-color) 12%, transparent 88%) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.user-profile-avatar {
+  width: 75px;
+  height: 75px;
+  border-radius: 50%;
+  margin: 0 auto 18px;
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    color-mix(in srgb, var(--primary-color) 80%, var(--secondary-color) 20%) 50%,
+    var(--secondary-color) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 25px
+      color-mix(in srgb, var(--primary-color) 25%, transparent 75%),
+    0 2px 8px color-mix(in srgb, var(--primary-color) 15%, transparent 85%);
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+/* Icono de usuario dentro del avatar */
 .user-profile-avatar::before {
   content: "";
-  font-size: 24px;
-  font-weight: bold;
-  color: white;
-  opacity: 0.9;
+  width: 35px;
+  height: 35px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8' d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.user-profile-avatar img {
+  width: 35px;
+  height: 35px;
+  filter: brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+  opacity: 0.95;
 }
 
 .user-profile-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  margin: 0;
-  text-shadow: none;
+  font-size: 19px;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0 0 6px 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 1;
+  line-height: 1.2;
 }
 
 .user-profile-status {
   font-size: 13px;
-  color: #666;
-  margin: 5px 0 0;
-  opacity: 0.8;
-}
-
-/* Sección sin sesión iniciada */
-.no-session-section {
-  padding: 25px 20px;
-  text-align: center;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  color: color-mix(in srgb, var(--primary-color) 70%, #666666 30%);
+  margin: 0;
+  opacity: 0.85;
+  font-weight: 500;
   position: relative;
-  opacity: 1 !important;
-  transform: translateX(0) !important;
-  transition: none !important;
+  z-index: 1;
+  padding: 4px 12px;
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent 92%);
+  border-radius: 12px;
+  display: inline-block;
+  border: 1px solid
+    color-mix(in srgb, var(--primary-color) 20%, transparent 80%);
 }
 
-/* Asegurar que TODOS los elementos de no-session no tengan animaciones */
-.no-session-section *,
-.no-session-section .mobile-menu-item,
-.no-session-section .auth-button {
-  opacity: 1 !important;
-  transform: translateX(0) !important;
-  transition: none !important;
+/* Sección sin sesión iniciada - DISEÑO MEJORADO */
+.no-session-section {
+  padding: 30px 25px;
+  text-align: center;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--secondary-color) 6%, #ffffff 94%) 0%,
+    color-mix(in srgb, var(--secondary-color) 3%, #f8f9fa 97%) 100%
+  );
+  position: relative;
+  opacity: 1;
+  overflow: hidden;
 }
 
 .no-session-icon {
-  width: 50px;
-  height: 50px;
+  width: 65px;
+  height: 65px;
   border-radius: 50%;
-  margin: 0 auto 15px;
-  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+  margin: 0 auto 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 15px rgba(108, 117, 125, 0.2);
-  border: 3px solid white;
+  box-shadow: 0 8px 25px
+      color-mix(in srgb, var(--secondary-color) 20%, transparent 80%),
+    0 2px 8px color-mix(in srgb, var(--secondary-color) 15%, transparent 85%),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   position: relative;
-  opacity: 0.8;
-}
-
-.no-session-icon::before {
-  content: "U";
-  font-size: 28px;
-  font-weight: bold;
-  color: #999;
-  opacity: 0.9;
-  font-family: Arial, sans-serif;
+  opacity: 0.95;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8' d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'/%3E%3C/svg%3E");
+  background-size: 32px 32px;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 1;
 }
 
 .no-session-message {
-  font-size: 16px;
-  font-weight: 500;
-  color: #666;
-  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0 0 8px 0;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .no-session-subtitle {
-  font-size: 12px;
-  color: #999;
-  margin: 5px 0 15px;
-}
-
-/* Contenedor para botones de auth dentro de no-session-section */
-.no-session-section .auth-buttons-row {
-  display: flex !important;
-  gap: 10px !important;
-  padding: 0 !important;
-  margin-top: 15px !important;
-}
-
-.no-session-section .auth-buttons-row .mobile-menu-item.auth-button {
-  flex: 1 !important;
-  margin: 0 !important;
-  opacity: 1 !important;
-  transform: translateX(0) !important;
-  transition: none !important;
-}
-
-.no-session-section .auth-buttons-row .mobile-menu-item.auth-button a {
-  margin: 0 !important;
-  text-align: center !important;
-  font-size: 14px !important;
-  padding: 12px 16px !important;
-  border-radius: 12px !important;
-  color: var(--primary-color) !important;
-  border-left: none !important;
-  background: rgba(255, 149, 69, 0.1) !important;
-  font-weight: 600 !important;
-}
-
-.no-session-section .auth-buttons-row .mobile-menu-item.auth-button a:hover {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 149, 69, 0.12) 0%,
-    rgba(255, 149, 69, 0.03) 100%
-  ) !important;
-  color: var(--primary-color) !important;
-  border-left: 4px solid var(--primary-color) !important;
-  border-radius: 0 15px 15px 0 !important;
-}
-
-/* Estilos para organización del menú */
-
-/* Estados especiales para elementos del menú */
-.mobile-menu-item.current a {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 149, 69, 0.15) 0%,
-    rgba(255, 149, 69, 0.05) 100%
-  ) !important;
-  border-left-color: var(--primary-color) !important;
-  color: var(--primary-color) !important;
-  font-weight: 600 !important;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--secondary-color) 60%, #718096 40%);
+  margin: 0 0 20px 0;
+  position: relative;
+  z-index: 1;
+  font-weight: 500;
 }
 
 /* Mejoras de accesibilidad */
 .mobile-menu-item a:focus {
   outline: 2px solid var(--primary-color);
   outline-offset: -2px;
-}
-
-/* Animaciones de entrada secuencial mejoradas */
-.header-mobile-menu.active .user-profile-section,
-.header-mobile-menu.active .no-session-section {
-  animation: slideInRight 0.4s ease-out forwards;
-  animation-delay: 0.1s;
-  opacity: 0;
-}
-
-.header-mobile-menu.active .user-profile-section {
-  animation-delay: 0.15s;
-}
-
-.header-mobile-menu.active .no-session-section {
-  animation-delay: 0.15s;
 }
 
 /* Responsive: comportamiento para desktop y móvil */
@@ -747,7 +354,6 @@
     height: 48px !important;
     min-width: 48px !important;
     max-width: 48px !important;
-    margin-right: 15px;
   }
 
   .header-right {
@@ -775,264 +381,119 @@
   }
 }
 
-/* Forzar visibilidad del contenido del menú */
-.header-mobile-menu * {
-  color: #333 !important;
-  background: transparent !important;
-}
-
-.header-mobile-menu .profile-name {
-  color: #333 !important;
-  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%) !important;
-}
-
-.header-mobile-menu .logout-section a {
-  color: #e53e3e !important;
-  background: rgba(229, 62, 62, 0.05) !important;
-}
-
-.header-mobile-menu .logout-section a:hover {
-  color: #c53030 !important;
-  background: rgba(229, 62, 62, 0.1) !important;
-  border-left-color: #c53030 !important; /* Consistencia en línea lateral */
-}
-
-#mobileMenuList {
-  background: transparent !important;
-}
-
-#mobileMenuList * {
-  color: #333 !important;
-  background: transparent !important;
-}
-
-#mobileMenuList .logout-section a {
-  color: #e53e3e !important;
-}
-
-/* Efectos adicionales y mejoras visuales */
-
-/* Animación de entrada para items del menú */
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Efecto de ondas deshabilitado para evitar animaciones raras */
-
-/* Efecto de partículas en el header */
-.mobile-menu-header::after {
-  content: "";
-  position: absolute;
-  top: 10%;
-  left: 10%;
-  width: 6px;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 50%;
-  box-shadow: 20px 30px 0 -2px rgba(255, 255, 255, 0.4),
-    40px 60px 0 -4px rgba(255, 255, 255, 0.3),
-    60px 20px 0 -1px rgba(255, 255, 255, 0.5),
-    80px 80px 0 -3px rgba(255, 255, 255, 0.2),
-    100px 40px 0 -2px rgba(255, 255, 255, 0.4);
-  animation: float 6s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
-    opacity: 0.6;
-  }
-  50% {
-    transform: translateY(-10px);
-    opacity: 1;
-  }
-}
-
-/* Mejora del scroll del menú */
-.header-mobile-menu::-webkit-scrollbar {
-  width: 6px;
-}
-
-.header-mobile-menu::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 3px;
-}
-
-.header-mobile-menu::-webkit-scrollbar-thumb {
-  background: rgba(255, 149, 69, 0.3);
-  border-radius: 3px;
-}
-
-.header-mobile-menu::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 149, 69, 0.5);
-}
-
-/* Sombras dinámicas deshabilitadas para mejor rendimiento */
-
-/* Indicador visual para sección activa */
-.mobile-menu-item.active a {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 149, 69, 0.15) 0%,
-    rgba(255, 149, 69, 0.05) 100%
-  ) !important;
-  border-left-color: var(--primary-color) !important;
-  color: var(--primary-color) !important;
-  font-weight: 600 !important;
-}
-
-/* Modal de Acceso Restringido */
+/* =========================
+   MODAL DE ACCESO RESTRINGIDO
+   ========================= */
 .restricted-access-modal {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 9999 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  animation: fadeIn 0.3s ease-out !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
 }
 
 .restricted-access-backdrop {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  background: rgba(0, 0, 0, 0.6) !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
   /* backdrop-filter deshabilitado para mejor rendimiento */
 }
 
 .restricted-access-content {
-  background: white !important;
-  border-radius: 20px !important;
-  padding: 40px 30px !important;
-  text-align: center !important;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
-  max-width: 400px !important;
-  width: 90% !important;
-  position: relative !important;
-  z-index: 1 !important;
-  animation: slideUp 0.3s ease-out !important;
+  background: white;
+  border-radius: 20px;
+  padding: 40px 30px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  width: 90%;
+  position: relative;
+  z-index: 1;
+  animation: slideUp 0.3s ease-out;
+  border-top: 6px solid var(--primary-color);
+}
+
+.restricted-access-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: none !important;
+  box-shadow: none !important;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #666 !important;
+  z-index: 8600 !important;
+}
+
+.restricted-access-close:hover {
+  color: #333 !important;
+  transform: scale(1.2) !important;
+}
+
+.restricted-access-close::before {
+  content: "×";
+  font-size: 24px;
+  font-weight: 300;
+  line-height: 1;
 }
 
 .restricted-access-icon {
-  font-size: 48px !important;
-  margin-bottom: 20px !important;
-  opacity: 0.8 !important;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  opacity: 0.8;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23666'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 .restricted-access-content h3 {
-  margin: 0 0 15px 0 !important;
-  font-size: 24px !important;
-  font-weight: 600 !important;
-  color: #333 !important;
+  margin: 0 0 15px 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
 }
 
 .restricted-access-content p {
-  margin: 0 0 30px 0 !important;
-  font-size: 16px !important;
-  color: #666 !important;
-  line-height: 1.5 !important;
+  margin: 0 0 30px 0;
+  font-size: 16px;
+  color: #666;
+  line-height: 1.5;
 }
 
-.restricted-access-buttons {
-  display: flex !important;
-  gap: 15px !important;
-  justify-content: center !important;
-  flex-wrap: wrap !important;
+.restricted-access-login-btn {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
 }
 
-.restricted-access-buttons button {
-  padding: 12px 24px !important;
-  border: none !important;
-  border-radius: 25px !important;
-  font-size: 16px !important;
-  font-weight: 600 !important;
-  cursor: pointer !important;
-  transition: all 0.3s ease !important;
-  min-width: 120px !important;
-}
-
-.btn-login-now {
-  background: linear-gradient(135deg, #ff9545 0%, #ff7a2d 100%) !important;
-  color: white !important;
-  box-shadow: 0 4px 15px rgba(255, 149, 69, 0.3) !important;
-}
-
-.btn-login-now:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 6px 20px rgba(255, 149, 69, 0.4) !important;
-}
-
-.btn-cancel {
-  background: #f8f9fa !important;
-  color: #666 !important;
-  border: 2px solid #e9ecef !important;
-}
-
-.btn-cancel:hover {
-  background: #e9ecef !important;
-  color: #333 !important;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* =========================
-   OPTIMIZACIONES DE RENDIMIENTO
-   ========================= */
-
-/* Forzar aceleración por hardware para elementos clave */
-.header-mobile-menu,
-.mobile-menu-backdrop,
-.header-menu-btn,
-.mobile-menu-close {
-  will-change: transform, opacity;
-  backface-visibility: hidden;
-  perspective: 1000px;
-}
-
-/* Deshabilitar animaciones complejas en dispositivos de baja potencia */
-@media (prefers-reduced-motion: reduce) {
-  .mobile-menu-item {
-    transition: none !important;
-  }
-
-  .header-mobile-menu {
-    transition: right 0.1s ease !important;
-  }
-
-  .mobile-menu-backdrop {
-    transition: opacity 0.1s ease !important;
-  }
+.restricted-access-login-btn:hover {
+  background: var(--secondary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px
+    color-mix(in srgb, var(--primary-color) 30%, transparent 70%);
 }
 
 /* Optimización para pantallas pequeñas */
@@ -1046,25 +507,3 @@
     font-size: 15px !important;
   }
 }
-
-/* =========================
-   ESQUEMA DE COLORES DEL MENÚ - ACTUALIZADO
-   ========================= */
-
-/*
-  🎨 CONSISTENCIA VISUAL:
-  
-  ✅ ELEMENTOS DISPONIBLES:
-  - Color primary (naranja): #ff9545 - Navegación normal y opciones
-  - Línea lateral: matching con el color del texto
-  
-  ✅ ELEMENTOS RESTRINGIDOS (sin sesión):
-  - Color gris: #6c757d - Firmar/Verificar bloqueados
-  - Hover gris oscuro: #495057
-  - Línea lateral gris: #6c757d
-  
-  ✅ CERRAR SESIÓN:
-  - Color rojo: #e53e3e - Acción de logout
-  - Hover rojo oscuro: #c53030
-  - Línea lateral roja: matching con el color
-*/

@@ -13,27 +13,18 @@
   user-select: none;
 }
 
-/* Variables de color */
-:root {
-  --primary-color: #ff9545;
-  --secondary-color: #333333;
-}
-
-/* Layout base */
-html,
-body {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  background: #fff;
-}
-
+/* Estilo base del body */
 body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   background: url("../recursos/Fondo2.jpg") no-repeat center center fixed;
   background-size: cover;
+}
+
+/* Evitar overflow horizontal accidental en Inicio (por full-bleed CTA) */
+body[data-current-section="inicio"] {
+  overflow-x: hidden;
 }
 
 /* =========================
@@ -46,39 +37,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* Espacio respecto al header sticky y footer fijo */
-  padding: 4vw 4vw 90px 4vw; /* top, right/left, bottom */
-  min-height: calc(100vh - 54px); /* 54px = altura del footer */
-  box-sizing: border-box;
-  background: url("../recursos/Fondo2.jpg") no-repeat center center;
-  background-size: cover;
-  background-attachment: fixed;
-  position: relative;
-  z-index: 1;
-}
-
-/* Secciones principales */
-.content > section {
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
-  box-sizing: border-box;
-  position: relative;
-  padding: 40px 32px 32px 32px;
-}
-
-/* Títulos y textos */
-.content > section h2,
-.content > section h3 {
-  margin-bottom: 24px;
-  margin-top: 0;
+  background: rgba(231, 231, 231, 0.45);
 }
 
 .section-desc {
@@ -88,8 +47,12 @@ body {
   text-align: center;
 }
 
+li {
+  list-style: none;
+}
+
 /* =========================
-   ESTILO DE BOTONES Y FORMULARIOS 
+   ESTILO DE FILE INPUTS GLOBAL
    ========================= */
 
 #verifyAvalForm,
@@ -101,71 +64,232 @@ body {
   align-items: center;
 }
 
-.file {
-  position: relative;
-  display: inline-block;
-  width: 100%;
-  max-width: 350px;
-  margin-bottom: 18px;
-}
-
-.custom-file-input {
-  width: 100%;
-  height: 44px;
-  opacity: 0;
-  z-index: 2;
-  position: relative;
-  cursor: pointer;
-}
-
-.file-custom {
-  display: block;
-  width: 100%;
-  height: 44px;
-  border: 2px solid var(--primary-color, #ed700f);
-  border-radius: 20px;
-  background: #fafafa;
-  color: #444;
-  font-size: 1em;
-  line-height: 44px;
-  padding: 0 120px 0 16px;
-  box-sizing: border-box;
-
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.file-input {
   position: absolute;
   top: 0;
   left: 0;
-  pointer-events: none;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-}
-
-.file:hover .file-custom,
-.custom-file-input:focus + .file-custom {
-  border-color: #ff9545;
-  box-shadow: 0 0 0 2px #ff954533;
-  background: #ffe5cc;
-}
-
-.file-custom:after {
-  content: "Elegir archivo";
-  position: absolute;
-  right: 0;
-  top: 0;
+  opacity: 0;
+  width: 100%;
   height: 100%;
-  background: var(--primary-color, #ed700f);
-  color: #fff;
-  padding: 0 22px;
-  border-radius: 0 8px 8px 0;
+  z-index: 10;
+  cursor: pointer;
+}
+
+.file-input-container {
+  position: relative;
+  width: 100%;
+  max-width: 450px;
+  margin: 24px auto;
+}
+
+.file-input-label {
+  display: block;
+  width: 100%;
+  min-height: 70px;
+  padding: 20px;
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  background: #f9f9f9;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* Elementos base del file input */
+.file-input-icon {
+  width: 32px;
+  height: 32px;
+  display: block;
+  margin: 0 auto 8px auto;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+  position: relative;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23666'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15V3m0 0l-4 4m4-4l4 4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17'/%3E%3C/svg%3E");
+}
+
+/* Iconos para diferentes estados */
+.file-input-label.has-file .file-input-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234caf50'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'/%3E%3C/svg%3E");
+}
+
+.file-input-label.auto-detected .file-input-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2328a745'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M13 10V3L4 14h7v7l9-11h-7z'/%3E%3C/svg%3E");
+}
+
+.file-input-label.error .file-input-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f44336'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L3.178 16.5c-.77.833.192 2.5 1.732 2.5z'/%3E%3C/svg%3E");
+}
+
+/* Cambios de color en hover */
+.file-input-label:hover .file-input-icon,
+.file-input:hover + .file-input-label .file-input-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ff9545'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15V3m0 0l-4 4m4-4l4 4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17'/%3E%3C/svg%3E");
+}
+
+.file-input-label.has-file:hover .file-input-icon,
+.file-input:hover + .file-input-label.has-file .file-input-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23388e3c'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'/%3E%3C/svg%3E");
+}
+
+.file-input-label.auto-detected:hover .file-input-icon,
+.file-input:hover + .file-input-label.auto-detected .file-input-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231e7e34'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M13 10V3L4 14h7v7l9-11h-7z'/%3E%3C/svg%3E");
+}
+
+.file-input-label.error:hover .file-input-icon,
+.file-input:hover + .file-input-label.error .file-input-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23d32f2f'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L3.178 16.5c-.77.833.192 2.5 1.732 2.5z'/%3E%3C/svg%3E");
+}
+
+.file-input-text {
+  display: block;
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 12px;
+  word-break: break-word;
+}
+
+.file-input-button {
+  display: inline-block;
+  background: var(--primary-color);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
+  transition: background 0.3s ease;
+}
+
+/* Estado normal - hover */
+.file-input-label:hover,
+.file-input:hover + .file-input-label {
+  border-color: var(--primary-color);
+  background: #fff7f0;
+  box-shadow: 0 2px 12px
+    color-mix(in srgb, var(--primary-color) 15%, transparent);
+}
+
+.file-input-label:hover .file-input-icon,
+.file-input:hover + .file-input-label .file-input-icon {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.file-input-label:hover .file-input-button,
+.file-input:hover + .file-input-label .file-input-button {
+  background: var(--secondary-color);
+}
+
+/* Estados de éxito (has-file y auto-detected) */
+.file-input-label.has-file,
+.file-input-label.auto-detected {
+  border-style: dashed;
+  background: #f1f8e9;
+}
+
+.file-input-label.has-file {
+  border-color: #4caf50;
+}
+
+.file-input-label.auto-detected {
+  border-color: #28a745;
+}
+
+.file-input-label.has-file .file-input-icon,
+.file-input-label.auto-detected .file-input-icon {
+  opacity: 1;
+}
+
+.file-input-label.has-file .file-input-text,
+.file-input-label.auto-detected .file-input-text {
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+/* Botón siempre del color primario en todos los estados */
+.file-input-label.has-file .file-input-button,
+.file-input-label.auto-detected .file-input-button {
+  background: var(--primary-color);
+}
+
+/* Hover para estados de éxito - mantener colores verdes */
+.file-input-label.has-file:hover,
+.file-input:hover + .file-input-label.has-file {
+  border-color: #388e3c;
+  background: #e8f5e8;
+  box-shadow: 0 2px 12px rgba(76, 175, 80, 0.15);
+}
+
+.file-input-label.auto-detected:hover,
+.file-input:hover + .file-input-label.auto-detected {
+  border-color: #1e7e34;
+  background: #e8f5e8;
+  box-shadow: 0 2px 12px rgba(40, 167, 69, 0.15);
+}
+
+.file-input-label.has-file:hover .file-input-icon,
+.file-input:hover + .file-input-label.has-file .file-input-icon {
+  transform: translateY(-2px);
+}
+
+.file-input-label.auto-detected:hover .file-input-icon,
+.file-input:hover + .file-input-label.auto-detected .file-input-icon {
+  transform: translateY(-2px);
+}
+
+/* Botón usar variables en hover también */
+.file-input-label.has-file:hover .file-input-button,
+.file-input:hover + .file-input-label.has-file .file-input-button,
+.file-input-label.auto-detected:hover .file-input-button,
+.file-input:hover + .file-input-label.auto-detected .file-input-button {
+  background: var(--secondary-color);
+}
+
+/* Estado de error */
+.file-input-label.error {
+  border-color: #f44336;
+  background: #ffebee;
+}
+
+.file-input-label.error .file-input-icon {
+  opacity: 1;
+}
+
+.file-input-label.error .file-input-text {
+  color: #d32f2f;
+  font-weight: 500;
+}
+
+/* Botón del color primario también en error */
+.file-input-label.error .file-input-button {
+  background: var(--primary-color);
+}
+
+/* Hover para estado de error - mantener colores rojos */
+.file-input-label.error:hover,
+.file-input:hover + .file-input-label.error {
+  border-color: #d32f2f;
+  background: #ffcdd2;
+  box-shadow: 0 2px 12px rgba(244, 67, 54, 0.15);
+}
+
+.file-input-label.error:hover .file-input-icon,
+.file-input:hover + .file-input-label.error .file-input-icon {
+  transform: translateY(-2px);
+}
+
+/* Botón usar variables en hover de error también */
+.file-input-label.error:hover .file-input-button,
+.file-input:hover + .file-input-label.error .file-input-button {
+  background: var(--secondary-color);
 }
 
 /* =========================
-   SISTEMA DE BOTONES ESTÁNDAR
+   SISTEMA DE BOTONES GLOBAL
    ========================= */
 
 /* Reset base para todos los botones */
@@ -197,8 +321,8 @@ button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) {
   line-height: 1.2;
 
   /* Colores por defecto (primario) */
-  background: #ff9545;
-  color: white !important;
+  background: var(--primary-color);
+  color: #ffffff;
 
   /* Efectos visuales */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -216,8 +340,7 @@ button:not(.clear-btn):not(.change-btn-circular):not(
   ):hover:not(:disabled) {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
-  background: #e5834a;
-  color: white !important;
+  background: var(--secondary-color);
   filter: brightness(1.05);
 }
 
@@ -227,8 +350,7 @@ button:not(.clear-btn):not(.change-btn-circular):not(
   ):active:not(:disabled) {
   transform: translateY(0);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  background: #d4742c;
-  color: white !important;
+  background: color-mix(in srgb, var(--primary-color) 85%, black 15%);
 }
 
 /* Estado deshabilitado */
@@ -236,7 +358,6 @@ button:not(.clear-btn):not(.change-btn-circular):not(
     .mobile-menu-close
   ):disabled {
   background: #9ca3af !important;
-  color: #f3f4f6 !important;
   cursor: not-allowed !important;
   transform: none !important;
   box-shadow: none !important;
@@ -244,7 +365,7 @@ button:not(.clear-btn):not(.change-btn-circular):not(
 }
 
 /* =========================
-   RESPONSIVE
+   RESPONSIVE GENERAL
    ========================= */
 
 @media (max-width: 1100px) {
@@ -281,7 +402,9 @@ button:not(.clear-btn):not(.change-btn-circular):not(
 }
 
 /* =========================
-   MODAL DE CONFIRMACIÓN PARA NAVEGACIÓN
+   MODAL INTERRUPCIÓN DE PROCESOS
+   Este es el modal que sale cuando en un proceso de firma o verificacion
+   se interrumpe al salir a otra seccion de la pagina
    ========================= */
 
 .navigation-confirm-modal {
@@ -291,8 +414,6 @@ button:not(.clear-btn):not(.change-btn-circular):not(
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -388,7 +509,23 @@ button:not(.clear-btn):not(.change-btn-circular):not(
   filter: brightness(0.95);
 }
 
-/* Responsive */
+.navigation-confirm-btn.primary {
+  background: #ef4444 !important;
+}
+
+.navigation-confirm-btn.primary:hover:not(:disabled) {
+  background: #dc2626 !important;
+}
+
+.navigation-confirm-btn.secondary {
+  background: #6b7280 !important;
+}
+
+.navigation-confirm-btn.secondary:hover:not(:disabled) {
+  background: #4b5563 !important;
+}
+
+/* Responsive MODAL INTERRUPCIÓN DE PROCESOS*/
 @media (max-width: 768px) {
   .navigation-confirm-content {
     padding: 24px;
@@ -412,418 +549,3 @@ button:not(.clear-btn):not(.change-btn-circular):not(
     width: 100%;
   }
 }
-
-#quickVerifyBtn:active {
-  transform: translateY(0);
-}
-
-/* =========================
-   OVERRIDES PARA SECCIÓN DE INICIO
-   ========================= */
-
-/* Cuando se muestra la sección de inicio, mantener el fondo sin restricciones */
-body[data-current-section="inicio"] .content,
-body.home-section-active .content {
-  padding: 0 !important;
-  max-width: none !important;
-}
-
-/* La sección de inicio debe ocupar todo el espacio */
-body[data-current-section="inicio"] #inicioSection,
-body.home-section-active #inicioSection {
-  max-width: none !important;
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-}
-
-/* =========================
-   VARIANTES DE BOTONES POR CONTEXTO
-   ========================= */
-
-/* Botón secundario/gris */
-.btn-secondary {
-  background: #6b7280 !important;
-  color: white !important;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #4b5563 !important;
-  color: white !important;
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 12px rgba(107, 114, 128, 0.3);
-  filter: brightness(1.1);
-}
-
-.btn-secondary:active:not(:disabled) {
-  background: #374151 !important;
-  color: white !important;
-}
-
-/* Botón de éxito/verde */
-.btn-success {
-  background: #10b981 !important;
-  color: white !important;
-}
-
-.btn-success:hover:not(:disabled) {
-  background: #059669 !important;
-  color: white !important;
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
-  filter: brightness(1.1);
-}
-
-.btn-success:active:not(:disabled) {
-  background: #047857 !important;
-  color: white !important;
-}
-
-/* Botón de advertencia/amarillo */
-.btn-warning {
-  background: #f59e0b !important;
-  color: white !important;
-}
-
-.btn-warning:hover:not(:disabled) {
-  background: #d97706 !important;
-  color: white !important;
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 12px rgba(245, 158, 11, 0.3);
-  filter: brightness(1.1);
-}
-
-.btn-warning:active:not(:disabled) {
-  background: #b45309 !important;
-  color: white !important;
-}
-
-/* Botón de peligro/rojo */
-.btn-danger {
-  background: #ef4444 !important;
-  color: white !important;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: #dc2626 !important;
-  color: white !important;
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 12px rgba(239, 68, 68, 0.3);
-  filter: brightness(1.1);
-}
-
-.btn-danger:active:not(:disabled) {
-  background: #b91c1c !important;
-  color: white !important;
-}
-
-/* =========================
-   ICONOS EN BOTONES
-   ========================= */
-
-/* Contenedores de iconos */
-button .btn-icon,
-button .btn-icon-right {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-/* SVGs en botones */
-button .btn-icon svg,
-button .btn-icon-right svg {
-  width: 16px;
-  height: 16px;
-  stroke: white !important;
-  fill: none !important;
-  stroke-width: 2;
-  transition: transform 0.2s ease;
-}
-
-/* Forzar color blanco en TODOS los iconos y texto */
-button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) *,
-button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) svg,
-button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) path,
-button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) circle,
-button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) line,
-button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close)
-  polyline {
-  color: white !important;
-  stroke: white !important;
-  fill: none !important;
-}
-
-/* Animación de iconos en hover */
-button:hover:not(:disabled) .btn-icon svg,
-button:hover:not(:disabled) .btn-icon-right svg {
-  transform: scale(1.1);
-  stroke: white !important;
-}
-
-/* =========================
-   ESPACIADO Y LAYOUT
-   ========================= */
-
-/* Espaciado entre botones */
-button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close)
-  + button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) {
-  margin-left: 8px;
-}
-
-/* Botones en contenedores flex */
-.button-group {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.button-group button {
-  margin: 0 !important;
-}
-
-/* =========================
-   OVERRIDE PARA BOTONES ESPECIALES
-   ========================= */
-
-/* Botones de confirmación de navegación */
-.navigation-confirm-btn {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 8px !important;
-  padding: 10px 16px !important;
-  min-height: 40px !important;
-  border-radius: 6px !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  border: none !important;
-  cursor: pointer !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-}
-
-.navigation-confirm-btn.primary {
-  background: #ef4444 !important;
-  color: white !important;
-}
-
-.navigation-confirm-btn.primary:hover:not(:disabled) {
-  background: #dc2626 !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
-}
-
-.navigation-confirm-btn.secondary {
-  background: #6b7280 !important;
-  color: white !important;
-}
-
-.navigation-confirm-btn.secondary:hover:not(:disabled) {
-  background: #4b5563 !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Botón de tutorial */
-.close-tutorial-btn {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 8px !important;
-  padding: 12px 20px !important;
-  min-height: 44px !important;
-  border-radius: 6px !important;
-  font-size: 15px !important;
-  font-weight: 500 !important;
-  border: none !important;
-  cursor: pointer !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-  background: #ff9545 !important;
-  color: white !important;
-}
-
-.close-tutorial-btn:hover:not(:disabled) {
-  background: #e5834a !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* =========================
-   BOTONES ESPECIALES Y MINI
-   ========================= */
-
-/* Botones mini para llaves */
-.btn-mini,
-.select-key-btn {
-  padding: 6px 12px !important;
-  min-height: 32px !important;
-  font-size: 12px !important;
-  gap: 6px !important;
-}
-
-/* Botones específicos en modales de acceso restringido */
-.btn-login-now,
-.btn-cancel {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 8px !important;
-  padding: 10px 16px !important;
-  min-height: 40px !important;
-  border-radius: 6px !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  border: none !important;
-  cursor: pointer !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-  color: white !important;
-}
-
-.btn-login-now {
-  background: #ff9545 !important;
-}
-
-.btn-login-now:hover:not(:disabled) {
-  background: #e5834a !important;
-  transform: translateY(-2px) scale(1.02) !important;
-  box-shadow: 0 6px 12px rgba(255, 149, 69, 0.3) !important;
-  filter: brightness(1.1) !important;
-}
-
-/* Forzar iconos blancos en botones dinámicos */
-.btn-login-now svg,
-.btn-cancel svg,
-.btn-mini svg,
-.select-key-btn svg,
-.restricted-access-buttons button svg,
-.hero-btn svg,
-.cta-btn svg,
-button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) svg {
-  stroke: white !important;
-  fill: none !important;
-}
-
-/* Forzar texto blanco en TODOS los botones */
-.hero-btn,
-.cta-btn,
-.hero-btn *,
-.cta-btn *,
-button:not(.clear-btn):not(.change-btn-circular):not(.hero-btn):not(
-    .btn-restart
-  ):not(.mobile-menu-close),
-button:not(.clear-btn):not(.change-btn-circular):not(.hero-btn):not(
-    .btn-restart
-  ):not(.mobile-menu-close)
-  * {
-  color: white !important;
-}
-
-/* Excepciones específicas para botones especiales */
-.hero-btn.secondary {
-  color: #334155 !important;
-}
-
-.hero-btn.secondary * {
-  color: #334155 !important;
-}
-
-.btn-restart,
-.btn-restart * {
-  color: #6b7280 !important;
-}
-
-/* Excepciones para estados hover en botones específicos */
-.hero-btn.secondary:hover {
-  background: var(--primary-color) !important;
-  border-color: var(--primary-color) !important;
-  color: white !important;
-}
-
-.hero-btn.secondary:hover * {
-  color: white !important;
-}
-
-.hero-btn.secondary:hover svg {
-  stroke: white !important;
-}
-
-/* =========================
-   BOTÓN RESTART ESPECIAL
-   ========================= */
-
-.btn-restart {
-  background: #f8fafc !important;
-  color: #475569 !important;
-  border: 1px solid #cbd5e1 !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 8px !important;
-  padding: 10px 16px !important;
-  min-height: 40px !important;
-  border-radius: 6px !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-.btn-restart:hover:not(:disabled) {
-  background: #e2e8f0 !important;
-  color: #334155 !important;
-  border-color: #94a3b8 !important;
-  transform: translateY(-2px) scale(1.02) !important;
-  box-shadow: 0 6px 12px rgba(71, 85, 105, 0.15) !important;
-  filter: brightness(1.05) !important;
-}
-
-.btn-restart:active:not(:disabled) {
-  background: #cbd5e1 !important;
-  color: #1e293b !important;
-  transform: translateY(0) !important;
-}
-
-.btn-restart,
-.btn-restart * {
-  color: #475569 !important;
-}
-
-.btn-restart:hover,
-.btn-restart:hover * {
-  color: #334155 !important;
-}
-
-.btn-restart:active,
-.btn-restart:active * {
-  color: #1e293b !important;
-}
-
-.btn-restart svg {
-  stroke: #475569 !important;
-  fill: none !important;
-  width: 16px !important;
-  height: 16px !important;
-}
-
-.btn-restart:hover svg {
-  stroke: #334155 !important;
-}
-
-.btn-restart:active svg {
-  stroke: #1e293b !important;
-}
-
-/* =========================
-   ESTILO GLOBAL PRINCIPAL
-   ========================= */

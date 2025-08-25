@@ -1,40 +1,58 @@
 /* =========================
-   SECCIÓN FIRMAR - DISEÑO MODERNO
+   SECCIÓN FIRMAR - DISEÑO UNIFICADO
    ========================= */
 
 #firmarSection {
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(255, 149, 69, 0.08) 100%
+    rgba(255, 255, 255, 0.98) 0%,
+    color-mix(in srgb, var(--primary-color) 5%, transparent) 100%
   );
-  border-radius: 16px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
-  padding: 40px 32px;
+  border-radius: 20px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
+  padding: 48px 40px;
   text-align: center;
   position: relative;
   overflow: hidden;
-  max-width: 600px;
+  max-width: 700px;
   margin: 40px auto 0 auto;
-  border: 1px solid rgba(255, 149, 69, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 8%, transparent);
+}
+
+#firmarSection::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--primary-color) 0%,
+    var(--secondary-color) 100%
+  );
+  border-radius: 20px 20px 0 0;
 }
 
 #firmarSection h2 {
   color: var(--primary-color);
-  margin-bottom: 12px;
-  font-size: 2.2em;
+  margin-bottom: 16px;
+  font-size: 2.4em;
   font-weight: 700;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 
-#firmarSection .section-desc {
-  color: #555;
-  font-size: 1.1em;
-  margin-bottom: 32px;
-  text-align: center;
-  line-height: 1.6;
+#firmarSection h2::before {
+  content: "";
+  width: 32px;
+  height: 32px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ff9545'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'/%3E%3C/svg%3E")
+    no-repeat center;
+  background-size: contain;
 }
 
 /* =========================
@@ -120,11 +138,16 @@
 }
 
 #signStepIndicator .step.active {
-  background: linear-gradient(135deg, var(--primary-color) 0%, #ff7b00 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--accent-color) 100%
+  );
   color: white;
   border-color: var(--primary-color);
   transform: scale(1.05);
-  box-shadow: 0 4px 20px rgba(255, 149, 69, 0.3);
+  box-shadow: 0 4px 20px
+    color-mix(in srgb, var(--primary-color) 30%, transparent);
 }
 
 #signStepIndicator .step.active::after {
@@ -152,7 +175,7 @@
   border-radius: 16px;
   padding: 32px 24px;
   margin: 0 auto;
-  border: 1px solid rgba(255, 149, 69, 0.1);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 10%, transparent);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
   display: flex;
@@ -234,19 +257,21 @@
 
 .key-item:hover {
   border-color: var(--primary-color);
-  background: rgba(255, 149, 69, 0.05);
+  background: color-mix(in srgb, var(--primary-color) 5%, transparent);
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(255, 149, 69, 0.1);
+  box-shadow: 0 4px 15px
+    color-mix(in srgb, var(--primary-color) 10%, transparent);
 }
 
 .key-item.selected {
   border-color: var(--primary-color) !important;
   background: linear-gradient(
     135deg,
-    rgba(255, 149, 69, 0.15) 0%,
+    color-mix(in srgb, var(--primary-color) 15%, transparent) 0%,
     rgba(255, 255, 255, 0.95) 100%
   ) !important;
-  box-shadow: 0 4px 20px rgba(255, 149, 69, 0.3) !important;
+  box-shadow: 0 4px 20px
+    color-mix(in srgb, var(--primary-color) 30%, transparent) !important;
   transform: translateY(-2px) !important;
 }
 
@@ -414,7 +439,7 @@
   display: inline-block;
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(255, 149, 69, 0.2);
+  border: 4px solid color-mix(in srgb, var(--primary-color) 20%, transparent);
   border-top: 4px solid var(--primary-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -665,127 +690,6 @@ button[id*="restart"] {
 .step-notification {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   border-left: 4px solid rgba(255, 255, 255, 0.3);
-}
-
-/* ===========================================
-   FILE INPUT - DISEÑO LIMPIO Y MODERNO
-   =========================================== */
-
-.file-input-container {
-  width: 100%;
-  max-width: 450px;
-  margin: 24px auto;
-}
-
-.file-input-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.file-input {
-  position: absolute;
-  opacity: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-  cursor: pointer;
-}
-
-.file-input-label {
-  display: block;
-  width: 100%;
-  min-height: 70px;
-  padding: 20px;
-  border: 2px dashed #ccc;
-  border-radius: 12px;
-  background: #f9f9f9;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-  box-sizing: border-box;
-}
-
-.file-input-label:hover {
-  border-color: var(--primary-color, #ff9545);
-  background: #fff7f0;
-  box-shadow: 0 2px 12px rgba(255, 149, 69, 0.15);
-}
-
-.file-input-icon {
-  width: 32px;
-  height: 32px;
-  display: block;
-  margin: 0 auto 8px auto;
-  opacity: 0.7;
-  color: #666;
-  transition: all 0.3s ease;
-}
-
-.file-input-label:hover .file-input-icon {
-  opacity: 1;
-  color: var(--primary-color, #ff9545);
-  transform: translateY(-2px);
-}
-
-.file-input-label.has-file .file-input-icon {
-  opacity: 1;
-  color: #4caf50;
-}
-
-.file-input-text {
-  display: block;
-  color: #666;
-  font-size: 14px;
-  margin-bottom: 12px;
-  word-break: break-word;
-}
-
-.file-input-button {
-  display: inline-block;
-  background: var(--primary-color, #ff9545);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background 0.3s ease;
-}
-
-.file-input-label:hover .file-input-button {
-  background: #e8803d;
-}
-
-/* Estados del file input */
-.file-input-label.has-file {
-  border-color: #4caf50;
-  background: #f1f8e9;
-  border-style: solid;
-}
-
-.file-input-label.has-file .file-input-icon {
-  color: #4caf50;
-}
-
-.file-input-label.has-file .file-input-text {
-  color: #2e7d32;
-  font-weight: 500;
-}
-
-.file-input-label.has-file .file-input-button {
-  background: #4caf50;
-}
-
-.file-input-label.error {
-  border-color: #f44336;
-  background: #ffebee;
-}
-
-.file-input-label.error .file-input-icon {
-  color: #f44336;
-}
-
-.file-input-label.error .file-input-text {
-  color: #d32f2f;
 }
 
 /* Responsive */

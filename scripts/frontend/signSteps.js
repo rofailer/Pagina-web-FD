@@ -542,7 +542,6 @@ document.addEventListener("DOMContentLoaded", () => {
             // Validar y almacenar información del archivo
             if (validateFileForUpload(file)) {
                 textSpan.textContent = file.name;
-                iconSpan.textContent = '✓';
                 label.classList.add('has-file');
                 label.classList.remove('error');
 
@@ -552,14 +551,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Archivo inválido, limpiar
                 input.value = "";
                 textSpan.textContent = 'Archivo inválido seleccionado';
-                iconSpan.textContent = '❌';
                 label.classList.add('error');
                 label.classList.remove('has-file');
                 window.firmaEnCurso = false;
             }
         } else {
             textSpan.textContent = 'Ningún archivo seleccionado';
-            iconSpan.textContent = '📄';
             label.classList.remove('has-file', 'error');
 
             // Si no hay archivo, verificar si debemos limpiar el estado

@@ -8,7 +8,6 @@
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(3px);
   animation: fadeIn 0.3s ease;
 }
 
@@ -182,7 +181,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  backdrop-filter: blur(4px);
+  /* sin blur */
 }
 
 .auth-required-close:hover {

@@ -8,7 +8,6 @@
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(3px);
 }
 
 #createKeysGuideModal .modal-content {
@@ -66,7 +65,7 @@
 }
 
 #createKeysGuideModal .modal-description strong {
-  color: #ed700f;
+  color: var(--primary-color);
 }
 
 #createKeysGuideModal .modal-subdescription {
@@ -84,7 +83,11 @@
 }
 
 #goToCreateKeysBtn {
-  background: linear-gradient(135deg, #ed700f, #ff8533);
+  background: linear-gradient(
+    135deg,
+    var(--primary-color),
+    var(--secondary-color)
+  );
   color: white;
   padding: 14px 28px;
   border: none;
@@ -93,13 +96,19 @@
   font-size: 16px;
   font-weight: 600;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(237, 112, 15, 0.3);
+  box-shadow: 0 4px 15px
+    color-mix(in srgb, var(--primary-color) 30%, transparent 70%);
 }
 
 #goToCreateKeysBtn:hover {
-  background: linear-gradient(135deg, #d65f0c, #ed700f);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary-color) 80%, black 20%),
+    color-mix(in srgb, var(--secondary-color) 80%, black 20%)
+  );
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(237, 112, 15, 0.4);
+  box-shadow: 0 6px 20px
+    color-mix(in srgb, var(--primary-color) 40%, transparent 60%);
 }
 
 #skipCreateKeysBtn {

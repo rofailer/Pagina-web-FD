@@ -8,7 +8,6 @@
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(3px);
 }
 
 /* ===== ESTILOS PARA MODALES DE AUTENTICACIÓN BÁSICA ===== */
@@ -34,20 +33,6 @@
   font-weight: 600;
   text-align: center;
   position: relative;
-}
-
-/* Línea decorativa naranja debajo de los títulos */
-.auth-modal h2::after {
-  content: "";
-  position: absolute;
-  bottom: -15px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 70%;
-  height: 4px;
-  background: linear-gradient(135deg, var(--primary-color, #ff9545), #ff8533);
-  border-radius: 3px;
-  box-shadow: 0 2px 8px rgba(255, 149, 69, 0.3);
 }
 
 /* Borde superior naranja para modales de autenticación básica */
@@ -184,7 +169,6 @@
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(3px);
   align-items: center;
   justify-content: center;
 }

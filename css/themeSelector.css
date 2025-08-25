@@ -1,0 +1,238 @@
+/* ========================================
+   SISTEMA DE SELECTOR DE TEMAS DINÁMICOS
+   ======================================== */
+
+/* =========================
+   VARIABLES DE TEMAS
+   ========================= */
+
+/* Tema por defecto - Naranja */
+:root {
+  --primary-color: #ff9545;
+  --primary-rgb: 255, 149, 69;
+  --secondary-color: #ff6b35;
+  --accent-color: #ff7b00;
+}
+
+/* Paletas de colores predefinidas */
+[data-theme="orange"] {
+  --primary-color: #ff9545;
+  --primary-rgb: 255, 149, 69;
+  --secondary-color: #ff6b35;
+  --accent-color: #ff7b00;
+}
+
+[data-theme="blue"] {
+  --primary-color: #3b82f6;
+  --primary-rgb: 59, 130, 246;
+  --secondary-color: #1d4ed8;
+  --accent-color: #2563eb;
+}
+
+[data-theme="green"] {
+  --primary-color: #10b981;
+  --primary-rgb: 16, 185, 129;
+  --secondary-color: #059669;
+  --accent-color: #0d9488;
+}
+
+[data-theme="purple"] {
+  --primary-color: #8b5cf6;
+  --primary-rgb: 139, 92, 246;
+  --secondary-color: #7c3aed;
+  --accent-color: #6d28d9;
+}
+
+[data-theme="red"] {
+  --primary-color: #ef4444;
+  --primary-rgb: 239, 68, 68;
+  --secondary-color: #dc2626;
+  --accent-color: #b91c1c;
+}
+
+[data-theme="teal"] {
+  --primary-color: #14b8a6;
+  --primary-rgb: 20, 184, 166;
+  --secondary-color: #0d9488;
+  --accent-color: #0f766e;
+}
+
+/* =========================
+   ESTILOS DEL SELECTOR
+   ========================= */
+
+.theme-selector-container {
+  position: relative;
+}
+
+/* Variante flotante: esquina inferior derecha (reemplaza al botón de ayuda) */
+.theme-selector-container.floating {
+  position: fixed;
+  right: 12px;
+  bottom: 40px;
+  z-index: 1000;
+}
+
+@media (max-width: 700px) {
+  .theme-selector-container.floating {
+    right: 20px;
+    bottom: 55px; /* respetar footer móvil */
+  }
+}
+
+.theme-btn {
+  border: none !important; /* sin bordes blancos */
+  border-radius: 999px !important;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px; /* más grande */
+  height: 56px; /* más grande */
+  background: var(--primary-color);
+  box-shadow: 0 6px 18px rgba(var(--primary-rgb), 0.35);
+  color: #fff;
+}
+
+.theme-btn:hover {
+  background: color-mix(
+    in srgb,
+    var(--primary-color) 85%,
+    #000 15%
+  ) !important; /* mismo color más oscuro */
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+.theme-icon {
+  color: #ffffff; /* icono blanco sobre botón de color */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+
+.theme-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #ffffff; /* sin blur para mejor rendimiento */
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  min-width: 140px;
+}
+
+.theme-dropdown.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Abrir hacia arriba cuando no hay espacio inferior */
+.theme-dropdown.open-up {
+  top: auto;
+  bottom: calc(100% + 8px);
+  transform-origin: bottom right;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #334155;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.theme-option:hover {
+  background: rgba(0, 0, 0, 0.05);
+  transform: translateX(2px);
+}
+
+.theme-option.active {
+  background: var(--primary-color);
+  color: white;
+  transform: translateX(4px);
+}
+
+.theme-option.active .theme-color {
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.theme-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.theme-color::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: inherit;
+  border: none;
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
+@media (max-width: 768px) {
+  .theme-btn {
+    width: 48px; /* mayor en móvil también */
+    height: 48px;
+    padding: 8px;
+  }
+
+  .theme-dropdown {
+    right: -8px;
+    min-width: 120px;
+  }
+
+  .theme-option {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .theme-color {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .theme-dropdown {
+    right: -16px;
+    left: auto;
+    transform-origin: top right;
+  }
+
+  .theme-option {
+    padding: 12px;
+    justify-content: center;
+    text-align: center;
+  }
+}

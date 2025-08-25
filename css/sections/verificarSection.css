@@ -6,9 +6,8 @@
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.9) 60%,
-    rgba(255, 149, 69, 0.15) 100%
+    color-mix(in srgb, var(--primary-color) 15%, transparent) 100%
   );
-  backdrop-filter: blur(10px);
   border-radius: 18px;
   box-shadow: 0 6px 32px rgba(33, 150, 243, 0.13);
   padding: 48px 32px 36px 32px;
@@ -24,13 +23,6 @@
   margin-bottom: 10px;
   font-size: 2.1em;
   letter-spacing: 1px;
-}
-
-#verifySection .section-desc {
-  color: #444;
-  font-size: 1.13em;
-  margin-bottom: 26px;
-  text-align: center;
 }
 
 /* Iconos CSS personalizados */
@@ -460,11 +452,16 @@
 }
 
 #verifyStepIndicator .step.active {
-  background: linear-gradient(135deg, var(--primary-color) 0%, #ff7b00 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--accent-color) 100%
+  );
   color: white;
   border-color: var(--primary-color);
   transform: scale(1.05);
-  box-shadow: 0 4px 20px rgba(255, 149, 69, 0.3);
+  box-shadow: 0 4px 20px
+    color-mix(in srgb, var(--primary-color) 30%, transparent);
 }
 
 #verifyStepIndicator .step.active::after {
@@ -492,7 +489,7 @@
   border-radius: 16px;
   padding: 32px 24px;
   margin: 0 auto;
-  border: 1px solid rgba(255, 149, 69, 0.1);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 10%, transparent);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
   display: flex;
@@ -566,7 +563,8 @@
 #profesorSelect:focus {
   border-color: var(--primary-color);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(255, 149, 69, 0.1);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--primary-color) 10%, transparent);
 }
 
 #profesorSelect:hover {
@@ -630,132 +628,6 @@
   margin-top: 20px;
 }
 
-/* ===========================================
-   FILE INPUT - DISEÑO LIMPIO Y MODERNO
-   =========================================== */
-
-.file-input-container {
-  width: 100%;
-  max-width: 450px;
-  margin: 24px auto;
-}
-
-.file-input-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.file-input {
-  position: absolute;
-  opacity: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-  cursor: pointer;
-}
-
-.file-input-label {
-  display: block;
-  width: 100%;
-  min-height: 70px;
-  padding: 20px;
-  border: 2px dashed #ccc;
-  border-radius: 12px;
-  background: #f9f9f9;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-  box-sizing: border-box;
-}
-
-.file-input-label:hover {
-  border-color: var(--primary-color, #ff9545);
-  background: #fff7f0;
-  box-shadow: 0 2px 12px rgba(255, 149, 69, 0.15);
-}
-
-.file-input-icon {
-  width: 32px;
-  height: 32px;
-  display: block;
-  margin: 0 auto 8px auto;
-  opacity: 0.7;
-  color: #666;
-  transition: all 0.3s ease;
-}
-
-.file-input-label:hover .file-input-icon {
-  opacity: 1;
-  color: var(--primary-color, #ff9545);
-  transform: translateY(-2px);
-}
-
-.file-input-label.has-file .file-input-icon {
-  opacity: 1;
-  color: #4caf50;
-}
-
-.file-input-label.auto-detected .file-input-icon {
-  opacity: 1;
-  color: #28a745;
-}
-
-.file-input-text {
-  display: block;
-  color: #666;
-  font-size: 14px;
-  margin-bottom: 12px;
-  word-break: break-word;
-}
-
-.file-input-button {
-  display: inline-block;
-  background: var(--primary-color, #ff9545);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background 0.3s ease;
-}
-
-.file-input-label:hover .file-input-button {
-  background: #e8803d;
-}
-
-/* Estados del file input */
-.file-input-label.has-file {
-  border-color: #4caf50;
-  background: #f1f8e9;
-  border-style: solid;
-}
-
-.file-input-label.has-file .file-input-icon {
-  color: #4caf50;
-}
-
-.file-input-label.has-file .file-input-text {
-  color: #2e7d32;
-  font-weight: 500;
-}
-
-.file-input-label.has-file .file-input-button {
-  background: #4caf50;
-}
-
-.file-input-label.error {
-  border-color: #f44336;
-  background: #ffebee;
-}
-
-.file-input-label.error .file-input-icon {
-  color: #f44336;
-}
-
-.file-input-label.error .file-input-text {
-  color: #d32f2f;
-}
-
 /* Paso 4: Resultado de verificación */
 #verifyStep4 {
   animation: fadeInUp 0.5s ease;
@@ -776,7 +648,7 @@
   display: inline-block;
   width: 32px;
   height: 32px;
-  border: 3px solid rgba(255, 149, 69, 0.2);
+  border: 3px solid color-mix(in srgb, var(--primary-color) 20%, transparent);
   border-top: 3px solid var(--primary-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;

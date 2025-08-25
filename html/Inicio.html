@@ -21,9 +21,11 @@
     <link rel="stylesheet" href="/css/sections/verificarSection.css" />
     <link rel="stylesheet" href="/css/sections/contactoSection.css" />
     <link rel="stylesheet" href="/css/sections/perfilSection.css" />
-    <link rel="stylesheet" href="/css/sections/opcionesSection.css" />
 
     <link rel="stylesheet" href="/css/Header/headerStyle.css" />
+
+    <!-- Sistema de Temas Dinámicos -->
+    <link rel="stylesheet" href="/css/themeSelector.css" />
     <link rel="stylesheet" href="/css/Header/hHamburguer_new.css" />
 
     <!-- CSS para módulo de eliminación de llaves -->
@@ -31,6 +33,7 @@
 
     <script src="/scripts/frontend/theme.js"></script>
   </head>
+
   <body style="visibility: hidden">
     <!-- Header con menú de autenticación -->
     <header>
@@ -46,31 +49,75 @@
       </div>
       <!-- Navegación movida al menú hamburguesa -->
       <div class="header-right">
-        <ul id="authMenu">
-          <li id="loginBtnLi"><a href="#" id="loginBtn">Iniciar Sesión</a></li>
-          <li id="registerBtnLi">
-            <a href="#" id="registerBtn">Registrarse</a>
-          </li>
-          <!-- Botón hamburguesa moderno -->
-          <button
-            id="headerMenuBtn"
-            class="header-menu-btn"
-            aria-label="Abrir menú de navegación"
-            aria-expanded="false"
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
-        </ul>
+        <!-- (Selector de temas movido al flotante) -->
+        <!-- Botón hamburguesa moderno -->
+        <button
+          id="headerMenuBtn"
+          class="header-menu-btn"
+          aria-label="Abrir menú de navegación"
+          aria-expanded="false"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </div>
     </header>
-    <!-- Menú móvil -->
-    <nav id="headerMobileMenu" class="header-mobile-menu" aria-hidden="true">
+
+    <!-- Menú móvil hamburguesa -->
+    <div id="headerMobileMenu" class="header-mobile-menu" aria-hidden="true">
       <ul id="mobileMenuList"></ul>
-    </nav>
-    <!-- Botón de ayuda flotante -->
-    <button id="showTutorialBtn" title="Ver tutorial de uso">?</button>
+    </div>
+
+    <!-- Selector de tema flotante (reemplaza el botón de ayuda) -->
+    <div
+      class="theme-selector-container floating"
+      aria-label="Selector de tema"
+    >
+      <button id="themeBtn" class="theme-btn" title="Cambiar tema">
+        <div class="theme-icon">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="5" />
+            <path
+              d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+            />
+          </svg>
+        </div>
+      </button>
+      <div id="themeDropdown" class="theme-dropdown">
+        <div class="theme-option" data-theme="orange">
+          <div class="theme-color" style="background: #ff9545"></div>
+          <span>Naranja</span>
+        </div>
+        <div class="theme-option" data-theme="blue">
+          <div class="theme-color" style="background: #3b82f6"></div>
+          <span>Azul</span>
+        </div>
+        <div class="theme-option" data-theme="green">
+          <div class="theme-color" style="background: #10b981"></div>
+          <span>Verde</span>
+        </div>
+        <div class="theme-option" data-theme="purple">
+          <div class="theme-color" style="background: #8b5cf6"></div>
+          <span>Morado</span>
+        </div>
+        <div class="theme-option" data-theme="red">
+          <div class="theme-color" style="background: #ef4444"></div>
+          <span>Rojo</span>
+        </div>
+        <div class="theme-option" data-theme="teal">
+          <div class="theme-color" style="background: #14b8a6"></div>
+          <span>Teal</span>
+        </div>
+      </div>
+    </div>
 
     <!-- Modal de Tutorial de Uso -->
     <div id="tutorialModal" class="tutorial-modal">
@@ -1118,27 +1165,6 @@
         <!-- Hero Section Principal -->
         <div class="hero-section">
           <div class="hero-content">
-            <div class="hero-badge">
-              <span class="badge-icon">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 2L14.09 8.26L22 9L16 14.74L17.18 21.02L12 18L6.82 21.02L8 14.74L2 9L9.91 8.26L12 2Z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    fill="none"
-                  />
-                </svg>
-              </span>
-              <span class="badge-text"
-                >Certificación Digital de Investigación</span
-              >
-            </div>
             <h1 class="hero-title">
               Firmas Digitales
               <span class="hero-highlight">Seguras y Confiables</span>
@@ -1596,139 +1622,132 @@
               vanguardia
             </p>
           </div>
-          <div class="process-steps">
-            <div class="process-step">
-              <div class="step-number">1</div>
-              <div class="step-content">
-                <h3 class="step-title">Genera tus Llaves</h3>
-                <p class="step-description">
+          <ol class="process-timeline" aria-label="Proceso en tres pasos">
+            <li class="timeline-item">
+              <div class="timeline-side side-header">
+                <div class="step-header">
+                  <span class="step-badge">Paso 1</span>
+                  <h3 class="step-title">Genera tus Llaves</h3>
+                </div>
+              </div>
+              <div class="timeline-marker" aria-hidden="true">
+                <!-- Key icon -->
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="7"
+                    cy="12"
+                    r="4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M11 12h10"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M18 12v3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M16 12v2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </div>
+              <div class="timeline-side side-desc">
+                <p class="step-desc">
                   Crea tu par de llaves criptográficas únicas. Una llave privada
                   (solo tuya) y una pública para verificación.
                 </p>
               </div>
-            </div>
+            </li>
 
-            <div class="process-arrow">
-              <svg width="60" height="20" viewBox="0 0 60 20">
-                <path
-                  d="M5 10 L50 10 M45 5 L50 10 L45 15"
-                  stroke="var(--primary-color)"
-                  stroke-width="2"
-                  fill="none"
-                  stroke-linecap="round"
-                />
-              </svg>
-            </div>
-
-            <div class="process-step">
-              <div class="step-number">2</div>
-              <div class="step-content">
-                <h3 class="step-title">Firma el Documento</h3>
-                <p class="step-description">
+            <li class="timeline-item">
+              <div class="timeline-side side-desc">
+                <p class="step-desc">
                   Sube tu PDF y aplica tu firma digital. El sistema genera un
                   hash único y lo cifra con tu llave privada.
                 </p>
               </div>
-            </div>
-
-            <div class="process-arrow">
-              <svg width="60" height="20" viewBox="0 0 60 20">
-                <path
-                  d="M5 10 L50 10 M45 5 L50 10 L45 15"
-                  stroke="var(--primary-color)"
-                  stroke-width="2"
+              <div class="timeline-marker" aria-hidden="true">
+                <!-- Pencil icon -->
+                <svg
+                  viewBox="0 0 24 24"
                   fill="none"
-                  stroke-linecap="round"
-                />
-              </svg>
-            </div>
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 17.25V21h3.75L19.81 7.94l-3.75-3.75L3 17.25z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M14.06 4.19l3.75 3.75"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </div>
+              <div class="timeline-side side-header">
+                <div class="step-header">
+                  <span class="step-badge">Paso 2</span>
+                  <h3 class="step-title">Firma el Documento</h3>
+                </div>
+              </div>
+            </li>
 
-            <div class="process-step">
-              <div class="step-number">3</div>
-              <div class="step-content">
-                <h3 class="step-title">Verifica y Avala</h3>
-                <p class="step-description">
-                  Cualquiera puede verificar la autenticidad usando tu llave
-                  pública. El documento queda avalado y protegido contra
-                  alteraciones.
+            <li class="timeline-item">
+              <div class="timeline-side side-header">
+                <div class="step-header">
+                  <span class="step-badge">Paso 3</span>
+                  <h3 class="step-title">Verifica y Avala</h3>
+                </div>
+              </div>
+              <div class="timeline-marker" aria-hidden="true">
+                <!-- Magnifying glass icon -->
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="11"
+                    cy="11"
+                    r="7"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="m21 21-4.35-4.35"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </div>
+              <div class="timeline-side side-desc">
+                <p class="step-desc">
+                  Verifica la autenticidad con tu llave pública. El documento
+                  queda avalado y protegido contra alteraciones.
                 </p>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- CTA Section -->
-        <div class="cta-section">
-          <div class="cta-content">
-            <h2 class="cta-title">¿Listo para proteger tus documentos?</h2>
-            <p class="cta-description">
-              Únete a la nueva era de la certificación digital de investigación.
-              Comienza a usar firmas digitales profesionales hoy mismo.
-            </p>
-            <div class="cta-buttons">
-              <button
-                class="cta-btn primary"
-                onclick="handleSignDocumentClick()"
-              >
-                <span class="btn-icon">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M17 3C17.2626 2.73735 17.5744 2.52901 17.9176 2.38687C18.2608 2.24473 18.6286 2.17157 19 2.17157C19.3714 2.17157 19.7392 2.24473 20.0824 2.38687C20.4256 2.52901 20.7374 2.73735 21 3C21.2626 3.26264 21.471 3.57444 21.6131 3.9176C21.7553 4.26077 21.8284 4.62856 21.8284 5C21.8284 5.37143 21.7553 5.73923 21.6131 6.08239C21.471 6.42555 21.2626 6.73735 21 7L7.5 20.5L2 22L3.5 16.5L17 3Z"
-                      stroke="white"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </span>
-                Firmar Documento
-              </button>
-              <button
-                class="cta-btn secondary"
-                onclick="handleCreateKeysClick()"
-              >
-                <span class="btn-icon">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <rect
-                      x="3"
-                      y="11"
-                      width="18"
-                      height="11"
-                      rx="2"
-                      ry="2"
-                      stroke="white"
-                      stroke-width="2"
-                    />
-                    <circle
-                      cx="12"
-                      cy="16"
-                      r="1"
-                      stroke="white"
-                      stroke-width="2"
-                    />
-                    <path
-                      d="M7 11V7a5 5 0 0 1 10 0v4"
-                      stroke="white"
-                      stroke-width="2"
-                    />
-                  </svg>
-                </span>
-                Crear Llaves
-              </button>
-            </div>
-          </div>
+            </li>
+          </ol>
         </div>
       </section>
 
@@ -1759,42 +1778,11 @@
                   required
                 />
                 <label for="fileInput" class="file-input-label">
-                  <svg
-                    class="file-input-icon"
-                    width="32"
-                    height="32"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <polyline
-                      points="7,10 12,15 17,10"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <line
-                      x1="12"
-                      y1="15"
-                      x2="12"
-                      y2="3"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                  </svg>
+                  <div class="file-input-icon"></div>
                   <span class="file-input-text"
                     >Ningún archivo seleccionado</span
                   >
-                  <span class="file-input-button">Elegir archivo</span>
+                  <button class="file-input-button">Elegir archivo</button>
                 </label>
               </div>
             </div>
@@ -1987,32 +1975,9 @@
                   aria-label="Seleccionar archivo PDF firmado para detección automática"
                 />
                 <label for="autoDetectFile" class="file-input-label">
-                  <span class="file-input-icon">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2Z"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <polyline
-                        points="14,2 14,8 20,8"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </span>
+                  <div class="file-input-icon"></div>
                   <span class="file-input-text">Subir documento firmado</span>
-                  <span class="file-input-button">Detectar firmante</span>
+                  <button class="file-input-button">Detectar firmante</button>
                 </label>
               </div>
             </div>
@@ -2155,34 +2120,11 @@
                   required
                 />
                 <label for="signedFile" class="file-input-label">
-                  <span class="file-input-icon">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2Z"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <polyline
-                        points="14,2 14,8 20,8"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </span>
+                  <div class="file-input-icon"></div>
                   <span class="file-input-text"
                     >Ningún archivo seleccionado</span
                   >
-                  <span class="file-input-button">Elegir archivo</span>
+                  <button class="file-input-button">Elegir archivo</button>
                 </label>
               </div>
             </div>
@@ -2222,34 +2164,11 @@
                   required
                 />
                 <label for="originalFile" class="file-input-label">
-                  <span class="file-input-icon">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2Z"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <polyline
-                        points="14,2 14,8 20,8"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </span>
+                  <div class="file-input-icon"></div>
                   <span class="file-input-text"
                     >Ningún archivo seleccionado</span
                   >
-                  <span class="file-input-button">Elegir archivo</span>
+                  <button class="file-input-button">Elegir archivo</button>
                 </label>
               </div>
             </div>
@@ -2541,31 +2460,6 @@
               <div class="tab-info">
                 <div class="tab-title">Personalización PDF</div>
                 <div class="tab-desc">Plantillas y logos</div>
-              </div>
-            </div>
-
-            <div class="perfil-tab-btn" data-tab="configuracion-avanzada">
-              <div class="tab-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="3"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <path
-                    d="M12 1v6m0 6v6m11-7h-6m-6 0H1m15.5-3.5L19 12l-2.5 2.5M5 9.5L2.5 12 5 14.5"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              </div>
-              <div class="tab-info">
-                <div class="tab-title">Configuración Avanzada</div>
-                <div class="tab-desc">Opciones del sistema</div>
               </div>
             </div>
           </div>
@@ -3725,104 +3619,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- TAB 6: CONFIGURACIÓN AVANZADA -->
-            <div class="perfil-tab-content" id="tab-configuracion-avanzada">
-              <div class="tab-content-header">
-                <h3>
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    style="vertical-align: middle; margin-right: 8px"
-                  >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="3"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <path
-                      d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                  </svg>
-                  Configuración Avanzada
-                </h3>
-                <p>Ajusta las opciones avanzadas del sistema</p>
-              </div>
-
-              <div class="additional-settings">
-                <div class="setting-item">
-                  <div class="setting-info">
-                    <div class="setting-label">Notificaciones por Email</div>
-                    <div class="setting-description">
-                      Recibir alertas sobre actividad de firma
-                    </div>
-                  </div>
-                  <div
-                    class="toggle-switch active"
-                    onclick="toggleSetting(this)"
-                  ></div>
-                </div>
-
-                <div class="setting-item">
-                  <div class="setting-info">
-                    <div class="setting-label">Validación Automática</div>
-                    <div class="setting-description">
-                      Verificar documentos automáticamente
-                    </div>
-                  </div>
-                  <div
-                    class="toggle-switch"
-                    onclick="toggleSetting(this)"
-                  ></div>
-                </div>
-
-                <div class="setting-item">
-                  <div class="setting-info">
-                    <div class="setting-label">Historial de Firmas</div>
-                    <div class="setting-description">
-                      Mantener registro de documentos firmados
-                    </div>
-                  </div>
-                  <div
-                    class="toggle-switch active"
-                    onclick="toggleSetting(this)"
-                  ></div>
-                </div>
-
-                <div class="setting-item">
-                  <div class="setting-info">
-                    <div class="setting-label">Modo Avanzado</div>
-                    <div class="setting-description">
-                      Mostrar opciones técnicas adicionales
-                    </div>
-                  </div>
-                  <div
-                    class="toggle-switch"
-                    onclick="toggleSetting(this)"
-                  ></div>
-                </div>
-
-                <div class="setting-item">
-                  <div class="setting-info">
-                    <div class="setting-label">Tema Oscuro</div>
-                    <div class="setting-description">
-                      Usar interfaz oscura (próximamente)
-                    </div>
-                  </div>
-                  <div
-                    class="toggle-switch"
-                    onclick="toggleSetting(this)"
-                  ></div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -3886,114 +3682,6 @@
           pronto.
         </p>
       </section>
-
-      <section id="opcionesSection">
-        <h2>Opciones de Personalización</h2>
-        <form id="configForm">
-          <!-- Cambiar logo -->
-          <label for="logoUpload">Subir Logo:</label>
-          <div class="input-inline">
-            <div style="width: 100%; max-width: 350px">
-              <label class="file">
-                <input
-                  type="file"
-                  id="logoUpload"
-                  name="logoUpload"
-                  accept="image/*"
-                  class="custom-file-input"
-                  aria-label="Subir logo"
-                />
-                <span class="file-custom">Ningún archivo seleccionado</span>
-              </label>
-              <button type="button" id="removeLogoBtn" title="Quitar logo">
-                X
-              </button>
-            </div>
-          </div>
-          <img
-            id="logoPreview"
-            style="display: none; max-height: 100px; margin-top: 10px"
-          />
-
-          <!-- Cambiar fondo del contenido -->
-          <label for="contentBgFile">Fondo del contenido (imagen):</label>
-          <div class="input-inline">
-            <div style="width: 100%; max-width: 350px">
-              <label class="file">
-                <input
-                  type="file"
-                  id="contentBgFile"
-                  accept="image/*"
-                  class="custom-file-input"
-                  aria-label="Subir fondo"
-                />
-                <span class="file-custom">Ningún archivo seleccionado</span>
-              </label>
-              <button
-                type="button"
-                id="removeContentBgBtn"
-                title="Quitar fondo"
-              >
-                X
-              </button>
-            </div>
-          </div>
-
-          <!-- Cambiar título de la página -->
-          <label for="pageTitle">Título de la Página:</label>
-          <input
-            type="text"
-            id="pageTitle"
-            name="title"
-            placeholder="Nuevo título"
-          />
-
-          <!-- Cambiar colores -->
-          <label for="primaryColor">Color Primario:</label>
-          <input
-            type="color"
-            id="primaryColor"
-            name="primaryColor"
-            value="#ed700f"
-          />
-
-          <label for="secondaryColor">Color Secundario:</label>
-          <input
-            type="color"
-            id="secondaryColor"
-            name="secondaryColor"
-            value="#333333"
-          />
-
-          <!-- Cambiar footer -->
-          <label for="footerText">Texto del Footer:</label>
-          <input
-            type="text"
-            id="footerText"
-            name="footer"
-            placeholder="Nuevo texto del footer"
-          />
-
-          <button type="submit">
-            <svg
-              class="btn-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <path
-                d="M20 6L9 17l-5-5"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            Guardar Cambios
-          </button>
-        </form>
-      </section>
     </main>
 
     <!-- Modal de confirmación para navegación -->
@@ -4053,6 +3741,53 @@
     </div>
 
     <footer class="fixed_footer">
+      <div class="footer-cta">
+        <h2 class="cta-title">¿Listo para proteger tus documentos?</h2>
+        <p class="cta-description">
+          Únete a la nueva era de certificación digital para investigación y
+          academia. Firma, avala y verifica con seguridad profesional.
+        </p>
+        <div class="cta-buttons">
+          <button class="cta-btn primary" onclick="window.openTutorial?.()">
+            Ver tutorial de uso
+          </button>
+        </div>
+        <p class="cta-meta" aria-label="Nota de privacidad">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+            style="vertical-align: -2px; margin-right: 6px"
+          >
+            <rect
+              x="3"
+              y="11"
+              width="18"
+              height="11"
+              rx="2"
+              ry="2"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <circle
+              cx="12"
+              cy="16"
+              r="1"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <path
+              d="M7 11V7a5 5 0 0 1 10 0v4"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+          </svg>
+          Tus archivos nunca se almacenan permanentemente.
+        </p>
+      </div>
+      <div class="footer-divider" role="separator" aria-hidden="true"></div>
       <p>&copy; 2025 Firmas Digitales FD. Todos los derechos reservados.</p>
     </footer>
 
@@ -4062,7 +3797,6 @@
 
     <script src="/scripts/frontend/auth.frontend.js"></script>
     <script src="/scripts/frontend/keys.frontend.js"></script>
-    <script src="/scripts/frontend/config.js"></script>
     <script src="/scripts/frontend/userKeysModal.js"></script>
     <script src="/scripts/frontend/keyPassword.frontend.js"></script>
     <script src="/scripts/frontend/deleteKey.frontend.js"></script>
@@ -4074,5 +3808,9 @@
     <!-- <script src="/scripts/frontend/headerResponsive.frontend.js"></script> -->
     <script src="/scripts/frontend/mobileHamburger.frontend.js"></script>
     <script src="/scripts/utils/tutorial.js"></script>
+
+    <!-- Sistema de Temas Dinámicos -->
+    <script src="/scripts/utils/themeManager.js"></script>
+    <script src="/scripts/frontend/inicioTimelineReveal.js"></script>
   </body>
 </html>

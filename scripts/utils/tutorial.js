@@ -1,7 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     const modal = document.getElementById("tutorialModal");
     const closeBtn = document.getElementById("closeTutorialBtn");
-    const showBtn = document.getElementById("showTutorialBtn");
 
     // Mostrar modal solo la primera vez
     if (!localStorage.getItem("fd_tutorial_shown")) {
@@ -9,20 +8,10 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("fd_tutorial_shown", "1");
     }
 
-    // Mostrar el botón de ayuda siempre
-    if (showBtn) showBtn.style.display = "block";
-
     // Botón para cerrar el modal
     if (closeBtn) {
         closeBtn.onclick = () => {
             modal.style.display = "none";
-        };
-    }
-
-    // Botón de ayuda para volver a mostrar el modal
-    if (showBtn) {
-        showBtn.onclick = () => {
-            modal.style.display = "block";
         };
     }
 
@@ -35,3 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
+// Exponer función global para abrir el tutorial desde cualquier botón
+window.openTutorial = function () {
+    const modal = document.getElementById("tutorialModal");
+    if (modal) modal.style.display = "block";
+};
