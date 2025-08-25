@@ -45,15 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Función para detección automática del firmante ---
     async function detectSignerFromDocument(file) {
-        const autoDetectResult = document.getElementById("autoDetectResult");
-
-        // Mostrar estado de carga
-        autoDetectResult.style.display = "block";
-        autoDetectResult.className = "auto-detect-result loading";
-        autoDetectResult.innerHTML = `
-            <div class="detected-signer">Analizando documento...</div>
-            <div class="detected-info">Extrayendo información del firmante</div>
-        `;
+        // Solo notificaciones, no mostrar modal ni contenido
 
         try {
             const formData = new FormData();
@@ -72,12 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (result.success) {
                 // Detección exitosa
                 autoDetectedSigner = result.signer;
-                autoDetectResult.className = "auto-detect-result success";
-                autoDetectResult.innerHTML = `
-                    <div class="detected-signer">Firmante detectado: ${result.signer.nombre}</div>
-                    <div class="detected-info">Usuario: ${result.signer.usuario} | ID: ${result.signer.id}</div>
-                    <div class="detected-info">El documento firmado se utilizará automáticamente en el paso 2</div>
-                `;
+
 
                 // Guardar archivo para uso en paso 2
                 window.autoDetectedFile = file;
@@ -100,11 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Error en la detección
                 autoDetectedSigner = null;
                 window.autoDetectedFile = null;
-                autoDetectResult.className = "auto-detect-result error";
-                autoDetectResult.innerHTML = `
-                    <div class="detected-signer">No se pudo detectar el firmante</div>
-                    <div class="detected-info">${result.message}</div>
-                `;
+
 
                 // Mostrar notificación de error
                 if (window.showNotification) {
@@ -116,11 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Error en detección automática:", error);
             autoDetectedSigner = null;
             window.autoDetectedFile = null;
-            autoDetectResult.className = "auto-detect-result error";
-            autoDetectResult.innerHTML = `
-                <div class="detected-signer">Error de conexión</div>
-                <div class="detected-info">No se pudo procesar el documento</div>
-            `;
+
 
             if (window.showNotification) {
                 window.showNotification("Error al procesar el documento", "error");

@@ -580,5 +580,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.addEventListener('keydown', handleEscape);
     }
 
+    // Exponer la función globalmente para uso desde otros scripts (ej: hero button)
+    window.showRestrictedAccessModal = showRestrictedAccessModal;
+
     // Llama a la función al cargar y cada vez que cambie el estado de sesión
 });

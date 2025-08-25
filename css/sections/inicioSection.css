@@ -65,10 +65,11 @@
   border-radius: 16px;
   padding: 20px 28px;
   width: 70%;
+  max-width: 700px;
+  min-width: 220px;
   display: flex;
   align-items: center;
   gap: 28px;
-  margin-top: 20px;
   box-shadow: 0 8px 32px
       color-mix(in srgb, var(--primary-color) 15%, transparent),
     0 2px 8px rgba(0, 0, 0, 0.05);
@@ -760,6 +761,11 @@
   .hero-stats {
     justify-content: center;
     flex-wrap: wrap;
+    margin-left: auto;
+    margin-right: auto;
+    width: 98%;
+    max-width: 420px;
+    min-width: 0;
   }
 
   .features-section,

@@ -478,11 +478,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // Validación de sesión solo para la sección de firmar
                 if (key === "firmar" && !localStorage.getItem("token")) {
-                    if (window.showLoginModal) window.showLoginModal();
+                    if (window.showSignAuthRequiredModal) window.showSignAuthRequiredModal();
                     else alert("Debes iniciar sesión para firmar documentos.");
-                    window.location.hash = "inicio";
-                    if (document.getElementById("inicioSection")) document.getElementById("inicioSection").style.display = "";
-                    if (document.getElementById("firmarSection")) document.getElementById("firmarSection").style.display = "none";
+                    // No cambiar el hash ni mostrar la sección firmar
+                    // Mantener la sección actual visible
                     return;
                 }
 

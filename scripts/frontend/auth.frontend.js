@@ -67,27 +67,36 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+
     // Cerrar modales
     document.querySelectorAll(".close-modal").forEach((btn) => {
         btn.addEventListener("click", closeModals);
     });
 
     // Cerrar modales al hacer clic fuera del contenido
-    loginModal.addEventListener("click", (e) => {
-        if (e.target === loginModal) {
-            closeModals();
-        }
-    });
+    if (loginModal) {
+        loginModal.addEventListener("click", (e) => {
+            if (e.target === loginModal) {
+                closeModals();
+            }
+        });
+    }
 
-    registerModal.addEventListener("click", (e) => {
-        if (e.target === registerModal) {
-            closeModals();
-        }
-    });
+    if (registerModal) {
+        registerModal.addEventListener("click", (e) => {
+            if (e.target === registerModal) {
+                closeModals();
+            }
+        });
+    }
 
     // Manejar envío de formularios
-    loginForm.addEventListener("submit", handleLogin);
-    registerForm.addEventListener("submit", handleRegister);
+    if (loginForm) {
+        loginForm.addEventListener("submit", handleLogin);
+    }
+    if (registerForm) {
+        registerForm.addEventListener("submit", handleRegister);
+    }
 
     // Funciones
     function showLoginModal(e) {
@@ -421,35 +430,54 @@ document.addEventListener("DOMContentLoaded", () => {
     // Función global para manejar el clic del botón "Firmar Documento"
     window.handleSignDocumentClick = function () {
         const token = localStorage.getItem("token");
-
-        // TEMPORAL: Para pruebas con Live Server, ir directo a firmar
-        window.location.hash = 'firmar';
-
-        /*if (token) {
+        if (token) {
             // Si está autenticado, ir directamente a la sección de firmar
             window.location.hash = 'firmar';
         } else {
-            // Si no está autenticado, mostrar el modal personalizado de autenticación requerida
-            showSignAuthRequiredModal();
-        }*/
+            // Si no está autenticado, mostrar el modal de acceso restringido (igual que menú móvil)
+            if (typeof window.showRestrictedAccessModal === 'function') {
+                window.showRestrictedAccessModal('firmar');
+            } else {
+                // Copia de seguridad: crear el modal aquí si no está global
+                const actionText = 'firmar documentos';
+                const modal = document.createElement('div');
+                modal.className = 'restricted-access-modal';
+                modal.innerHTML = `
+                    <div class="restricted-access-backdrop"></div>
+                    <div class="restricted-access-content">
+                        <button class="restricted-access-close"></button>
+                        <div class="restricted-access-icon"></div>
+                        <h3>Acceso Restringido</h3>
+                        <p>Para <strong>${actionText}</strong> necesitas iniciar sesión en tu cuenta.</p>
+                        <button class="restricted-access-login-btn">Iniciar Sesión</button>
+                    </div>
+                `;
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100vw;
+                    height: 100vh;
+                    z-index: 9999;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                `;
+                document.body.appendChild(modal);
+                const btnLogin = modal.querySelector('.restricted-access-login-btn');
+                const btnClose = modal.querySelector('.restricted-access-close');
+                const backdrop = modal.querySelector('.restricted-access-backdrop');
+                function closeModal() { document.body.removeChild(modal); }
+                btnLogin.addEventListener('click', () => { closeModal(); setTimeout(() => { if (window.showLoginModal) { window.showLoginModal(); } }, 100); });
+                btnClose.addEventListener('click', closeModal);
+                backdrop.addEventListener('click', closeModal);
+                function handleEscape(e) { if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', handleEscape); } }
+                document.addEventListener('keydown', handleEscape);
+            }
+        }
     };
 
-    // Función para mostrar el modal de autenticación requerida para firmar
-    function showSignAuthRequiredModal() {
-        const modal = document.getElementById('signAuthRequiredModal');
-        const title = document.getElementById('signAuthTitle');
-        const description = document.getElementById('signAuthDescription');
-        const subdescription = document.getElementById('signAuthSubdescription');
-
-        if (modal && title && description && subdescription) {
-            // Restaurar el contenido original para firmar
-            title.textContent = 'Autenticación Requerida';
-            description.innerHTML = '<strong>Para acceder a la sección de firmar documentos necesitas iniciar sesión.</strong>';
-            subdescription.textContent = 'La funcionalidad de firma requiere autenticación para garantizar la seguridad e identidad del firmante, protegiendo así la integridad del proceso criptográfico y la validez legal de las firmas digitales.';
-
-            modal.style.display = 'flex';
-        }
-    }
+    // Eliminada función showSignAuthRequiredModal (ya no se usa, lógica unificada en showKeysAuthRequiredModal)
 
     // Función para mostrar el modal de autenticación requerida para crear llaves
     function showKeysAuthRequiredModal() {
@@ -468,45 +496,5 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Event listeners para el modal de autenticación requerida
-    const signAuthModal = document.getElementById('signAuthRequiredModal');
-    const closeSignAuthModal = document.getElementById('closeSignAuthModal');
-    const signAuthLoginBtn = document.getElementById('signAuthLoginBtn');
-    const signAuthRegisterBtn = document.getElementById('signAuthRegisterBtn');
-
-    // Cerrar modal con X
-    if (closeSignAuthModal) {
-        closeSignAuthModal.addEventListener('click', function () {
-            signAuthModal.style.display = 'none';
-        });
-    }
-
-    // Botón de login
-    if (signAuthLoginBtn) {
-        signAuthLoginBtn.addEventListener('click', function () {
-            signAuthModal.style.display = 'none';
-            if (window.showLoginModal) {
-                window.showLoginModal();
-            }
-        });
-    }
-
-    // Botón de registro
-    if (signAuthRegisterBtn) {
-        signAuthRegisterBtn.addEventListener('click', function () {
-            signAuthModal.style.display = 'none';
-            if (window.showRegisterModal) {
-                window.showRegisterModal();
-            }
-        });
-    }
-
-    // Cerrar modal haciendo clic fuera
-    if (signAuthModal) {
-        signAuthModal.addEventListener('click', function (e) {
-            if (e.target === signAuthModal) {
-                signAuthModal.style.display = 'none';
-            }
-        });
-    }
+    // Eliminados event listeners del modal signAuthRequiredModal (ya no se usa)
 });

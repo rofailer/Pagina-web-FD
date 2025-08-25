@@ -108,7 +108,7 @@ li {
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23666'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15V3m0 0l-4 4m4-4l4 4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ccc'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15V3m0 0l-4 4m4-4l4 4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17'/%3E%3C/svg%3E");
 }
 
 /* Iconos para diferentes estados */
@@ -122,12 +122,6 @@ li {
 
 .file-input-label.error .file-input-icon {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f44336'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L3.178 16.5c-.77.833.192 2.5 1.732 2.5z'/%3E%3C/svg%3E");
-}
-
-/* Cambios de color en hover */
-.file-input-label:hover .file-input-icon,
-.file-input:hover + .file-input-label .file-input-icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ff9545'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15V3m0 0l-4 4m4-4l4 4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17'/%3E%3C/svg%3E");
 }
 
 .file-input-label.has-file:hover .file-input-icon,
@@ -168,13 +162,14 @@ li {
 .file-input-label:hover,
 .file-input:hover + .file-input-label {
   border-color: var(--primary-color);
-  background: #fff7f0;
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
   box-shadow: 0 2px 12px
     color-mix(in srgb, var(--primary-color) 15%, transparent);
 }
 
 .file-input-label:hover .file-input-icon,
 .file-input:hover + .file-input-label .file-input-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23888'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15V3m0 0l-4 4m4-4l4 4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17'/%3E%3C/svg%3E");
   opacity: 1;
   transform: translateY(-2px);
 }
@@ -213,7 +208,8 @@ li {
 /* Botón siempre del color primario en todos los estados */
 .file-input-label.has-file .file-input-button,
 .file-input-label.auto-detected .file-input-button {
-  background: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 70%, transparent);
+  background: color-mix(in srgb, #388e3c 60%, transparent);
 }
 
 /* Hover para estados de éxito - mantener colores verdes */
@@ -221,7 +217,7 @@ li {
 .file-input:hover + .file-input-label.has-file {
   border-color: #388e3c;
   background: #e8f5e8;
-  box-shadow: 0 2px 12px rgba(76, 175, 80, 0.15);
+  background: color-mix(in srgb, #1e7e34 60%, transparent);
 }
 
 .file-input-label.auto-detected:hover,
@@ -231,14 +227,9 @@ li {
   box-shadow: 0 2px 12px rgba(40, 167, 69, 0.15);
 }
 
-.file-input-label.has-file:hover .file-input-icon,
-.file-input:hover + .file-input-label.has-file .file-input-icon {
-  transform: translateY(-2px);
-}
-
 .file-input-label.auto-detected:hover .file-input-icon,
 .file-input:hover + .file-input-label.auto-detected .file-input-icon {
-  transform: translateY(-2px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15V3m0 0l-4 4m4-4l4 4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17'/%3E%3C/svg%3E");
 }
 
 /* Botón usar variables en hover también */

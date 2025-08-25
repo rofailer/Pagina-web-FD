@@ -471,8 +471,8 @@
       </div>
     </div>
 
-    <!-- Modales de Autenticación -->
-    <div id="loginModal" class="auth-modal">
+    <!-- Modal de Login -->
+    <div id="loginModal" class="auth-modal" style="display: none">
       <div class="modal-content">
         <span class="close-modal">&times;</span>
         <h2>Iniciar Sesión</h2>
@@ -517,13 +517,12 @@
                 stroke-linejoin="round"
               />
             </svg>
-            Ingresar
+            Iniciar Sesión
           </button>
         </form>
         <p id="loginError" class="error-message"></p>
         <p>
-          ¿No tienes cuenta?
-          <a href="#" id="showRegister">Regístrate aquí</a>
+          ¿No tienes cuenta? <a href="#" id="showRegister">Regístrate aquí</a>
         </p>
       </div>
     </div>
@@ -1022,139 +1021,6 @@
               />
             </svg>
             Recordar más tarde
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal para requerir autenticación para firmar -->
-    <div id="signAuthRequiredModal" class="auth-modal" style="display: none">
-      <div class="modal-content">
-        <span class="close-modal" id="closeSignAuthModal">&times;</span>
-        <h2 id="signAuthTitle">Autenticación Requerida</h2>
-        <div class="modal-icon">
-          <svg
-            width="48"
-            height="48"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect
-              x="3"
-              y="11"
-              width="18"
-              height="11"
-              rx="2"
-              ry="2"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <circle
-              cx="12"
-              cy="16"
-              r="1"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <path
-              d="M7 11V7a5 5 0 0 1 10 0v4"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-          </svg>
-        </div>
-        <p class="modal-description" id="signAuthDescription">
-          <strong
-            >Para acceder a la sección de firmar documentos necesitas iniciar
-            sesión.</strong
-          >
-        </p>
-        <p class="modal-subdescription" id="signAuthSubdescription">
-          La funcionalidad de firma requiere autenticación para garantizar la
-          seguridad e identidad del firmante, protegiendo así la integridad del
-          proceso criptográfico y la validez legal de las firmas digitales.
-        </p>
-        <div class="modal-buttons">
-          <button id="signAuthLoginBtn">
-            <svg
-              class="btn-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <path
-                d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <polyline
-                points="10,17 15,12 10,7"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <line
-                x1="15"
-                y1="12"
-                x2="3"
-                y2="12"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            Iniciar Sesión
-          </button>
-          <button id="signAuthRegisterBtn" class="btn-secondary">
-            <svg
-              class="btn-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <path
-                d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <circle
-                cx="8.5"
-                cy="7"
-                r="4"
-                stroke="currentColor"
-                stroke-width="2"
-              />
-              <line
-                x1="20"
-                y1="8"
-                x2="20"
-                y2="14"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <line
-                x1="23"
-                y1="11"
-                x2="17"
-                y2="11"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            Registrarse
           </button>
         </div>
       </div>
@@ -1921,7 +1787,7 @@
 
         <!-- Indicador de pasos moderno -->
         <div id="verifyStepIndicator" class="step-indicator">
-          <div class="step active" data-step="1" data-label="Profesor"></div>
+          <div class="step active" data-step="1" data-label="Avalador"></div>
           <div class="step" data-step="2" data-label="Aval firmado"></div>
           <div class="step" data-step="3" data-label="Original"></div>
           <div class="step" data-step="4" data-label="Resultado"></div>
@@ -1930,7 +1796,7 @@
         <!-- Paso 1: Selección de profesor -->
         <div id="verifyStep1" class="step-content">
           <div class="input-title">
-            Selecciona el profesor o tutor que firmó el documento
+            Selecciona el Avalador que firmó el documento
           </div>
 
           <!-- Opción de detección automática -->
@@ -1985,9 +1851,7 @@
               id="autoDetectResult"
               class="auto-detect-result"
               style="display: none"
-            >
-              <!-- Resultado de la detección automática -->
-            </div>
+            ></div>
           </div>
 
           <!-- Separador -->
@@ -2052,17 +1916,17 @@
               <div class="professors-list" id="professorsList">
                 <div class="loading-professors">
                   <span class="loader-small"></span>
-                  <span>Cargando profesores...</span>
+                  <span>Cargando Avaladores...</span>
                 </div>
               </div>
 
-              <!-- Profesor seleccionado -->
+              <!-- Avalador seleccionado -->
               <div
                 class="selected-professor"
                 id="selectedProfessor"
                 style="display: none"
               >
-                <div class="selected-label">Profesor seleccionado:</div>
+                <div class="selected-label">Avalador seleccionado:</div>
                 <div class="selected-info">
                   <span class="selected-name" id="selectedProfessorName"></span>
                   <button
@@ -2071,7 +1935,7 @@
                     class="change-btn-circular"
                     title="Cambiar profesor"
                   >
-                    <img src="recursos/cambiar.png" alt="Cambiar" />
+                    <img src="" alt="Cambiar" />
                   </button>
                 </div>
               </div>
@@ -3794,15 +3658,14 @@
     <!-- Scripts de frontend -->
     <!-- Sistema de notificaciones (debe cargarse primero) -->
     <script src="/scripts/frontend/notifications.js"></script>
-
-    <script src="/scripts/frontend/auth.frontend.js"></script>
     <script src="/scripts/frontend/keys.frontend.js"></script>
+    <script src="/scripts/frontend/auth.frontend.js"></script>
     <script src="/scripts/frontend/userKeysModal.js"></script>
     <script src="/scripts/frontend/keyPassword.frontend.js"></script>
     <script src="/scripts/frontend/deleteKey.frontend.js"></script>
     <script src="/scripts/frontend/signSteps.js"></script>
     <script src="/scripts/frontend/verifySteps.js"></script>
-    <script src="/scripts/frontend/frontend.js" type="module"></script>
+    <script src="/scripts/frontend/frontend.js"></script>
     <script src="/scripts/frontend/profileEncryption.frontend.js"></script>
     <script src="/scripts/frontend/profile.frontend.js"></script>
     <!-- <script src="/scripts/frontend/headerResponsive.frontend.js"></script> -->
