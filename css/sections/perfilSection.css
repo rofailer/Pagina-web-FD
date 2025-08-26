@@ -1552,23 +1552,6 @@
   font-weight: 600;
 }
 
-/* Instrucciones */
-.template-instructions {
-  background: #f1f3f4;
-  border-radius: 12px;
-  padding: 25px;
-}
-
-.template-instructions h4 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  color: #495057;
-  font-size: 16px;
-  font-weight: 600;
-}
-
 .instructions-list {
   display: flex;
   flex-direction: column;
@@ -1847,8 +1830,7 @@
     gap: 20px;
   }
 
-  .template-upload-section,
-  .template-instructions {
+  .template-upload-section {
     padding: 20px;
   }
 

@@ -8,8 +8,8 @@ const multer = require("multer");
 const { PDFDocument, rgb } = require("pdf-lib");
 const pool = require('./db/pool');
 const authenticate = require('./middlewares/authenticate');
-const isAdmin = require('./middlewares/isAdmin');
-const isOwner = require('./middlewares/isOwner');
+const { isAdmin } = require('./middlewares/isAdmin');
+const { isOwner } = require('./middlewares/isOwner');
 const { encrypt, decrypt, decryptWithPassword, decryptAES, decryptWithType } = require('./utils/crypto');
 const PORT = process.env.PORT || 3000;
 
@@ -113,11 +113,14 @@ app.get("/", (req, res) => {
 
 
 // =================== Routers backend ===================
+
 const authRoutes = require('./routes/auth.routes');
 const keysRoutes = require('./routes/keys.routes');
+const pdfTemplateRoutes = require('./routes/pdfTemplate.routes');
 
 app.use(authRoutes);
 app.use(keysRoutes);
+app.use('/api/pdf-template', pdfTemplateRoutes);
 
 // =================== Rutas de configuración ===================
 const configPath = path.join(__dirname, "../config.json");
@@ -145,7 +148,50 @@ app.post("/api/config", authenticate, (req, res) => {
 // =================== Rutas de firma y verificación ===================
 app.post("/sign-document", authenticate, upload.single("document"), async (req, res) => {
   const userId = req.userId;
-  const keyPassword = req.body.keyPassword; // Asegúrate de recibirla del frontend
+  const keyPassword = req.body.keyPassword;
+  const { renderPdfWithTemplate } = require("./utils/pdf");
+  const configPath = path.join(__dirname, "../config/pdfTemplateConfig.json");
+
+  // Definición de los 4 diseños prediseñados y custom
+  const TEMPLATES = {
+    template1: {
+      // Clásico: título arriba, autores debajo, logo izq, institución der, avalador abajo
+      titulo: { x: 50, y: 700, size: 22 },
+      autores: { x: 50, y: 670, size: 16 },
+      institucion: { x: 400, y: 700, size: 14 },
+      logo: { x: 40, y: 750, width: 60, height: 60 },
+      avalador: { x: 50, y: 100, size: 14 },
+      fecha: { x: 400, y: 100, size: 12 }
+    },
+    template2: {
+      // Moderno: título centrado, logo grande arriba, autores e institución abajo
+      logo: { x: 250, y: 730, width: 100, height: 100 },
+      titulo: { x: 180, y: 650, size: 24 },
+      autores: { x: 180, y: 620, size: 16 },
+      institucion: { x: 180, y: 590, size: 14 },
+      avalador: { x: 180, y: 120, size: 14 },
+      fecha: { x: 400, y: 120, size: 12 }
+    },
+    template3: {
+      // Minimalista: solo título y autores centrados, logo pequeño
+      titulo: { x: 200, y: 700, size: 20 },
+      autores: { x: 200, y: 670, size: 14 },
+      logo: { x: 500, y: 750, width: 40, height: 40 },
+      institucion: { x: 200, y: 640, size: 12 },
+      avalador: { x: 200, y: 120, size: 12 },
+      fecha: { x: 400, y: 120, size: 10 }
+    },
+    template4: {
+      // Elegante: título y logo centrados, autores e institución laterales
+      titulo: { x: 180, y: 700, size: 22 },
+      logo: { x: 250, y: 730, width: 80, height: 80 },
+      autores: { x: 50, y: 650, size: 14 },
+      institucion: { x: 400, y: 650, size: 14 },
+      avalador: { x: 180, y: 120, size: 14 },
+      fecha: { x: 400, y: 120, size: 12 }
+    },
+    custom: null // Se define en config
+  };
 
   try {
     // Obtener la llave privada activa del usuario
@@ -181,9 +227,7 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
     const { exec } = require("child_process");
     const signCommand = `openssl dgst -sign "${privateKeyPath}" -keyform PEM -sha256 -out "${signedFilePath}" "${documentPath}"`;
     exec(signCommand, async (err) => {
-      // Limpieza de llaves temporales
       fs.unlinkSync(privateKeyPath);
-
       if (err) {
         console.error("Error al firmar documento:", err);
         return res.status(500).json({ error: "Error al firmar el documento" });
@@ -197,26 +241,60 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
         [userId]
       );
 
-      const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage([600, 400]);
-      page.drawText(`DOCUMENTO AVALADO: ${req.file.originalname}`, { x: 50, y: 300, size: 20 });
-      page.drawText(`Firmado por: ${userInfo[0].nombre}`, { x: 50, y: 270, size: 14 });
-      page.drawText(`Fecha: ${new Date().toLocaleString()}`, { x: 50, y: 240, size: 14 });
+      // Leer configuración global de plantilla
+      let templateConfig = { template: 'template1', customConfig: {} };
+      if (fs.existsSync(configPath)) {
+        try {
+          templateConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        } catch (e) { /* usar defaults */ }
+      }
+      let templateId = templateConfig.template || 'template1';
+      let fieldConfig = TEMPLATES[templateId] || TEMPLATES['template1'];
+      if (templateId === 'custom' && templateConfig.customConfig) {
+        fieldConfig = templateConfig.customConfig;
+      }
 
-      // Guardar firma en subject y información del firmante en author
-      pdfDoc.setSubject(signatureBase64);
-      pdfDoc.setAuthor(`${userInfo[0].id}|${userInfo[0].nombre}|${userInfo[0].usuario}`);
-      pdfDoc.setTitle("Documento Avalado");
-      pdfDoc.setKeywords(["firma digital", "avalado", "documento"]);
-      pdfDoc.setCreator("Firmas Digitales FD");
-      pdfDoc.setCreationDate(new Date());
-      pdfDoc.setModificationDate(new Date());
-      const pdfBytes = await pdfDoc.save();
+      // Datos a renderizar
+      const data = {
+        titulo: req.body.titulo || req.file.originalname,
+        autores: req.body.autores || userInfo[0].nombre,
+        institucion: req.body.institucion || 'Universidad',
+        avalador: req.body.avalador || '',
+        fecha: new Date().toLocaleString(),
+        logo: req.body.logoPath ? path.join(__dirname, '../recursos', req.body.logoPath) : path.join(__dirname, '../recursos', 'usuario-de-perfil.png')
+      };
+
+      // Crear PDF base (hoja en blanco tamaño carta)
+      const { PDFDocument } = require('pdf-lib');
+      const blankPdfDoc = await PDFDocument.create();
+      blankPdfDoc.addPage([612, 792]); // Carta
+      const blankPdfBytes = await blankPdfDoc.save();
+      const tempBlankPath = path.join(tempDir, `blank_${Date.now()}.pdf`);
+      fs.writeFileSync(tempBlankPath, blankPdfBytes);
+
+      // Renderizar PDF con plantilla
       const avaladoFilePath = path.join(__dirname, "../downloads", `avalado_${Date.now()}.pdf`);
-      fs.writeFileSync(avaladoFilePath, pdfBytes);
-      res.json({ success: true, downloadUrl: `/downloads/${path.basename(avaladoFilePath)}` });
+      await renderPdfWithTemplate(tempBlankPath, avaladoFilePath, data, fieldConfig);
+
+      // Insertar metadatos de firma
+      const finalPdfBytes = fs.readFileSync(avaladoFilePath);
+      const finalPdfDoc = await PDFDocument.load(finalPdfBytes);
+      finalPdfDoc.setSubject(signatureBase64);
+      finalPdfDoc.setAuthor(`${userInfo[0].id}|${userInfo[0].nombre}|${userInfo[0].usuario}`);
+      finalPdfDoc.setTitle("Documento Avalado");
+      finalPdfDoc.setKeywords(["firma digital", "avalado", "documento"]);
+      finalPdfDoc.setCreator("Firmas Digitales FD");
+      finalPdfDoc.setCreationDate(new Date());
+      finalPdfDoc.setModificationDate(new Date());
+      const finalBytes = await finalPdfDoc.save();
+      fs.writeFileSync(avaladoFilePath, finalBytes);
+
+      // Limpieza de archivos temporales
       fs.unlinkSync(documentPath);
       fs.unlinkSync(signedFilePath);
+      fs.unlinkSync(tempBlankPath);
+
+      res.json({ success: true, downloadUrl: `/downloads/${path.basename(avaladoFilePath)}` });
     });
   } catch (err) {
     console.error("Error en el proceso de firma:", err);

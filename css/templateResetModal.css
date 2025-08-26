@@ -1,0 +1,75 @@
+/* Modal de restablecimiento de plantilla personalizada */
+#templateResetModal.modal {
+  position: fixed;
+  z-index: 1100;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#templateResetModal .modal-content {
+  background: #fff;
+  padding: 2em 2.5em 1.5em 2.5em;
+  border-radius: 12px;
+  min-width: 320px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  text-align: center;
+  position: relative;
+  animation: modalFadeIn 0.3s;
+}
+#templateResetModal .modal-icon {
+  margin-bottom: 1em;
+}
+#templateResetModal .modal-title {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin-bottom: 0.5em;
+}
+#templateResetModal .modal-desc {
+  color: #444;
+  margin-bottom: 1.5em;
+}
+#templateResetModal .modal-actions {
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+}
+#templateResetModal .modal-btn {
+  padding: 0.5em 1.5em;
+  border-radius: 6px;
+  border: none;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#templateResetModal .modal-btn.confirm {
+  background: #e74c3c;
+  color: #fff;
+}
+#templateResetModal .modal-btn.cancel {
+  background: #f3f3f3;
+  color: #333;
+}
+#templateResetModal .close-modal {
+  position: absolute;
+  right: 16px;
+  top: 10px;
+  font-size: 1.5em;
+  cursor: pointer;
+  color: #aaa;
+}
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

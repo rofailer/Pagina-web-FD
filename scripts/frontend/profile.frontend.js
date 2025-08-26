@@ -73,6 +73,77 @@ function initializeProfile() {
 }
 
 // ===========================
+// PERSONALIZACIÓN PDF: Cargar plantilla actual y mostrar modal de reset
+// ===========================
+function loadCurrentTemplate() {
+    // Carga la configuración actual y actualiza el panel visualmente
+    setupPdfTemplates();
+    // Animación visual para la sección de personalización
+    const panel = document.getElementById('customTemplateOptions');
+    if (panel) {
+        panel.classList.remove('section-animate');
+        void panel.offsetWidth;
+        panel.classList.add('section-animate');
+    }
+    // Vincular botón de reset para mostrar el modal
+    const resetBtn = document.getElementById('resetTemplateBtn');
+    if (resetBtn) {
+        resetBtn.onclick = function (e) {
+            e.preventDefault();
+            const modal = document.getElementById('templateResetModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                setTimeout(() => modal.classList.add('show'), 10);
+            }
+        };
+    }
+    const cancelBtn = document.getElementById('cancelTemplateResetBtn');
+    const closeBtn = document.getElementById('closeTemplateResetModal');
+    const confirmBtn = document.getElementById('confirmTemplateResetBtn');
+    [cancelBtn, closeBtn].forEach(btn => {
+        if (btn) {
+            btn.onclick = function () {
+                const modal = document.getElementById('templateResetModal');
+                if (modal) {
+                    modal.classList.remove('show');
+                    setTimeout(() => modal.style.display = 'none', 200);
+                }
+            };
+        }
+    });
+    // Botón de confirmar reset
+    if (confirmBtn) {
+        confirmBtn.onclick = async function () {
+            setControlStatus('applying');
+            // Restablecer: volver a plantilla clásica (template1)
+            const res = await fetch('/api/pdf-template/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ template: 'template1' })
+            });
+            if (res.ok) {
+                setControlStatus('success');
+                showNotification('Plantilla restablecida a Clásico', 'success');
+                // Actualiza el selector visualmente a Clásico
+                renderPdfTemplateSelector('template1');
+                setupPdfTemplates();
+            } else {
+                setControlStatus('error');
+                showNotification('Error al restablecer', 'error');
+            }
+            const modal = document.getElementById('templateResetModal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => modal.style.display = 'none', 200);
+            }
+        };
+    }
+}
+
+// ===========================
 // DATOS PERSONALES
 // ===========================
 function selectProfilePhoto() {
@@ -434,888 +505,89 @@ function handleLogo(event) {
     }
 }
 
-function setupPdfTemplates() {
-    // Inicializar drag and drop
-    setupPdfDragAndDrop();
-
-    // Configurar botones de acción
-    setupPdfTemplateButtons();
-
-    // Cargar estado actual de la plantilla
-    loadCurrentTemplate();
-
-    // Configurar formulario de subida
-    setupTemplateUploadForm();
-}
-
-function setupPdfDragAndDrop() {
-    const uploadArea = document.getElementById('pdfUploadArea');
-    const fileInput = document.getElementById('templatePdfInput');
-
-    if (!uploadArea || !fileInput) return;
-
-    // Prevenir comportamiento por defecto del navegador
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        uploadArea.addEventListener(eventName, preventDefaults, false);
-        document.body.addEventListener(eventName, preventDefaults, false);
-    });
-
-    // Efectos visuales para drag over
-    ['dragenter', 'dragover'].forEach(eventName => {
-        uploadArea.addEventListener(eventName, highlight, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        uploadArea.addEventListener(eventName, unhighlight, false);
-    });
-
-    // Manejar drop
-    uploadArea.addEventListener('drop', handleDrop, false);
-
-    // Click en área de subida
-    uploadArea.addEventListener('click', () => fileInput.click());
-
-    // Change en input file
-    fileInput.addEventListener('change', handleFileSelect);
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    function highlight() {
-        uploadArea.classList.add('dragover');
-    }
-
-    function unhighlight() {
-        uploadArea.classList.remove('dragover');
-    }
-
-    function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        handleFiles(files);
-    }
-
-    function handleFileSelect(e) {
-        const files = e.target.files;
-        handleFiles(files);
-    }
-
-    function handleFiles(files) {
-        if (files.length > 0) {
-            const file = files[0];
-            if (file.type === 'application/pdf') {
-                uploadPdfTemplate(file);
-            } else {
-                showNotification('Por favor selecciona un archivo PDF válido', 'error');
-            }
-        }
-    }
-}
-
-function setupPdfTemplateButtons() {
-    // Botón subir nueva plantilla
-    const uploadBtn = document.getElementById('uploadTemplateBtn');
-    if (uploadBtn) {
-        uploadBtn.addEventListener('click', () => {
-            document.getElementById('templatePdfInput').click();
-        });
-    }
-
-    // Botón descargar plantilla actual
-    const downloadBtn = document.getElementById('downloadTemplateBtn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', downloadCurrentTemplate);
-    }
-
-    // Botón eliminar plantilla
-    const deleteBtn = document.getElementById('deleteTemplateBtn');
-    if (deleteBtn) {
-        deleteBtn.addEventListener('click', deleteCurrentTemplate);
-    }
-
-    // Botón vista previa
-    const previewBtn = document.getElementById('previewTemplateBtn');
-    if (previewBtn) {
-        previewBtn.addEventListener('click', previewCurrentTemplate);
-    }
-
-    // Botón aplicar cambios
-    const applyBtn = document.getElementById('applyTemplateChangesBtn');
-    if (applyBtn) {
-        applyBtn.addEventListener('click', applyTemplateChanges);
-    }
-
-    // Botón restablecer
-    const resetBtn = document.getElementById('resetTemplateBtn');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', resetTemplateConfiguration);
-    }
-}
-
-function setupTemplateUploadForm() {
-    const form = document.getElementById('templateUploadForm');
-    if (form) {
-        form.addEventListener('submit', handleTemplateFormSubmit);
-    }
-}
-
-async function uploadPdfTemplate(file) {
-    const progressBar = document.querySelector('.progress-fill');
-    const progressContainer = document.querySelector('.upload-progress');
-    const statusElement = document.querySelector('.template-status');
-    const uploadArea = document.getElementById('pdfUploadArea');
-
-    try {
-        // Mostrar progreso
-        if (progressContainer) progressContainer.style.display = 'block';
-        if (uploadArea) uploadArea.style.display = 'none';
-
-        updateTemplateStatus('Subiendo plantilla...', 'uploading');
-
-        // Verificar si el backend está disponible
-        const backendAvailable = await checkBackendAvailability();
-
-        if (!backendAvailable) {
-            // Simular subida exitosa localmente
-            await simulateLocalUpload(file, progressBar);
-            return;
-        }
-
-        // Simular progreso de subida
-        let progress = 0;
-        const progressInterval = setInterval(() => {
-            progress += Math.random() * 30;
-            if (progress > 95) progress = 95;
-
-            if (progressBar) {
-                progressBar.style.width = progress + '%';
-            }
-        }, 200);
-
-        // Crear FormData
-        const formData = new FormData();
-        formData.append('templatePdf', file);
-        formData.append('templateName', file.name);
-
-        // Enviar al servidor
-        const response = await fetch('/api/template/upload', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-
-        clearInterval(progressInterval);
-
-        if (response.ok) {
-            const result = await response.json();
-
-            // Completar progreso
-            if (progressBar) progressBar.style.width = '100%';
-
-            setTimeout(() => {
-                updateTemplateStatus(`Plantilla activa: ${file.name}`, 'success');
-                enableTemplateActions(true);
-
-                // Ocultar progreso después de un momento
-                setTimeout(() => {
-                    if (progressContainer) progressContainer.style.display = 'none';
-                    if (uploadArea) uploadArea.style.display = 'flex';
-                }, 2000);
-            }, 500);
-
-            showNotification('Plantilla PDF subida exitosamente', 'success');
-
-        } else {
-            throw new Error('Error al subir la plantilla');
-        }
-
-    } catch (error) {
-        console.warn('Error uploading template (usando modo offline):', error);
-        // Modo offline - simular subida exitosa
-        await simulateLocalUpload(file, progressBar);
-    }
-}
-
-async function simulateLocalUpload(file, progressBar) {
-    const progressText = document.getElementById('progressText');
-
-    // Simular progreso de subida local
-    let progress = 0;
-    const progressInterval = setInterval(() => {
-        progress += Math.random() * 25 + 10;
-        if (progress > 100) progress = 100;
-
-        if (progressBar) {
-            progressBar.style.width = progress + '%';
-        }
-
-        if (progressText) {
-            progressText.textContent = `Subiendo... ${Math.round(progress)}%`;
-        }
-
-        if (progress >= 100) {
-            clearInterval(progressInterval);
-
-            // Guardar en localStorage
-            const templateData = {
-                name: file.name,
-                size: file.size,
-                uploadDate: new Date().toISOString(),
-                exists: true
-            };
-            localStorage.setItem('currentTemplate', JSON.stringify(templateData));
-
-            setTimeout(() => {
-                if (progressText) {
-                    progressText.textContent = 'Completado 100%';
-                }
-
-                updateTemplateStatus(`Plantilla activa: ${file.name}`, 'success');
-                enableTemplateActions(true);
-                updateTemplateInfo(templateData);
-
-                const progressContainer = document.querySelector('.upload-progress');
-                const uploadArea = document.getElementById('pdfUploadArea');
-
-                // Ocultar progreso después de un momento
-                setTimeout(() => {
-                    if (progressContainer) progressContainer.style.display = 'none';
-                    if (uploadArea) uploadArea.style.display = 'flex';
-                }, 1500);
-            }, 800);
-
-            showNotification('Plantilla configurada correctamente (modo offline)', 'success');
-        }
-    }, 150);
-}
-
-async function checkBackendAvailability() {
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1000); // 1 segundo timeout
-
-        const response = await fetch('/api/template/current', {
-            signal: controller.signal,
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-
-        clearTimeout(timeoutId);
-        return true;
-    } catch (error) {
-        return false;
-    }
-}
-
-function updateTemplateStatus(message, type) {
-    const statusContainer = document.getElementById('templateStatus');
-
-    if (!statusContainer) return;
-
-    // Crear el HTML del estado
-    let statusHTML = `
-        <div class="template-status status-${type}">
-            <div class="status-icon">
-                ${getStatusSVG(type)}
-            </div>
-            <div class="status-text">
-                <div class="status-title">${message}</div>
-                <div class="status-desc">${getStatusDescription(type)}</div>
-            </div>
-        </div>
-    `;
-
-    statusContainer.innerHTML = statusHTML;
-}
-
-function getStatusSVG(type) {
-    switch (type) {
-        case 'success':
-            return `
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            `;
-        case 'error':
-            return `
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                    <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
-                    <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
-                </svg>
-            `;
-        case 'uploading':
-            return `
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <polyline points="17,8 12,3 7,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-            `;
-        case 'none':
-        default:
-            return `
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-            `;
-    }
-}
-
-function getStatusDescription(type) {
-    switch (type) {
-        case 'success':
-            return 'Plantilla configurada y lista para usar en todas las firmas';
-        case 'error':
-            return 'Hubo un problema al cargar o configurar la plantilla';
-        case 'uploading':
-            return 'Procesando plantilla, por favor espere...';
-        case 'none':
-        default:
-            return 'Se está usando el PDF en blanco por defecto';
-    }
-}
-
-async function loadCurrentTemplate() {
-    try {
-        // Primero verificar localStorage
-        const localTemplate = localStorage.getItem('currentTemplate');
-        if (localTemplate) {
-            const template = JSON.parse(localTemplate);
-            if (template.exists) {
-                updateTemplateStatus(`Plantilla activa: ${template.name}`, 'success');
-                enableTemplateActions(true);
-                updateTemplateInfo(template);
-                return;
-            }
-        }
-
-        // Intentar cargar desde backend
-        const backendAvailable = await checkBackendAvailability();
-        if (!backendAvailable) {
-            updateTemplateStatus('No hay plantilla configurada', 'none');
-            enableTemplateActions(false);
-            return;
-        }
-
-        const response = await fetch('/api/template/current', {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-
-        if (response.ok) {
-            const template = await response.json();
-
-            if (template.exists) {
-                updateTemplateStatus(`Plantilla activa: ${template.name}`, 'success');
-                enableTemplateActions(true);
-                updateTemplateInfo(template);
-
-                // Guardar en localStorage
-                localStorage.setItem('currentTemplate', JSON.stringify(template));
-            } else {
-                updateTemplateStatus('No hay plantilla configurada', 'none');
-                enableTemplateActions(false);
-            }
-        } else {
-            updateTemplateStatus('No hay plantilla configurada', 'none');
-            enableTemplateActions(false);
-        }
-
-    } catch (error) {
-        console.warn('Backend no disponible - usando estado por defecto');
-        updateTemplateStatus('No hay plantilla configurada', 'none');
-        enableTemplateActions(false);
-    }
-}
-
-function updateTemplateInfo(template) {
-    // Actualizar información en la interfaz
-    const infoElements = {
-        name: document.querySelector('.template-name'),
-        size: document.querySelector('.template-size'),
-        date: document.querySelector('.template-date'),
-        pages: document.querySelector('.template-pages')
-    };
-
-    if (infoElements.name) infoElements.name.textContent = template.name;
-    if (infoElements.size) infoElements.size.textContent = formatFileSize(template.size);
-    if (infoElements.date) infoElements.date.textContent = formatDate(template.uploadDate);
-    if (infoElements.pages) infoElements.pages.textContent = `${template.pages} página(s)`;
-}
-
-function enableTemplateActions(enable) {
-    const buttons = [
-        'downloadTemplateBtn',
-        'deleteTemplateBtn',
-        'previewTemplateBtn'
+function renderPdfTemplateSelector(currentTemplate) {
+    const templates = [
+        { id: 'template1', name: 'Clásico', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><line x1="8" y1="7" x2="16" y2="7" stroke="#2563eb" stroke-width="1.5"/><line x1="8" y1="11" x2="16" y2="11" stroke="#2563eb" stroke-width="1.5"/><line x1="8" y1="15" x2="13" y2="15" stroke="#2563eb" stroke-width="1.5"/></svg>` },
+        { id: 'template2', name: 'Moderno', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><rect x="8" y="7" width="8" height="2" fill="#2563eb"/><rect x="8" y="11" width="8" height="2" fill="#2563eb"/><rect x="8" y="15" width="5" height="2" fill="#2563eb"/></svg>` },
+        { id: 'template3', name: 'Minimalista', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="#2563eb" stroke-width="1.5"/></svg>` },
+        { id: 'template4', name: 'Elegante', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><path d="M8 8C8 10 16 10 16 8" stroke="#2563eb" stroke-width="1.5"/><path d="M8 16C8 14 16 14 16 16" stroke="#2563eb" stroke-width="1.5"/></svg>` },
+        { id: 'custom', name: 'Personalizado', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><path d="M12 8v4l3 3" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>` }
     ];
-
-    buttons.forEach(btnId => {
-        const btn = document.getElementById(btnId);
-        if (btn) {
-            btn.disabled = !enable;
-            if (enable) {
-                btn.classList.remove('disabled');
-            } else {
-                btn.classList.add('disabled');
-            }
-        }
+    const container = document.getElementById('pdfTemplatesSelector');
+    // Preview should update in real time when clicking different templates
+    if (!container) return;
+    // Estado local: cuál radio está seleccionado (sin aplicar aún)
+    // selected: la plantilla seleccionada temporalmente (preview)
+    // currentTemplate: la plantilla activa real (aplicada)
+    // Elimina dependencias de variables globales y usa solo el argumento actual
+    let selected = currentTemplate;
+    let active = (typeof window._pdfTemplateActive !== 'undefined') ? window._pdfTemplateActive : currentTemplate;
+    let html = '<div class="perfil-template-selector" style="display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-bottom:18px;">';
+    templates.forEach(t => {
+        html += `
+        <label class="template-radio-label${selected === t.id ? ' selected-radio' : ''}" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 18px;border-radius:10px;border:2px solid #e0e0e0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.04);transition:all 0.2s;cursor:pointer;min-width:90px;position:relative;${selected === t.id ? 'border-color:#2563eb !important;box-shadow:0 0 0 2px #2563eb22;' : ''}">
+            <input type="radio" name="pdfTemplate" value="${t.id}" ${selected === t.id ? 'checked' : ''} style="accent-color:#2563eb;width:20px;height:20px;margin-bottom:6px;" />
+            <span style="display:flex;align-items:center;justify-content:center;">${t.svg}</span>
+            <span style="font-weight:500;font-size:1em;">${t.name}</span>
+            ${(active === t.id) ? '<span class="active-template-indicator">Plantilla activa</span>' : ''}
+        </label>`;
     });
-}
-
-async function downloadCurrentTemplate() {
-    try {
-        const response = await fetch('/api/template/download', {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'plantilla-aval.pdf';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-
-            showNotification('Plantilla descargada exitosamente', 'success');
-        } else {
-            throw new Error('Error al descargar plantilla');
-        }
-    } catch (error) {
-        console.error('Error downloading template:', error);
-        showNotification('Error al descargar la plantilla', 'error');
-    }
-}
-
-async function deleteCurrentTemplate() {
-    if (!confirm('¿Estás seguro de que quieres eliminar la plantilla actual? Esta acción no se puede deshacer.')) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/template/delete', {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+    html += '</div>';
+    container.innerHTML = html;
+    // Siempre asocia eventos a los radios tras cada render
+    container.querySelectorAll('input[type=radio][name=pdfTemplate]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            renderPdfTemplateSelector(this.value);
+            if (window._lastPdfTemplateConfig) {
+                renderPdfTemplatePreview(this.value, window._lastPdfTemplateConfig.customConfig || {}, window._lastPdfTemplateConfig);
             }
         });
-
-        if (response.ok) {
-            updateTemplateStatus('No hay plantilla configurada', 'none');
-            enableTemplateActions(false);
-            clearTemplateInfo();
-            showNotification('Plantilla eliminada exitosamente', 'success');
-        } else {
-            throw new Error('Error al eliminar plantilla');
-        }
-    } catch (error) {
-        console.error('Error deleting template:', error);
-        showNotification('Error al eliminar la plantilla', 'error');
-    }
-}
-
-async function previewCurrentTemplate() {
-    try {
-        const response = await fetch('/api/template/preview', {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            window.open(url, '_blank');
-            showNotification('Abriendo vista previa...', 'info');
-        } else {
-            throw new Error('Error al obtener vista previa');
-        }
-    } catch (error) {
-        console.error('Error previewing template:', error);
-        showNotification('Error al obtener vista previa', 'error');
-    }
-}
-
-function clearTemplateInfo() {
-    const infoElements = [
-        '.template-name',
-        '.template-size',
-        '.template-date',
-        '.template-pages'
-    ];
-
-    infoElements.forEach(selector => {
-        const element = document.querySelector(selector);
-        if (element) element.textContent = '-';
     });
-}
-
-function handleTemplateFormSubmit(e) {
-    e.preventDefault();
-    // El formulario se maneja a través del drag & drop y file input
-    showNotification('Use el área de arrastrar y soltar o el botón de subir', 'info');
-}
-
-async function applyTemplateChanges() {
-    const applyBtn = document.getElementById('applyTemplateChangesBtn');
-    const statusIndicator = document.querySelector('.status-indicator');
-
-    if (!applyBtn) return;
-
-    // Cambiar estado a procesando
-    updateControlStatus('processing', 'Aplicando configuración...');
-
-    // Deshabilitar botón temporalmente
-    const originalHTML = applyBtn.innerHTML;
-    applyBtn.disabled = true;
-    applyBtn.innerHTML = `
-        <span class="btn-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <polyline points="17,8 12,3 7,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-        </span>
-        <span class="btn-text">Aplicando...</span>
-    `;
-
-    try {
-        // Simular proceso de aplicación
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Verificar si hay plantilla configurada
-        const localTemplate = localStorage.getItem('currentTemplate');
-        if (localTemplate) {
-            const template = JSON.parse(localTemplate);
-            if (template.exists) {
-                updateControlStatus('active', 'Configuración aplicada exitosamente');
-                showNotification('Plantilla aplicada al sistema de firmas', 'success');
-
-                // Marcar como aplicada
-                template.applied = true;
-                template.appliedDate = new Date().toISOString();
-                localStorage.setItem('currentTemplate', JSON.stringify(template));
-            } else {
-                throw new Error('No hay plantilla configurada');
-            }
-        } else {
-            throw new Error('No hay plantilla configurada');
+    // Preview SIEMPRE visible justo después del selector
+    let preview = document.querySelector('.pdf-preview');
+    if (!preview) {
+        preview = document.createElement('div');
+        preview.className = 'pdf-preview';
+        preview.style.margin = '18px auto';
+        preview.style.maxWidth = '420px';
+        container.parentNode.insertBefore(preview, container.nextSibling);
+    } else {
+        // Si ya existe, asegúrate que esté en el lugar correcto
+        if (preview.parentNode !== container.parentNode || preview.previousSibling !== container) {
+            preview.remove();
+            container.parentNode.insertBefore(preview, container.nextSibling);
         }
-
-    } catch (error) {
-        console.error('Error applying template changes:', error);
-        updateControlStatus('inactive', 'Error al aplicar configuración');
-        showNotification('Error al aplicar la configuración', 'error');
-    } finally {
-        // Restaurar botón
-        setTimeout(() => {
-            applyBtn.disabled = false;
-            applyBtn.innerHTML = originalHTML;
-        }, 1000);
+    }
+    // Siempre mostrar la sección de personalización de estilos y logo
+    const customDiv = document.getElementById('customTemplateOptions');
+    if (customDiv) customDiv.style.display = '';
+    // Si es custom, recargar autores/firmas/posiciones
+    if (currentTemplate === 'custom') {
+        fetch('/api/pdf-template/config', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        })
+            .then(res => res.json())
+            .then(cfg => setupCustomTemplateForm(cfg.customConfig || {}));
     }
 }
 
-async function resetTemplateConfiguration() {
-    const resetBtn = document.getElementById('resetTemplateBtn');
-
-    if (!confirm('¿Estás seguro de que quieres restablecer la configuración? Se eliminará la plantilla actual.')) {
-        return;
-    }
-
-    if (!resetBtn) return;
-
-    // Cambiar estado a procesando
-    updateControlStatus('processing', 'Restableciendo configuración...');
-
-    // Deshabilitar botón temporalmente
-    const originalHTML = resetBtn.innerHTML;
-    resetBtn.disabled = true;
-    resetBtn.innerHTML = `
-        <span class="btn-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M3 3v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        </span>
-        <span class="btn-text">Restableciendo...</span>
-    `;
-
-    try {
-        // Simular proceso de restablecimiento
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Limpiar localStorage
-        localStorage.removeItem('currentTemplate');
-
-        // Actualizar estados
-        updateTemplateStatus('No hay plantilla configurada', 'none');
-        updateControlStatus('inactive', 'Esperando configuración');
-        enableTemplateActions(false);
-
-        showNotification('Configuración restablecida exitosamente', 'success');
-
-    } catch (error) {
-        console.error('Error resetting template:', error);
-        updateControlStatus('inactive', 'Error al restablecer');
-        showNotification('Error al restablecer la configuración', 'error');
-    } finally {
-        // Restaurar botón
-        setTimeout(() => {
-            resetBtn.disabled = false;
-            resetBtn.innerHTML = originalHTML;
-        }, 500);
-    }
+// Añade estilos para el indicador visual
+const activeTemplateStyle = document.createElement('style');
+activeTemplateStyle.textContent = `
+.selected-radio {
+  box-shadow: 0 0 0 2px #2563eb22 !important;
+  border-color: #2563eb !important;
 }
-
-function updateControlStatus(status, message) {
-    const statusIndicator = document.querySelector('.status-indicator');
-    const statusText = statusIndicator.querySelector('span');
-
-    if (!statusIndicator || !statusText) return;
-
-    statusIndicator.className = `status-indicator ${status}`;
-    statusText.textContent = message;
+.active-template-indicator {
+  margin-top: 6px;
+  color: #10b981;
+  font-size: 0.95em;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  display: block;
 }
-
-// ===========================
-// CONFIGURACIÓN AVANZADA
-// ===========================
-function toggleSetting(toggle) {
-    toggle.classList.toggle('active');
-
-    // Guardar configuración
-    const settings = {};
-    document.querySelectorAll('.toggle-switch').forEach((switchEl, index) => {
-        const settingItem = switchEl.closest('.setting-item');
-        const label = settingItem.querySelector('.setting-label').textContent;
-        settings[label] = switchEl.classList.contains('active');
-    });
-
-    localStorage.setItem('advancedSettings', JSON.stringify(settings));
-}
-
-function loadAdvancedSettings() {
-    const settings = JSON.parse(localStorage.getItem('advancedSettings') || '{}');
-
-    document.querySelectorAll('.setting-item').forEach(item => {
-        const label = item.querySelector('.setting-label').textContent;
-        const toggle = item.querySelector('.toggle-switch');
-
-        if (settings.hasOwnProperty(label)) {
-            if (settings[label]) {
-                toggle.classList.add('active');
-            } else {
-                toggle.classList.remove('active');
-            }
-        }
-    });
-}
-
-// ===========================
-// ACCIONES GLOBALES
-// ===========================
-function saveAllSettings() {
-    try {
-        // Guardar datos personales
-        saveUserData();
-
-        // Guardar configuración de cifrado
-        const selectedEncryption = document.querySelector('.encryption-option.selected');
-        if (selectedEncryption) {
-            localStorage.setItem('encryptionType', selectedEncryption.dataset.encryption);
-        }
-
-        // Guardar plantilla PDF seleccionada
-        const selectedTemplate = document.querySelector('.pdf-template.selected');
-        if (selectedTemplate) {
-            localStorage.setItem('pdfTemplate', selectedTemplate.dataset.template);
-        }
-
-        // Guardar configuraciones avanzadas (ya se guardan automáticamente)
-
-        showNotification('¡Todas las configuraciones han sido guardadas exitosamente!', 'success');
-
-    } catch (error) {
-        console.error('Error guardando configuraciones:', error);
-        showNotification('Error al guardar las configuraciones', 'error');
-    }
-}
-
-function resetAllSettings() {
-    if (confirm('¿Estás seguro de que quieres restablecer todas las configuraciones?')) {
-        // Limpiar localStorage
-        localStorage.removeItem('userData');
-        localStorage.removeItem('encryptionType');
-        localStorage.removeItem('pdfTemplate');
-        localStorage.removeItem('advancedSettings');
-
-        // Recargar configuraciones por defecto
-        initializeProfile();
-
-        // Limpiar formularios
-        const userNameInput = document.getElementById('userName');
-        const userEmailInput = document.getElementById('userEmail');
-        const userOrganizationInput = document.getElementById('userOrganization');
-        const userBioInput = document.getElementById('userBio');
-
-        if (userNameInput) userNameInput.value = '';
-        if (userEmailInput) userEmailInput.value = '';
-        if (userOrganizationInput) userOrganizationInput.value = '';
-        if (userBioInput) userBioInput.value = '';
-
-        // Restablecer foto
-        const photoContainer = document.querySelector('.perfil-photo');
-        if (photoContainer) {
-            photoContainer.innerHTML = '<div class="perfil-photo-placeholder">📷</div>';
-        }
-
-        showNotification('Configuraciones restablecidas a valores por defecto', 'info');
-    }
-}
-
-// ===========================
-// UTILIDADES
-// ===========================
-// Las notificaciones ahora se manejan con el sistema global de notifications.js
-
-// ===========================
-// DATOS PERSONALES
-// ===========================
-function selectProfilePhoto() {
-    document.getElementById('profilePhotoInput').click();
-}
-
-function handleProfilePhoto(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            const photoContainer = document.querySelector('.perfil-photo');
-            photoContainer.innerHTML = `<img src="${e.target.result}" alt="Foto de perfil">`;
-        };
-        reader.readAsDataURL(file);
-    }
-}
-
-function loadUserData() {
-    // Cargar datos del usuario desde localStorage o backend
-    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-
-    if (userData.name) document.getElementById('userName').value = userData.name;
-    if (userData.email) document.getElementById('userEmail').value = userData.email;
-    if (userData.organization) document.getElementById('userOrganization').value = userData.organization;
-    if (userData.bio) document.getElementById('userBio').value = userData.bio;
-    if (userData.photo) {
-        const photoContainer = document.querySelector('.perfil-photo');
-        photoContainer.innerHTML = `<img src="${userData.photo}" alt="Foto de perfil">`;
-    }
-}
-
-function saveUserData() {
-    const userData = {
-        name: document.getElementById('userName').value,
-        email: document.getElementById('userEmail').value,
-        organization: document.getElementById('userOrganization').value,
-        bio: document.getElementById('userBio').value,
-        photo: document.querySelector('.perfil-photo img')?.src || ''
-    };
-
-    localStorage.setItem('userData', JSON.stringify(userData));
-    showNotification('Datos personales guardados correctamente', 'success');
-}
-
-// ===========================
-// GESTIÓN DE LLAVES
-// ===========================
-function updateKeysCount() {
-    const keysList = document.getElementById('profileKeysList');
-
-    if (keysList) {
-        const count = keysList.children.length;
-
-        // Actualizar los nuevos elementos de estadísticas
-        const totalKeysElement = document.getElementById('totalKeysCount');
-        const activeKeysElement = document.getElementById('activeKeysCount');
-        const expiredKeysElement = document.getElementById('expiredKeysCount');
-
-        if (totalKeysElement) totalKeysElement.textContent = count;
-        // Por ahora mostrar count en activas hasta que se implemente la lógica completa
-        if (activeKeysElement) activeKeysElement.textContent = count;
-        if (expiredKeysElement) expiredKeysElement.textContent = '0';
-    }
-}
-
-function loadUserKeys() {
-    // Esta función se conectará con el sistema existente de llaves
-    const keysList = document.getElementById('profileKeysList');
-
-    // Ejemplo de estructura para mostrar llaves
-    const exampleKeys = [
-        { name: 'Llave Principal', date: '2024-01-15', type: 'RSA-2048' },
-        { name: 'Llave Tesis', date: '2024-01-20', type: 'RSA-2048' }
-    ];
-
-    keysList.innerHTML = '';
-    exampleKeys.forEach(key => {
-        const keyElement = createKeyElement(key);
-        keysList.appendChild(keyElement);
-    });
-
-    updateKeysCount();
-}
-
-// createKeyElement function removed - duplicate function eliminated
-
-// Esta función está duplicada - comentada para evitar conflictos
-// La función principal está arriba con toda la lógica
-/*
-function showCreateKeyModal() {
-    // Mostrar el campo de nombre de llave
-    const keyNameInput = document.getElementById('keyNameInput');
-    keyNameInput.focus();
-    keyNameInput.scrollIntoView({ behavior: 'smooth' });
-}
-*/
-
-function downloadKey(keyName) {
-    showNotification(`Descargando llave: ${keyName}`, 'info');
-    // Aquí se conectará con la funcionalidad existente de descarga
-}
-
-// deleteKey function removed - now handled by deleteKey.frontend.js module
-
-// ===========================
-// CONFIGURACIÓN DE CIFRADO
-// ===========================
-function setupEncryptionOptions() {
-    const options = document.querySelectorAll('.encryption-option');
-    options.forEach(option => {
-        option.addEventListener('click', function () {
-            // Remover selección anterior
-            options.forEach(opt => opt.classList.remove('selected'));
-            // Seleccionar nueva opción
-            this.classList.add('selected');
-
-            const encryption = this.dataset.encryption;
-            document.getElementById('currentEncryption').textContent = encryption.toUpperCase();
-        });
-    });
-}
+`;
+document.head.appendChild(activeTemplateStyle);
 
 // ===========================
 // PERSONALIZACIÓN PDF
@@ -1603,3 +875,795 @@ function formatDate(dateString) {
         minute: '2-digit'
     });
 }
+
+// === PDF Template Setup ===
+function setupPdfTemplates() {
+    fetch('/api/pdf-template/config', {
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+        .then(res => res.json())
+        .then(config => {
+            let currentTemplate = config.template || 'template1';
+            // Permite que la plantilla activa sea la última aplicada
+            window._pdfTemplateActive = currentTemplate;
+            renderPdfTemplateSelector(currentTemplate);
+            renderPdfTemplatePreview(currentTemplate, config.customConfig || {}, config);
+            const customDiv = document.getElementById('customTemplateOptions');
+            if (customDiv) customDiv.style.display = '';
+            setupTemplateControlPanel();
+            setupCustomTemplateForm(config.customConfig || {}, config);
+            // Lógica del botón aplicar
+            const applyBtn = document.getElementById('applyTemplateChangesBtn');
+            if (applyBtn) {
+                applyBtn.onclick = async function (e) {
+                    e.preventDefault();
+                    applyBtn.disabled = true;
+                    applyBtn.classList.add('loading');
+                    setControlStatus('applying');
+                    // Toma la plantilla seleccionada actualmente en el DOM
+                    const selectedRadio = document.querySelector('input[type=radio][name=pdfTemplate]:checked');
+                    const selectedTemplate = selectedRadio ? selectedRadio.value : currentTemplate;
+                    window._pdfTemplateActive = selectedTemplate;
+                    let customConfig = {};
+                    const form = document.getElementById('customTemplateForm');
+                    if (form) {
+                        customConfig = {
+                            fieldFontSize: form.fieldFontSize ? parseInt(form.fieldFontSize.value, 10) : 16,
+                            fieldColor: form.fieldColor ? form.fieldColor.value : '#222',
+                            logo: form.pdfLogo && form.pdfLogo.files && form.pdfLogo.files[0] ? form.pdfLogo.files[0] : undefined
+                        };
+                        if (selectedTemplate === 'custom') {
+                            customConfig = {
+                                ...customConfig,
+                                posTitulo: customPreviewState.posTitulo,
+                                posAutores: customPreviewState.posAutores,
+                                posFecha: customPreviewState.posFecha,
+                                posFirmas: customPreviewState.posFirmas,
+                                autores: customPreviewState.autores,
+                                numFirmas: customPreviewState.posFirmas ? customPreviewState.posFirmas.length : 1
+                            };
+                        }
+                    }
+                    try {
+                        let body, headers;
+                        if (customConfig.logo) {
+                            body = new FormData();
+                            body.append('template', selectedTemplate);
+                            body.append('customConfig', JSON.stringify(customConfig));
+                            body.append('logo', customConfig.logo);
+                            headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+                        } else {
+                            body = JSON.stringify({ template: selectedTemplate, customConfig });
+                            headers = {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            };
+                        }
+                        const res = await fetch('/api/pdf-template/config', {
+                            method: 'POST',
+                            headers,
+                            body
+                        });
+                        if (res.ok) {
+                            // Hacer GET para obtener el estado real
+                            const getRes = await fetch('/api/pdf-template/config', {
+                                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                            });
+                            if (getRes.ok) {
+                                const config = await getRes.json();
+                                window._pdfTemplateActive = config.template || 'template1';
+                                window._lastPdfTemplateConfig = config;
+                                renderPdfTemplateSelector(window._pdfTemplateActive);
+                                renderPdfTemplatePreview(window._pdfTemplateActive, config.customConfig || {}, config);
+                                setControlStatus('success');
+                                showNotification('Configuración aplicada', 'success');
+                            }
+                            animateApplyButton(applyBtn);
+                        }
+                    } finally {
+                        applyBtn.disabled = false;
+                        applyBtn.classList.remove('loading');
+                    }
+                };
+            }
+            // Actualiza preview al cambiar plantilla
+            const radios = document.querySelectorAll('input[type=radio][name=pdfTemplate]');
+            radios.forEach(radio => {
+                radio.addEventListener('change', function () {
+                    const template = this.value;
+                    window._pdfTemplateSelected = template;
+                    renderPdfTemplateSelector(template);
+                    renderPdfTemplatePreview(template, config.customConfig || {}, config);
+                });
+            });
+            // Actualiza preview al editar campos de color/fuente/logo
+            const form = document.getElementById('customTemplateForm');
+            if (form) {
+                ['fieldFontSize', 'fieldColor', 'pdfLogo'].forEach(field => {
+                    if (form[field]) {
+                        form[field].addEventListener('input', function () {
+                            const customConfig = {
+                                fieldFontSize: form.fieldFontSize ? parseInt(form.fieldFontSize.value, 10) : 16,
+                                fieldColor: form.fieldColor ? form.fieldColor.value : '#222'
+                            };
+                            renderPdfTemplatePreview(window._pdfTemplateSelected || currentTemplate, customConfig, config);
+                        });
+                    }
+                });
+            }
+        });
+}
+
+// Asegura que el div .pdf-preview existe en el DOM al cargar la personalización PDF
+function ensurePdfPreviewDiv() {
+    let preview = document.querySelector('.pdf-preview');
+    if (!preview) {
+        // Busca la sección de personalización PDF
+        const section = document.getElementById('customTemplateOptions') || document.body;
+        preview = document.createElement('div');
+        preview.className = 'pdf-preview';
+        preview.style.margin = '18px auto';
+        preview.style.maxWidth = '420px';
+        section.insertBefore(preview, section.firstChild);
+    }
+}
+
+// Llama a ensurePdfPreviewDiv al cargar la personalización
+const observer = new MutationObserver(() => ensurePdfPreviewDiv());
+observer.observe(document.body, { childList: true, subtree: true });
+// Llama una vez por si ya está cargado
+ensurePdfPreviewDiv();
+
+// Define la función para evitar ReferenceError
+function setupTemplateControlPanel() { }
+
+// === PDF Template Preview ===
+let customPreviewState = {
+    autores: ['Autor/es de ejemplo'],
+    posAutores: [{ x: 120, y: 90 }],
+    posTitulo: { x: 120, y: 60 },
+    posFecha: { x: 120, y: 120 },
+    posFirmas: [{ x: 100, y: 200 }],
+    numFirmas: 1
+};
+
+function renderPdfTemplatePreview(template, customConfig, fullConfig) {
+    const preview = document.querySelector('.pdf-preview');
+    if (!preview) return;
+    preview.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 250;
+    preview.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Valores base
+    let titulo = (customConfig?.titulo || fullConfig?.titulo || 'Título de ejemplo');
+    let autores = (customConfig?.autores || fullConfig?.autores || customPreviewState.autores || ['Autor/es de ejemplo']);
+    if (typeof autores === 'string') autores = autores.split('\n');
+    let fecha = (customConfig?.fecha || fullConfig?.fecha || '2025-08-25');
+    let firmante = (customConfig?.firmante || fullConfig?.firmante || 'Nombre Firmante');
+    let logoUrl = (customConfig?.logoUrl || fullConfig?.logoUrl || window._pdfPreviewLogoUrl || null);
+    let fieldFontSize = customConfig?.fieldFontSize || 16;
+    let fieldColor = customConfig?.fieldColor || '#222';
+    let numFirmas = customConfig?.numFirmas || fullConfig?.numFirmas || 1;
+
+    // --- Plantillas prediseñadas ---
+    if (template !== 'custom') {
+        // --- Unique styles for each template ---
+        let borderColor = '#2563eb', borderWidth = 3, bgColor = '#fff', titleColor = '#2563eb', authorColor = fieldColor, firmaBoxColor = '#bbb', firmaTextColor = '#222', font = 'Arial', titleFontWeight = 'bold', authorFontWeight = '', authorFontStyle = '', titleFontSize = fieldFontSize + 4, authorFontSize = fieldFontSize, firmaFont = 'bold 13px Arial', textAlign = 'center', extraDraw = null;
+        switch (template) {
+            case 'template1': // Clásico
+                // Defaults already set
+                break;
+            case 'template2': // Moderno
+                borderColor = '#10b981';
+                borderWidth = 2;
+                titleColor = '#10b981';
+                authorColor = '#333';
+                bgColor = '#f8fafc';
+                titleFontWeight = 'bold';
+                titleFontSize = fieldFontSize + 6;
+                authorFontSize = fieldFontSize + 1;
+                firmaBoxColor = '#e0e7ef';
+                firmaTextColor = '#10b981';
+                font = 'Segoe UI';
+                break;
+            case 'template3': // Minimalista
+                borderColor = '#222';
+                borderWidth = 1.5;
+                titleColor = '#222';
+                authorColor = '#666';
+                bgColor = '#fff';
+                titleFontWeight = '';
+                titleFontSize = fieldFontSize + 2;
+                authorFontSize = fieldFontSize - 1;
+                firmaBoxColor = '#f3f3f3';
+                firmaTextColor = '#222';
+                font = 'Helvetica Neue';
+                break;
+            case 'template4': // Elegante
+                borderColor = '#7c3aed';
+                borderWidth = 2.5;
+                titleColor = '#7c3aed';
+                authorColor = '#444';
+                bgColor = '#f6f0ff';
+                titleFontWeight = 'bold';
+                titleFontSize = fieldFontSize + 5;
+                authorFontSize = fieldFontSize + 1;
+                firmaBoxColor = '#ede9fe';
+                firmaTextColor = '#7c3aed';
+                font = 'Georgia';
+                authorFontStyle = 'italic';
+                extraDraw = function () {
+                    // Draw a subtle line under the title
+                    ctx.strokeStyle = '#c4b5fd';
+                    ctx.lineWidth = 1.2;
+                    ctx.beginPath();
+                    ctx.moveTo(60, 90);
+                    ctx.lineTo(340, 90);
+                    ctx.stroke();
+                };
+                break;
+        }
+        // Background
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Border
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = borderWidth;
+        ctx.strokeRect(20, 20, 360, 210);
+        // Logo
+        if (logoUrl) {
+            const img = new window.Image();
+            img.onload = function () {
+                ctx.drawImage(img, 40, 30, 48, 48);
+                drawTexts();
+            };
+            img.src = logoUrl;
+        } else {
+            drawTexts();
+        }
+        function drawTexts() {
+            ctx.font = `${titleFontWeight} ${titleFontSize}px ${font}`;
+            ctx.fillStyle = titleColor;
+            ctx.textAlign = textAlign;
+            ctx.fillText(titulo, 200, 80);
+            ctx.font = `${authorFontStyle} ${authorFontWeight} ${authorFontSize}px ${font}`;
+            ctx.fillStyle = authorColor;
+            autores.forEach((autor, i) => {
+                ctx.fillText(autor, 200, 110 + i * 20);
+            });
+            ctx.font = `italic ${fieldFontSize - 2}px ${font}`;
+            ctx.fillStyle = '#888';
+            ctx.fillText('Firmado por: ' + firmante, 200, 170);
+            ctx.fillText('Fecha aval: ' + fecha, 200, 190);
+            if (typeof extraDraw === 'function') extraDraw();
+        }
+        // Zona de firmas global (mínimo 1)
+        for (let i = 0; i < Math.max(1, numFirmas); i++) {
+            ctx.fillStyle = firmaBoxColor;
+            ctx.fillRect(80 + i * 110, 200, 100, 24);
+            ctx.fillStyle = firmaTextColor;
+            ctx.font = firmaFont;
+            ctx.textAlign = 'center';
+            ctx.fillText('FIRMA', 130 + i * 110, 217);
+        }
+        return;
+    }
+    // --- Plantilla personalizada: todos los campos movibles, pero visual igual a Clásico ---
+    // Usa el estado global para mantener posiciones y autores
+    let posTitulo = customPreviewState.posTitulo;
+    let posAutores = customPreviewState.posAutores;
+    let posFecha = customPreviewState.posFecha;
+    let posFirmas = customPreviewState.posFirmas;
+    let dragging = null; // 'titulo', 'autor0', 'autor1', ..., 'fecha', 'firma0', ...
+    let offset = { x: 0, y: 0 };
+    function drawCustom() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Visual igual a Clásico
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#2563eb';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(20, 20, 360, 210);
+        // Logo global
+        if (logoUrl) {
+            const img = new window.Image();
+            img.onload = function () {
+                ctx.drawImage(img, 40, 30, 48, 48);
+                drawTextsAndFirmas();
+            };
+            img.src = logoUrl;
+        } else {
+            drawTextsAndFirmas();
+        }
+        function drawTextsAndFirmas() {
+            // Título
+            ctx.font = `bold ${fieldFontSize + 4}px Arial`;
+            ctx.fillStyle = '#2563eb';
+            ctx.textAlign = 'left';
+            ctx.fillText(titulo, posTitulo.x, posTitulo.y);
+            // Autores (varios)
+            ctx.font = `${fieldFontSize}px Arial`;
+            ctx.fillStyle = fieldColor;
+            autores.forEach((autor, i) => {
+                ctx.fillText(autor, posAutores[i]?.x || 120, posAutores[i]?.y || (posTitulo.y + 30 + i * 20));
+            });
+            // Fecha
+            ctx.font = `italic ${fieldFontSize - 2}px Arial`;
+            ctx.fillStyle = '#888';
+            ctx.fillText(fecha, posFecha.x, posFecha.y);
+            // Firmas (varias)
+            for (let i = 0; i < posFirmas.length; i++) {
+                ctx.fillStyle = dragging === 'firma' + i ? '#10b981' : '#bbb';
+                ctx.fillRect(posFirmas[i].x, posFirmas[i].y, 100, 24);
+                ctx.fillStyle = '#222';
+                ctx.font = 'bold 13px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText('FIRMA', posFirmas[i].x + 15, posFirmas[i].y + 17);
+            }
+        }
+    }
+    drawCustom();
+    // Drag & drop para todos los campos
+    canvas.onmousedown = function (e) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        if (x >= posTitulo.x && x <= posTitulo.x + 200 && y >= posTitulo.y - 18 && y <= posTitulo.y + 5) {
+            dragging = 'titulo'; offset.x = x - posTitulo.x; offset.y = y - posTitulo.y;
+        } else if (x >= posFecha.x && x <= posFecha.x + 120 && y >= posFecha.y - 13 && y <= posFecha.y + 5) {
+            dragging = 'fecha'; offset.x = x - posFecha.x; offset.y = y - posFecha.y;
+        } else {
+            for (let i = 0; i < autores.length; i++) {
+                let ax = posAutores[i]?.x || 120, ay = posAutores[i]?.y || (posTitulo.y + 30 + i * 20);
+                if (x >= ax && x <= ax + 200 && y >= ay - 14 && y <= ay + 5) {
+                    dragging = 'autor' + i; offset.x = x - ax; offset.y = y - ay; break;
+                }
+            }
+            for (let i = 0; i < posFirmas.length; i++) {
+                if (x >= posFirmas[i].x && x <= posFirmas[i].x + 100 && y >= posFirmas[i].y && y <= posFirmas[i].y + 24) {
+                    dragging = 'firma' + i; offset.x = x - posFirmas[i].x; offset.y = y - posFirmas[i].y; break;
+                }
+            }
+        }
+    };
+    canvas.onmousemove = function (e) {
+        if (!dragging) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        if (dragging === 'titulo') {
+            posTitulo.x = Math.max(20, Math.min(x - offset.x, canvas.width - 200));
+            posTitulo.y = Math.max(30, Math.min(y - offset.y, canvas.height - 20));
+        } else if (dragging === 'fecha') {
+            posFecha.x = Math.max(20, Math.min(x - offset.x, canvas.width - 120));
+            posFecha.y = Math.max(30, Math.min(y - offset.y, canvas.height - 20));
+        } else if (dragging && dragging.startsWith('autor')) {
+            let idx = parseInt(dragging.replace('autor', ''));
+            if (!posAutores[idx]) posAutores[idx] = { x: 120, y: 90 + idx * 20 };
+            posAutores[idx].x = Math.max(20, Math.min(x - offset.x, canvas.width - 200));
+            posAutores[idx].y = Math.max(30, Math.min(y - offset.y, canvas.height - 20));
+        } else if (dragging && dragging.startsWith('firma')) {
+            let idx = parseInt(dragging.replace('firma', ''));
+            posFirmas[idx].x = Math.max(20, Math.min(x - offset.x, canvas.width - 100));
+            posFirmas[idx].y = Math.max(30, Math.min(y - offset.y, canvas.height - 24));
+        }
+        drawCustom();
+    };
+    canvas.onmouseup = function () {
+        dragging = null;
+        drawCustom();
+    };
+    // Actualiza controles de firmas y autores
+    const firmasCount = document.getElementById('firmasCount');
+    if (firmasCount) firmasCount.textContent = `${posFirmas.length} firmas`;
+}
+
+// Controles para agregar/eliminar firmas y autores en custom
+function setupCustomTemplateForm(customConfig) {
+    const form = document.getElementById('customTemplateForm');
+    if (!form) return;
+    // Inicializa autores
+    const autoresInput = document.getElementById('customAutores');
+    if (autoresInput) {
+        autoresInput.value = (customConfig.autores && Array.isArray(customConfig.autores)) ? customConfig.autores.join('\n') : (customConfig.autores || 'Autor/es de ejemplo');
+        autoresInput.oninput = function () {
+            customPreviewState.autores = autoresInput.value.split('\n');
+            // Ajusta posiciones si cambian autores
+            while (customPreviewState.posAutores.length < customPreviewState.autores.length) {
+                customPreviewState.posAutores.push({ x: 120, y: 90 + customPreviewState.posAutores.length * 20 });
+            }
+            renderPdfTemplatePreview('custom', customPreviewState);
+        };
+        customPreviewState.autores = autoresInput.value.split('\n');
+    }
+    // Inicializa firmas
+    const addFirmaBtn = document.getElementById('addFirmaBtn');
+    const removeFirmaBtn = document.getElementById('removeFirmaBtn');
+    if (addFirmaBtn) {
+        addFirmaBtn.onclick = function () {
+            customPreviewState.posFirmas.push({ x: 100 + customPreviewState.posFirmas.length * 30, y: 200 });
+            renderPdfTemplatePreview('custom', customPreviewState);
+        };
+    }
+    if (removeFirmaBtn) {
+        removeFirmaBtn.onclick = function () {
+            if (customPreviewState.posFirmas.length > 1) {
+                customPreviewState.posFirmas.pop();
+                renderPdfTemplatePreview('custom', customPreviewState);
+            }
+        };
+    }
+    // Inicializa posiciones
+    customPreviewState.posTitulo = customConfig.posTitulo || { x: 120, y: 60 };
+    customPreviewState.posFecha = customConfig.posFecha || { x: 120, y: 120 };
+    customPreviewState.posFirmas = customConfig.posFirmas || [{ x: 100, y: 200 }];
+    customPreviewState.posAutores = customConfig.posAutores || customPreviewState.autores.map((a, i) => ({ x: 120, y: 90 + i * 20 }));
+    // Al guardar, envía todas las posiciones y autores
+    form.onsubmit = async function (e) {
+        e.preventDefault();
+        // Recoge todos los datos relevantes de la configuración personalizada
+        const config = {
+            posTitulo: customPreviewState.posTitulo,
+            posAutores: customPreviewState.posAutores,
+            posFecha: customPreviewState.posFecha,
+            posFirmas: customPreviewState.posFirmas,
+            autores: customPreviewState.autores,
+            fieldFontSize: form.fieldFontSize ? parseInt(form.fieldFontSize.value, 10) : 16,
+            fieldColor: form.fieldColor ? form.fieldColor.value : '#222',
+            numFirmas: customPreviewState.posFirmas ? customPreviewState.posFirmas.length : 1
+        };
+        renderPdfTemplatePreview('custom', config);
+        // Guardar configuración personalizada y logo en el backend
+        try {
+            setControlStatus && setControlStatus('applying');
+            const pdfLogoInput = document.getElementById('pdfLogo');
+            let formData = null;
+            let useFormData = pdfLogoInput && pdfLogoInput.files && pdfLogoInput.files[0];
+            if (useFormData) {
+                formData = new FormData();
+                formData.append('template', 'custom');
+                formData.append('customConfig', JSON.stringify(config));
+                formData.append('logo', pdfLogoInput.files[0]);
+            }
+            const res = await fetch('/api/pdf-template/config', {
+                method: 'POST',
+                headers: useFormData ? { 'Authorization': `Bearer ${localStorage.getItem('token')}` } : {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: useFormData ? formData : JSON.stringify({ template: 'custom', customConfig: config })
+            });
+            if (res.ok) {
+                setControlStatus && setControlStatus('success');
+                showNotification && showNotification('Configuración personalizada guardada', 'success');
+            } else {
+                setControlStatus && setControlStatus('error');
+                showNotification && showNotification('Error al guardar configuración', 'error');
+            }
+        } catch (err) {
+            setControlStatus && setControlStatus('error');
+            showNotification && showNotification('Error al guardar configuración', 'error');
+        }
+    };
+    // Render inicial
+    renderPdfTemplatePreview('custom', customPreviewState);
+}
+
+// ===========================
+// CONTROL DE ESTILO Y ANIMACIONES
+// ===========================
+// Animación para el botón de aplicar cambios
+function animateApplyButton(btn) {
+    btn.classList.remove('applied');
+    // Forzar reflow para reiniciar la animación
+    void btn.offsetWidth;
+    btn.classList.add('applied');
+    setTimeout(() => btn.classList.remove('applied'), 1200);
+}
+
+// Añadir estilos para la animación y color del botón
+// Botón aplicar: solo color, sin animación JS
+const style = document.createElement('style');
+style.textContent = `
+#applyTemplateChangesBtn {
+    background: var(--primary-color,#2563eb);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 22px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px #2563eb22;
+}
+`;
+document.head.appendChild(style);
+
+// Añadir estilos para el modal usando la variable CSS principal
+const modalStyle = document.createElement('style');
+modalStyle.textContent = `
+#templateResetModal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.18);
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+#templateResetModal.show {
+  display: flex;
+  opacity: 1;
+}
+#templateResetModal .modal-content {
+  background: #fff;
+  border-radius: 10px;
+  padding: 32px 28px 22px 28px;
+  box-shadow: 0 4px 32px #2563eb22;
+  min-width: 320px;
+  max-width: 95vw;
+  text-align: center;
+  border: 2px solid var(--primary-color,#2563eb);
+}
+#templateResetModal .modal-content h3 {
+  color: var(--primary-color,#2563eb);
+  font-size: 1.2em;
+  margin-bottom: 18px;
+}
+#templateResetModal .modal-content button {
+  background: var(--primary-color,#2563eb);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 20px;
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#templateResetModal .modal-content button.cancel {
+  background: #e5e7eb;
+  color: #222;
+}
+`;
+document.head.appendChild(modalStyle);
+
+// Añadir estilos para el feedback visual de control-status
+const statusStyle = document.createElement('style');
+statusStyle.textContent = `
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  font-size: 1em;
+  margin-top: 10px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  /* box-shadow: 0 2px 8px #0001; */
+  background: transparent !important;
+  transition: background 0.3s, color 0.3s;
+}
+.status-indicator .indicator-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #bbb;
+  box-shadow: 0 0 0 2px #bbb2;
+  animation: pulse 1.2s infinite;
+}
+.status-indicator.applying {
+  background: #e0e7ff;
+  color: #1e40af;
+}
+.status-indicator.applying .indicator-dot {
+  background: #2563eb;
+  box-shadow: 0 0 0 2px #2563eb44;
+}
+.status-indicator.success {
+  background: #d1fae5;
+  color: #065f46;
+}
+.status-indicator.success .indicator-dot {
+  background: #10b981;
+  box-shadow: 0 0 0 2px #10b98144;
+}
+.status-indicator.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.status-indicator.error .indicator-dot {
+  background: #ef4444;
+  box-shadow: 0 0 0 2px #ef444444;
+}
+.status-indicator.inactive {
+  background: #f3f4f6;
+  color: #374151;
+}
+.status-indicator.inactive .indicator-dot {
+  background: #bbb;
+  box-shadow: 0 0 0 2px #bbb2;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 2px #bbb2; }
+  50% { box-shadow: 0 0 0 6px #bbb1; }
+  100% { box-shadow: 0 0 0 2px #bbb2; }
+}
+`;
+document.head.appendChild(statusStyle);
+
+// Reemplaza la función setControlStatus para mantener el feedback visible 2 segundos
+let controlStatusTimeout;
+function setControlStatus(state) {
+    const controlStatus = document.getElementById('controlStatus');
+    if (!controlStatus) return;
+    let html = '';
+    if (state === 'applying') {
+        html = `<div class="status-indicator applying"><div class="indicator-dot"></div><span>Aplicando configuración...</span></div>`;
+    } else if (state === 'success') {
+        html = `<div class="status-indicator success"><div class="indicator-dot"></div><span>Configuración aplicada</span></div>`;
+    } else if (state === 'error') {
+        html = `<div class="status-indicator error"><div class="indicator-dot"></div><span>Error al aplicar</span></div>`;
+    } else {
+        html = `<div class="status-indicator inactive"><div class="indicator-dot"></div><span>Esperando configuración</span></div>`;
+    }
+    controlStatus.innerHTML = html;
+}
+
+// ===========================
+// FUNCIONES AUXILIARES
+// ===========================
+function setupCustomTemplateForm(customConfig) {
+    const form = document.getElementById('customTemplateForm');
+    if (!form) return;
+    // Inicializa autores
+    const autoresInput = document.getElementById('customAutores');
+    if (autoresInput) {
+        autoresInput.value = (customConfig.autores && Array.isArray(customConfig.autores)) ? customConfig.autores.join('\n') : (customConfig.autores || 'Autor/es de ejemplo');
+        autoresInput.oninput = function () {
+            customPreviewState.autores = autoresInput.value.split('\n');
+            // Ajusta posiciones si cambian autores
+            while (customPreviewState.posAutores.length < customPreviewState.autores.length) {
+                customPreviewState.posAutores.push({ x: 120, y: 90 + customPreviewState.posAutores.length * 20 });
+            }
+            renderPdfTemplatePreview('custom', customPreviewState);
+        };
+        customPreviewState.autores = autoresInput.value.split('\n');
+    }
+    // Inicializa firmas
+    const addFirmaBtn = document.getElementById('addFirmaBtn');
+    const removeFirmaBtn = document.getElementById('removeFirmaBtn');
+    if (addFirmaBtn) {
+        addFirmaBtn.onclick = function () {
+            customPreviewState.posFirmas.push({ x: 100 + customPreviewState.posFirmas.length * 30, y: 200 });
+            renderPdfTemplatePreview('custom', customPreviewState);
+        };
+    }
+    if (removeFirmaBtn) {
+        removeFirmaBtn.onclick = function () {
+            if (customPreviewState.posFirmas.length > 1) {
+                customPreviewState.posFirmas.pop();
+                renderPdfTemplatePreview('custom', customPreviewState);
+            }
+        };
+    }
+    // Inicializa posiciones
+    customPreviewState.posTitulo = customConfig.posTitulo || { x: 120, y: 60 };
+    customPreviewState.posFecha = customConfig.posFecha || { x: 120, y: 120 };
+    customPreviewState.posFirmas = customConfig.posFirmas || [{ x: 100, y: 200 }];
+    customPreviewState.posAutores = customConfig.posAutores || customPreviewState.autores.map((a, i) => ({ x: 120, y: 90 + i * 20 }));
+    // Al guardar, envía todas las posiciones y autores
+    form.onsubmit = async function (e) {
+        e.preventDefault();
+        const config = {
+            posTitulo: customPreviewState.posTitulo,
+            posAutores: customPreviewState.posAutores,
+            posFecha: customPreviewState.posFecha,
+            posFirmas: customPreviewState.posFirmas,
+            autores: customPreviewState.autores
+        };
+        renderPdfTemplatePreview('custom', config);
+        // Guardar configuración personalizada y logo en el backend
+        try {
+            setControlStatus && setControlStatus('applying');
+            const pdfLogoInput = document.getElementById('pdfLogo');
+            let formData = null;
+            let useFormData = pdfLogoInput && pdfLogoInput.files && pdfLogoInput.files[0];
+            if (useFormData) {
+                formData = new FormData();
+                formData.append('template', 'custom');
+                formData.append('customConfig', JSON.stringify(config));
+                formData.append('logo', pdfLogoInput.files[0]);
+            }
+            const res = await fetch('/api/pdf-template/config', {
+                method: 'POST',
+                headers: useFormData ? { 'Authorization': `Bearer ${localStorage.getItem('token')}` } : {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: useFormData ? formData : JSON.stringify({ template: 'custom', customConfig: config })
+            });
+            if (res.ok) {
+                setControlStatus && setControlStatus('success');
+                showNotification && showNotification('Configuración personalizada guardada', 'success');
+            } else {
+                setControlStatus && setControlStatus('error');
+                showNotification && showNotification('Error al guardar configuración', 'error');
+            }
+        } catch (err) {
+            setControlStatus && setControlStatus('error');
+            showNotification && showNotification('Error al guardar configuración', 'error');
+        }
+    };
+    // Render inicial
+    renderPdfTemplatePreview('custom', customPreviewState);
+}
+
+// === ENVÍO DE DATOS DEL DOCUMENTO AL FIRMAR ===
+document.addEventListener('DOMContentLoaded', function () {
+    const signForm = document.getElementById('signForm');
+    const fileInput = document.getElementById('fileInput');
+    const docTitleInput = document.getElementById('docTitle');
+    if (fileInput && docTitleInput) {
+        fileInput.addEventListener('change', function () {
+            if (fileInput.files[0]) {
+                const fileName = fileInput.files[0].name.replace(/\.[^.]+$/, '');
+                docTitleInput.value = fileName;
+            }
+        });
+    }
+    if (signForm) {
+        signForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('fileInput');
+            const docTitle = document.getElementById('docTitle').value;
+            const docAuthors = document.getElementById('docAuthors').value;
+            const selectedTemplate = window._pdfTemplateSelected || localStorage.getItem('pdfTemplate') || 'template1';
+            if (!fileInput.files[0]) {
+                showNotification && showNotification('Selecciona un archivo PDF', 'error');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('document', fileInput.files[0]);
+            formData.append('titulo', docTitle);
+            formData.append('autores', docAuthors);
+            formData.append('template', selectedTemplate);
+            try {
+                const res = await fetch('/sign-document', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: formData
+                });
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'documento_firmado.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(url);
+                        a.remove();
+                    }, 100);
+                    showNotification && showNotification('Documento firmado correctamente', 'success');
+                } else {
+                    showNotification && showNotification('Error al firmar el documento', 'error');
+                }
+            } catch (err) {
+                showNotification && showNotification('Error de conexión al firmar', 'error');
+            }
+        });
+    }
+});

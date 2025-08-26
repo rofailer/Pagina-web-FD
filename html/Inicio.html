@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="/css/userKeysModal.css" />
     <link rel="stylesheet" href="/css/noKeysmodal.css" />
     <link rel="stylesheet" href="/css/profileMenu.css" />
+    <link rel="stylesheet" href="/css/templateResetModal.css" />
     <link rel="stylesheet" href="/css/tutorial.css" />
 
     <link rel="stylesheet" href="/css/sections/inicioSection.css" />
@@ -63,6 +64,100 @@
         </button>
       </div>
     </header>
+
+    <!-- Modal de confirmación para navegación -->
+    <div id="navigationConfirmModal" class="navigation-confirm-modal">
+      <div class="navigation-confirm-content">
+        <span class="navigation-confirm-icon">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <line
+              x1="12"
+              y1="9"
+              x2="12"
+              y2="13"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <line
+              x1="12"
+              y1="17"
+              x2="12.01"
+              y2="17"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+          </svg>
+        </span>
+        <h3 class="navigation-confirm-title">¿Estás seguro?</h3>
+        <p class="navigation-confirm-message">
+          Tienes un proceso en curso. Si continúas, perderás todos los cambios
+          no guardados.
+        </p>
+        <div class="navigation-confirm-buttons">
+          <button
+            id="confirmNavigationBtn"
+            class="navigation-confirm-btn primary"
+          >
+            Sí, continuar
+          </button>
+          <button
+            id="cancelNavigationBtn"
+            class="navigation-confirm-btn secondary"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de restablecimiento de plantilla personalizada (ahora correctamente dentro del body) -->
+    <div id="templateResetModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <span class="close-modal" id="closeTemplateResetModal">&times;</span>
+        <div class="modal-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="#e74c3c"
+              stroke-width="2"
+              fill="#fff"
+            />
+            <path
+              d="M8 12h8M12 8v8"
+              stroke="#e74c3c"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+        </div>
+        <div class="modal-title">Restablecer Personalización</div>
+        <div class="modal-desc">
+          ¿Seguro que quieres restablecer los valores personalizados de la
+          plantilla? Esta acción no se puede deshacer.
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn confirm" id="confirmTemplateResetBtn">
+            Sí, restablecer
+          </button>
+          <button class="modal-btn cancel" id="cancelTemplateResetBtn">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Menú móvil hamburguesa -->
     <div id="headerMobileMenu" class="header-mobile-menu" aria-hidden="true">
@@ -1652,6 +1747,37 @@
                 </label>
               </div>
             </div>
+            <!-- Formulario de datos del documento ajustado -->
+            <div
+              class="doc-data-form"
+              style="
+                margin: 18px 0 0 0;
+                display: grid;
+                gap: 12px;
+                grid-template-columns: 1fr 1fr;
+              "
+            >
+              <div class="form-group" style="grid-column: 1/3">
+                <label for="docTitle">Título del trabajo</label>
+                <input
+                  type="text"
+                  id="docTitle"
+                  name="docTitle"
+                  placeholder="Título del documento"
+                  required
+                />
+              </div>
+              <div class="form-group" style="grid-column: 1/3">
+                <label for="docAuthors">Autores</label>
+                <input
+                  type="text"
+                  id="docAuthors"
+                  name="docAuthors"
+                  placeholder="Autor/es"
+                  required
+                />
+              </div>
+            </div>
             <button type="button" id="acceptDocumentBtn">
               <svg
                 class="btn-icon"
@@ -2080,7 +2206,7 @@
                   fill="none"
                 >
                   <path
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
                     stroke="currentColor"
                     stroke-width="2"
                     stroke-linecap="round"
@@ -2285,8 +2411,6 @@
                     d="M7 11V7a5 5 0 0 1 10 0v4"
                     stroke="currentColor"
                     stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
                   />
                 </svg>
               </div>
@@ -2634,6 +2758,8 @@
                             points="7,10 12,15 17,10"
                             stroke="currentColor"
                             stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
                           />
                           <line
                             x1="12"
@@ -2642,6 +2768,8 @@
                             y2="3"
                             stroke="currentColor"
                             stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
                           />
                         </svg>
                       </button>
@@ -2660,6 +2788,7 @@
                             stroke="currentColor"
                             stroke-width="2"
                             stroke-linecap="round"
+                            stroke-linejoin="round"
                           />
                           <circle
                             cx="12"
@@ -2761,6 +2890,8 @@
                             points="7,10 12,15 17,10"
                             stroke="currentColor"
                             stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
                           />
                           <line
                             x1="12"
@@ -2769,6 +2900,8 @@
                             y2="3"
                             stroke="currentColor"
                             stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
                           />
                         </svg>
                       </button>
@@ -2787,6 +2920,7 @@
                             stroke="currentColor"
                             stroke-width="2"
                             stroke-linecap="round"
+                            stroke-linejoin="round"
                           />
                           <circle
                             cx="12"
@@ -3152,123 +3286,107 @@
               </div>
 
               <div class="pdf-template-manager">
-                <!-- Estado actual de la plantilla -->
-                <div class="current-template-status">
-                  <div class="status-header">
-                    <span>Estado de la Plantilla</span>
+                <!-- Selector visual de plantillas prediseñadas y custom -->
+                <div class="template-selector-section">
+                  <h4>Selecciona un diseño de plantilla</h4>
+                  <div
+                    id="pdfTemplatesSelector"
+                    class="pdf-templates-selector pdf-templates-selector-mb"
+                  >
+                    <!-- Aquí se renderizan los botones de los diseños desde JS -->
                   </div>
-                  <div class="status-content" id="templateStatus">
-                    <div class="template-status status-none">
-                      <div class="status-icon">
-                        <svg
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
+                  <div
+                    id="customTemplateOptions"
+                    class="custom-template-animate pdf-advanced-custom"
+                  >
+                    <div class="pdf-advanced-header">
+                      <span class="pdf-advanced-title"
+                        >Personalización avanzada de PDF</span
+                      >
+                      <span class="pdf-advanced-desc"
+                        >Ajusta el diseño, colores, autores, firmas y logo de tu
+                        plantilla para un documento profesional y único.</span
+                      >
+                    </div>
+                    <form id="customTemplateForm" class="pdf-advanced-form">
+                      <div class="pdf-advanced-row">
+                        <div class="custom-field-group field-bg">
+                          <label for="fieldFontSize">Tamaño fuente</label>
+                          <input
+                            type="number"
+                            id="fieldFontSize"
+                            name="fieldFontSize"
+                            min="8"
+                            max="48"
+                            step="1"
+                            class="input-font-size"
+                          />
+                        </div>
+                        <div class="custom-field-group field-bg">
+                          <label for="fieldColor">Color</label>
+                          <input
+                            type="color"
+                            id="fieldColor"
+                            name="fieldColor"
+                            value="#222222"
+                            class="input-color"
+                          />
+                        </div>
+                        <div class="custom-field-group logo-group field-bg">
+                          <label for="pdfLogo">Logo (opcional)</label>
+                          <div class="logo-input-wrapper">
+                            <input
+                              type="file"
+                              id="pdfLogo"
+                              name="pdfLogo"
+                              accept="image/*"
+                              class="input-logo"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div class="pdf-advanced-row">
+                        <div class="custom-field-group autores-group">
+                          <label>Autores (uno por línea)</label>
+                          <textarea
+                            id="customAutores"
+                            name="customAutores"
+                            rows="2"
+                            class="input-autores"
+                          ></textarea>
+                        </div>
+                        <div class="custom-field-group firmas-group">
+                          <label>Firmas</label>
+                          <div id="firmasControls" class="firmas-controls">
+                            <button
+                              type="button"
+                              id="addFirmaBtn"
+                              class="icon-btn btn-add-firma"
+                              title="Agregar firma"
+                            >
+                              +
+                            </button>
+                            <button
+                              type="button"
+                              id="removeFirmaBtn"
+                              class="icon-btn btn-remove-firma"
+                              title="Quitar firma"
+                            >
+                              -
+                            </button>
+                            <span id="firmasCount" class="firmas-count"></span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="pdf-advanced-row">
+                        <button
+                          type="submit"
+                          class="control-btn primary pdf-advanced-save"
                         >
-                          <circle
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            stroke-width="2"
-                          />
-                          <path
-                            d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                          <path
-                            d="M12 17h.01"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        </svg>
+                          Guardar cambios
+                        </button>
                       </div>
-                      <div class="status-text">
-                        <div class="status-title">
-                          Sin plantilla configurada
-                        </div>
-                        <div class="status-desc">
-                          Se está usando el PDF en blanco por defecto
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Subir nueva plantilla -->
-                <div class="template-upload-section">
-                  <h4>Importar Nueva Plantilla PDF</h4>
-
-                  <div class="upload-area-container">
-                    <div class="upload-area" id="pdfUploadArea">
-                      <div class="upload-content">
-                        <div class="upload-icon">
-                          <svg
-                            width="48"
-                            height="48"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                          >
-                            <path
-                              d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"
-                              stroke="currentColor"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            />
-                            <polyline
-                              points="16,13 12,9 8,13"
-                              stroke="currentColor"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            />
-                            <line
-                              x1="12"
-                              y1="9"
-                              x2="12"
-                              y2="16"
-                              stroke="currentColor"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                            />
-                          </svg>
-                        </div>
-                        <div class="upload-text">
-                          <div class="upload-title">
-                            Arrastra tu PDF aquí o haz clic para seleccionar
-                          </div>
-                          <div class="upload-subtitle">
-                            Solo archivos PDF • Máximo 10MB
-                          </div>
-                        </div>
-                      </div>
-                      <input
-                        type="file"
-                        id="templatePdfInput"
-                        accept=".pdf"
-                        style="display: none"
-                      />
-                    </div>
-
-                    <div
-                      class="upload-progress"
-                      id="uploadProgress"
-                      style="display: none"
-                    >
-                      <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill"></div>
-                      </div>
-                      <div class="progress-text" id="progressText">
-                        Subiendo... 0%
-                      </div>
-                    </div>
+                    </form>
                   </div>
                 </div>
 
@@ -3290,7 +3408,7 @@
                           stroke-width="2"
                         />
                         <path
-                          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                          d="M19.4 15a1.65 1.82 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
                           stroke="currentColor"
                           stroke-width="2"
                         />
@@ -3362,54 +3480,6 @@
                   </div>
                 </div>
 
-                <!-- Instrucciones -->
-                <div class="template-instructions">
-                  <h4>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                    Cómo Funciona
-                  </h4>
-                  <div class="instructions-list">
-                    <div class="instruction-item">
-                      <div class="instruction-number">1</div>
-                      <div class="instruction-text">
-                        <strong>Importa tu PDF:</strong> Sube el documento que
-                        quieres usar como plantilla de aval
-                      </div>
-                    </div>
-                    <div class="instruction-item">
-                      <div class="instruction-number">2</div>
-                      <div class="instruction-text">
-                        <strong>Configuración automática:</strong> El sistema
-                        configurará este PDF como plantilla para todos los
-                        usuarios
-                      </div>
-                    </div>
-                    <div class="instruction-item">
-                      <div class="instruction-number">3</div>
-                      <div class="instruction-text">
-                        <strong>Aplicación universal:</strong> Todos los
-                        documentos firmados usarán esta plantilla en lugar del
-                        PDF en blanco
-                      </div>
-                    </div>
-                    <div class="instruction-item">
-                      <div class="instruction-number">4</div>
-                      <div class="instruction-text">
-                        <strong>Verificación compatible:</strong> Los documentos
-                        se verificarán correctamente con esta plantilla
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 <!-- Acciones -->
                 <div
                   class="template-actions"
@@ -3457,6 +3527,7 @@
                         stroke="currentColor"
                         stroke-width="2"
                         stroke-linecap="round"
+                        stroke-linejoin="round"
                       />
                     </svg>
                     Descargar
@@ -3548,62 +3619,6 @@
       </section>
     </main>
 
-    <!-- Modal de confirmación para navegación -->
-    <div id="navigationConfirmModal" class="navigation-confirm-modal">
-      <div class="navigation-confirm-content">
-        <span class="navigation-confirm-icon">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <line
-              x1="12"
-              y1="9"
-              x2="12"
-              y2="13"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <line
-              x1="12"
-              y1="17"
-              x2="12.01"
-              y2="17"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-          </svg>
-        </span>
-        <h3 class="navigation-confirm-title">¿Estás seguro?</h3>
-        <p class="navigation-confirm-message">
-          Tienes un proceso en curso. Si continúas, perderás todos los cambios
-          no guardados.
-        </p>
-        <div class="navigation-confirm-buttons">
-          <button
-            id="confirmNavigationBtn"
-            class="navigation-confirm-btn primary"
-          >
-            Sí, continuar
-          </button>
-          <button
-            id="cancelNavigationBtn"
-            class="navigation-confirm-btn secondary"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-
     <footer class="fixed_footer">
       <div class="footer-cta">
         <h2 class="cta-title">¿Listo para proteger tus documentos?</h2>
@@ -3668,7 +3683,6 @@
     <script src="/scripts/frontend/frontend.js"></script>
     <script src="/scripts/frontend/profileEncryption.frontend.js"></script>
     <script src="/scripts/frontend/profile.frontend.js"></script>
-    <!-- <script src="/scripts/frontend/headerResponsive.frontend.js"></script> -->
     <script src="/scripts/frontend/mobileHamburger.frontend.js"></script>
     <script src="/scripts/utils/tutorial.js"></script>
 
