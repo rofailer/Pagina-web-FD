@@ -3,35 +3,20 @@
    ========================= */
 
 #firmarSection {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.98) 0%,
-    color-mix(in srgb, var(--primary-color) 5%, transparent) 100%
-  );
-  border-radius: 20px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
-  padding: 48px 40px;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 24px 40px;
   text-align: center;
   position: relative;
   overflow: hidden;
-  max-width: 700px;
-  margin: 40px auto 0 auto;
-  border: 1px solid color-mix(in srgb, var(--primary-color) 8%, transparent);
+  width: 100%;
+  margin: 0;
+  border: none;
 }
 
 #firmarSection::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(
-    90deg,
-    var(--primary-color) 0%,
-    var(--secondary-color) 100%
-  );
-  border-radius: 20px 20px 0 0;
+  display: none;
 }
 
 #firmarSection h2 {
@@ -46,13 +31,312 @@
   gap: 12px;
 }
 
-#firmarSection h2::before {
-  content: "";
-  width: 32px;
-  height: 32px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ff9545'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'/%3E%3C/svg%3E")
-    no-repeat center;
-  background-size: contain;
+/* =========================
+   ESTRUCTURA DE PASOS CON HEADERS
+   ========================= */
+
+.step-header-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  text-align: center;
+}
+
+.step-icon-container {
+  flex-shrink: 0;
+}
+
+.step-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--accent-color) 100%
+  );
+  color: white;
+  box-shadow: 0 4px 16px
+    color-mix(in srgb, var(--primary-color) 25%, transparent);
+}
+
+.step-icon-wrapper.result-icon {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.25);
+}
+
+.step-icon {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2;
+}
+
+.step-header-content {
+  flex: 1;
+  text-align: center;
+}
+
+.step-title {
+  font-size: 1.4em;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.step-description {
+  font-size: 1em;
+  color: #666;
+}
+
+/* =========================
+   FIRMA ELECTRÓNICA - NUEVOS ESTILOS
+   ========================= */
+
+.signature-options-container {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.signature-method-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.method-option {
+  padding: 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+}
+
+.method-option:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+}
+
+.method-option.active {
+  border-color: var(--primary-color);
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.05) 0%,
+    rgba(168, 85, 247, 0.05) 100%
+  );
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+}
+
+.method-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--accent-color) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.method-content h5 {
+  margin: 0 0 4px 0;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.method-content p {
+  margin: 0;
+  font-size: 0.9em;
+  color: #666;
+}
+
+/* =========================
+   ÁREAS DE FIRMA
+   ========================= */
+
+.signature-area {
+  margin-bottom: 32px;
+}
+
+.signature-canvas-container {
+  position: relative;
+  background: white;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+#signatureCanvas {
+  display: block;
+  width: 100%;
+  height: 200px;
+  cursor: crosshair;
+  background: transparent;
+}
+
+.canvas-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.canvas-placeholder svg {
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.canvas-placeholder p {
+  margin: 0;
+  font-size: 0.9em;
+}
+
+.signature-controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.btn-outline.small {
+  padding: 8px 16px;
+  font-size: 0.9em;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-outline.small:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+/* Botones más pequeños para el paso 3 */
+#signStep3 .btn-primary {
+  padding: 10px 20px !important;
+  font-size: 0.95em !important;
+  min-height: auto !important;
+}
+
+#signStep3 .btn-outline.small {
+  padding: 6px 12px !important;
+  font-size: 0.85em !important;
+}
+
+#signStep3 .signature-controls {
+  margin-top: 12px;
+}
+
+/* =========================
+   SUBIDA DE IMAGEN DE FIRMA
+   ========================= */
+
+.signature-preview {
+  max-width: 300px;
+  max-height: 120px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+#signatureImagePreview {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* =========================
+   INFORMACIÓN DEL AVALADOR
+   ========================= */
+
+.avalador-info-section {
+  margin-top: 32px;
+  padding: 24px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.avalador-info-section .upload-title {
+  color: var(--primary-color);
+  margin-bottom: 16px;
+}
+
+/* =========================
+   RESPONSIVE DESIGN
+   ========================= */
+
+@media (max-width: 768px) {
+  .signature-method-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .method-option {
+    padding: 16px;
+  }
+
+  .method-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  #signatureCanvas {
+    height: 150px;
+  }
+
+  .signature-options-container {
+    max-width: 100%;
+  }
+}
+
+.step-description {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.step-main-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 /* =========================
@@ -64,7 +348,7 @@
   justify-content: center;
   align-items: center;
   margin-bottom: 40px;
-  gap: 40px;
+  gap: 80px;
   position: relative;
   padding: 0 20px;
 }
@@ -76,7 +360,7 @@
   top: 50%;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 160px);
+  width: calc(100% - 200px);
   height: 2px;
   background: linear-gradient(
     90deg,
@@ -171,22 +455,24 @@
    ========================= */
 
 .step-content {
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 16px;
-  padding: 32px 24px;
+  background: transparent;
+  border-radius: 0;
+  padding: 16px 24px;
   margin: 0 auto;
-  border: 1px solid color-mix(in srgb, var(--primary-color) 10%, transparent);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  border: none;
+  box-shadow: none;
+  transition: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  text-align: center;
+  width: 100%;
 }
 
 .step-content:hover {
-  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
+  box-shadow: none;
+  transform: none;
 }
 
 /* Paso 1: Selección de archivo */
@@ -197,7 +483,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 20px;
+  padding: 12px;
 }
 
 #signStep1 .input-title {
@@ -222,11 +508,340 @@
 }
 
 /* =========================
+   FILE INPUTS MODERNOS
+   ========================= */
+
+.file-input-container {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.file-input-display {
+  border: 2px dashed #ddd;
+  border-radius: 12px;
+  padding: 32px 20px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.file-input-display::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.file-input-display:hover {
+  border-color: var(--primary-color);
+  background: color-mix(
+    in srgb,
+    var(--primary-color) 5%,
+    rgba(255, 255, 255, 0.9)
+  );
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.file-input-display:hover::before {
+  left: 100%;
+}
+
+.file-input-display.dragover {
+  border-color: var(--primary-color);
+  background: color-mix(
+    in srgb,
+    var(--primary-color) 10%,
+    rgba(255, 255, 255, 0.9)
+  );
+  transform: scale(1.02);
+}
+
+.file-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  color: var(--primary-color);
+}
+
+.file-label {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.file-sublabel {
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 0;
+}
+
+.file-info {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 16px;
+  text-align: center;
+  display: none;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.file-info.show {
+  display: flex;
+}
+
+.file-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+  word-break: break-all;
+  font-size: 0.9em;
+  line-height: 1.3;
+}
+
+.file-size {
+  font-size: 0.8em;
+  color: #666;
+  margin: 0;
+}
+
+.file-remove {
+  background: none;
+  border: none;
+  color: #ff4444;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+
+.file-remove:hover {
+  background: rgba(255, 68, 68, 0.1);
+}
+
+.file-remove svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* =========================
+   CONTENIDO DE ÉXITO
+   ========================= */
+
+.success-content {
+  text-align: center;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 32px;
+}
+
+.primary-actions {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.secondary-actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Botones del paso 3 */
+.download-btn {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
+  min-width: 220px;
+}
+
+.download-btn:hover {
+  background: linear-gradient(135deg, #45a049 0%, #388e3c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.verify-btn {
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--accent-color) 100%
+  );
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px
+    color-mix(in srgb, var(--primary-color) 30%, transparent);
+  min-width: 180px;
+}
+
+.verify-btn:hover {
+  background: linear-gradient(
+    135deg,
+    var(--accent-color) 0%,
+    var(--primary-color) 100%
+  );
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px
+    color-mix(in srgb, var(--primary-color) 40%, transparent);
+}
+
+.restart-btn {
+  background: transparent;
+  color: #666;
+  border: 2px solid #ddd;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 200px;
+}
+
+.restart-btn:hover {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 5%, transparent);
+  transform: translateY(-1px);
+}
+
+.btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.btn-text {
+  font-weight: inherit;
+  font-size: inherit;
+}
+
+.btn-icon {
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.download-btn:hover .btn-icon,
+.verify-btn:hover .btn-icon {
+  transform: scale(1.1);
+}
+
+.restart-btn .btn-content {
+  flex-direction: row-reverse;
+}
+
+.restart-btn:hover .btn-icon {
+  transform: rotate(180deg);
+}
+
+/* Responsive para botones del paso 3 */
+@media (max-width: 768px) {
+  .primary-actions {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .download-btn,
+  .verify-btn,
+  .customize-btn,
+  .restart-btn {
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .btn-content {
+    gap: 8px;
+  }
+
+  .pdf-customization-section {
+    max-width: 100%;
+    padding: 20px;
+  }
+
+  .customization-controls {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .control-group {
+    width: 100%;
+  }
+}
+
+/* =========================
    SELECCIÓN DE LLAVES EN PASO 2
    ========================= */
 
 .key-selection-container {
   margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
 }
 
 .key-selection-container h3 {
@@ -477,10 +1092,10 @@
 }
 
 #signStep3 p {
-  font-size: 1.3em;
-  color: #4caf50;
+  font-size: 1.1em;
+  color: var(--text-color);
   margin-bottom: 24px;
-  font-weight: 600;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -680,6 +1295,26 @@ button[id*="restart"] {
   transition: all 0.3s ease;
 }
 
+/* Estado deshabilitado del botón */
+button:disabled,
+button.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #ccc !important;
+  color: #666 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+button:disabled:hover,
+button.disabled:hover {
+  opacity: 0.6;
+  background: #ccc !important;
+  color: #666 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 /* Estados de carga mejorados */
 #signLoading {
   text-align: center;
@@ -805,4 +1440,341 @@ button[id*="restart"] {
   height: 20px;
   stroke: white;
   fill: none;
+}
+
+/* =========================
+   GESTIÓN DE AUTORES DINÁMICOS
+   ========================= */
+
+.authors-management {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.authors-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.author-field-group {
+  background: #f9fafb !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  position: relative !important;
+  transition: all 0.3s ease !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.author-field-group:hover {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.1) !important;
+}
+
+.author-field-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+.author-number {
+  font-weight: 600 !important;
+  color: var(--primary-color) !important;
+  font-size: 0.9em !important;
+}
+
+.author-required {
+  font-size: 0.8em !important;
+  color: #dc2626 !important;
+  background: rgba(220, 38, 38, 0.1) !important;
+  padding: 2px 8px !important;
+  border-radius: 12px !important;
+}
+
+.author-optional {
+  font-size: 0.8em !important;
+  color: #059669 !important;
+  background: rgba(5, 150, 105, 0.1) !important;
+  padding: 2px 8px !important;
+  border-radius: 12px !important;
+}
+
+.author-input-container {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+}
+
+.author-input-container-with-add {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+}
+
+.author-input {
+  flex: 1 !important;
+  padding: 10px 12px !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  font-size: 1em !important;
+  transition: border-color 0.3s ease !important;
+  min-width: 0 !important;
+}
+
+/* =========================
+   BOTONES DE GESTIÓN DE AUTORES
+   ========================= */
+
+.add-author-btn-inline {
+  background: transparent !important;
+  color: #059669 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  margin: 0 !important;
+  padding: 4px !important;
+  flex-shrink: 0 !important;
+  box-shadow: none !important;
+}
+
+.add-author-btn-inline:hover {
+  background: transparent !important;
+  transform: scale(1.1) !important;
+  color: #047857 !important;
+}
+
+.add-author-btn-inline:active {
+  transform: scale(0.95) !important;
+}
+
+.add-author-btn-inline:disabled {
+  color: #9ca3af !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  background: transparent !important;
+}
+
+.add-author-btn-inline:disabled svg {
+  color: #9ca3af !important;
+  stroke: #9ca3af !important;
+}
+
+.add-author-btn-inline svg {
+  width: 20px !important;
+  height: 20px !important;
+  color: inherit !important;
+  stroke: currentColor !important;
+}
+
+.remove-author-btn {
+  background: transparent !important;
+  color: #ef4444 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  margin: 0 !important;
+  padding: 4px !important;
+  flex-shrink: 0 !important;
+  box-shadow: none !important;
+}
+
+.remove-author-btn:hover {
+  background: transparent !important;
+  transform: scale(1.1) !important;
+  color: #dc2626 !important;
+}
+
+.remove-author-btn:active {
+  transform: scale(0.95) !important;
+}
+
+.remove-author-btn svg {
+  width: 18px !important;
+  height: 18px !important;
+  color: inherit !important;
+  stroke: currentColor !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.authors-count-text {
+  font-size: 0.9em !important;
+  color: #6b7280 !important;
+  margin-left: 8px !important;
+  white-space: nowrap !important;
+}
+
+/* =========================
+   BOTÓN CONTINUAR DEL PASO 1
+   ========================= */
+
+#acceptDocumentBtn {
+  background: var(--primary-color) !important;
+  color: white !important;
+  border: none !important;
+  padding: 12px 24px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+}
+
+#acceptDocumentBtn:disabled {
+  background: transparent !important;
+  color: #9ca3af !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  border: 2px solid #e5e7eb !important;
+}
+
+/* Paso 4 - Estilo cuando sea visible */
+#signStep4 {
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  min-height: auto !important;
+}
+
+/* Cuando el paso 4 esté visible */
+#signStep4:not([style*="display: none"]) {
+  display: flex !important;
+}
+
+#signStep4.step-content {
+  background: var(--card-background, #ffffff) !important;
+  border: 1px solid var(--border-color, #e5e7eb) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  padding: 24px !important;
+  margin: 16px auto !important;
+  max-width: 800px !important;
+}
+
+#signStep4 .step-main-content {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+.author-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.remove-author-btn {
+  width: 32px;
+  height: 32px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.remove-author-btn:hover {
+  background: #b91c1c;
+  transform: scale(1.1);
+}
+
+/* Controles inline para el primer autor */
+.authors-controls-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.add-author-btn-inline {
+  width: 32px;
+  height: 32px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.add-author-btn-inline:hover {
+  background: var(--accent-color);
+  transform: scale(1.1);
+}
+
+.add-author-btn-inline:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.authors-count-inline {
+  font-size: 0.9em;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Ocultar los controles viejos */
+.authors-controls {
+  display: none;
+}
+
+.add-author-btn {
+  display: none;
+}
+
+.authors-count {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .authors-controls {
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .author-field-group {
+    padding: 10px;
+  }
+
+  .remove-author-btn {
+    top: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+  }
 }

@@ -275,6 +275,18 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (adminMenuItem) {
             adminMenuItem.style.display = "none";
         }
+
+        // Mostrar/ocultar pestaña de personalización PDF solo para owners
+        const personalizacionTab = document.querySelector('[data-tab="personalizacion-pdf"]');
+        if (user && personalizacionTab) {
+            if (user.rol === "owner") {
+                personalizacionTab.style.display = "flex";
+            } else {
+                personalizacionTab.style.display = "none";
+            }
+        } else if (personalizacionTab) {
+            personalizacionTab.style.display = "none";
+        }
     }
 
     function logoutUser() {

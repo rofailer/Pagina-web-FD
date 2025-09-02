@@ -122,6 +122,51 @@ app.use(authRoutes);
 app.use(keysRoutes);
 app.use('/api/pdf-template', pdfTemplateRoutes);
 
+// =================== Rutas para configuración de plantillas ===================
+
+// Configuración global de plantillas
+let globalTemplateConfig = {
+  selectedTemplate: 'template1',
+  logo: null
+};
+
+// Guardar configuración de plantilla (solo owners y admins)
+app.post('/api/save-template-config', authenticate, (req, res) => {
+  try {
+    if (req.userRole !== 'admin' && req.userRole !== 'owner') {
+      return res.status(403).json({
+        success: false,
+        error: 'Solo los propietarios y administradores pueden cambiar la configuración de plantillas'
+      });
+    }
+
+    const { template, logo } = req.body;
+
+    if (template) {
+      globalTemplateConfig.selectedTemplate = template;
+    }
+
+    if (logo !== undefined) {
+      globalTemplateConfig.logo = logo;
+    }
+
+    console.log('💾 Configuración de plantilla guardada por:', req.userRole, {
+      template: globalTemplateConfig.selectedTemplate,
+      hasLogo: !!globalTemplateConfig.logo
+    });
+
+    res.json({ success: true, message: 'Configuración guardada correctamente' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener configuración de plantilla
+app.get('/api/template-config', (req, res) => {
+  console.log('📋 Solicitud de configuración de plantilla:', globalTemplateConfig);
+  res.json(globalTemplateConfig);
+});
+
 // =================== Rutas de configuración ===================
 const configPath = path.join(__dirname, "../config.json");
 
@@ -152,43 +197,51 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
   const { renderPdfWithTemplate } = require("./utils/pdf");
   const configPath = path.join(__dirname, "../config/pdfTemplateConfig.json");
 
-  // Definición de los 4 diseños prediseñados y custom
+  // Definición de las 4 plantillas profesionales mejoradas
   const TEMPLATES = {
     template1: {
       // Clásico: título arriba, autores debajo, logo izq, institución der, avalador abajo
-      titulo: { x: 50, y: 700, size: 22 },
-      autores: { x: 50, y: 670, size: 16 },
-      institucion: { x: 400, y: 700, size: 14 },
-      logo: { x: 40, y: 750, width: 60, height: 60 },
-      avalador: { x: 50, y: 100, size: 14 },
-      fecha: { x: 400, y: 100, size: 12 }
+      titulo: { x: 80, y: 720, size: 24, color: [0.15, 0.15, 0.15] },
+      autores: { x: 80, y: 680, size: 16, color: [0.3, 0.3, 0.3] },
+      institucion: { x: 350, y: 720, size: 14, color: [0.1, 0.3, 0.7] },
+      logo: { x: 50, y: 750, width: 60, height: 60 },
+      avalador: { x: 80, y: 120, size: 14, color: [0.2, 0.2, 0.2] },
+      fecha: { x: 400, y: 120, size: 12, color: [0.5, 0.5, 0.5] },
+      // Agregar borde clásico
+      border: { style: 'classic', color: [0.1, 0.3, 0.7], width: 2 }
     },
     template2: {
       // Moderno: título centrado, logo grande arriba, autores e institución abajo
-      logo: { x: 250, y: 730, width: 100, height: 100 },
-      titulo: { x: 180, y: 650, size: 24 },
-      autores: { x: 180, y: 620, size: 16 },
-      institucion: { x: 180, y: 590, size: 14 },
-      avalador: { x: 180, y: 120, size: 14 },
-      fecha: { x: 400, y: 120, size: 12 }
+      logo: { x: 260, y: 720, width: 100, height: 100 },
+      titulo: { x: 180, y: 650, size: 26, color: [0.53, 0.36, 0.96] },
+      autores: { x: 180, y: 610, size: 16, color: [0.2, 0.2, 0.2] },
+      institucion: { x: 180, y: 580, size: 14, color: [0.66, 0.42, 0.97] },
+      avalador: { x: 180, y: 120, size: 14, color: [0.3, 0.3, 0.3] },
+      fecha: { x: 400, y: 120, size: 12, color: [0.5, 0.5, 0.5] },
+      // Borde moderno con acento
+      border: { style: 'modern', color: [0.53, 0.36, 0.96], width: 3 }
     },
     template3: {
       // Minimalista: solo título y autores centrados, logo pequeño
-      titulo: { x: 200, y: 700, size: 20 },
-      autores: { x: 200, y: 670, size: 14 },
-      logo: { x: 500, y: 750, width: 40, height: 40 },
-      institucion: { x: 200, y: 640, size: 12 },
-      avalador: { x: 200, y: 120, size: 12 },
-      fecha: { x: 400, y: 120, size: 10 }
+      titulo: { x: 200, y: 700, size: 22, color: [0.42, 0.45, 0.5] },
+      autores: { x: 200, y: 670, size: 14, color: [0.22, 0.26, 0.32] },
+      logo: { x: 500, y: 750, width: 50, height: 50 },
+      institucion: { x: 200, y: 640, size: 12, color: [0.42, 0.45, 0.5] },
+      avalador: { x: 200, y: 120, size: 12, color: [0.3, 0.3, 0.3] },
+      fecha: { x: 400, y: 120, size: 10, color: [0.6, 0.6, 0.6] },
+      // Borde minimalista
+      border: { style: 'minimal', color: [0.42, 0.45, 0.5], width: 2 }
     },
     template4: {
       // Elegante: título y logo centrados, autores e institución laterales
-      titulo: { x: 180, y: 700, size: 22 },
-      logo: { x: 250, y: 730, width: 80, height: 80 },
-      autores: { x: 50, y: 650, size: 14 },
-      institucion: { x: 400, y: 650, size: 14 },
-      avalador: { x: 180, y: 120, size: 14 },
-      fecha: { x: 400, y: 120, size: 12 }
+      titulo: { x: 180, y: 700, size: 24, color: [0.83, 0.69, 0.22] },
+      logo: { x: 260, y: 720, width: 80, height: 80 },
+      autores: { x: 80, y: 650, size: 14, color: [0.12, 0.16, 0.22] },
+      institucion: { x: 350, y: 650, size: 14, color: [0.83, 0.69, 0.22] },
+      avalador: { x: 180, y: 120, size: 14, color: [0.2, 0.2, 0.2] },
+      fecha: { x: 400, y: 120, size: 12, color: [0.5, 0.5, 0.5] },
+      // Borde elegante con oro
+      border: { style: 'elegant', color: [0.83, 0.69, 0.22], width: 2 }
     },
     custom: null // Se define en config
   };
@@ -241,28 +294,57 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
         [userId]
       );
 
-      // Leer configuración global de plantilla
+      // Leer configuración de plantilla (primero del frontend, luego del archivo)
       let templateConfig = { template: 'template1', customConfig: {} };
-      if (fs.existsSync(configPath)) {
-        try {
-          templateConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        } catch (e) { /* usar defaults */ }
+
+      // Usar plantilla del frontend si está disponible
+      if (req.body.template) {
+        templateConfig.template = req.body.template;
+        console.log('🎨 Plantilla recibida del frontend:', req.body.template);
+      } else {
+        console.log('⚠️ No se recibió plantilla del frontend, usando template1');
+        // Fallback a archivo de configuración
+        if (fs.existsSync(configPath)) {
+          try {
+            templateConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+          } catch (e) { /* usar defaults */ }
+        }
       }
-      let templateId = templateConfig.template || 'template1';
+
+      // Usar configuración global de plantillas
+      let templateId = globalTemplateConfig.selectedTemplate || 'template1';
       let fieldConfig = TEMPLATES[templateId] || TEMPLATES['template1'];
-      if (templateId === 'custom' && templateConfig.customConfig) {
-        fieldConfig = templateConfig.customConfig;
-      }
+
+      console.log('📋 Configuración de plantilla global:', {
+        templateId,
+        hasBorder: !!fieldConfig.border,
+        borderStyle: fieldConfig.border?.style
+      });
 
       // Datos a renderizar
       const data = {
-        titulo: req.body.titulo || req.file.originalname,
+        titulo: req.body.titulo || 'DOCUMENTO OFICIAL AVALADO',
         autores: req.body.autores || userInfo[0].nombre,
-        institucion: req.body.institucion || 'Universidad',
-        avalador: req.body.avalador || '',
-        fecha: new Date().toLocaleString(),
-        logo: req.body.logoPath ? path.join(__dirname, '../recursos', req.body.logoPath) : path.join(__dirname, '../recursos', 'usuario-de-perfil.png')
+        institucion: req.body.institucion || 'Universidad Nacional de Colombia',
+        avalador: `Avalado por: ${userInfo[0].nombre}`,
+        fecha: new Date().toLocaleDateString('es-CO', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        logo: globalTemplateConfig.logo || path.join(__dirname, '../recursos', 'logotipo-de-github.png'),
+        // Agregar datos de firma electrónica
+        signatureData: req.body.signatureData || null,
+        signatureMethod: req.body.signatureMethod || null,
+        // Agregar contenido básico del documento
+        contenido: 'Este documento ha sido procesado y avalado digitalmente a través del sistema de firmas electrónicas. La autenticidad e integridad del contenido está garantizada mediante tecnología criptográfica.'
       };
+
+      console.log('✍️ Datos de firma electrónica:', {
+        hasSignature: !!req.body.signatureData,
+        signatureMethod: req.body.signatureMethod,
+        signatureLength: req.body.signatureData ? req.body.signatureData.length : 0
+      });
 
       // Crear PDF base (hoja en blanco tamaño carta)
       const { PDFDocument } = require('pdf-lib');

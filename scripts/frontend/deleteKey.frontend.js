@@ -3,13 +3,10 @@
  * Maneja la validación de contraseña y eliminación segura de llaves
  */
 
-console.log('Cargando módulo de eliminación de llaves...');
-
 let currentKeyToDelete = null;
 
 // Función para mostrar el modal de eliminación - disponible globalmente
 window.showDeleteKeyModal = function (keyName) {
-    console.log(`showDeleteKeyModal llamada con keyName: ${keyName}`);
     currentKeyToDelete = keyName;
 
     const modal = document.getElementById('deleteKeyModal');

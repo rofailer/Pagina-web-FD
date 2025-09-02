@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="/css/noKeysmodal.css" />
     <link rel="stylesheet" href="/css/profileMenu.css" />
     <link rel="stylesheet" href="/css/templateResetModal.css" />
+    <link rel="stylesheet" href="/css/templateSystem.css" />
     <link rel="stylesheet" href="/css/tutorial.css" />
 
     <link rel="stylesheet" href="/css/sections/inicioSection.css" />
@@ -22,6 +23,9 @@
     <link rel="stylesheet" href="/css/sections/verificarSection.css" />
     <link rel="stylesheet" href="/css/sections/contactoSection.css" />
     <link rel="stylesheet" href="/css/sections/perfilSection.css" />
+    
+    <!-- CSS del Sistema PDF Profesional -->
+    <link rel="stylesheet" href="/css/professionalPDF.css" />
 
     <link rel="stylesheet" href="/css/Header/headerStyle.css" />
 
@@ -67,38 +71,15 @@
 
     <!-- Modal de confirmación para navegación -->
     <div id="navigationConfirmModal" class="navigation-confirm-modal">
+      <div class="navigation-confirm-backdrop"></div>
       <div class="navigation-confirm-content">
-        <span class="navigation-confirm-icon">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <line
-              x1="12"
-              y1="9"
-              x2="12"
-              y2="13"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <line
-              x1="12"
-              y1="17"
-              x2="12.01"
-              y2="17"
-              stroke="currentColor"
-              stroke-width="2"
-            />
+        <div class="navigation-confirm-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
-        </span>
+        </div>
         <h3 class="navigation-confirm-title">¿Estás seguro?</h3>
         <p class="navigation-confirm-message">
           Tienes un proceso en curso. Si continúas, perderás todos los cambios
@@ -1127,14 +1108,14 @@
         <div class="hero-section">
           <div class="hero-content">
             <h1 class="hero-title">
-              Firmas Digitales
+              Firmas Electrónicas
               <span class="hero-highlight">Seguras y Confiables</span>
             </h1>
             <p class="hero-description">
               Plataforma profesional para la autenticación criptográfica de
               documentos de investigación. Protege la integridad de trabajos de
               investigación, proyectos científicos y documentos profesionales
-              con tecnología de cifrado militar.
+              con tecnología de cifrado militar y firmas electrónicas.
             </p>
             <div class="hero-buttons">
               <button
@@ -1291,7 +1272,7 @@
                       />
                     </svg>
                   </span>
-                  <span class="sig-text">Firma Digital</span>
+                  <span class="sig-text">Firma Electrónica</span>
                   <span class="sig-status verified">
                     <svg
                       width="12"
@@ -1550,7 +1531,7 @@
               </div>
               <h3 class="feature-title">Validez Legal</h3>
               <p class="feature-description">
-                Firmas digitales con validez jurídica completa. Cumple con
+                Firmas electrónicas con validez jurídica completa. Cumple con
                 estándares internacionales y normativas de autenticación
                 digital.
               </p>
@@ -1637,7 +1618,7 @@
             <li class="timeline-item">
               <div class="timeline-side side-desc">
                 <p class="step-desc">
-                  Sube tu PDF y aplica tu firma digital. El sistema genera un
+                  Sube tu PDF y aplica tu firma electrónica. El sistema genera un
                   hash único y lo cifra con tu llave privada.
                 </p>
               </div>
@@ -1715,191 +1696,411 @@
       <section id="firmarSection">
         <h2>Firmar Documento</h2>
         <p class="section-desc">
-          Sube tu archivo PDF para firmarlo digitalmente y obtener un aval que
+          Sube tu archivo PDF para firmarlo electrónicamente y obtener un aval que
           garantiza su autenticidad e integridad.
         </p>
+
+        <!-- Indicador de pasos moderno -->
         <div id="signStepIndicator" class="step-indicator">
           <div class="step active" data-step="1" data-label="Seleccionar"></div>
           <div class="step" data-step="2" data-label="Firmar"></div>
-          <div class="step" data-step="3" data-label="Descargar"></div>
+          <div class="step" data-step="3" data-label="Firma Avalador"></div>
+          <div class="step" data-step="4" data-label="Descargar"></div>
         </div>
 
+        <!-- Paso 1: Selección de archivo -->
         <div id="signStep1" class="step-content">
-          <!-- Firmar -->
-          <form id="signForm">
-            <p class="input-title">Selecciona el documento PDF a firmar:</p>
-            <div class="file-input-container">
-              <div class="file-input-wrapper">
-                <input
-                  type="file"
-                  id="fileInput"
-                  class="file-input"
-                  accept=".pdf"
-                  aria-label="Seleccionar archivo PDF"
-                  required
-                />
-                <label for="fileInput" class="file-input-label">
-                  <div class="file-input-icon"></div>
-                  <span class="file-input-text"
-                    >Ningún archivo seleccionado</span
+          <div class="step-header-container">
+            <div class="step-icon-container">
+              <div class="step-icon-wrapper">
+                <svg class="step-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+                  <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                  <path d="M9 15l2 2 4-4" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+              </div>
+            </div>
+            <div class="step-header-content">
+              <h3 class="step-title">Seleccionar Documento</h3>
+              <p class="step-description">Sube el archivo PDF que deseas firmar electrónicamente</p>
+            </div>
+          </div>
+
+          <div class="step-main-content">
+            <form id="signForm">
+              <div class="upload-section">
+                <div class="upload-content">
+                  <h4 class="upload-title">Sube tu documento PDF</h4>
+                  <p class="upload-subtitle">El archivo debe tener la extensión .pdf</p>
+                  
+                  <div class="modern-file-input-container">
+                    <input
+                      type="file"
+                      id="fileInput"
+                      accept=".pdf"
+                      class="modern-file-input"
+                      aria-label="Seleccionar archivo PDF"
+                      required
+                    />
+                    <label for="fileInput" class="modern-file-label">
+                      <div class="file-label-content">
+                        <div class="file-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                          </svg>
+                        </div>
+                        <div class="file-text">
+                          <span class="file-main-text">Haz clic para seleccionar archivo</span>
+                          <span class="file-sub-text">o arrastra y suelta aquí</span>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div class="file-info" id="signFileInfo" style="display: none;">
+                    <div class="file-info-content">
+                      <div class="file-info-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+                          <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                      </div>
+                      <div class="file-details">
+                        <div class="file-name-row">
+                          <span class="file-name" id="signFileName">documento.pdf</span>
+                          <button type="button" class="file-remove-btn" onclick="clearSignFile()" title="Eliminar archivo">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                          </button>
+                        </div>
+                        <div class="file-size" id="signFileSize">0 KB</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Formulario de metadatos del documento -->
+              <div class="document-metadata">
+                <h4 class="upload-title">Información del documento</h4>
+                <div class="metadata-form">
+                  <div class="form-group">
+                    <label for="docTitle">Título del trabajo</label>
+                    <input
+                      type="text"
+                      id="docTitle"
+                      name="docTitle"
+                      placeholder="Título del documento (se detectará automáticamente)"
+                      required
+                    />
+                  </div>
+                  
+                  <!-- Sistema dinámico de autores -->
+                  <div class="form-group">
+                    <label>Autores del documento</label>
+                    <div class="authors-management">
+                      <div id="documentAuthorsContainer" class="authors-container">
+                        <!-- Los autores se generarán dinámicamente -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: center; margin-top: 24px">
+                <button
+                  type="button"
+                  id="acceptDocumentBtn"
+                  class="btn-primary"
+                  disabled
+                >
+                  Continuar
+                  <svg
+                    class="btn-icon-right"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
                   >
-                  <button class="file-input-button">Elegir archivo</button>
-                </label>
+                    <path
+                      d="M6 12h12M14 8l4 4-4 4"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
               </div>
-            </div>
-            <!-- Formulario de datos del documento ajustado -->
-            <div
-              class="doc-data-form"
-              style="
-                margin: 18px 0 0 0;
-                display: grid;
-                gap: 12px;
-                grid-template-columns: 1fr 1fr;
-              "
-            >
-              <div class="form-group" style="grid-column: 1/3">
-                <label for="docTitle">Título del trabajo</label>
-                <input
-                  type="text"
-                  id="docTitle"
-                  name="docTitle"
-                  placeholder="Título del documento"
-                  required
-                />
-              </div>
-              <div class="form-group" style="grid-column: 1/3">
-                <label for="docAuthors">Autores</label>
-                <input
-                  type="text"
-                  id="docAuthors"
-                  name="docAuthors"
-                  placeholder="Autor/es"
-                  required
-                />
-              </div>
-            </div>
-            <button type="button" id="acceptDocumentBtn">
-              <svg
-                class="btn-icon"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <path
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              Aceptar documento
-            </button>
-          </form>
+            </form>
+          </div>
         </div>
 
-        <!-- Paso 2: Firmar -->
+        <!-- Paso 2: Selección de llave -->
         <div id="signStep2" class="step-content" style="display: none">
-          <div class="key-selection-container">
-            <h3>Selecciona la llave para firmar:</h3>
-            <div id="keysList" class="keys-list">
-              <div class="loading-keys">
-                <span class="small-loader"></span>
-                <span>Cargando llaves...</span>
+          <div class="step-header-container">
+            <div class="step-icon-container">
+              <div class="step-icon-wrapper">
+                <svg class="step-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 10a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V10z" stroke="currentColor" stroke-width="2"/>
+                  <path d="M10 8V6a2 2 0 0 1 4 0v2" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="12" cy="15" r="1" fill="currentColor"/>
+                </svg>
               </div>
             </div>
+            <div class="step-header-content">
+              <h3 class="step-title">Seleccionar Llave</h3>
+              <p class="step-description">Elige la llave digital que usarás para firmar el documento electrónicamente</p>
+            </div>
           </div>
-          <div class="loader-container">
-            <button
-              id="signDocumentButton"
-              class="btn btn-primary"
-              style="display: none"
-            >
-              <svg
-                class="btn-icon"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
+
+          <div class="step-main-content">
+            <div class="key-selection-container">
+              <div id="keysList" class="keys-list">
+                <div class="loading-keys">
+                  <span class="small-loader"></span>
+                  <span>Cargando llaves...</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: center; margin-top: 24px; gap: 16px;">
+              <button
+                id="signDocumentButton"
+                class="btn-primary"
+                style="display: none"
+                disabled
               >
-                <path
-                  d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              Firmar documento
-            </button>
-            <div id="signLoading" style="display: none">
-              <span class="loader"></span>
-              <div class="loader-text">Firmando documento...</div>
+                <svg
+                  class="btn-icon"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <path
+                    d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Firmar documento
+              </button>
+              
+              <div id="signLoading" style="display: none" class="loading-container">
+                <span class="loader"></span>
+                <div class="loader-text">Firmando documento...</div>
+              </div>
             </div>
           </div>
         </div>
 
+        <!-- Paso 3: Firma Electrónica del Avalador -->
         <div id="signStep3" class="step-content" style="display: none">
-          <p>Documento firmado correctamente</p>
-          <div class="success-buttons-container">
-            <button id="downloadSignedBtn">
-              <svg
-                class="btn-icon"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <path
-                  d="M12 15.577l-3.539-3.538.707-.707L11.5 13.664V2h1v11.664l2.332-2.332.707.707L12 15.577z"
-                  fill="currentColor"
-                />
-                <path d="M4 17h16v2H4v-2z" fill="currentColor" />
-              </svg>
-              Descargar documento avalado
-            </button>
-            <button id="goToVerifyBtn" class="btn-secondary">
-              Ir a verificar
-              <svg
-                class="btn-icon-right"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <path
-                  d="M8.5 5l7 7-7 7"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </button>
+          <div class="step-header-container">
+            <div class="step-icon-container">
+              <div class="step-icon-wrapper">
+                <svg class="step-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 10l5 5 10-10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M3 21h18M3 17h18M3 13h18" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+                </svg>
+              </div>
+            </div>
+            <div class="step-header-content">
+              <h3 class="step-title">Firma Electrónica del Avalador</h3>
+              <p class="step-description">Proporciona la firma electrónica del avalador que validará el documento</p>
+            </div>
           </div>
-          <button
-            id="restartSignProcessBtn"
-            class="btn btn-secondary"
-            style="display: none"
-          >
-            <svg
-              class="btn-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <path
-                d="M20 11A8.1 8.1 0 0 0 4.5 9M4 5v4h4m-4 4a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            Volver a empezar
-          </button>
+
+          <div class="step-main-content">
+            <div class="signature-options-container">
+              <h4 class="upload-title">Añadir firma del avalador</h4>
+              <p class="upload-subtitle">Elige cómo quieres proporcionar la firma electrónica</p>
+              
+              <!-- Selector de método de firma -->
+              <div class="signature-method-selector">
+                <div class="method-option active" data-method="draw">
+                  <div class="method-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 19l7-7 3 3-7 7-3-3z" stroke="currentColor" stroke-width="2"/>
+                      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" stroke="currentColor" stroke-width="2"/>
+                      <path d="M2 2l7.586 7.586" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="11" cy="11" r="2" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </div>
+                  <div class="method-content">
+                    <h5>Dibujar Firma</h5>
+                    <p>Dibuja la firma con el mouse o touch</p>
+                  </div>
+                </div>
+                
+                <div class="method-option" data-method="upload">
+                  <div class="method-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+                      <path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </div>
+                  <div class="method-content">
+                    <h5>Subir Imagen</h5>
+                    <p>Sube una foto de la firma</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Área de dibujo de firma -->
+              <div id="drawSignatureArea" class="signature-area">
+                <div class="signature-canvas-container">
+                  <canvas id="signatureCanvas" width="600" height="200"></canvas>
+                  <div class="canvas-placeholder" id="canvasPlaceholder">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 19l7-7 3 3-7 7-3-3z" stroke="currentColor" stroke-width="2"/>
+                      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" stroke="currentColor" stroke-width="2"/>
+                      <path d="M2 2l7.586 7.586" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <p>Dibuja la firma del avalador aquí</p>
+                  </div>
+                </div>
+                <div class="signature-controls">
+                  <button type="button" id="clearSignature" class="btn-outline small">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Limpiar
+                  </button>
+                </div>
+              </div>
+
+              <!-- Área de subida de imagen -->
+              <div id="uploadSignatureArea" class="signature-area" style="display: none;">
+                <div class="modern-file-input-container">
+                  <input
+                    type="file"
+                    id="signatureImageInput"
+                    accept="image/*"
+                    class="modern-file-input"
+                    aria-label="Seleccionar imagen de firma"
+                  />
+                  <label for="signatureImageInput" class="modern-file-label">
+                    <div class="file-label-content">
+                      <div class="file-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                          <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+                          <path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                      </div>
+                      <div class="file-text">
+                        <span class="file-main-text">Seleccionar imagen de firma</span>
+                        <span class="file-sub-text">PNG, JPG o JPEG</span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="file-info" id="signatureImageInfo" style="display: none;">
+                  <div class="file-info-content">
+                    <div class="signature-preview">
+                      <img id="signatureImagePreview" alt="Vista previa de firma" />
+                    </div>
+                    <button type="button" class="file-remove-btn" onclick="clearSignatureImage()" title="Eliminar imagen">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: center; margin-top: 24px; gap: 16px;">
+              <button
+                id="acceptSignatureBtn"
+                class="btn-primary"
+                disabled
+              >
+                Continuar con firma
+                <svg
+                  class="btn-icon-right"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M6 12h12M14 8l4 4-4 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paso 4: Descarga (antes paso 3) -->
+        <div id="signStep4" class="step-content" style="display: none">
+          <div class="step-header-container">
+            <div class="step-icon-container">
+              <div class="step-icon-wrapper result-icon">
+                <svg class="step-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </div>
+            </div>
+            <div class="step-header-content">
+              <h3 class="step-title">¡Documento Firmado Exitosamente!</h3>
+              <p class="step-description">Tu documento ha sido firmado electrónicamente y está listo para compartir. Puedes descargarlo o verificar la integridad de la firma en cualquier momento.</p>
+            </div>
+          </div>
+
+          <div class="step-main-content">
+            <div class="success-content">
+              <div class="primary-actions">
+                <button id="downloadSignedBtn" class="btn-primary download-btn">
+                  <div class="btn-content">
+                    <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="btn-text">Descargar documento firmado</span>
+                  </div>
+                </button>
+                
+                <button id="goToVerifyBtn" class="btn-secondary verify-btn">
+                  <div class="btn-content">
+                    <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <span class="btn-text">Verificar firma</span>
+                  </div>
+                </button>
+              </div>
+
+              <div class="secondary-actions">
+                <button id="restartSignProcessBtn" class="btn-outline restart-btn">
+                  <div class="btn-content">
+                    <span class="btn-text">Firmar otro documento</span>
+                    <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M20 11A8.1 8.1 0 0 0 4.5 9M4 5v4h4m-4 4a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1908,7 +2109,7 @@
         <h2>Verificar Aval</h2>
         <p class="section-desc">
           Verifica la autenticidad y la integridad de un documento PDF avalado
-          digitalmente por un profesor o tutor.
+          electrónicamente por un profesor o tutor.
         </p>
 
         <!-- Indicador de pasos moderno -->
@@ -1920,169 +2121,198 @@
         </div>
 
         <!-- Paso 1: Selección de profesor -->
-        <div id="verifyStep1" class="step-content">
-          <div class="input-title">
-            Selecciona el Avalador que firmó el documento
-          </div>
-
-          <!-- Opción de detección automática -->
-          <div class="auto-detect-container">
-            <h4>
-              <svg
-                class="section-icon"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <circle
-                  cx="11"
-                  cy="11"
-                  r="8"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="m21 21-4.35-4.35"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              Detección Automática
-            </h4>
-            <p class="auto-detect-description">
-              Sube el documento firmado para detectar automáticamente quién lo
-              firmó
-            </p>
-            <div class="file-input-container">
-              <div class="file-input-wrapper">
-                <input
-                  type="file"
-                  id="autoDetectFile"
-                  accept=".pdf"
-                  class="file-input"
-                  aria-label="Seleccionar archivo PDF firmado para detección automática"
-                />
-                <label for="autoDetectFile" class="file-input-label">
-                  <div class="file-input-icon"></div>
-                  <span class="file-input-text">Subir documento firmado</span>
-                  <button class="file-input-button">Detectar firmante</button>
-                </label>
+        <div id="verifyStep1" class="step-content" style="display: none">
+          <div class="step-header-container">
+            <div class="step-icon-container">
+              <div class="step-icon-wrapper">
+                <svg class="step-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2"/>
+                </svg>
               </div>
             </div>
-            <div
-              id="autoDetectResult"
-              class="auto-detect-result"
-              style="display: none"
-            ></div>
+            <div class="step-header-content">
+              <h3 class="step-title">Método de Verificación</h3>
+              <p class="step-description">Selecciona el método de verificación que prefieres usar</p>
+            </div>
           </div>
 
-          <!-- Separador -->
-          <div class="option-separator">
-            <div class="separator-line"></div>
-            <span class="separator-text">O selecciona manualmente</span>
-            <div class="separator-line"></div>
-          </div>
-
-          <form id="verifyProfesorForm">
-            <!-- Sistema de búsqueda y filtrado de profesores -->
-            <div class="professor-search-container">
-              <div class="search-controls">
-                <div class="search-input-wrapper">
-                  <input
-                    type="text"
-                    id="professorSearchInput"
-                    placeholder="Buscar profesor por nombre..."
-                    class="search-input"
-                  />
-                  <span class="search-icon">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
+          <div class="step-main-content">
+            <div class="verify-switch-container">
+              <label class="verify-switch-label">
+                <span id="manualLabel" class="switch-label">Manual</span>
+                <input type="checkbox" id="verifyModeSwitch" checked />
+                <span class="verify-switch-slider"></span>
+                <span id="autoLabel" class="switch-label-active">Automático</span>
+              </label>
+            </div>
+          <div id="manualVerifyOption" style="display: none;">
+            <div class="verify-description">
+              <strong>Manual:</strong> Busca y selecciona manualmente el
+              avalador que firmó el documento.
+            </div>
+            <form id="verifyProfesorForm">
+              <!-- Sistema de búsqueda y filtrado de profesores -->
+              <div class="professor-search-container">
+                <div class="search-controls">
+                  <div class="search-input-wrapper">
+                    <input
+                      type="text"
+                      id="professorSearchInput"
+                      placeholder="Buscar profesor por nombre..."
+                      class="search-input"
+                    />
+                    <span class="search-icon">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle
+                          cx="11"
+                          cy="11"
+                          r="8"
+                          stroke="#9CA3AF"
+                          stroke-width="2"
+                        />
+                        <path
+                          d="m21 21-4.35-4.35"
+                          stroke="#9CA3AF"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                  <div class="filter-controls">
+                    <select id="sortOrder" class="sort-select">
+                      <option value="asc">A-Z</option>
+                      <option value="desc">Z-A</option>
+                    </select>
+                    <button
+                      type="button"
+                      id="clearSearch"
+                      class="clear-btn"
+                      title="Limpiar búsqueda"
                     >
-                      <circle
-                        cx="11"
-                        cy="11"
-                        r="8"
-                        stroke="#9CA3AF"
-                        stroke-width="2"
-                      />
-                      <path
-                        d="m21 21-4.35-4.35"
-                        stroke="#9CA3AF"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                      />
-                    </svg>
-                  </span>
+                      ×
+                    </button>
+                  </div>
                 </div>
-                <div class="filter-controls">
-                  <select id="sortOrder" class="sort-select">
-                    <option value="asc">A-Z</option>
-                    <option value="desc">Z-A</option>
-                  </select>
-                  <button
-                    type="button"
-                    id="clearSearch"
-                    class="clear-btn"
-                    title="Limpiar búsqueda"
-                  >
-                    ×
-                  </button>
+                <!-- Lista de profesores -->
+                <div class="professors-list" id="professorsList">
+                  <div class="loading-professors">
+                    <span class="loader-small"></span>
+                    <span>Cargando Avaladores...</span>
+                  </div>
+                </div>
                 </div>
               </div>
-
-              <!-- Lista de profesores -->
-              <div class="professors-list" id="professorsList">
-                <div class="loading-professors">
-                  <span class="loader-small"></span>
-                  <span>Cargando Avaladores...</span>
-                </div>
-              </div>
-
-              <!-- Avalador seleccionado -->
-              <div
-                class="selected-professor"
-                id="selectedProfessor"
-                style="display: none"
-              >
-                <div class="selected-label">Avalador seleccionado:</div>
-                <div class="selected-info">
-                  <span class="selected-name" id="selectedProfessorName"></span>
-                  <button
-                    type="button"
-                    id="changeProfessor"
-                    class="change-btn-circular"
-                    title="Cambiar profesor"
-                  >
-                    <img src="" alt="Cambiar" />
-                  </button>
-                </div>
-              </div>
+            </form>
+          </div>
+          
+          <!-- Sección automática -->
+          <div id="autoVerifyOption">
+            <div class="verify-description">
+              <strong>Automático:</strong> Sube el documento firmado y el
+              sistema detectará automáticamente quién lo firmó.
             </div>
-
+            <form id="autoDetectForm">
+              <div class="auto-detect-container">
+                <h4>
+                  <svg
+                    class="section-icon"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      cx="11"
+                      cy="11"
+                      r="8"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <path
+                      d="m21 21-4.35-4.35"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  Detección Automática
+                </h4>
+                <p class="auto-detect-description">
+                  Sube el documento firmado para detectar automáticamente quién
+                  lo firmó.
+                </p>
+                <div class="file-input-container">
+                  <div class="file-input-wrapper">
+                    <input
+                      type="file"
+                      id="autoDetectFile"
+                      accept=".pdf"
+                      class="file-input"
+                      aria-label="Seleccionar archivo PDF firmado para detección automática"
+                    />
+                    <label for="autoDetectFile" class="file-input-label">
+                      <div class="file-input-icon"></div>
+                      <span class="file-input-text"
+                        >Subir documento firmado</span
+                      >
+                      <button class="file-input-button">
+                        Detectar firmante
+                      </button>
+                    </label>
+                  </div>
+                </div>
+                <div
+                  id="autoDetectResult"
+                  class="auto-detect-result"
+                  style="display: none"
+                ></div>
+              </div>
+            </form>
+          </div>
+          
+          <!-- Campo de profesor seleccionado - Global para ambos modos -->
+          <div class="selected-professor" id="selectedProfessor" style="display: none; margin-top: 24px;">
+            <div class="selected-label">Avalador seleccionado:</div>
+            <div class="selected-info">
+              <span class="selected-name" id="selectedProfessorName"></span>
+              <button type="button" id="changeProfessor" class="change-btn-circular" title="Cambiar profesor">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1 4v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Botón global de continuar para ambos modos -->
+          <div style="display: flex; justify-content: center; margin-top: 24px">
             <button
               type="button"
-              id="acceptProfesorBtn"
+              id="continueVerifyStep1Btn"
               class="btn-primary"
               disabled
             >
               Continuar
               <svg
                 class="btn-icon-right"
-                width="16"
-                height="16"
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
+                aria-hidden="true"
               >
                 <path
-                  d="M8.5 5l7 7-7 7"
+                  d="M6 12h12M14 8l4 4-4 4"
                   stroke="currentColor"
                   stroke-width="2"
                   stroke-linecap="round"
@@ -2090,185 +2320,253 @@
                 />
               </svg>
             </button>
-          </form>
+          </div>
+          </div>
         </div>
 
         <!-- Paso 2: Selección de archivo avalado -->
         <div id="verifyStep2" class="step-content" style="display: none">
-          <div class="input-title">
-            Selecciona el archivo avalado (PDF firmado)
-          </div>
-          <form id="verifyAvalForm">
-            <div class="file-input-container">
-              <div class="file-input-wrapper">
-                <input
-                  type="file"
-                  id="signedFile"
-                  accept=".pdf"
-                  class="file-input"
-                  aria-label="Seleccionar archivo PDF firmado"
-                  required
-                />
-                <label for="signedFile" class="file-input-label">
-                  <div class="file-input-icon"></div>
-                  <span class="file-input-text"
-                    >Ningún archivo seleccionado</span
-                  >
-                  <button class="file-input-button">Elegir archivo</button>
-                </label>
+          <div class="step-header-container">
+            <div class="step-icon-container">
+              <div class="step-icon-wrapper">
+                <svg class="step-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M12 18v-6M9 15l3-3 3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </div>
             </div>
-            <button type="button" id="acceptAvalBtn" class="btn-primary">
-              Continuar
-              <svg
-                class="btn-icon-right"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <path
-                  d="M8.5 5l7 7-7 7"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </button>
-          </form>
+            <div class="step-header-content">
+              <h3 class="step-title">Documento Avalado</h3>
+              <p class="step-description">Selecciona el archivo PDF que fue firmado electrónicamente por el avalador</p>
+            </div>
+          </div>
+
+          <div class="step-main-content">
+            <form id="verifyAvalForm">
+              <div class="upload-section">
+                <div class="upload-content">
+                  <h4 class="upload-title">Sube tu documento firmado</h4>
+                  <p class="upload-subtitle">El archivo debe tener la extensión .pdf y contener la firma electrónica</p>
+                  
+                  <div class="modern-file-input-container">
+                    <input
+                      type="file"
+                      id="signedFile"
+                      accept=".pdf"
+                      class="modern-file-input"
+                      aria-label="Seleccionar archivo PDF firmado"
+                      required
+                    />
+                    <label for="signedFile" class="modern-file-label">
+                      <div class="file-label-content">
+                        <div class="file-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                          </svg>
+                        </div>
+                        <div class="file-text">
+                          <span class="file-main-text">Haz clic para seleccionar archivo</span>
+                          <span class="file-sub-text">o arrastra y suelta aquí</span>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div class="file-info" id="signedFileInfo" style="display: none;">
+                    <div class="file-info-content">
+                      <div class="file-info-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+                          <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                      </div>
+                      <div class="file-details">
+                        <div class="file-name" id="signedFileName"></div>
+                        <div class="file-size" id="signedFileSize"></div>
+                      </div>
+                      <button type="button" class="file-remove-btn" onclick="clearSignedFile()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="step-actions">
+                <button type="button" id="acceptAvalBtn" class="modern-btn primary" disabled>
+                  <span class="btn-content">
+                    <span class="btn-text">Continuar con verificación</span>
+                    <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
 
         <!-- Paso 3: Selección de archivo original -->
         <div id="verifyStep3" class="step-content" style="display: none">
-          <div class="input-title">Selecciona el archivo original (PDF)</div>
-          <form id="verifyOriginalForm">
-            <div class="file-input-container">
-              <div class="file-input-wrapper">
-                <input
-                  type="file"
-                  id="originalFile"
-                  accept=".pdf"
-                  class="file-input"
-                  aria-label="Seleccionar archivo PDF original"
-                  required
-                />
-                <label for="originalFile" class="file-input-label">
-                  <div class="file-input-icon"></div>
-                  <span class="file-input-text"
-                    >Ningún archivo seleccionado</span
-                  >
-                  <button class="file-input-button">Elegir archivo</button>
-                </label>
+          <div class="step-header-container">
+            <div class="step-icon-container">
+              <div class="step-icon-wrapper">
+                <svg class="step-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+                  <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="12" cy="15" r="1" fill="currentColor"/>
+                  <path d="M9 12h6" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
               </div>
             </div>
-            <button type="button" id="acceptOriginalBtn" class="btn-success">
-              <svg
-                class="btn-icon"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <path
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              Verificar documento
-            </button>
-          </form>
+            <div class="step-header-content">
+              <h3 class="step-title">Documento Original</h3>
+              <p class="step-description">Selecciona el archivo PDF original (sin firmar) para comparar con el documento avalado</p>
+            </div>
+          </div>
+
+          <div class="step-main-content">
+            <form id="verifyOriginalForm">
+              <div class="upload-section">
+                <div class="upload-content">
+                  <h4 class="upload-title">Sube el documento original</h4>
+                  <p class="upload-subtitle">Debe ser la versión sin firmar del documento que quieres verificar</p>
+                  
+                  <div class="modern-file-input-container">
+                    <input
+                      type="file"
+                      id="originalFile"
+                      accept=".pdf"
+                      class="modern-file-input"
+                      aria-label="Seleccionar archivo PDF original"
+                      required
+                    />
+                    <label for="originalFile" class="modern-file-label">
+                      <div class="file-label-content">
+                        <div class="file-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                          </svg>
+                        </div>
+                        <div class="file-text">
+                          <span class="file-main-text">Haz clic para seleccionar archivo</span>
+                          <span class="file-sub-text">o arrastra y suelta aquí</span>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div class="file-info" id="originalFileInfo" style="display: none;">
+                    <div class="file-info-content">
+                      <div class="file-info-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+                          <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                      </div>
+                      <div class="file-details">
+                        <div class="file-name" id="originalFileName"></div>
+                        <div class="file-size" id="originalFileSize"></div>
+                      </div>
+                      <button type="button" class="file-remove-btn" onclick="clearOriginalFile()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="verification-notice">
+                <div class="notice-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                </div>
+                <div class="notice-content">
+                  <h5>Verificación de integridad</h5>
+                  <p>Compararemos este documento original con el archivo firmado para verificar que no haya sido alterado.</p>
+                </div>
+              </div>
+
+              <div class="step-actions">
+                <button type="button" id="acceptOriginalBtn" class="modern-btn success" disabled>
+                  <span class="btn-content">
+                    <span class="btn-text">Iniciar verificación</span>
+                    <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                      <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
 
         <!-- Paso 4: Resultado de verificación -->
         <div id="verifyStep4" class="step-content" style="display: none">
-          <div id="verificationResult"></div>
-          <div
-            style="
-              margin-top: 20px;
-              display: flex;
-              flex-direction: column;
-              gap: 12px;
-              align-items: center;
-            "
-          >
-            <!-- Primera fila: Verificar otro documento y Intentar con otro profesor -->
-            <div class="button-group">
-              <button id="continueVerifyBtn" style="display: none">
-                <svg
-                  class="btn-icon"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <path
-                    d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
+          <div class="step-header-container">
+            <div class="step-icon-container">
+              <div class="step-icon-wrapper result-icon">
+                <svg class="step-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
                 </svg>
-                Verificar otro documento
-              </button>
-              <button
-                id="retryKeyBtn"
-                class="btn-warning"
-                style="display: none"
-              >
-                <svg
-                  class="btn-icon"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <path
-                    d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2m0-2v4h8V2"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M9 9l2 2 4-4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Intentar con otro profesor
-              </button>
+              </div>
             </div>
-            <!-- Segunda fila: Volver a empezar (centrado) -->
-            <div class="button-group">
-              <button
-                id="restartVerifyProcessBtn"
-                class="btn-secondary"
-                style="display: none"
-              >
-                <svg
-                  class="btn-icon"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <path
-                    d="M20 11A8.1 8.1 0 0 0 4.5 9M4 5v4h4m-4 4a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Volver a empezar
-              </button>
+            <div class="step-header-content">
+              <h3 class="step-title">Resultado de Verificación</h3>
+              <p class="step-description">Aquí se muestra el resultado completo del proceso de verificación</p>
+            </div>
+          </div>
+
+          <div class="step-main-content">
+            <div class="verification-result-container">
+              <div id="verificationResult"></div>
+            </div>
+
+            <div class="result-actions-container">
+              <div class="primary-actions">
+                <button id="continueVerifyBtn" class="modern-btn primary" style="display: none">
+                  <span class="btn-content">
+                    <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <span class="btn-text">Verificar otro documento</span>
+                  </span>
+                </button>
+                
+                <button id="retryKeyBtn" class="modern-btn warning" style="display: none">
+                  <span class="btn-content">
+                    <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M1 4v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3.51 15a9 9 0 102.13-9.36L1 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="btn-text">Intentar con otro avalador</span>
+                  </span>
+                </button>
+              </div>
+
+              <div class="secondary-actions">
+                <button id="restartVerifyProcessBtn" class="modern-btn secondary" style="display: none">
+                  <span class="btn-content">
+                    <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M1 4v6h6" stroke="currentColor" stroke-width="2"/>
+                      <path d="M3.51 15a9 9 0 102.13-9.36L1 10" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <span class="btn-text">Comenzar nuevo proceso</span>
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -3245,7 +3543,7 @@
               </div>
             </div>
 
-            <!-- TAB 5: PERSONALIZACIÓN PDF -->
+            <!-- TAB 5: PERSONALIZACIÓN PDF PROFESIONAL -->
             <div class="perfil-tab-content" id="tab-personalizacion-pdf">
               <div class="tab-content-header">
                 <h3>
@@ -3271,287 +3569,235 @@
                       stroke-linejoin="round"
                     />
                     <path
-                      d="M16 13H8M16 17H8M10 9H8"
+                      d="M9 12l2 2 4-4"
                       stroke="currentColor"
                       stroke-width="2"
                       stroke-linecap="round"
                     />
                   </svg>
-                  Plantilla PDF de Aval
+                  Plantillas PDF Profesionales
                 </h3>
                 <p>
-                  Configura el documento PDF que se usará como aval para todas
-                  las firmas
+                  Diseña documentos PDF profesionales con plantillas avanzadas, autores dinámicos y preview en tiempo real
                 </p>
               </div>
 
-              <div class="pdf-template-manager">
-                <!-- Selector visual de plantillas prediseñadas y custom -->
-                <div class="template-selector-section">
-                  <h4>Selecciona un diseño de plantilla</h4>
-                  <div
-                    id="pdfTemplatesSelector"
-                    class="pdf-templates-selector pdf-templates-selector-mb"
-                  >
-                    <!-- Aquí se renderizan los botones de los diseños desde JS -->
+              <!-- SISTEMA DE PLANTILLAS PROFESIONALES -->
+              <div class="professional-pdf-system">
+                
+                <!-- Selector de Plantillas Profesionales -->
+                <div class="template-selection-section">
+                  <div class="section-header-pro">
+                    <h4>Selecciona una plantilla profesional</h4>
+                    <p>Elige entre nuestros diseños profesionales predefinidos</p>
                   </div>
-                  <div
-                    id="customTemplateOptions"
-                    class="custom-template-animate pdf-advanced-custom"
-                  >
-                    <div class="pdf-advanced-header">
-                      <span class="pdf-advanced-title"
-                        >Personalización avanzada de PDF</span
-                      >
-                      <span class="pdf-advanced-desc"
-                        >Ajusta el diseño, colores, autores, firmas y logo de tu
-                        plantilla para un documento profesional y único.</span
-                      >
+                  
+                  <div class="professional-templates-grid">
+                    <div class="template-card" data-template="clasico">
+                      <div class="template-preview">
+                        <div class="template-preview-content">
+                          <div class="preview-header classic">
+                            <div class="preview-title">Documento Oficial</div>
+                            <div class="preview-subtitle">Certificación Académica</div>
+                          </div>
+                          <div class="preview-body">
+                            <div class="preview-line long"></div>
+                            <div class="preview-line medium"></div>
+                            <div class="preview-line short"></div>
+                            <div class="preview-signature-area">
+                              <div class="preview-signature"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="template-info">
+                        <h5>Clásico</h5>
+                        <p>Diseño tradicional y formal</p>
+                      </div>
                     </div>
-                    <form id="customTemplateForm" class="pdf-advanced-form">
-                      <div class="pdf-advanced-row">
-                        <div class="custom-field-group field-bg">
-                          <label for="fieldFontSize">Tamaño fuente</label>
-                          <input
-                            type="number"
-                            id="fieldFontSize"
-                            name="fieldFontSize"
-                            min="8"
-                            max="48"
-                            step="1"
-                            class="input-font-size"
-                          />
-                        </div>
-                        <div class="custom-field-group field-bg">
-                          <label for="fieldColor">Color</label>
-                          <input
-                            type="color"
-                            id="fieldColor"
-                            name="fieldColor"
-                            value="#222222"
-                            class="input-color"
-                          />
-                        </div>
-                        <div class="custom-field-group logo-group field-bg">
-                          <label for="pdfLogo">Logo (opcional)</label>
-                          <div class="logo-input-wrapper">
-                            <input
-                              type="file"
-                              id="pdfLogo"
-                              name="pdfLogo"
-                              accept="image/*"
-                              class="input-logo"
-                            />
+
+                    <div class="template-card" data-template="moderno">
+                      <div class="template-preview">
+                        <div class="template-preview-content">
+                          <div class="preview-header modern">
+                            <div class="preview-accent"></div>
+                            <div class="preview-title">Documento Profesional</div>
+                            <div class="preview-subtitle">Validación Digital</div>
+                          </div>
+                          <div class="preview-body">
+                            <div class="preview-line long"></div>
+                            <div class="preview-line medium"></div>
+                            <div class="preview-line short"></div>
+                            <div class="preview-signature-area modern">
+                              <div class="preview-signature"></div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div class="pdf-advanced-row">
-                        <div class="custom-field-group autores-group">
-                          <label>Autores (uno por línea)</label>
-                          <textarea
-                            id="customAutores"
-                            name="customAutores"
-                            rows="2"
-                            class="input-autores"
-                          ></textarea>
-                        </div>
-                        <div class="custom-field-group firmas-group">
-                          <label>Firmas</label>
-                          <div id="firmasControls" class="firmas-controls">
-                            <button
-                              type="button"
-                              id="addFirmaBtn"
-                              class="icon-btn btn-add-firma"
-                              title="Agregar firma"
-                            >
-                              +
-                            </button>
-                            <button
-                              type="button"
-                              id="removeFirmaBtn"
-                              class="icon-btn btn-remove-firma"
-                              title="Quitar firma"
-                            >
-                              -
-                            </button>
-                            <span id="firmasCount" class="firmas-count"></span>
+                      <div class="template-info">
+                        <h5>Moderno</h5>
+                        <p>Diseño contemporáneo y dinámico</p>
+                      </div>
+                    </div>
+
+                    <div class="template-card" data-template="minimalista">
+                      <div class="template-preview">
+                        <div class="template-preview-content">
+                          <div class="preview-header minimal">
+                            <div class="preview-title">CERTIFICADO</div>
+                            <div class="preview-line-accent"></div>
+                          </div>
+                          <div class="preview-body">
+                            <div class="preview-line long"></div>
+                            <div class="preview-line medium"></div>
+                            <div class="preview-signature-area minimal">
+                              <div class="preview-signature small"></div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div class="pdf-advanced-row">
-                        <button
-                          type="submit"
-                          class="control-btn primary pdf-advanced-save"
-                        >
-                          Guardar cambios
-                        </button>
+                      <div class="template-info">
+                        <h5>Minimalista</h5>
+                        <p>Limpio y elegante</p>
                       </div>
-                    </form>
+                    </div>
+
+                    <div class="template-card" data-template="elegante">
+                      <div class="template-preview">
+                        <div class="template-preview-content">
+                          <div class="preview-header elegant">
+                            <div class="preview-ornament"></div>
+                            <div class="preview-title">Documento de Honor</div>
+                            <div class="preview-ornament"></div>
+                          </div>
+                          <div class="preview-body">
+                            <div class="preview-line long"></div>
+                            <div class="preview-line medium"></div>
+                            <div class="preview-signature-area elegant">
+                              <div class="preview-signature"></div>
+                              <div class="preview-seal"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="template-info">
+                        <h5>Elegante</h5>
+                        <p>Sofisticado con detalles</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Control de aplicación -->
-                <div class="template-control-panel">
-                  <div class="control-header">
-                    <div class="control-icon">
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="3"
-                          stroke="currentColor"
-                          stroke-width="2"
+                <!-- Preview Canvas Preciso -->
+                <div class="canvas-preview-section">
+                  <div class="section-header-pro">
+                    <h4>Vista previa en tiempo real</h4>
+                    <p>Visualiza exactamente cómo se verá tu documento final</p>
+                  </div>
+                  
+                  <div class="canvas-preview-container">
+                    <canvas id="pdfPreviewCanvas" width="600" height="800"></canvas>
+                    <div class="canvas-overlay">
+                      <div class="canvas-loading">
+                        <div class="canvas-spinner"></div>
+                        <span>Generando preview...</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Personalización Avanzada -->
+                <div class="advanced-customization-section">
+                  <div class="section-header-pro">
+                    <h4>Personalización avanzada</h4>
+                    <p>Agrega logo institucional y ajusta la posición de elementos</p>
+                  </div>
+                  
+                  <div class="customization-grid">
+                    <!-- Logo Upload -->
+                    <div class="custom-group">
+                      <label>Logo institucional</label>
+                      <div class="logo-upload-area">
+                        <input type="file" id="logoInput" accept="image/*" class="logo-input">
+                        <label for="logoInput" class="logo-upload-label">
+                          <div class="logo-upload-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+                              <circle cx="10" cy="13" r="2" stroke="currentColor" stroke-width="2"/>
+                              <path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                          </div>
+                          <span>Subir logo</span>
+                        </label>
+                        <div class="logo-preview" id="logoPreview" style="display: none;">
+                          <!-- Contenido se llena dinámicamente -->
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Nombre de Institución -->
+                    <div class="custom-group">
+                      <label>Nombre de la institución</label>
+                      <div class="institution-input-area">
+                        <input 
+                          type="text" 
+                          id="institutionInput" 
+                          placeholder="Universidad Nacional" 
+                          class="institution-input"
+                          value="Universidad Nacional"
                         />
-                        <path
-                          d="M19.4 15a1.65 1.82 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        />
+                        <div class="input-icon">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Control de Aplicación -->
+                <div class="application-controls">
+                  <div class="controls-header">
+                    <div class="controls-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                        <path d="M19.4 15a1.65 1.82 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="2"/>
                       </svg>
                     </div>
-                    <div class="control-info">
-                      <h4>Control de Plantillas</h4>
-                      <p>Gestiona la aplicación de la configuración actual</p>
+                    <div class="controls-info">
+                      <h4>Configuración del sistema</h4>
+                      <p>Aplica los cambios a todos los documentos futuros</p>
                     </div>
                   </div>
 
-                  <div class="control-actions">
-                    <button
-                      class="control-btn primary"
-                      id="applyTemplateChangesBtn"
-                    >
-                      <span class="btn-icon">
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M20 6L9 17l-5-5"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        </svg>
-                      </span>
-                      <span class="btn-text">Aplicar Configuración</span>
+                  <div class="controls-actions">
+                    <button class="pro-btn primary" id="updateTemplateBtn">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" stroke-width="2"/>
+                        <path d="M7 3v5h8" stroke="currentColor" stroke-width="2"/>
+                        <path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                      Aplicar plantilla
                     </button>
-
-                    <button class="control-btn secondary" id="resetTemplateBtn">
-                      <span class="btn-icon">
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                          <path
-                            d="M3 3v5h5"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        </svg>
-                      </span>
-                      <span class="btn-text">Restablecer</span>
+                    
+                    <button class="pro-btn secondary" id="resetTemplateBtn">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2"/>
+                        <path d="M3 3v5h5" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                      Restablecer
                     </button>
                   </div>
 
-                  <div class="control-status" id="controlStatus">
-                    <div class="status-indicator inactive">
-                      <div class="indicator-dot"></div>
-                      <span>Esperando configuración</span>
+                  <div class="controls-status" id="configStatus">
+                    <div class="status-indicator">
+                      <div class="status-dot"></div>
+                      <span>Configuración lista para aplicar</span>
                     </div>
                   </div>
                 </div>
 
-                <!-- Acciones -->
-                <div
-                  class="template-actions"
-                  id="templateActions"
-                  style="display: none"
-                >
-                  <button class="btn-secondary" id="previewTemplateBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="3"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
-                    </svg>
-                    Vista Previa
-                  </button>
-                  <button class="btn-secondary" id="downloadTemplateBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <polyline
-                        points="7,10 12,15 17,10"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <line
-                        x1="12"
-                        y1="15"
-                        x2="12"
-                        y2="3"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                    Descargar
-                  </button>
-                  <button class="btn-danger" id="deleteTemplateBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <polyline
-                        points="3,6 5,6 21,6"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <path
-                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                    Eliminar Plantilla
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -3685,6 +3931,9 @@
     <script src="/scripts/frontend/profile.frontend.js"></script>
     <script src="/scripts/frontend/mobileHamburger.frontend.js"></script>
     <script src="/scripts/utils/tutorial.js"></script>
+    
+    <!-- Sistema PDF Profesional -->
+    <script src="/scripts/frontend/professionalPDF.js"></script>
 
     <!-- Sistema de Temas Dinámicos -->
     <script src="/scripts/utils/themeManager.js"></script>

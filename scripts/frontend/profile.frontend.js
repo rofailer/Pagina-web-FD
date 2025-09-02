@@ -543,20 +543,11 @@ function renderPdfTemplateSelector(currentTemplate) {
             }
         });
     });
-    // Preview SIEMPRE visible justo después del selector
+    // Preview SOLO visible en la sección de perfil cuando esté activa
     let preview = document.querySelector('.pdf-preview');
-    if (!preview) {
-        preview = document.createElement('div');
-        preview.className = 'pdf-preview';
-        preview.style.margin = '18px auto';
-        preview.style.maxWidth = '420px';
-        container.parentNode.insertBefore(preview, container.nextSibling);
-    } else {
-        // Si ya existe, asegúrate que esté en el lugar correcto
-        if (preview.parentNode !== container.parentNode || preview.previousSibling !== container) {
-            preview.remove();
-            container.parentNode.insertBefore(preview, container.nextSibling);
-        }
+    if (preview && !preview.closest('#tab-personalizacion-pdf')) {
+        // Si el preview existe pero no está en la sección de PDF, lo eliminamos
+        preview.remove();
     }
     // Siempre mostrar la sección de personalización de estilos y logo
     const customDiv = document.getElementById('customTemplateOptions');
@@ -995,26 +986,6 @@ function setupPdfTemplates() {
             }
         });
 }
-
-// Asegura que el div .pdf-preview existe en el DOM al cargar la personalización PDF
-function ensurePdfPreviewDiv() {
-    let preview = document.querySelector('.pdf-preview');
-    if (!preview) {
-        // Busca la sección de personalización PDF
-        const section = document.getElementById('customTemplateOptions') || document.body;
-        preview = document.createElement('div');
-        preview.className = 'pdf-preview';
-        preview.style.margin = '18px auto';
-        preview.style.maxWidth = '420px';
-        section.insertBefore(preview, section.firstChild);
-    }
-}
-
-// Llama a ensurePdfPreviewDiv al cargar la personalización
-const observer = new MutationObserver(() => ensurePdfPreviewDiv());
-observer.observe(document.body, { childList: true, subtree: true });
-// Llama una vez por si ya está cargado
-ensurePdfPreviewDiv();
 
 // Define la función para evitar ReferenceError
 function setupTemplateControlPanel() { }

@@ -139,18 +139,30 @@ document.addEventListener("DOMContentLoaded", () => {
                     window.verificacionEnCurso = false;
                     window.selectedProfesorId = null;
 
-                    // Reset file inputs visual state
-                    const signedFileInput = document.getElementById('signedFileInput');
-                    const originalFileInput = document.getElementById('originalFileInput');
+                    // Reset file inputs visual state usando los IDs correctos del diseño moderno
+                    const modernFileInputs = [
+                        'autoDetectFile',    // Paso 1 - detección automática
+                        'signedFile',        // Paso 2 - documento firmado
+                        'originalFile'       // Paso 3 - documento original
+                    ];
 
-                    [signedFileInput, originalFileInput].forEach(input => {
+                    modernFileInputs.forEach(inputId => {
+                        const input = document.getElementById(inputId);
                         if (input) {
                             input.value = '';
-                            const label = input.nextElementSibling;
-                            if (label) {
-                                const textSpan = label.querySelector('.file-input-text');
-                                if (textSpan) textSpan.textContent = 'Seleccionar archivo PDF';
-                                label.classList.remove('has-file', 'error');
+
+                            // Limpiar visualización específica para cada tipo
+                            if (inputId === 'autoDetectFile') {
+                                const label = document.querySelector(`label[for="${inputId}"]`);
+                                if (label) {
+                                    const textSpan = label.querySelector('.file-input-text');
+                                    if (textSpan) textSpan.textContent = 'Subir documento firmado';
+                                    label.classList.remove('has-file', 'auto-detected', 'error');
+                                }
+                            } else {
+                                // Para signedFile y originalFile (diseño moderno)
+                                const fileInfo = document.getElementById(`${inputId.replace('File', 'FileInfo')}`);
+                                if (fileInfo) fileInfo.style.display = 'none';
                             }
                         }
                     });
@@ -166,6 +178,11 @@ document.addEventListener("DOMContentLoaded", () => {
     function showSection(sectionKey) {
         // Ejecutar limpieza automática antes de cambiar de sección
         autoCleanFormsOnSectionChange(sectionKey);
+
+        // Ejecutar limpieza específica de formularios de firma si salimos de esa sección
+        if (window.cleanSignFormsOnSectionExit) {
+            window.cleanSignFormsOnSectionExit(sectionKey);
+        }
 
         hideAllSections();
         if (sections[sectionKey]) {
@@ -190,6 +207,12 @@ document.addEventListener("DOMContentLoaded", () => {
             if (window.loadUserKeys) {
                 window.loadUserKeys();
             }
+            // Validar estado del botón de continuar
+            if (window.validateDocumentStep) {
+                setTimeout(() => {
+                    window.validateDocumentStep();
+                }, 100);
+            }
         } else if (sectionKey === 'verificar') {
             // Cargar profesores automáticamente para la sección de verificar
             if (window.cargarProfesoresYMostrarPaso1) {
@@ -212,6 +235,51 @@ document.addEventListener("DOMContentLoaded", () => {
     window.firmaEnCurso = false;
     window.verificacionEnCurso = false;
 
+    // Función para determinar si estamos en un paso importante (más amplio que progreso real)
+    function isInImportantStep(processType) {
+        if (processType === 'firma') {
+            const currentStep = getCurrentSignStep();
+            const fileInput = document.getElementById('fileInput');
+            const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+            const hasSelectedKey = window.selectedKeyId !== null;
+            const isInProcess = window.firmaEnCurso;
+
+            // Paso importante si:
+            // - Está en proceso activo, O
+            // - Tiene archivo seleccionado, O  
+            // - Tiene llave seleccionada, O
+            // - Está en paso 2 o superior
+            return isInProcess || hasFile || hasSelectedKey || currentStep >= 2;
+        } else if (processType === 'verificacion') {
+            const currentStep = getCurrentVerifyStep();
+
+            // Usar los IDs correctos del diseño moderno
+            const autoDetectFile = document.getElementById('autoDetectFile');
+            const signedFile = document.getElementById('signedFile');
+            const originalFile = document.getElementById('originalFile');
+
+            const hasAutoDetectFile = autoDetectFile && autoDetectFile.files && autoDetectFile.files.length > 0;
+            const hasSignedFile = signedFile && signedFile.files && signedFile.files.length > 0;
+            const hasOriginalFile = originalFile && originalFile.files && originalFile.files.length > 0;
+            const hasSelectedProfesor = window.selectedProfesorId !== null || window.autoDetectedSigner !== null;
+            const isInProcess = window.verificacionEnCurso;
+
+            // Paso importante si:
+            // - Está en proceso activo, O
+            // - Tiene cualquier archivo seleccionado, O
+            // - Tiene profesor/avalador seleccionado, O
+            // - Está en paso 2 o superior, O
+            // - Está en modo automático y hay detección en curso
+            return isInProcess ||
+                hasAutoDetectFile ||
+                hasSignedFile ||
+                hasOriginalFile ||
+                hasSelectedProfesor ||
+                currentStep >= 2;
+        }
+        return false;
+    }
+
     // Función mejorada para detectar progreso real en procesos
     function hasRealProgress(processType) {
         if (processType === 'firma') {
@@ -229,21 +297,31 @@ document.addEventListener("DOMContentLoaded", () => {
             return isInProgress || (hasFile && hasSelectedKey && currentStep >= 2) || currentStep === 3 || isCompleted;
         } else if (processType === 'verificacion') {
             const currentStep = getCurrentVerifyStep();
-            const signedFileInput = document.getElementById('signedFileInput');
-            const originalFileInput = document.getElementById('originalFileInput');
-            const hasSignedFile = signedFileInput && signedFileInput.files && signedFileInput.files.length > 0;
-            const hasOriginalFile = originalFileInput && originalFileInput.files && originalFileInput.files.length > 0;
-            const hasSelectedProfesor = window.selectedProfesorId !== null;
+
+            // Usar los IDs correctos del diseño moderno
+            const autoDetectFile = document.getElementById('autoDetectFile');
+            const signedFile = document.getElementById('signedFile');
+            const originalFile = document.getElementById('originalFile');
+
+            const hasAutoDetectFile = autoDetectFile && autoDetectFile.files && autoDetectFile.files.length > 0;
+            const hasSignedFile = signedFile && signedFile.files && signedFile.files.length > 0;
+            const hasOriginalFile = originalFile && originalFile.files && originalFile.files.length > 0;
+            const hasSelectedProfesor = window.selectedProfesorId !== null || window.autoDetectedSigner !== null;
             const isInProgress = window.verificacionEnCurso;
             const isCompleted = isProcessCompleted('verificacion');
 
             // Hay progreso si:
             // 1. Está en proceso activo, O
-            // 2. Tiene ambos archivos y profesor (paso 3), O
+            // 2. Tiene ambos archivos (firmado y original) y profesor (paso 3+), O
             // 3. Está en paso 4 (resultado mostrado), O
-            // 4. Tiene al menos un archivo subido
-            return isInProgress || (hasSignedFile && hasOriginalFile && hasSelectedProfesor && currentStep >= 3) ||
-                currentStep === 4 || isCompleted || hasSignedFile || hasOriginalFile;
+            // 4. Tiene al menos un archivo subido (cualquiera de los tres tipos)
+            return isInProgress ||
+                (hasSignedFile && hasOriginalFile && hasSelectedProfesor && currentStep >= 3) ||
+                currentStep === 4 ||
+                isCompleted ||
+                hasAutoDetectFile ||
+                hasSignedFile ||
+                hasOriginalFile;
         }
         return false;
     }
@@ -271,11 +349,16 @@ document.addEventListener("DOMContentLoaded", () => {
             return 'configuración en progreso';
         } else if (processType === 'verificacion') {
             const currentStep = getCurrentVerifyStep();
-            const signedFileInput = document.getElementById('signedFileInput');
-            const originalFileInput = document.getElementById('originalFileInput');
-            const hasSignedFile = signedFileInput && signedFileInput.files && signedFileInput.files.length > 0;
-            const hasOriginalFile = originalFileInput && originalFileInput.files && originalFileInput.files.length > 0;
-            const hasSelectedProfesor = window.selectedProfesorId !== null;
+
+            // Usar los IDs correctos del diseño moderno
+            const autoDetectFile = document.getElementById('autoDetectFile');
+            const signedFile = document.getElementById('signedFile');
+            const originalFile = document.getElementById('originalFile');
+
+            const hasAutoDetectFile = autoDetectFile && autoDetectFile.files && autoDetectFile.files.length > 0;
+            const hasSignedFile = signedFile && signedFile.files && signedFile.files.length > 0;
+            const hasOriginalFile = originalFile && originalFile.files && originalFile.files.length > 0;
+            const hasSelectedProfesor = window.selectedProfesorId !== null || window.autoDetectedSigner !== null;
             const isCompleted = isProcessCompleted('verificacion');
 
             if (isCompleted) {
@@ -283,12 +366,13 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (currentStep === 4) {
                 return 'resultado de verificación generado';
             } else if (hasSignedFile && hasOriginalFile && hasSelectedProfesor) {
-                return 'archivos y profesor seleccionados';
+                return 'archivos y avalador seleccionados';
             } else {
                 const progressParts = [];
+                if (hasAutoDetectFile) progressParts.push('archivo para detección');
                 if (hasSignedFile) progressParts.push('documento firmado');
                 if (hasOriginalFile) progressParts.push('documento original');
-                if (hasSelectedProfesor) progressParts.push('profesor seleccionado');
+                if (hasSelectedProfesor) progressParts.push('avalador seleccionado');
                 return progressParts.length > 0 ? progressParts.join(' y ') : 'configuración en progreso';
             }
         }
@@ -307,27 +391,47 @@ document.addEventListener("DOMContentLoaded", () => {
         const message = modal.querySelector('.navigation-confirm-message');
         const icon = modal.querySelector('.navigation-confirm-icon');
 
-        // Verificar si realmente hay progreso que perder
+        // Verificar si hay progreso real o estamos en un paso importante
         const hasProgress = hasRealProgress(processType);
+        const isImportant = isInImportantStep(processType);
         const progressDetails = getProgressDetails(processType);
 
         if (processType === 'firma') {
             title.textContent = '¿Abandonar el proceso de firma?';
-            message.textContent = hasProgress ?
-                `Tienes ${progressDetails}. Si continúas, perderás todo el progreso.` :
-                'No hay progreso que perder.';
-            icon.textContent = '📝';
+            if (hasProgress) {
+                message.textContent = `Tienes ${progressDetails}. Si continúas, perderás todo el progreso.`;
+            } else if (isImportant) {
+                message.textContent = 'Estás en un paso importante del proceso de firma. ¿Estás seguro de que quieres salir?';
+            } else {
+                message.textContent = 'No hay progreso que perder.';
+            }
+            icon.innerHTML = `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
         } else if (processType === 'verificacion') {
             title.textContent = '¿Abandonar la verificación?';
-            message.textContent = hasProgress ?
-                `Tienes ${progressDetails}. Si continúas, perderás todo el progreso.` :
-                'No hay progreso que perder.';
-            icon.textContent = '🔍';
+            if (hasProgress) {
+                message.textContent = `Tienes ${progressDetails}. Si continúas, perderás todo el progreso.`;
+            } else if (isImportant) {
+                message.textContent = 'Estás en un paso importante del proceso de verificación. ¿Estás seguro de que quieres salir?';
+            } else {
+                message.textContent = 'No hay progreso que perder.';
+            }
+            // Actualizar con SVG en lugar de emoji
+            icon.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+            `;
         }
 
-        // Solo mostrar el modal si realmente hay progreso que perder
-        if (!hasProgress) {
-            // No hay progreso real, navegar directamente y limpiar
+        // Mostrar el modal si hay progreso real O estamos en un paso importante
+        if (!hasProgress && !isImportant) {
+            // No hay progreso ni paso importante, navegar directamente y limpiar
             autoCleanFormsOnSectionChange(targetSection);
             window.verificacionEnCurso = false;
             window.firmaEnCurso = false;
@@ -384,22 +488,46 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.verificacionEnCurso = false;
                 window.selectedProfesorId = null;
 
-                // Limpiar file inputs
-                const signedFileInput = document.getElementById('signedFileInput');
-                const originalFileInput = document.getElementById('originalFileInput');
+                // Limpiar también los file inputs modernos específicos por si acaso
+                const modernFileInputs = [
+                    'autoDetectFile',    // Paso 1 - detección automática
+                    'signedFile',        // Paso 2 - documento firmado
+                    'originalFile'       // Paso 3 - documento original
+                ];
 
-                [signedFileInput, originalFileInput].forEach(input => {
+                modernFileInputs.forEach(inputId => {
+                    const input = document.getElementById(inputId);
                     if (input) {
                         input.value = '';
-                        // Actualizar visualización del input
-                        const label = input.nextElementSibling;
-                        if (label) {
-                            const textSpan = label.querySelector('.file-input-text');
-                            if (textSpan) textSpan.textContent = 'Seleccionar archivo PDF';
-                            label.classList.remove('has-file', 'error');
+
+                        // Limpiar visualización específica para cada tipo
+                        if (inputId === 'autoDetectFile') {
+                            const label = document.querySelector(`label[for="${inputId}"]`);
+                            if (label) {
+                                const textSpan = label.querySelector('.file-input-text');
+                                if (textSpan) textSpan.textContent = 'Subir documento firmado';
+                                label.classList.remove('has-file', 'auto-detected', 'error');
+                            }
+                        } else {
+                            // Para signedFile y originalFile (diseño moderno)
+                            const fileInfo = document.getElementById(`${inputId.replace('File', 'FileInfo')}`);
+                            if (fileInfo) fileInfo.style.display = 'none';
                         }
                     }
                 });
+
+                // Limpiar estados visuales adicionales
+                const autoDetectResult = document.getElementById('autoDetectResult');
+                if (autoDetectResult) {
+                    autoDetectResult.style.display = 'none';
+                    autoDetectResult.innerHTML = '';
+                }
+
+                const autoDetectedProfessor = document.getElementById('autoDetectedProfessor');
+                if (autoDetectedProfessor) {
+                    autoDetectedProfessor.style.display = 'none';
+                    autoDetectedProfessor.innerHTML = '';
+                }
             }
 
             hideNavigationConfirmModal();
@@ -430,23 +558,30 @@ document.addEventListener("DOMContentLoaded", () => {
         const hash = window.location.hash.replace("#", "");
         const sectionKey = hash && sections[hash] ? hash : "inicio";
 
-        // Verificar si hay procesos en curso antes de navegar
+        // Verificar si hay procesos en curso O estamos en pasos importantes antes de navegar
         const hasProcessInProgress = window.verificacionEnCurso || window.firmaEnCurso;
         const isLeavingCurrentProcess =
             (window.verificacionEnCurso && sectionKey !== "verificar") ||
             (window.firmaEnCurso && sectionKey !== "firmar");
 
-        if (hasProcessInProgress && isLeavingCurrentProcess) {
-            // Prevenir la navegación y mostrar modal
-            const currentSection = Object.keys(sections).find(key =>
-                sections[key] && sections[key].style.display !== "none"
-            ) || "inicio";
+        // También verificar si estamos en pasos importantes
+        const currentSection = Object.keys(sections).find(key =>
+            sections[key] && sections[key].style.display !== "none"
+        ) || "inicio";
 
+        const isInImportantVerifyStep = currentSection === "verificar" &&
+            sectionKey !== "verificar" &&
+            isInImportantStep('verificacion');
+        const isInImportantSignStep = currentSection === "firmar" &&
+            sectionKey !== "firmar" &&
+            isInImportantStep('firma');
+
+        if ((hasProcessInProgress && isLeavingCurrentProcess) || isInImportantVerifyStep || isInImportantSignStep) {
             // Restaurar hash anterior temporalmente
             window.history.replaceState(null, null, `#${currentSection}`);
 
             // Mostrar modal de confirmación
-            const processType = window.firmaEnCurso ? 'firma' : 'verificacion';
+            const processType = (currentSection === "firmar" || window.firmaEnCurso) ? 'firma' : 'verificacion';
             showNavigationConfirmModal(sectionKey, processType);
             return;
         }
@@ -463,15 +598,27 @@ document.addEventListener("DOMContentLoaded", () => {
             links[key].addEventListener("click", (event) => {
                 event.preventDefault();
 
-                // Verificar si hay procesos en curso
+                // Verificar si hay procesos en curso O estamos en pasos importantes
                 const hasProcessInProgress = window.verificacionEnCurso || window.firmaEnCurso;
                 const isLeavingCurrentProcess =
                     (window.verificacionEnCurso && key !== "verificar") ||
                     (window.firmaEnCurso && key !== "firmar");
 
-                if (hasProcessInProgress && isLeavingCurrentProcess) {
+                // También verificar si estamos en pasos importantes
+                const currentSection = Object.keys(sections).find(sectionKey =>
+                    sections[sectionKey] && sections[sectionKey].style.display !== "none"
+                ) || "inicio";
+
+                const isInImportantVerifyStep = currentSection === "verificar" &&
+                    key !== "verificar" &&
+                    isInImportantStep('verificacion');
+                const isInImportantSignStep = currentSection === "firmar" &&
+                    key !== "firmar" &&
+                    isInImportantStep('firma');
+
+                if ((hasProcessInProgress && isLeavingCurrentProcess) || isInImportantVerifyStep || isInImportantSignStep) {
                     // Mostrar modal de confirmación personalizado
-                    const processType = window.firmaEnCurso ? 'firma' : 'verificacion';
+                    const processType = (currentSection === "firmar" || window.firmaEnCurso) ? 'firma' : 'verificacion';
                     showNavigationConfirmModal(key, processType);
                     return;
                 }
@@ -493,16 +640,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Función universal para verificar navegación
     function checkNavigationConfirmation(targetSection, event) {
-        // Verificar si hay procesos en curso
+        // Verificar si hay procesos en curso O estamos en pasos importantes
         const hasProcessInProgress = window.verificacionEnCurso || window.firmaEnCurso;
         const isLeavingCurrentProcess =
             (window.verificacionEnCurso && targetSection !== "verificar") ||
             (window.firmaEnCurso && targetSection !== "firmar");
 
-        if (hasProcessInProgress && isLeavingCurrentProcess) {
+        // También verificar si estamos en pasos importantes
+        const currentSection = Object.keys(sections).find(sectionKey =>
+            sections[sectionKey] && sections[sectionKey].style.display !== "none"
+        ) || "inicio";
+
+        const isInImportantVerifyStep = currentSection === "verificar" &&
+            targetSection !== "verificar" &&
+            isInImportantStep('verificacion');
+        const isInImportantSignStep = currentSection === "firmar" &&
+            targetSection !== "firmar" &&
+            isInImportantStep('firma');
+
+        if ((hasProcessInProgress && isLeavingCurrentProcess) || isInImportantVerifyStep || isInImportantSignStep) {
             event.preventDefault();
             // Mostrar modal de confirmación personalizado
-            const processType = window.firmaEnCurso ? 'firma' : 'verificacion';
+            const processType = (currentSection === "firmar" || window.firmaEnCurso) ? 'firma' : 'verificacion';
             showNavigationConfirmModal(targetSection, processType);
             return false;
         }
