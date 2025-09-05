@@ -1,0 +1,151 @@
+/* Estilos para la página 403 Forbidden */
+
+/* Importar colores de tema */
+@import url("./themeSelector.css");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    color-mix(in srgb, var(--primary-color) 70%, black 30%) 100%
+  );
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+}
+
+.error-container {
+  text-align: center;
+  max-width: 600px;
+  padding: 40px 20px;
+}
+
+.error-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+}
+
+.error-code {
+  font-size: 6rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  letter-spacing: -2px;
+}
+
+.error-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: -1px;
+}
+
+.forbidden-icon {
+  width: 120px;
+  height: 120px;
+  color: #fff;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.error-message {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 50px;
+  line-height: 1.6;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.back-button {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  padding: 15px 40px;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.back-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .error-header {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .error-code {
+    font-size: 4rem;
+  }
+
+  .error-title {
+    font-size: 2rem;
+  }
+
+  .forbidden-icon {
+    width: 80px;
+    height: 80px;
+  }
+
+  .error-message {
+    font-size: 1rem;
+    margin-bottom: 40px;
+  }
+
+  .back-button {
+    padding: 12px 30px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .error-container {
+    padding: 20px 15px;
+  }
+
+  .error-code {
+    font-size: 3rem;
+  }
+
+  .error-title {
+    font-size: 1.5rem;
+  }
+
+  .forbidden-icon {
+    width: 60px;
+    height: 60px;
+  }
+}

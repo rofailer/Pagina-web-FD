@@ -1,3 +1,6 @@
+/* Importar sistema de temas */
+@import url("./themeSelector.css");
+
 /* =========================
    ESTILO GLOBAL PRINCIPAL
    ========================= */
@@ -478,7 +481,7 @@ button:not(.clear-btn):not(.change-btn-circular):not(
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #f59e0b;
+  color: #6c757d;
 }
 
 .navigation-confirm-icon svg {

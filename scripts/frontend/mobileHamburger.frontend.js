@@ -297,6 +297,16 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderMobileMenu() {
         if (!mobileMenuList) return;
 
+        // Guardar el estado de la foto antes de regenerar el HTML
+        const currentAvatar = document.querySelector('.user-profile-avatar');
+        let currentAvatarHTML = null;
+        let hasPhoto = false;
+
+        if (currentAvatar) {
+            currentAvatarHTML = currentAvatar.innerHTML;
+            hasPhoto = currentAvatar.classList.contains('has-photo');
+        }
+
         mobileMenuList.innerHTML = "";
 
         const token = localStorage.getItem("token");
@@ -362,6 +372,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         mobileMenuList.innerHTML = html;
+
+        // Restaurar la foto del avatar si existía antes y el usuario sigue logueado
+        if (isLogged && currentAvatarHTML && hasPhoto) {
+            const newAvatar = document.querySelector('.user-profile-avatar');
+            if (newAvatar) {
+                newAvatar.innerHTML = currentAvatarHTML;
+                newAvatar.classList.add('has-photo');
+            }
+        } else if (isLogged) {
+            // Si no había foto guardada pero el usuario está logueado, intentar cargar desde backend
+            setTimeout(() => {
+                if (typeof loadUserProfilePhoto === 'function') {
+                    loadUserProfilePhoto();
+                }
+            }, 100);
+        }
     }
 
     // Llama a la función al cargar y cada vez que cambie el estado de sesión

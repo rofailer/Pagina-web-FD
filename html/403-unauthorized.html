@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>403 Forbidden - Sistema de Firmas Digitales</title>
+    <link rel="stylesheet" href="../css/403-page.css" />
+  </head>
+  <body>
+    <div class="error-container">
+      <div class="error-header">
+        <div class="error-code">403</div>
+        <svg
+          class="forbidden-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="m4.9 4.9 14.2 14.2" />
+        </svg>
+        <div class="error-title">FORBIDDEN</div>
+      </div>
+
+      <p class="error-message">
+        No tienes acceso a esta página. Se requiere autenticación para
+        continuar.
+      </p>
+
+      <a href="/" class="back-button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="m12 19-7-7 7-7" />
+          <path d="M19 12H5" />
+        </svg>
+        Volver al Inicio
+      </a>
+    </div>
+
+    <script>
+      // Aplicar el tema seleccionado por el usuario
+      (function () {
+        // Leer tema guardado en localStorage
+        const selectedTheme = localStorage.getItem("selectedTheme") || "orange";
+        const customColor = localStorage.getItem("customColor");
+
+        // Aplicar tema predefinido
+        if (selectedTheme && selectedTheme !== "custom") {
+          document.documentElement.setAttribute("data-theme", selectedTheme);
+        }
+
+        // Si hay color personalizado, aplicarlo
+        if (selectedTheme === "custom" && customColor) {
+          // Función para convertir hex a RGB
+          function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(
+              hex
+            );
+            return result
+              ? {
+                  r: parseInt(result[1], 16),
+                  g: parseInt(result[2], 16),
+                  b: parseInt(result[3], 16),
+                }
+              : null;
+          }
+
+          // Función para ajustar brillo de un color
+          function adjustBrightness(hex, percent) {
+            const rgb = hexToRgb(hex);
+            if (!rgb) return hex;
+
+            const amount = Math.round(2.55 * percent);
+            const r = Math.max(0, Math.min(255, rgb.r + amount));
+            const g = Math.max(0, Math.min(255, rgb.g + amount));
+            const b = Math.max(0, Math.min(255, rgb.b + amount));
+
+            return `#${((1 << 24) + (r << 16) + (g << 8) + b)
+              .toString(16)
+              .slice(1)}`;
+          }
+
+          // Aplicar color personalizado
+          const rgb = hexToRgb(customColor);
+          if (rgb) {
+            const root = document.documentElement;
+            root.style.setProperty("--primary-color", customColor);
+            root.style.setProperty(
+              "--primary-rgb",
+              `${rgb.r}, ${rgb.g}, ${rgb.b}`
+            );
+
+            // Generar colores secundarios
+            const secondary = adjustBrightness(customColor, -15);
+            const accent = adjustBrightness(customColor, -8);
+
+            root.style.setProperty("--secondary-color", secondary);
+            root.style.setProperty("--accent-color", accent);
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>

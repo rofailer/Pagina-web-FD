@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     // --- Variables de estado ---
     let currentStep = 1;
     let downloadUrl = null;
@@ -16,6 +16,17 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Variables para gestión de autores ---
     let documentAuthors = [''];
     const maxAuthors = 3;
+
+    // --- Cargar configuración global ---
+    try {
+        const configResponse = await fetch('/api/global-template-config');
+        if (configResponse.ok) {
+            window.globalTemplateConfig = await configResponse.json();
+            console.log('📋 Configuración global cargada en signSteps:', window.globalTemplateConfig);
+        }
+    } catch (error) {
+        console.warn('Warning: No se pudo cargar la configuración global:', error);
+    }
 
     // --- Elementos de pasos y barra de progreso ---
     const steps = [
@@ -439,11 +450,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Función para actualizar la línea de progreso ---
     function updateProgressLine(step) {
-        const progressPercentage = ((step - 1) / 3) * 100; // Ahora son 4 pasos
         const stepIndicator = document.getElementById("signStepIndicator");
 
         if (stepIndicator) {
-            stepIndicator.style.setProperty('--progress', `${progressPercentage}%`);
+            // Remover clases anteriores
+            stepIndicator.classList.remove('step-1', 'step-2', 'step-3', 'step-4');
+
+            // Agregar clase correspondiente al paso actual
+            stepIndicator.classList.add(`step-${step}`);
         }
     }    // --- Paso 1: Seleccionar y aceptar documento ---
     document.getElementById("acceptDocumentBtn").onclick = () => {
@@ -513,7 +527,7 @@ document.addEventListener("DOMContentLoaded", () => {
             file.name !== window.currentFileInfo.name;
     }
 
-    // --- Paso 2: Firmar documento ---
+    // --- Paso 2: Preparar documento para firma ---
     document.getElementById("signDocumentButton").onclick = () => {
         const token = localStorage.getItem("token");
         if (!token) {
@@ -527,106 +541,48 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        window.showKeyPasswordModal(async (keyPassword) => {
-            const fileInput = document.getElementById("fileInput");
-            const file = fileInput.files[0];
+        // Validar archivo antes de proceder
+        const fileInput = document.getElementById("fileInput");
+        const file = fileInput.files[0];
+        if (!validateFileForUpload(file)) {
+            return;
+        }
 
-            // Validar archivo antes de proceder
-            if (!validateFileForUpload(file)) {
-                return;
+        // Verificar si el archivo cambió desde la selección inicial
+        if (hasFileChanged(file)) {
+            showNotification("El archivo ha sido modificado. Por favor, selecciona nuevamente el archivo.", "error");
+            const fileInfo = document.getElementById("fileInfo");
+            if (fileInput && fileInfo) {
+                clearFileSelection(fileInput, fileInfo);
             }
+            showStep(1);
+            return;
+        }
 
-            // Verificar si el archivo cambió desde la selección inicial
-            if (hasFileChanged(file)) {
-                showNotification("El archivo ha sido modificado. Por favor, selecciona nuevamente el archivo.", "error");
-                // Limpiar el input y volver al paso 1
-                const fileInfo = document.getElementById("fileInfo");
-                if (fileInput && fileInfo) {
-                    clearFileSelection(fileInput, fileInfo);
-                }
-                showStep(1);
-                return;
-            }
+        // Pedir contraseña de la llave antes de proceder
+        if (typeof window.showKeyPasswordModal === 'function') {
+            window.showKeyPasswordModal((keyPassword) => {
+                // Preparar datos del documento con la contraseña
+                const docTitle = document.getElementById('docTitle');
+                const documentTitle = docTitle && docTitle.value.trim() ? docTitle.value.trim() : 'Documento';
 
-            // Mostrar loading con animación
-            document.getElementById("signDocumentButton").style.display = "none";
-            const loadingEl = document.getElementById("signLoading");
-            loadingEl.style.display = "";
-            loadingEl.style.animation = "fadeInDown 0.3s ease";
+                // Guardar datos temporalmente para uso posterior
+                window.tempDocumentData = {
+                    file: file,
+                    titulo: documentTitle,
+                    autores: documentAuthors.filter(author => author.trim()).join(', '),
+                    keyId: selectedKeyId,
+                    keyPassword: keyPassword, // ¡IMPORTANTE! Ahora incluimos la contraseña
+                    template: window.getSelectedTemplate ? window.getSelectedTemplate() : 'clasico', // ✅ MODERNIZADO
+                    institucion: window.globalTemplateConfig?.institutionName // Usar directamente la configuración global
+                };
 
-            const formData = new FormData();
-            formData.append("document", file);
-            formData.append("keyPassword", keyPassword);
-            formData.append("keyId", selectedKeyId);
-
-            // Obtener datos del formulario para incluir en el PDF
-            const docTitle = document.getElementById('docTitle');
-            if (docTitle && docTitle.value.trim()) {
-                formData.append("titulo", docTitle.value.trim());
-            }
-
-            // Obtener autores del sistema documentAuthors
-            if (documentAuthors && documentAuthors.length > 0) {
-                const authorsText = documentAuthors.filter(author => author.trim()).join(', ');
-                if (authorsText) {
-                    formData.append("autores", authorsText);
-                }
-            }
-
-            // Agregar institución por defecto (puedes cambiarlo si tienes un campo específico)
-            formData.append("institucion", "Universidad Nacional de Colombia");
-
-            // Agregar plantilla seleccionada
-            const selectedTemplate = window.getSelectedTemplate ? window.getSelectedTemplate() : 'template1';
-            formData.append("template", selectedTemplate);
-
-            // Agregar datos de firma electrónica si están disponibles
-            if (hasSignature && signatureData) {
-                formData.append("signatureData", signatureData);
-                formData.append("signatureMethod", signatureMethod);
-            }
-
-            setTimeout(async () => {
-                try {
-                    const response = await fetch("/sign-document", {
-                        method: "POST",
-                        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-                        body: formData,
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        downloadUrl = data.downloadUrl;
-                        document.getElementById("signLoading").style.display = "none";
-                        showNotification("¡Documento procesado exitosamente!", "success");
-                        setTimeout(() => {
-                            showStep(3); // Ir al paso de firma electrónica
-                            document.getElementById("restartSignProcessBtn").style.display = "inline-block";
-                        }, 500);
-                        // No marcar proceso terminado todavía, falta la firma electrónica
-                    } else {
-                        document.getElementById("signLoading").style.display = "none";
-                        const error = await response.json();
-                        showNotification(`${error.error || "Error al firmar el documento"}`, "error");
-                        if (response.status === 401 || response.status === 403) {
-                            if (window.showLoginModal) window.showLoginModal();
-                            localStorage.removeItem("token");
-                        }
-                        setTimeout(() => {
-                            showStep(1);
-                        }, 2000);
-                        window.firmaEnCurso = false;
-                    }
-                } catch (err) {
-                    document.getElementById("signLoading").style.display = "none";
-                    showNotification("Error al firmar el documento.", "error");
-                    setTimeout(() => {
-                        showStep(1);
-                    }, 2000);
-                    window.firmaEnCurso = false;
-                }
-            }, 1200);
-        });
+                showNotification("Documento preparado. Ahora agrega tu firma electrónica.", "info");
+                showStep(3); // Ir directamente al paso de firma electrónica
+            });
+        } else {
+            showNotification("Error: Sistema de contraseñas no disponible.", "error");
+        }
     };
 
     // --- Paso 3: Descargar documento firmado y volver a empezar ---
@@ -1431,29 +1387,69 @@ document.addEventListener("DOMContentLoaded", () => {
             acceptBtn.disabled = true;
             acceptBtn.innerHTML = 'Procesando...';
 
-            // Preparar datos de la firma electrónica
-            const signatureInfo = {
-                signatureData: signatureData,
+            // Verificar que tenemos los datos necesarios del paso 2
+            if (!tempDocumentData) {
+                throw new Error('No se encontraron los datos del documento preparados. Por favor, vuelve al paso anterior.');
+            }
+
+            // Preparar FormData para envío al servidor
+            const formData = new FormData();
+
+            // Añadir archivo (necesario recrear el file desde tempDocumentData)
+            formData.append('document', tempDocumentData.file);
+
+            // Añadir contraseña de la llave
+            formData.append('keyPassword', tempDocumentData.keyPassword);
+
+            // Añadir datos del documento
+            formData.append('titulo', tempDocumentData.titulo);
+            formData.append('autores', tempDocumentData.autores);
+            formData.append('institucion', tempDocumentData.institucion);
+
+            // Añadir datos de la firma electrónica
+            formData.append('signatureData', signatureData);
+            formData.append('signatureMethod', signatureMethod);
+
+            console.log('🚀 Generando PDF final con firma electrónica:', {
+                titulo: tempDocumentData.titulo,
+                autores: tempDocumentData.autores,
+                hasSignature: !!signatureData,
                 signatureMethod: signatureMethod
-            };
+            });
 
-            // Aquí normalmente enviarías la información al servidor
-            // Por ahora simularemos el procesamiento
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Realizar petición al servidor para generar PDF final con firma
+            const token = localStorage.getItem("token");
+            const response = await fetch('/sign-document', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}` // Agregar token de autorización
+                },
+                body: formData
+            });
 
-            showNotification('¡Firma electrónica procesada exitosamente!', 'success');
-            // NO marcar firmaEnCurso = false aquí, se marcará después de la primera descarga
+            const result = await response.json();
 
-            // Asegurar que downloadUrl esté disponible para el paso 4
-            console.log("📂 downloadUrl antes del paso 4:", downloadUrl);
+            if (!response.ok) {
+                throw new Error(result.error || 'Error en el servidor');
+            }
 
-            setTimeout(() => {
-                showStep(4); // Ir al paso final de descarga
-            }, 300);
+            if (result.success && result.downloadUrl) {
+                // Actualizar downloadUrl con el PDF que incluye la firma electrónica
+                downloadUrl = result.downloadUrl;
+
+                showNotification('¡Documento firmado digitalmente generado exitosamente!', 'success');
+                console.log("📂 PDF final con firma generado:", downloadUrl);
+
+                setTimeout(() => {
+                    showStep(4); // Ir al paso final de descarga
+                }, 300);
+            } else {
+                throw new Error('No se recibió URL de descarga del servidor');
+            }
 
         } catch (error) {
             console.error('Error al procesar firma electrónica:', error);
-            showNotification('Error al procesar la firma electrónica', 'error');
+            showNotification(`Error al procesar la firma electrónica: ${error.message}`, 'error');
 
             // Restaurar botón
             const acceptBtn = document.getElementById('acceptSignatureBtn');
@@ -1529,7 +1525,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function initTemplateSystem() {
         const templateCards = document.querySelectorAll('.template-card');
-        let selectedTemplate = 'template1'; // Template por defecto
+        let selectedTemplate = 'clasico'; // ✅ MODERNIZADO - Usar nombre directo
 
         templateCards.forEach(card => {
             card.addEventListener('click', function () {
@@ -1539,18 +1535,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Seleccionar nueva plantilla
                 this.classList.add('selected');
 
-                // Obtener tipo de plantilla
-                const templateType = this.getAttribute('data-template');
-
-                // Mapear nombres de plantillas
-                const templateMap = {
-                    'clasico': 'template1',
-                    'moderno': 'template2',
-                    'minimalista': 'template3',
-                    'ejecutivo': 'template4'
-                };
-
-                selectedTemplate = templateMap[templateType] || 'template1';
+                // ✅ MODERNIZADO - Usar directamente el nombre de la plantilla
+                selectedTemplate = this.getAttribute('data-template');
 
                 console.log('📄 Plantilla seleccionada:', selectedTemplate);
 
@@ -1578,7 +1564,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Función para obtener plantilla seleccionada
     window.getSelectedTemplate = function () {
-        return localStorage.getItem('selectedTemplate') || 'template1';
+        return localStorage.getItem('selectedTemplate') || 'clasico'; // ✅ MODERNIZADO
     };
 });
 
@@ -1610,3 +1596,45 @@ function improveDownloadExperience() {
         }
     };
 }
+
+// Función global para limpiar formularios cuando se hace logout
+window.cleanSignFormsOnLogout = function () {
+    console.log('🧹 Limpiando formularios de firma por logout...');
+
+    // Limpiar variables de estado
+    currentStep = 1;
+    downloadUrl = null;
+    selectedKeyId = null;
+    userKeys = [];
+    signatureData = null;
+    hasSignature = false;
+    documentAuthors = [''];
+    window.firmaEnCurso = false;
+
+    // Limpiar formularios
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) {
+        fileInput.value = '';
+        // Limpiar display del archivo
+        const fileDisplay = fileInput.closest('.file-input-container')?.querySelector('.file-input-display');
+        if (fileDisplay) {
+            fileDisplay.innerHTML = '<span class="placeholder">Seleccionar archivo PDF...</span>';
+        }
+    }
+
+    // Limpiar otros elementos del formulario
+    const authorInputs = document.querySelectorAll('.author-input');
+    authorInputs.forEach(input => {
+        if (input) input.value = '';
+    });
+
+    // Limpiar canvas de firma si existe
+    if (signatureCanvas && signatureCtx) {
+        signatureCtx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+    }
+
+    // Resetear pasos
+    showStep(1);
+
+    console.log('✅ Formularios de firma limpiados completamente');
+};

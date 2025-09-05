@@ -380,11 +380,21 @@
 }
 
 #pdfPreviewCanvas {
-  max-width: 100%;
-  height: auto;
+  width: 100%;
+  max-width: 600px;
+  height: 800px; /* Altura fija para evitar distorsión */
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   background: white;
+  /* ✅ RENDERIZADO DE MÁXIMA CALIDAD - SIN CONFLICTOS */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  -ms-interpolation-mode: bicubic;
+  object-fit: contain; /* Mantiene proporción sin distorsión */
+  /* ✅ PREVENIR PIXELACIÓN Y BORDES BORROSOS */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
 }
 
 .canvas-overlay {

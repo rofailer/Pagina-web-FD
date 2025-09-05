@@ -4,17 +4,17 @@ const path = require('path');
 
 const CONFIG_PATH = path.join(__dirname, '../../config/pdfTemplateConfig.json');
 const PREDEFINED_TEMPLATES = [
-    { id: 'template1', name: 'Diseño Clásico' },
-    { id: 'template2', name: 'Diseño Moderno' },
-    { id: 'template3', name: 'Diseño Minimalista' },
-    { id: 'template4', name: 'Diseño Elegante' },
+    { id: 'clasico', name: 'Diseño Clásico' },        // ✅ MODERNIZADO
+    { id: 'moderno', name: 'Diseño Moderno' },        // ✅ MODERNIZADO 
+    { id: 'minimalista', name: 'Diseño Minimalista' }, // ✅ MODERNIZADO
+    { id: 'ejecutivo', name: 'Diseño Ejecutivo' },     // ✅ MODERNIZADO
     { id: 'custom', name: 'Personalizado' }
 ];
 
 function getPdfTemplateConfig(req, res) {
     try {
         if (!fs.existsSync(CONFIG_PATH)) {
-            return res.json({ template: 'template1', customConfig: {} });
+            return res.json({ template: 'clasico', customConfig: {} }); // ✅ MODERNIZADO
         }
         const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
         res.json(config);

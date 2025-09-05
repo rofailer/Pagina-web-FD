@@ -10,7 +10,10 @@
   background-color: rgba(0, 0, 0, 0.5);
 }
 
-/* ===== ESTILOS PARA MODALES DE AUTENTICACIÓN BÁSICA ===== */
+/* Importar sistema de temas */
+@import url("./themeSelector.css");
+
+/* === ESTILOS PARA EL MODAL DE AUTENTICACIÓN === */
 /* Contenedor principal para login, registro y password */
 .auth-modal .modal-content {
   background-color: #fff;
@@ -39,13 +42,17 @@
 #loginModal .modal-content,
 #registerModal .modal-content,
 #keyPasswordModal .modal-content {
-  border-top: 4px solid var(--primary-color, #ff9545);
+  border-top: 4px solid var(--primary-color);
 }
 
 /* Botones de submit para modales de autenticación */
 .auth-modal button[type="submit"],
 .auth-modal button[type="button"] {
-  background: linear-gradient(135deg, var(--primary-color, #ff9545), #ff8533);
+  background: linear-gradient(
+    135deg,
+    var(--primary-color),
+    var(--secondary-color)
+  );
   color: white;
   border: none;
   padding: 12px 24px;
@@ -54,15 +61,19 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 3px 10px rgba(255, 149, 69, 0.3);
+  box-shadow: 0 3px 10px rgba(var(--primary-rgb), 0.3);
   width: 100%;
 }
 
 .auth-modal button[type="submit"]:hover,
 .auth-modal button[type="button"]:hover {
-  background: linear-gradient(135deg, #e8843e, #ed700f);
+  background: linear-gradient(
+    135deg,
+    var(--secondary-color),
+    var(--accent-color)
+  );
   transform: translateY(-1px);
-  box-shadow: 0 5px 15px rgba(255, 149, 69, 0.4);
+  box-shadow: 0 5px 15px rgba(var(--primary-rgb), 0.4);
 }
 
 /* ===== ESTILOS GENERALES DE MODAL ===== */
@@ -128,14 +139,14 @@
 }
 
 .auth-modal input:focus {
-  border-color: var(--primary-color, #ff9545);
+  border-color: var(--primary-color);
   outline: none;
   box-shadow: 0 0 8px rgba(255, 149, 69, 0.2);
 }
 
 /* Enlaces en modales */
 .auth-modal a {
-  color: var(--primary-color, #ff9545);
+  color: var(--primary-color);
   text-decoration: none;
   transition: filter 0.2s;
 }
@@ -157,6 +168,18 @@
 .auth-modal p {
   text-align: center;
   margin-top: 20px;
+}
+
+/* Estilo específico para información de acceso */
+.auth-modal p.login-info {
+  color: #666;
+  font-size: 14px;
+  background-color: #f8f9fa;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border-left: 3px solid var(--primary-color);
+  margin-top: 20px;
+  text-align: left;
 }
 
 /* ===== MODAL DE AUTENTICACIÓN REQUERIDA (signAuthRequiredModal) ===== */
@@ -202,7 +225,7 @@
   margin-bottom: 15px;
   display: block;
   animation: iconPulse 2s infinite;
-  color: var(--primary-color, #ff9545);
+  color: var(--primary-color);
 }
 
 #signAuthRequiredModal .modal-description {
@@ -243,30 +266,38 @@
 }
 
 #signAuthLoginBtn {
-  background: linear-gradient(135deg, #ed700f, #ff8533);
+  background: linear-gradient(
+    135deg,
+    var(--secondary-color),
+    var(--accent-color)
+  );
   color: white;
-  box-shadow: 0 4px 15px rgba(237, 112, 15, 0.3);
+  box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.3);
 }
 
 #signAuthLoginBtn:hover {
-  background: linear-gradient(135deg, #d65f0c, #ed700f);
+  background: linear-gradient(
+    135deg,
+    var(--accent-color),
+    var(--secondary-color)
+  );
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(237, 112, 15, 0.4);
+  box-shadow: 0 6px 20px rgba(var(--primary-rgb), 0.4);
 }
 
 #signAuthRegisterBtn {
   background: #f8f9fa;
   color: #6c757d;
-  border: 2px solid var(--primary-color, #ff9545);
-  box-shadow: 0 3px 10px rgba(255, 149, 69, 0.2);
+  border: 2px solid var(--primary-color);
+  box-shadow: 0 3px 10px rgba(var(--primary-rgb), 0.2);
 }
 
 #signAuthRegisterBtn:hover {
   background: #e9ecef;
-  border-color: #ed700f;
+  border-color: var(--secondary-color);
   color: #495057;
   transform: translateY(-1px);
-  box-shadow: 0 5px 15px rgba(255, 149, 69, 0.3);
+  box-shadow: 0 5px 15px rgba(var(--primary-rgb), 0.3);
 }
 
 /* ===== RESPONSIVE DESIGN ===== */

@@ -115,20 +115,20 @@ function loadCurrentTemplate() {
     if (confirmBtn) {
         confirmBtn.onclick = async function () {
             setControlStatus('applying');
-            // Restablecer: volver a plantilla clásica (template1)
+            // ✅ MODERNIZADO - Restablecer a plantilla clásica
             const res = await fetch('/api/pdf-template/config', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify({ template: 'template1' })
+                body: JSON.stringify({ template: 'clasico' })
             });
             if (res.ok) {
                 setControlStatus('success');
                 showNotification('Plantilla restablecida a Clásico', 'success');
                 // Actualiza el selector visualmente a Clásico
-                renderPdfTemplateSelector('template1');
+                renderPdfTemplateSelector('clasico');
                 setupPdfTemplates();
             } else {
                 setControlStatus('error');
@@ -144,63 +144,330 @@ function loadCurrentTemplate() {
 }
 
 // ===========================
-// DATOS PERSONALES
+// DATOS PERSONALES - VERSIÓN EXPANDIDA CON BACKEND
 // ===========================
+
+// Variables globales para datos del usuario
+let currentUserData = {};
+
+// Función para seleccionar foto de perfil
 function selectProfilePhoto() {
     document.getElementById('profilePhotoInput').click();
 }
 
-function handleProfilePhoto(event) {
+// Función para manejar la subida de foto
+async function handleProfilePhoto(event) {
     const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            const photoContainer = document.querySelector('.perfil-photo');
-            photoContainer.innerHTML = `<img src="${e.target.result}" alt="Foto de perfil">`;
-        };
-        reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+        showNotification('Por favor selecciona un archivo de imagen válido', 'error');
+        return;
+    }
+
+    // Validar tamaño (5MB máximo)
+    if (file.size > 5 * 1024 * 1024) {
+        showNotification('La imagen no puede ser mayor a 5MB', 'error');
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('photo', file);
+
+        const response = await fetch('/api/profile/photo', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Actualizar la imagen en la interfaz
+            updateProfilePhoto(data.photoPath);
+
+            showNotification('Foto de perfil actualizada correctamente', 'success');
+        } else {
+            throw new Error(data.error || 'Error al subir la foto');
+        }
+
+    } catch (error) {
+        console.error('Error al subir foto:', error);
+        showNotification(error.message || 'Error al subir la foto de perfil', 'error');
     }
 }
 
-function loadUserData() {
-    // Cargar datos del usuario desde localStorage o backend
-    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+// Función para actualizar la foto de perfil en toda la interfaz
+function updateProfilePhoto(photoPath) {
+    // 1. Actualizar en la sección de perfil (.perfil-photo)
+    const photoContainer = document.querySelector('.perfil-photo');
+    if (photoContainer) {
+        photoContainer.innerHTML = `<img src="${photoPath}" alt="Foto de perfil">`;
+    }
 
-    const userNameInput = document.getElementById('userName');
-    const userEmailInput = document.getElementById('userEmail');
-    const userOrganizationInput = document.getElementById('userOrganization');
-    const userBioInput = document.getElementById('userBio');
+    // 2. Actualizar en el menú móvil (.user-profile-avatar)
+    const mobileAvatar = document.querySelector('.user-profile-avatar');
+    if (mobileAvatar) {
+        if (photoPath) {
+            mobileAvatar.innerHTML = `<img src="${photoPath}" alt="Avatar de usuario">`;
+            mobileAvatar.classList.add('has-photo');
+        } else {
+            // Sin foto: mostrar SVG por defecto
+            mobileAvatar.innerHTML = '';
+            mobileAvatar.classList.remove('has-photo');
+        }
+    }
 
-    if (userNameInput && userData.name) userNameInput.value = userData.name;
-    if (userEmailInput && userData.email) userEmailInput.value = userData.email;
-    if (userOrganizationInput && userData.organization) userOrganizationInput.value = userData.organization;
-    if (userBioInput && userData.bio) userBioInput.value = userData.bio;
+    // 3. Actualizar en el dropdown del perfil (desktop) si existe
+    const desktopAvatar = document.querySelector('.profile-avatar-large');
+    if (desktopAvatar) {
+        desktopAvatar.src = photoPath;
+    }
 
-    if (userData.photo) {
-        const photoContainer = document.querySelector('.perfil-photo');
-        if (photoContainer) {
-            photoContainer.innerHTML = `<img src="${userData.photo}" alt="Foto de perfil">`;
+    // 4. Actualizar avatar pequeño del header si existe
+    const headerAvatar = document.querySelector('.profile-avatar-small');
+    if (headerAvatar) {
+        headerAvatar.src = photoPath;
+    }
+}
+
+// Exponer la función globalmente para uso en otros módulos
+window.updateProfilePhoto = updateProfilePhoto;
+
+// Función para cargar datos del usuario desde el backend
+async function loadUserData() {
+    // Verificar si hay un token válido antes de hacer la request
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.log('No hay token de autenticación, saltando carga de datos del usuario');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/profile', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                console.log('Token inválido o expirado, limpiando localStorage');
+                localStorage.removeItem('token');
+                return;
+            }
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            currentUserData = data.user;
+            const preferences = data.preferences;
+            const stats = data.stats;
+
+            // Llenar campos de datos personales
+            fillFormFields(currentUserData);
+
+            // Actualizar foto de perfil si existe
+            if (currentUserData.foto_perfil) {
+                updateProfilePhoto(currentUserData.foto_perfil);
+            }
+
+            // Actualizar estadísticas si existen elementos en el DOM
+            updateUserStats(stats);
+
+        } else {
+            throw new Error(data.error || 'Error al cargar datos del usuario');
+        }
+
+    } catch (error) {
+        console.error('Error al cargar datos del usuario:', error);
+        // Solo mostrar notificación si hay un token (evita spam en usuarios no logueados)
+        if (localStorage.getItem('token')) {
+            showNotification('Error al cargar los datos del perfil', 'error');
         }
     }
 }
 
-function saveUserData() {
-    const userNameInput = document.getElementById('userName');
-    const userEmailInput = document.getElementById('userEmail');
-    const userOrganizationInput = document.getElementById('userOrganization');
-    const userBioInput = document.getElementById('userBio');
+// Función para llenar los campos del formulario
+function fillFormFields(userData) {
+    console.log('📝 Llenando campos del formulario con datos:', userData);
 
-    const userData = {
-        name: userNameInput ? userNameInput.value : '',
-        email: userEmailInput ? userEmailInput.value : '',
-        organization: userOrganizationInput ? userOrganizationInput.value : '',
-        bio: userBioInput ? userBioInput.value : '',
-        photo: document.querySelector('.perfil-photo img')?.src || ''
+    const fieldMappings = {
+        'userName': userData.nombre_completo || userData.nombre || '',
+        'userEmail': userData.email || '',
+        'userOrganization': userData.organizacion || '',
+        'userBio': userData.biografia || '',
+        'userPhone': userData.telefono || '',
+        'userAddress': userData.direccion || '',
+        'userPosition': userData.cargo || '',
+        'userDepartment': userData.departamento || '',
+        'userDegree': userData.grado_academico || '',
+        'userTimezone': userData.zona_horaria || 'America/Bogota',
+        'userLanguage': userData.idioma || 'es'
     };
 
-    localStorage.setItem('userData', JSON.stringify(userData));
-    showNotification('Datos personales guardados correctamente', 'success');
+    console.log('🎯 Mapeando campos:', fieldMappings);
+
+    for (const [fieldId, value] of Object.entries(fieldMappings)) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.value = value;
+            console.log(`✅ Campo ${fieldId} llenado con: "${value}"`);
+        } else {
+            console.warn(`⚠️ Campo ${fieldId} no encontrado en el DOM`);
+        }
+    }
+
+    // Llenar campos de configuración
+    const emailNotifications = document.getElementById('emailNotifications');
+    if (emailNotifications) {
+        emailNotifications.checked = userData.notificaciones_email || false;
+        console.log(`📧 Notificaciones email: ${emailNotifications.checked}`);
+    }
+
+    const twoFactorAuth = document.getElementById('twoFactorAuth');
+    if (twoFactorAuth) {
+        twoFactorAuth.checked = userData.autenticacion_2fa || false;
+        console.log(`🔐 Autenticación 2FA: ${twoFactorAuth.checked}`);
+    }
+
+    console.log('✅ Formulario llenado completamente');
 }
+
+// Función para actualizar estadísticas del usuario
+function updateUserStats(stats) {
+    const statsElements = {
+        'totalKeysCount': stats.total_keys || 0,
+        'activeKeysCount': stats.active_keys || 0,
+        'expiredKeysCount': stats.expired_keys || 0
+    };
+
+    for (const [elementId, value] of Object.entries(statsElements)) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = value;
+        }
+    }
+}
+
+// Función para guardar datos personales en el backend
+async function saveUserData() {
+    try {
+        // Recopilar datos del formulario
+        const personalData = {
+            nombre_completo: document.getElementById('userName')?.value || '',
+            email: document.getElementById('userEmail')?.value || '',
+            organizacion: document.getElementById('userOrganization')?.value || '',
+            biografia: document.getElementById('userBio')?.value || '',
+            telefono: document.getElementById('userPhone')?.value || '',
+            direccion: document.getElementById('userAddress')?.value || '',
+            cargo: document.getElementById('userPosition')?.value || '',
+            departamento: document.getElementById('userDepartment')?.value || '',
+            grado_academico: document.getElementById('userDegree')?.value || ''
+        };
+
+        // Validación básica
+        if (!personalData.nombre_completo.trim()) {
+            showNotification('El nombre completo es obligatorio', 'error');
+            return;
+        }
+
+        if (personalData.email && !isValidEmail(personalData.email)) {
+            showNotification('Por favor ingresa un correo electrónico válido', 'error');
+            return;
+        }
+
+        const response = await fetch('/api/profile/personal', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(personalData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Datos personales guardados correctamente', 'success');
+            // Recargar datos para mantener sincronización
+            await loadUserData();
+        } else {
+            throw new Error(data.error || 'Error al guardar datos');
+        }
+
+    } catch (error) {
+        console.error('Error al guardar datos personales:', error);
+        showNotification(error.message || 'Error al guardar los datos personales', 'error');
+    }
+}
+
+// Función para guardar configuraciones
+async function saveUserSettings() {
+    try {
+        const settingsData = {
+            zona_horaria: document.getElementById('userTimezone')?.value || 'America/Bogota',
+            idioma: document.getElementById('userLanguage')?.value || 'es',
+            notificaciones_email: document.getElementById('emailNotifications')?.checked || false,
+            autenticacion_2fa: document.getElementById('twoFactorAuth')?.checked || false
+        };
+
+        const response = await fetch('/api/profile/settings', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settingsData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Configuraciones guardadas correctamente', 'success');
+        } else {
+            throw new Error(data.error || 'Error al guardar configuraciones');
+        }
+
+    } catch (error) {
+        console.error('Error al guardar configuraciones:', error);
+        showNotification(error.message || 'Error al guardar las configuraciones', 'error');
+    }
+}
+
+// Función de validación de email
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+// Función para inicializar la sección de datos personales
+function initializePersonalDataSection() {
+    // Cargar datos del usuario al inicializar
+    loadUserData();
+
+    // Agregar event listeners para guardado automático (opcional)
+    const saveButton = document.querySelector('.save-btn[onclick="saveUserData()"]');
+    if (saveButton) {
+        saveButton.onclick = saveUserData;
+    }
+}
+
+// Llamar a la inicialización cuando se cargue el perfil
+document.addEventListener('DOMContentLoaded', function () {
+    // Solo inicializar si estamos en la sección de perfil
+    if (document.getElementById('perfilSection')) {
+        setTimeout(initializePersonalDataSection, 1000); // Pequeño delay para asegurar que todo esté cargado
+    }
+});
 
 // ===========================
 // GESTIÓN DE LLAVES
@@ -227,11 +494,19 @@ async function loadUserKeys() {
     const keysList = document.getElementById('profileKeysList');
     if (!keysList) return;
 
+    // Verificar si hay un token válido antes de hacer la request
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.log('No hay token de autenticación, saltando carga de llaves');
+        keysList.innerHTML = '<p class="no-keys-message">Inicia sesión para ver tus llaves.</p>';
+        return;
+    }
+
     try {
         const response = await fetch('/list-keys', {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'Authorization': `Bearer ${token}`
             }
         });
 
@@ -248,6 +523,12 @@ async function loadUserKeys() {
                 });
             }
         } else {
+            if (response.status === 401 || response.status === 403) {
+                console.log('Token inválido o expirado, limpiando localStorage');
+                localStorage.removeItem('token');
+                keysList.innerHTML = '<p class="no-keys-message">Sesión expirada. Inicia sesión nuevamente.</p>';
+                return;
+            }
             keysList.innerHTML = '<p class="error-message">Error al cargar las llaves.</p>';
         }
     } catch (error) {
@@ -507,10 +788,10 @@ function handleLogo(event) {
 
 function renderPdfTemplateSelector(currentTemplate) {
     const templates = [
-        { id: 'template1', name: 'Clásico', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><line x1="8" y1="7" x2="16" y2="7" stroke="#2563eb" stroke-width="1.5"/><line x1="8" y1="11" x2="16" y2="11" stroke="#2563eb" stroke-width="1.5"/><line x1="8" y1="15" x2="13" y2="15" stroke="#2563eb" stroke-width="1.5"/></svg>` },
-        { id: 'template2', name: 'Moderno', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><rect x="8" y="7" width="8" height="2" fill="#2563eb"/><rect x="8" y="11" width="8" height="2" fill="#2563eb"/><rect x="8" y="15" width="5" height="2" fill="#2563eb"/></svg>` },
-        { id: 'template3', name: 'Minimalista', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="#2563eb" stroke-width="1.5"/></svg>` },
-        { id: 'template4', name: 'Elegante', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><path d="M8 8C8 10 16 10 16 8" stroke="#2563eb" stroke-width="1.5"/><path d="M8 16C8 14 16 14 16 16" stroke="#2563eb" stroke-width="1.5"/></svg>` },
+        { id: 'clasico', name: 'Clásico', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><line x1="8" y1="7" x2="16" y2="7" stroke="#2563eb" stroke-width="1.5"/><line x1="8" y1="11" x2="16" y2="11" stroke="#2563eb" stroke-width="1.5"/><line x1="8" y1="15" x2="13" y2="15" stroke="#2563eb" stroke-width="1.5"/></svg>` },
+        { id: 'moderno', name: 'Moderno', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><rect x="8" y="7" width="8" height="2" fill="#2563eb"/><rect x="8" y="11" width="8" height="2" fill="#2563eb"/><rect x="8" y="15" width="5" height="2" fill="#2563eb"/></svg>` },
+        { id: 'minimalista', name: 'Minimalista', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="#2563eb" stroke-width="1.5"/></svg>` },
+        { id: 'ejecutivo', name: 'Ejecutivo', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><path d="M8 8C8 10 16 10 16 8" stroke="#2563eb" stroke-width="1.5"/><path d="M8 16C8 14 16 14 16 16" stroke="#2563eb" stroke-width="1.5"/></svg>` },
         { id: 'custom', name: 'Personalizado', svg: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="3" stroke="#2563eb" stroke-width="2"/><path d="M12 8v4l3 3" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>` }
     ];
     const container = document.getElementById('pdfTemplatesSelector');
@@ -876,7 +1157,7 @@ function setupPdfTemplates() {
     })
         .then(res => res.json())
         .then(config => {
-            let currentTemplate = config.template || 'template1';
+            let currentTemplate = config.template || 'clasico'; // ✅ MODERNIZADO
             // Permite que la plantilla activa sea la última aplicada
             window._pdfTemplateActive = currentTemplate;
             renderPdfTemplateSelector(currentTemplate);
@@ -944,7 +1225,7 @@ function setupPdfTemplates() {
                             });
                             if (getRes.ok) {
                                 const config = await getRes.json();
-                                window._pdfTemplateActive = config.template || 'template1';
+                                window._pdfTemplateActive = config.template || 'clasico'; // ✅ MODERNIZADO
                                 window._lastPdfTemplateConfig = config;
                                 renderPdfTemplateSelector(window._pdfTemplateActive);
                                 renderPdfTemplatePreview(window._pdfTemplateActive, config.customConfig || {}, config);
@@ -1027,10 +1308,10 @@ function renderPdfTemplatePreview(template, customConfig, fullConfig) {
         // --- Unique styles for each template ---
         let borderColor = '#2563eb', borderWidth = 3, bgColor = '#fff', titleColor = '#2563eb', authorColor = fieldColor, firmaBoxColor = '#bbb', firmaTextColor = '#222', font = 'Arial', titleFontWeight = 'bold', authorFontWeight = '', authorFontStyle = '', titleFontSize = fieldFontSize + 4, authorFontSize = fieldFontSize, firmaFont = 'bold 13px Arial', textAlign = 'center', extraDraw = null;
         switch (template) {
-            case 'template1': // Clásico
+            case 'clasico': // ✅ MODERNIZADO - Clásico
                 // Defaults already set
                 break;
-            case 'template2': // Moderno
+            case 'moderno': // ✅ MODERNIZADO - Moderno
                 borderColor = '#10b981';
                 borderWidth = 2;
                 titleColor = '#10b981';
@@ -1043,7 +1324,7 @@ function renderPdfTemplatePreview(template, customConfig, fullConfig) {
                 firmaTextColor = '#10b981';
                 font = 'Segoe UI';
                 break;
-            case 'template3': // Minimalista
+            case 'minimalista': // ✅ MODERNIZADO - Minimalista
                 borderColor = '#222';
                 borderWidth = 1.5;
                 titleColor = '#222';
@@ -1056,7 +1337,7 @@ function renderPdfTemplatePreview(template, customConfig, fullConfig) {
                 firmaTextColor = '#222';
                 font = 'Helvetica Neue';
                 break;
-            case 'template4': // Elegante
+            case 'ejecutivo': // ✅ MODERNIZADO - Ejecutivo
                 borderColor = '#7c3aed';
                 borderWidth = 2.5;
                 titleColor = '#7c3aed';
@@ -1598,7 +1879,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const fileInput = document.getElementById('fileInput');
             const docTitle = document.getElementById('docTitle').value;
             const docAuthors = document.getElementById('docAuthors').value;
-            const selectedTemplate = window._pdfTemplateSelected || localStorage.getItem('pdfTemplate') || 'template1';
+            const selectedTemplate = window._pdfTemplateSelected || localStorage.getItem('pdfTemplate') || 'clasico'; // ✅ MODERNIZADO
             if (!fileInput.files[0]) {
                 showNotification && showNotification('Selecciona un archivo PDF', 'error');
                 return;

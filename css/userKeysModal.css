@@ -38,7 +38,10 @@
   margin-left: 10px;
 }
 
-/* Modal de selección de llaves */
+/* Importar sistema de temas */
+@import url("./themeSelector.css");
+
+/* ===== MODAL DE LLAVES DEL USUARIO ===== */
 #keySelectModal .modal-content {
   min-width: 340px;
   max-width: 420px;
@@ -71,7 +74,7 @@
 }
 
 #userKeysList li.active-key {
-  border: 2px solid var(--primary-color, #ed700f);
+  border: 2px solid var(--primary-color);
   background: color-mix(in srgb, var(--primary-color) 20%, #fff 80%);
 }
 
@@ -100,7 +103,7 @@
 #userKeysList button {
   padding: 6px 16px;
   border-radius: 6px;
-  background: var(--primary-color, #ed700f);
+  background: var(--primary-color);
   color: #fff;
   border: none;
   font-weight: bold;
@@ -160,7 +163,7 @@
 
 .key-name-form input[type="text"]:focus {
   outline: none;
-  border-color: var(--primary-color, #ed700f);
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(237, 112, 15, 0.1);
 }
 

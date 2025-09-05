@@ -15,7 +15,6 @@
     <link rel="stylesheet" href="/css/noKeysmodal.css" />
     <link rel="stylesheet" href="/css/profileMenu.css" />
     <link rel="stylesheet" href="/css/templateResetModal.css" />
-    <link rel="stylesheet" href="/css/templateSystem.css" />
     <link rel="stylesheet" href="/css/tutorial.css" />
 
     <link rel="stylesheet" href="/css/sections/inicioSection.css" />
@@ -24,7 +23,7 @@
     <link rel="stylesheet" href="/css/sections/contactoSection.css" />
     <link rel="stylesheet" href="/css/sections/perfilSection.css" />
     
-    <!-- CSS del Sistema PDF Profesional -->
+    <!-- CSS del Sistema de Plantillas -->
     <link rel="stylesheet" href="/css/professionalPDF.css" />
 
     <link rel="stylesheet" href="/css/Header/headerStyle.css" />
@@ -597,8 +596,13 @@
           </button>
         </form>
         <p id="loginError" class="error-message"></p>
-        <p>
-          ¿No tienes cuenta? <a href="#" id="showRegister">Regístrate aquí</a>
+        <p class="login-info">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: inline; margin-right: 6px; vertical-align: text-top;">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 16v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Para obtener acceso al sistema, contacta al administrador
         </p>
       </div>
     </div>
@@ -996,107 +1000,59 @@
     <!-- Modal para guiar creación de llaves -->
     <div id="createKeysGuideModal" class="auth-modal" style="display: none">
       <div class="modal-content">
-        <h2>¡Bienvenido!</h2>
-        <div class="modal-icon">
-          <svg
-            width="48"
-            height="48"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect
-              x="3"
-              y="11"
-              width="18"
-              height="11"
-              rx="2"
-              ry="2"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <circle
-              cx="12"
-              cy="16"
-              r="1"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <path
-              d="M7 11V7a5 5 0 0 1 10 0v4"
-              stroke="currentColor"
-              stroke-width="2"
-            />
+        <h2>
+          <svg class="modal-icon" width="48" height="48" viewBox="0 0 24 24" fill="none">
+            <path d="M12 1L21 5v6c0 5.55-3.84 10.74-9 12-5.16-1.26-9-6.45-9-12V5l9-4z" 
+                  stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" 
+                  stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-        </div>
+          Configuración Inicial
+        </h2>
         <p class="modal-description">
-          <strong
-            >Para comenzar a usar el sistema de firmas digitales, necesitas
-            crear tus llaves criptográficas.</strong
-          >
+          <strong>¡Bienvenido al sistema de firmas digitales!</strong><br>
+          Para comenzar a usar todas las funcionalidades, necesitas configurar tus llaves criptográficas personales.
         </p>
-        <p class="modal-subdescription">
-          Las llaves son necesarias para firmar y verificar documentos de forma
-          segura.
-        </p>
+        <div class="modal-subdescription">
+          <div class="feature-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+              <circle cx="12" cy="16" r="1" stroke="currentColor" stroke-width="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            <span>Las llaves son tu identidad digital y te permiten firmar documentos de forma segura.</span>
+          </div>
+          <div class="feature-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+              <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+              <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2"/>
+              <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            <span>Sin llaves no podrás firmar documentos, solo verificar firmas existentes.</span>
+          </div>
+          <div class="feature-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+              <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            <span>El proceso es rápido y solo necesitas hacerlo una vez.</span>
+          </div>
+        </div>
         <div class="modal-buttons">
           <button id="goToCreateKeysBtn">
-            <svg
-              class="btn-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <rect
-                x="3"
-                y="11"
-                width="18"
-                height="11"
-                rx="2"
-                ry="2"
-                stroke="currentColor"
-                stroke-width="2"
-              />
-              <circle
-                cx="12"
-                cy="16"
-                r="1"
-                stroke="currentColor"
-                stroke-width="2"
-              />
-              <path
-                d="M7 11V7a5 5 0 0 1 10 0v4"
-                stroke="currentColor"
-                stroke-width="2"
-              />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2"/>
+              <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
             </svg>
-            Ir a crear llaves
+            Configurar Llaves
           </button>
-          <button id="skipCreateKeysBtn" class="btn-secondary">
-            <svg
-              class="btn-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <path
-                d="M18 6L6 18"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M6 6L18 18"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
+          <button id="skipCreateKeysBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+              <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
             </svg>
-            Recordar más tarde
+            Más tarde
           </button>
         </div>
       </div>
@@ -2862,6 +2818,105 @@
                       rows="3"
                     ></textarea>
                   </div>
+                  
+                  <!-- Campos adicionales de información personal -->
+                  <div class="form-group">
+                    <label for="userPhone">Teléfono</label>
+                    <input
+                      type="tel"
+                      id="userPhone"
+                      placeholder="+57 300 123 4567"
+                    />
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="userAddress">Dirección</label>
+                    <textarea
+                      id="userAddress"
+                      placeholder="Dirección completa..."
+                      rows="2"
+                    ></textarea>
+                  </div>
+                  
+                  <!-- Información académica/profesional -->
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="userPosition">Cargo</label>
+                      <input
+                        type="text"
+                        id="userPosition"
+                        placeholder="Profesor, Director, etc."
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label for="userDepartment">Departamento</label>
+                      <input
+                        type="text"
+                        id="userDepartment"
+                        placeholder="Facultad o departamento"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="userDegree">Grado Académico</label>
+                    <select id="userDegree">
+                      <option value="">Selecciona tu grado académico</option>
+                      <option value="Técnico">Técnico</option>
+                      <option value="Tecnólogo">Tecnólogo</option>
+                      <option value="Profesional">Profesional</option>
+                      <option value="Especialista">Especialista</option>
+                      <option value="Magíster">Magíster</option>
+                      <option value="Doctor">Doctor</option>
+                      <option value="Post-Doctor">Post-Doctor</option>
+                    </select>
+                  </div>
+                  
+                  <!-- Configuraciones -->
+                  <div class="form-section-title">
+                    <h4>Configuraciones</h4>
+                  </div>
+                  
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="userTimezone">Zona Horaria</label>
+                      <select id="userTimezone">
+                        <option value="America/Bogota">América/Bogotá (UTC-5)</option>
+                        <option value="America/Mexico_City">América/Ciudad de México (UTC-6)</option>
+                        <option value="America/New_York">América/Nueva York (UTC-5/-4)</option>
+                        <option value="Europe/Madrid">Europa/Madrid (UTC+1/+2)</option>
+                        <option value="Europe/London">Europa/Londres (UTC+0/+1)</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="userLanguage">Idioma</label>
+                      <select id="userLanguage">
+                        <option value="es">Español</option>
+                        <option value="en">English</option>
+                        <option value="fr">Français</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <div class="checkbox-group">
+                      <label class="checkbox-label">
+                        <input type="checkbox" id="emailNotifications" />
+                        <span class="checkmark"></span>
+                        Recibir notificaciones por correo electrónico
+                      </label>
+                    </div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <div class="checkbox-group">
+                      <label class="checkbox-label">
+                        <input type="checkbox" id="twoFactorAuth" />
+                        <span class="checkmark"></span>
+                        Habilitar autenticación de dos factores (2FA)
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -3802,16 +3857,6 @@
             </div>
           </div>
         </div>
-
-        <!-- BOTONES DE ACCIÓN GLOBALES -->
-        <div class="perfil-actions">
-          <button class="save-btn" onclick="saveAllSettings()">
-            💾 Guardar Todos los Cambios
-          </button>
-          <button class="cancel-btn" onclick="resetAllSettings()">
-            🔄 Restablecer
-          </button>
-        </div>
       </section>
 
       <section id="contactoSection">
@@ -3932,8 +3977,15 @@
     <script src="/scripts/frontend/mobileHamburger.frontend.js"></script>
     <script src="/scripts/utils/tutorial.js"></script>
     
-    <!-- Sistema PDF Profesional -->
-    <script src="/scripts/frontend/professionalPDF.js"></script>
+    <!-- Scripts de plantillas modulares (cargar antes que el sistema PDF) -->
+    <script src="/scripts/templates/base.template.js"></script>
+    <script src="/scripts/templates/clasico.template.js"></script>
+    <script src="/scripts/templates/moderno.template.js"></script>
+    <script src="/scripts/templates/minimalista.template.js"></script>
+    <script src="/scripts/templates/elegante.template.js"></script>
+    
+    <!-- Sistema PDF Principal -->
+    <script src="/scripts/frontend/pdfPreview.frontend.js"></script>
 
     <!-- Sistema de Temas Dinámicos -->
     <script src="/scripts/utils/themeManager.js"></script>

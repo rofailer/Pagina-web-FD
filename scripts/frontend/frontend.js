@@ -176,6 +176,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showSection(sectionKey) {
+        // Verificar si la sección requiere autenticación
+        const protectedSections = ['firmar', 'perfil'];
+        const token = localStorage.getItem('token');
+
+        if (protectedSections.includes(sectionKey) && !token) {
+            // Redirigir a la página de error 403
+            window.location.href = '/403';
+            return false;
+        }
+
         // Ejecutar limpieza automática antes de cambiar de sección
         autoCleanFormsOnSectionChange(sectionKey);
 
@@ -228,8 +238,49 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.loadActiveKey();
             }
         }
+
+        // Asegurar que la foto del avatar se mantenga después del cambio de sección
+        setTimeout(() => {
+            if (localStorage.getItem('token') && window.loadUserProfilePhoto) {
+                window.loadUserProfilePhoto();
+            }
+        }, 100);
+
         return false;
     }
+
+    // Función para forzar navegación sin verificaciones (para logout)
+    function forceShowSection(sectionKey) {
+        // Ejecutar limpieza automática antes de cambiar de sección
+        autoCleanFormsOnSectionChange(sectionKey);
+
+        // Ejecutar limpieza específica de formularios de firma si salimos de esa sección
+        if (window.cleanSignFormsOnSectionExit) {
+            window.cleanSignFormsOnSectionExit(sectionKey);
+        }
+
+        hideAllSections();
+        if (sections[sectionKey]) {
+            sections[sectionKey].style.display = "block";
+            sections[sectionKey].scrollIntoView({ behavior: "auto" });
+        }
+        setActiveLink(sectionKey);
+        window.scrollTo(0, 0);
+
+        // Manejo especial de clases CSS para la sección de inicio
+        if (sectionKey === 'inicio') {
+            document.body.setAttribute('data-current-section', 'inicio');
+            document.body.classList.add('home-section-active');
+        } else {
+            document.body.removeAttribute('data-current-section');
+            document.body.classList.remove('home-section-active');
+        }
+
+        return false;
+    }
+
+    // Exponer la función globalmente para auth.frontend.js
+    window.forceShowSection = forceShowSection;
 
     // --- Variables de estado global ---
     window.firmaEnCurso = false;
@@ -557,6 +608,16 @@ document.addEventListener("DOMContentLoaded", () => {
     function showSectionFromHash() {
         const hash = window.location.hash.replace("#", "");
         const sectionKey = hash && sections[hash] ? hash : "inicio";
+
+        // Verificar si la sección requiere autenticación ANTES de cualquier otra verificación
+        const protectedSections = ['firmar', 'perfil'];
+        const token = localStorage.getItem('token');
+
+        if (protectedSections.includes(sectionKey) && !token) {
+            // Redirigir a la página de error 403 y salir
+            window.location.href = '/403';
+            return;
+        }
 
         // Verificar si hay procesos en curso O estamos en pasos importantes antes de navegar
         const hasProcessInProgress = window.verificacionEnCurso || window.firmaEnCurso;

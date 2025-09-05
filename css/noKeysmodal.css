@@ -1,32 +1,36 @@
-/* Modal para guiar creación de llaves */
+/* Importar sistema de temas */
+@import url("./themeSelector.css");
+
+/* ===== MODAL CREAR LLAVES - REDISEÑADO ===== */
 #createKeysGuideModal {
   display: none;
   position: fixed;
-  z-index: 8001;
+  z-index: 9999;
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
 #createKeysGuideModal .modal-content {
-  background-color: #fefefe;
+  background-color: #fff;
   margin: 10% auto;
   padding: 30px;
-  border: none;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border-top: 4px solid var(--primary-color);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   width: 90%;
-  max-width: 500px;
+  max-width: 480px;
   text-align: center;
-  animation: modalSlideIn 0.3s ease-out;
+  animation: modalFadeIn 0.3s;
+  position: relative;
 }
 
-@keyframes modalSlideIn {
+@keyframes modalFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-50px) scale(0.9);
+    transform: translateY(-30px) scale(0.95);
   }
   to {
     opacity: 1;
@@ -36,42 +40,68 @@
 
 #createKeysGuideModal h2 {
   color: #333;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
   font-size: 24px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 
 #createKeysGuideModal .modal-icon {
-  font-size: 56px;
-  margin-bottom: 15px;
-  display: block;
-  animation: iconPulse 2s infinite;
-}
-
-@keyframes iconPulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
+  width: 48px;
+  height: 48px;
+  margin-bottom: 20px;
+  display: inline-block;
+  color: #6c757d;
+  opacity: 0.8;
 }
 
 #createKeysGuideModal .modal-description {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   font-size: 16px;
   line-height: 1.5;
+  color: #555;
+  text-align: left;
 }
 
 #createKeysGuideModal .modal-description strong {
   color: var(--primary-color);
+  font-weight: 600;
 }
 
 #createKeysGuideModal .modal-subdescription {
-  color: #666;
-  margin-bottom: 25px;
+  color: #6c757d;
+  margin-bottom: 30px;
   font-size: 14px;
+  line-height: 1.5;
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 3px solid #dee2e6;
+  text-align: left;
+}
+
+#createKeysGuideModal .feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+#createKeysGuideModal .feature-item:last-child {
+  margin-bottom: 0;
+}
+
+#createKeysGuideModal .feature-item svg {
+  color: var(--primary-color);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+#createKeysGuideModal .feature-item span {
+  flex: 1;
   line-height: 1.4;
 }
 
@@ -96,19 +126,25 @@
   font-size: 16px;
   font-weight: 600;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px
-    color-mix(in srgb, var(--primary-color) 30%, transparent 70%);
+  box-shadow: 0 4px 15px rgba(255, 149, 69, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 #goToCreateKeysBtn:hover {
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--primary-color) 80%, black 20%),
-    color-mix(in srgb, var(--secondary-color) 80%, black 20%)
+    var(--secondary-color),
+    var(--accent-color)
   );
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px
-    color-mix(in srgb, var(--primary-color) 40%, transparent 60%);
+  box-shadow: 0 6px 20px rgba(var(--primary-rgb), 0.4);
+}
+
+#goToCreateKeysBtn svg {
+  width: 18px;
+  height: 18px;
 }
 
 #skipCreateKeysBtn {
@@ -121,6 +157,9 @@
   font-size: 16px;
   font-weight: 500;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 #skipCreateKeysBtn:hover {
@@ -130,4 +169,28 @@
   transform: translateY(-1px);
 }
 
-/* ...existing code... */
+#skipCreateKeysBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  #createKeysGuideModal .modal-content {
+    margin: 5% auto;
+    padding: 25px 20px;
+    max-width: 95%;
+  }
+
+  #createKeysGuideModal .modal-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #goToCreateKeysBtn,
+  #skipCreateKeysBtn {
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
+  }
+}

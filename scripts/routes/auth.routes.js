@@ -37,33 +37,51 @@ router.post("/api/register", async (req, res) => {
 // Login de usuario
 router.post("/api/login", async (req, res) => {
     const { usuario, password } = req.body;
+    console.log('🔐 Intento de login:', { usuario: usuario });
+
     try {
         const [rows] = await pool.query("SELECT * FROM users WHERE usuario = ?", [usuario]);
+        console.log('👤 Usuarios encontrados:', rows.length);
+
         if (!rows.length) {
-            // Usuario no existe
+            console.log('❌ Usuario no encontrado:', usuario);
             return res.status(404).json({ error: "Usuario inexistente." });
         }
 
         const user = rows[0];
+        console.log('👤 Usuario encontrado:', { id: user.id, usuario: user.usuario, rol: user.rol });
+
         const match = await bcrypt.compare(password, user.password);
+        console.log('🔑 Contraseña válida:', match);
+
         if (!match) {
-            // Contraseña incorrecta
+            console.log('❌ Contraseña incorrecta para usuario:', usuario);
             return res.status(401).json({ error: "Contraseña incorrecta." });
         }
 
         const token = jwt.sign(
-            { id: user.id, rol: user.rol, nombre: user.nombre },
+            { id: user.id, rol: user.rol, nombre: user.nombre, usuario: user.usuario },
             process.env.JWT_SECRET,
             { expiresIn: "8h" }
         );
+
+        console.log('✅ Token generado para usuario:', usuario);
+
+        // Actualizar último acceso
+        await pool.query("UPDATE users SET ultimo_acceso = NOW() WHERE id = ?", [user.id]);
+
         // Ejemplo de respuesta en /api/login
         res.json({
             token,
             nombre: user.nombre,
-            rol: user.rol
+            rol: user.rol,
+            usuario: user.usuario
         });
+
+        console.log('✅ Login exitoso para usuario:', usuario);
     } catch (err) {
-        res.status(500).json({ error: "Error al iniciar sesión." });
+        console.error('❌ Error en login:', err);
+        res.status(500).json({ error: "Error al iniciar sesión.", details: err.message });
     }
 });
 

@@ -1691,3 +1691,52 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 100);
 });
+
+// Función global para limpiar formularios cuando se hace logout
+window.cleanVerifyFormsOnLogout = function () {
+    console.log('🧹 Limpiando formularios de verificación por logout...');
+
+    // Limpiar variables de estado
+    currentStep = 1;
+    verificationResult = null;
+    window.verificacionEnCurso = false;
+
+    // Limpiar archivos subidos
+    const signedFileInput = document.getElementById('signedFile');
+    if (signedFileInput) {
+        signedFileInput.value = '';
+        // Limpiar display del archivo
+        const fileDisplay = signedFileInput.closest('.file-input-container')?.querySelector('.file-input-display');
+        if (fileDisplay) {
+            fileDisplay.innerHTML = '<span class="placeholder">Seleccionar archivo firmado...</span>';
+        }
+    }
+
+    const originalFileInput = document.getElementById('originalFile');
+    if (originalFileInput) {
+        originalFileInput.value = '';
+        // Limpiar display del archivo
+        const fileDisplay = originalFileInput.closest('.file-input-container')?.querySelector('.file-input-display');
+        if (fileDisplay) {
+            fileDisplay.innerHTML = '<span class="placeholder">Seleccionar archivo original...</span>';
+        }
+    }
+
+    // Limpiar selector de profesor
+    const profesorSelect = document.getElementById('profesorSelect');
+    if (profesorSelect) {
+        profesorSelect.value = '';
+    }
+
+    // Limpiar resultados de verificación
+    const resultContainer = document.getElementById('verificationResult');
+    if (resultContainer) {
+        resultContainer.innerHTML = '';
+        resultContainer.style.display = 'none';
+    }
+
+    // Resetear pasos
+    showStep(1);
+
+    console.log('✅ Formularios de verificación limpiados completamente');
+};

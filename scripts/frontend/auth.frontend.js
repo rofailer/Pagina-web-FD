@@ -28,12 +28,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Event listeners para elementos del modal que siempre deben existir
-    const showRegisterElement = document.getElementById("showRegister");
+    // const showRegisterElement = document.getElementById("showRegister");
     const showLoginElement = document.getElementById("showLogin");
 
-    if (showRegisterElement) {
-        showRegisterElement.addEventListener("click", showRegisterModal);
-    }
+    // Registro deshabilitado - ya no hay enlace de registro en el modal
+    // if (showRegisterElement) {
+    //     showRegisterElement.addEventListener("click", showRegisterModal);
+    // }
     if (showLoginElement) {
         showLoginElement.addEventListener("click", showLoginModal);
     }
@@ -156,6 +157,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 JSON.stringify({ nombre: data.nombre, rol: data.rol }),
             );
 
+            // Cargar datos del perfil automáticamente después del login exitoso
+            setTimeout(() => {
+                if (typeof loadUserData === 'function') {
+                    console.log('🔄 Cargando datos del perfil después del login exitoso');
+                    loadUserData();
+                }
+            }, 500);
+
             // PASO 1: Ocultar inmediatamente los botones de login/registro
             if (loginBtn) {
                 loginBtn.style.visibility = "hidden";
@@ -168,6 +177,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // PASO 2: Actualizar la UI inmediatamente después del login
             checkAuthStatus();
+
+            // PASO 2.5: Cargar foto de perfil inmediatamente después del login
+            setTimeout(() => {
+                loadUserProfilePhoto();
+            }, 100);
 
             // PASO 3: Cerrar el modal de login
             closeModals();
@@ -184,7 +198,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
             }, 150);
 
-            // PASO 5: Verificar si el usuario tiene llaves después del login
+            // PASO 5: Limpiar banderas de sesión anterior y verificar llaves
+            localStorage.removeItem("keysGuideShown"); // Permitir mostrar el modal nuevamente
             checkUserKeysAfterLogin();
         } catch (err) {
             document.getElementById("loginError").textContent = "Error de conexión";
@@ -238,6 +253,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (user && profileMenuContainer && profileName) {
             profileMenuContainer.style.display = "flex";
             profileName.textContent = user.nombre || "Usuario";
+
+            // Cargar foto de perfil si el usuario está autenticado
+            loadUserProfilePhoto();
         } else if (profileMenuContainer) {
             profileMenuContainer.style.display = "none";
         }
@@ -296,11 +314,25 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.removeItem("user");
         localStorage.removeItem("keysGuideShown"); // Limpiar la marca de guía mostrada
 
-        // Limpiar estados de procesos en curso
+        // Limpiar estados de procesos en curso INMEDIATAMENTE
         window.firmaEnCurso = false;
         window.verificacionEnCurso = false;
 
-        // Navegar a inicio antes de recargar
+        // Cerrar cualquier modal de advertencia si está abierto
+        const confirmModal = document.getElementById('navigationConfirmModal');
+        if (confirmModal && confirmModal.classList.contains('show')) {
+            confirmModal.classList.remove('show');
+        }
+
+        // Forzar limpieza de procesos y formularios
+        if (window.cleanSignFormsOnLogout) {
+            window.cleanSignFormsOnLogout();
+        }
+        if (window.cleanVerifyFormsOnLogout) {
+            window.cleanVerifyFormsOnLogout();
+        }
+
+        // Navegar a inicio INMEDIATAMENTE sin verificaciones
         window.location.hash = "inicio";
 
         // Disparar evento personalizado para que otros scripts sepan del cambio de autenticación
@@ -309,6 +341,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 detail: { authenticated: false, user: null },
             }),
         );
+
+        // Forzar mostrar sección de inicio sin verificaciones
+        if (window.forceShowSection) {
+            window.forceShowSection('inicio');
+        }
 
         // Pequeño delay para que se aplique la navegación antes del reload
         setTimeout(() => {
@@ -354,7 +391,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const token = localStorage.getItem("token");
             if (!token) return;
 
-            const response = await fetch("/api/user-keys", {
+            console.log('🔍 Verificando llaves del usuario después del login...');
+
+            const response = await fetch("/user-keys", {
                 method: "GET",
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -364,20 +403,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (response.ok) {
                 const data = await response.json();
+                console.log('🔍 Llaves del usuario:', data);
 
-                // Si no tiene llaves y no se ha mostrado la guía en esta sesión
-                if (
-                    (!data.keys || data.keys.length === 0) &&
-                    !localStorage.getItem("keysGuideShown")
-                ) {
+                // Si no tiene llaves, mostrar el modal
+                if (!data.keys || data.keys.length === 0) {
+                    console.log('⚠️ Usuario sin llaves - mostrando modal de guía');
                     // Esperar un momento para que se complete la actualización de la UI
                     setTimeout(() => {
                         showCreateKeysGuide();
                     }, 800);
+                } else {
+                    console.log('✅ Usuario tiene llaves:', data.keys.length);
                 }
-                // Si tiene llaves o ya se mostró la guía, no hacer nada (el usuario ya está logueado en la página)
             } else {
-                console.error("Error obteniendo llaves del usuario");
+                console.error("Error obteniendo llaves del usuario:", response.status);
             }
         } catch (err) {
             console.error("Error verificando llaves del usuario:", err);
@@ -390,27 +429,47 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function navigateToKeysSection() {
-        // Navegar a la página principal y luego al perfil
-        window.location.href = "/#perfil";
+        console.log('🎯 Navegando a la sección de gestión de llaves...');
 
-        // Después de cargar, activar la pestaña de llaves
-        setTimeout(() => {
-            // Hacer clic en la sección perfil del menú
-            const perfilLink = document.querySelector('a[href="#perfil"]');
-            if (perfilLink) {
-                perfilLink.click();
-            }
+        // Cerrar modal si está abierto
+        if (createKeysGuideModal) {
+            createKeysGuideModal.style.display = "none";
+        }
 
-            // Activar la pestaña de llaves
+        // Si ya estamos en la página de perfil, activar directamente la pestaña
+        const currentHash = window.location.hash;
+        if (currentHash === '#perfil') {
+            console.log('✅ Ya estamos en perfil, activando pestaña directamente');
+            activateKeysTab();
+        } else {
+            // Navegar a perfil y luego activar pestaña
+            window.location.href = "/#perfil";
+
+            // Esperar a que cargue y activar pestaña
             setTimeout(() => {
-                const llavesTab = document.querySelector(
-                    '.perfil-tab[data-tab="llaves"]',
-                );
-                if (llavesTab) {
-                    llavesTab.click();
-                }
-            }, 500);
-        }, 100);
+                activateKeysTab();
+            }, 300);
+        }
+    }
+
+    function activateKeysTab() {
+        console.log('🔑 Activando pestaña de gestión de llaves...');
+
+        const llavesTab = document.querySelector('.perfil-tab-btn[data-tab="gestion-llaves"]');
+        if (llavesTab) {
+            console.log('✅ Pestaña encontrada, activando...');
+            llavesTab.click();
+        } else {
+            console.log('❌ Pestaña no encontrada, intentando con selector alternativo...');
+            // Intentar con selector alternativo
+            const llavesTabAlt = document.querySelector('[data-tab="gestion-llaves"]');
+            if (llavesTabAlt) {
+                console.log('✅ Pestaña encontrada con selector alternativo');
+                llavesTabAlt.click();
+            } else {
+                console.log('❌ No se pudo encontrar la pestaña de gestión de llaves');
+            }
+        }
     }
 
     // Exponer funciones globalmente para el menú hamburguesa
@@ -507,6 +566,60 @@ document.addEventListener("DOMContentLoaded", () => {
             modal.style.display = 'flex';
         }
     }
+
+    // Función para cargar la foto de perfil del usuario autenticado
+    async function loadUserProfilePhoto() {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/profile/photo', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data.success && data.hasPhoto && data.photoPath) {
+                    // Actualizar foto en el menú móvil (.user-profile-avatar)
+                    const mobileAvatar = document.querySelector('.user-profile-avatar');
+                    if (mobileAvatar) {
+                        mobileAvatar.innerHTML = `<img src="${data.photoPath}" alt="Avatar de usuario">`;
+                        mobileAvatar.classList.add('has-photo');
+                    }
+
+                    // Actualizar en el dropdown del perfil (desktop) si existe
+                    const desktopAvatar = document.querySelector('.profile-avatar-large');
+                    if (desktopAvatar) {
+                        desktopAvatar.src = data.photoPath;
+                    }
+
+                    // Actualizar avatar pequeño del header si existe
+                    const headerAvatar = document.querySelector('.profile-avatar-small');
+                    if (headerAvatar) {
+                        headerAvatar.src = data.photoPath;
+                    }
+                } else {
+                    // Sin foto: limpiar avatares y mostrar SVG por defecto
+                    const mobileAvatar = document.querySelector('.user-profile-avatar');
+                    if (mobileAvatar) {
+                        mobileAvatar.innerHTML = '';
+                        mobileAvatar.classList.remove('has-photo');
+                    }
+                }
+            }
+        } catch (error) {
+            console.log('Error al cargar foto de perfil:', error);
+            // No mostrar error al usuario, es opcional
+        }
+    }
+
+    // Exponer la función globalmente para uso en otros módulos
+    window.loadUserProfilePhoto = loadUserProfilePhoto;
 
     // Eliminados event listeners del modal signAuthRequiredModal (ya no se usa)
 });

@@ -22,6 +22,28 @@ if (!process.env.JWT_SECRET) {
 
 console.log('✅ Variables de entorno validadas correctamente');
 
+// =================== Crear directorios necesarios ===================
+function createRequiredDirectories() {
+  const directories = [
+    path.join(__dirname, '../uploads'),
+    path.join(__dirname, '../uploads/profile-photos'),
+    path.join(__dirname, '../downloads'),
+    path.join(__dirname, '../llaves')
+  ];
+
+  directories.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`📁 Directorio creado: ${dir}`);
+    }
+  });
+
+  console.log('✅ Directorios del sistema verificados y creados');
+}
+
+// Crear directorios al iniciar el servidor
+createRequiredDirectories();
+
 // Middlewares globales
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -37,10 +59,33 @@ if (process.env.NODE_ENV !== 'production') {
 
 // Configuración de archivos estáticos ANTES de las rutas
 app.use("/css", express.static(path.join(__dirname, "../css"), { maxAge: "1d" }));
-app.use("/scripts/frontend", express.static(path.join(__dirname, "./frontend"), { maxAge: "1d" }));
-app.use("/scripts/utils", express.static(path.join(__dirname, "./utils"), { maxAge: "1d" }));
+app.use("/scripts/frontend", express.static(path.join(__dirname, "./frontend"), {
+  maxAge: "1d",
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  }
+}));
+app.use("/scripts/utils", express.static(path.join(__dirname, "./utils"), {
+  maxAge: "1d",
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  }
+}));
+app.use("/scripts/templates", express.static(path.join(__dirname, "./templates"), {
+  maxAge: "1d",
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  }
+}));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/recursos", express.static(path.join(__dirname, "../recursos")));
+app.use("/html", express.static(path.join(__dirname, "../html"), { maxAge: "1d" }));
 // app.use("/downloads", express.static(path.join(__dirname, "../downloads")));
 
 // Configuración de multer para subir archivos
@@ -85,10 +130,16 @@ app.get("/ping", (req, res) => {
   res.status(200).json({ status: "alive" });
 });
 
+// Ruta específica para manejar acceso no autorizado
+app.get("/403", (req, res) => {
+  const filePath = path.join(__dirname, "../html/403-unauthorized.html");
+  res.sendFile(filePath);
+});
+
 // Ruta principal simplificada para Railway health check
 app.get("/", (req, res) => {
   try {
-    const filePath = path.join(__dirname, "../html/Inicio.html");
+    const filePath = path.join(__dirname, "../html/index.html"); // ✅ CORREGIDO - Usar index.html
 
     if (!fs.existsSync(filePath)) {
       console.error(`Archivo no encontrado: ${filePath}`);
@@ -117,20 +168,96 @@ app.get("/", (req, res) => {
 const authRoutes = require('./routes/auth.routes');
 const keysRoutes = require('./routes/keys.routes');
 const pdfTemplateRoutes = require('./routes/pdfTemplate.routes');
+const profileRoutes = require('./routes/profile.routes');
 
 app.use(authRoutes);
 app.use(keysRoutes);
 app.use('/api/pdf-template', pdfTemplateRoutes);
+app.use(profileRoutes);
 
 // =================== Rutas para configuración de plantillas ===================
 
-// Configuración global de plantillas
+// ========================================
+// CONFIGURACIÓN GLOBAL DE TEMPLATES UNIFICADA
+// ========================================
+
 let globalTemplateConfig = {
-  selectedTemplate: 'template1',
-  logo: null
+  selectedTemplate: 'clasico',
+  logo: null,
+  institutionName: 'Universidad Ejemplo'
 };
 
-// Guardar configuración de plantilla (solo owners y admins)
+// Cargar configuración desde la base de datos al iniciar
+async function loadGlobalTemplateConfig() {
+  try {
+    const [rows] = await pool.query("SELECT * FROM global_template_config ORDER BY id DESC LIMIT 1");
+    if (rows.length > 0) {
+      globalTemplateConfig.selectedTemplate = rows[0].template_name;
+      globalTemplateConfig.logo = rows[0].logo_path;
+      globalTemplateConfig.institutionName = rows[0].institution_name;
+      console.log('✅ Configuración global cargada');
+    }
+  } catch (error) {
+    console.error('❌ Error cargando configuración global:', error);
+  }
+}
+
+// Llamar al cargar la aplicación
+loadGlobalTemplateConfig();
+
+// Ruta para guardar configuración global (solo para owners)
+app.post('/api/save-global-template-config', authenticate, async (req, res) => {
+  try {
+    // Verificar que el usuario sea owner
+    const [userRows] = await pool.query("SELECT rol FROM users WHERE id = ?", [req.userId]);
+    if (userRows.length === 0 || userRows[0].rol !== 'owner') {
+      return res.status(403).json({ error: 'Solo los owners pueden cambiar la configuración global' });
+    }
+
+    const { template, logo, institutionName } = req.body;
+
+    if (template) {
+      globalTemplateConfig.selectedTemplate = template;
+    }
+
+    if (logo !== undefined) {
+      globalTemplateConfig.logo = logo;
+    }
+
+    if (institutionName) {
+      globalTemplateConfig.institutionName = institutionName;
+    }
+
+    // Guardar en la base de datos
+    await pool.query(
+      "UPDATE global_template_config SET template_name = ?, logo_path = ?, institution_name = ? WHERE id = 1",
+      [globalTemplateConfig.selectedTemplate, globalTemplateConfig.logo, globalTemplateConfig.institutionName]
+    );
+
+    console.log('✅ Configuración global guardada:', globalTemplateConfig);
+
+    res.json({
+      success: true,
+      template: globalTemplateConfig.selectedTemplate,
+      hasLogo: !!globalTemplateConfig.logo,
+      institutionName: globalTemplateConfig.institutionName
+    });
+
+  } catch (error) {
+    console.error('❌ Error guardando configuración global:', error);
+    res.status(500).json({ error: 'Error guardando configuración' });
+  }
+});
+
+// Ruta para obtener configuración global
+app.get('/api/global-template-config', (req, res) => {
+  // Solo loggear ocasionalmente para evitar spam
+  if (Math.random() < 0.1) { // 10% de las veces
+    console.log('📋 Configuración global solicitada');
+  }
+  res.json(globalTemplateConfig);
+});
+// Guardar configuración de plantilla (LEGACY - mantener por compatibilidad)
 app.post('/api/save-template-config', authenticate, (req, res) => {
   try {
     if (req.userRole !== 'admin' && req.userRole !== 'owner') {
@@ -161,9 +288,9 @@ app.post('/api/save-template-config', authenticate, (req, res) => {
   }
 });
 
-// Obtener configuración de plantilla
+// Obtener configuración de plantilla (LEGACY - mantener por compatibilidad)
 app.get('/api/template-config', (req, res) => {
-  console.log('📋 Solicitud de configuración de plantilla:', globalTemplateConfig);
+  // Log reducido para legacy endpoint
   res.json(globalTemplateConfig);
 });
 
@@ -194,57 +321,7 @@ app.post("/api/config", authenticate, (req, res) => {
 app.post("/sign-document", authenticate, upload.single("document"), async (req, res) => {
   const userId = req.userId;
   const keyPassword = req.body.keyPassword;
-  const { renderPdfWithTemplate } = require("./utils/pdf");
-  const configPath = path.join(__dirname, "../config/pdfTemplateConfig.json");
-
-  // Definición de las 4 plantillas profesionales mejoradas
-  const TEMPLATES = {
-    template1: {
-      // Clásico: título arriba, autores debajo, logo izq, institución der, avalador abajo
-      titulo: { x: 80, y: 720, size: 24, color: [0.15, 0.15, 0.15] },
-      autores: { x: 80, y: 680, size: 16, color: [0.3, 0.3, 0.3] },
-      institucion: { x: 350, y: 720, size: 14, color: [0.1, 0.3, 0.7] },
-      logo: { x: 50, y: 750, width: 60, height: 60 },
-      avalador: { x: 80, y: 120, size: 14, color: [0.2, 0.2, 0.2] },
-      fecha: { x: 400, y: 120, size: 12, color: [0.5, 0.5, 0.5] },
-      // Agregar borde clásico
-      border: { style: 'classic', color: [0.1, 0.3, 0.7], width: 2 }
-    },
-    template2: {
-      // Moderno: título centrado, logo grande arriba, autores e institución abajo
-      logo: { x: 260, y: 720, width: 100, height: 100 },
-      titulo: { x: 180, y: 650, size: 26, color: [0.53, 0.36, 0.96] },
-      autores: { x: 180, y: 610, size: 16, color: [0.2, 0.2, 0.2] },
-      institucion: { x: 180, y: 580, size: 14, color: [0.66, 0.42, 0.97] },
-      avalador: { x: 180, y: 120, size: 14, color: [0.3, 0.3, 0.3] },
-      fecha: { x: 400, y: 120, size: 12, color: [0.5, 0.5, 0.5] },
-      // Borde moderno con acento
-      border: { style: 'modern', color: [0.53, 0.36, 0.96], width: 3 }
-    },
-    template3: {
-      // Minimalista: solo título y autores centrados, logo pequeño
-      titulo: { x: 200, y: 700, size: 22, color: [0.42, 0.45, 0.5] },
-      autores: { x: 200, y: 670, size: 14, color: [0.22, 0.26, 0.32] },
-      logo: { x: 500, y: 750, width: 50, height: 50 },
-      institucion: { x: 200, y: 640, size: 12, color: [0.42, 0.45, 0.5] },
-      avalador: { x: 200, y: 120, size: 12, color: [0.3, 0.3, 0.3] },
-      fecha: { x: 400, y: 120, size: 10, color: [0.6, 0.6, 0.6] },
-      // Borde minimalista
-      border: { style: 'minimal', color: [0.42, 0.45, 0.5], width: 2 }
-    },
-    template4: {
-      // Elegante: título y logo centrados, autores e institución laterales
-      titulo: { x: 180, y: 700, size: 24, color: [0.83, 0.69, 0.22] },
-      logo: { x: 260, y: 720, width: 80, height: 80 },
-      autores: { x: 80, y: 650, size: 14, color: [0.12, 0.16, 0.22] },
-      institucion: { x: 350, y: 650, size: 14, color: [0.83, 0.69, 0.22] },
-      avalador: { x: 180, y: 120, size: 14, color: [0.2, 0.2, 0.2] },
-      fecha: { x: 400, y: 120, size: 12, color: [0.5, 0.5, 0.5] },
-      // Borde elegante con oro
-      border: { style: 'elegant', color: [0.83, 0.69, 0.22], width: 2 }
-    },
-    custom: null // Se define en config
-  };
+  const { renderPdfWithTemplate } = require("./utils/pdfGenerator.backend");
 
   try {
     // Obtener la llave privada activa del usuario
@@ -255,6 +332,7 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
     if (rows.length === 0) {
       return res.status(400).json({ error: "No hay una llave activa seleccionada" });
     }
+
     const encryptedPrivateKey = rows[0].private_key;
     const encryptionType = rows[0].encryption_type || "aes-256-cbc";
     let privateKey;
@@ -294,38 +372,19 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
         [userId]
       );
 
-      // Leer configuración de plantilla (primero del frontend, luego del archivo)
-      let templateConfig = { template: 'template1', customConfig: {} };
+      // Usar configuración global de plantillas unificada con el sistema modular
+      let templateName = globalTemplateConfig.selectedTemplate; // 'clasico', 'moderno', etc.
 
-      // Usar plantilla del frontend si está disponible
-      if (req.body.template) {
-        templateConfig.template = req.body.template;
-        console.log('🎨 Plantilla recibida del frontend:', req.body.template);
-      } else {
-        console.log('⚠️ No se recibió plantilla del frontend, usando template1');
-        // Fallback a archivo de configuración
-        if (fs.existsSync(configPath)) {
-          try {
-            templateConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-          } catch (e) { /* usar defaults */ }
-        }
-      }
-
-      // Usar configuración global de plantillas
-      let templateId = globalTemplateConfig.selectedTemplate || 'template1';
-      let fieldConfig = TEMPLATES[templateId] || TEMPLATES['template1'];
-
-      console.log('📋 Configuración de plantilla global:', {
-        templateId,
-        hasBorder: !!fieldConfig.border,
-        borderStyle: fieldConfig.border?.style
+      console.log('🎨 Configuración de plantilla global:', {
+        templateName,
+        institutionName: globalTemplateConfig.institutionName
       });
 
-      // Datos a renderizar
+      // Datos a renderizar usando configuración global
       const data = {
         titulo: req.body.titulo || 'DOCUMENTO OFICIAL AVALADO',
         autores: req.body.autores || userInfo[0].nombre,
-        institucion: req.body.institucion || 'Universidad Nacional de Colombia',
+        institucion: req.body.institucion || globalTemplateConfig.institutionName,
         avalador: `Avalado por: ${userInfo[0].nombre}`,
         fecha: new Date().toLocaleDateString('es-CO', {
           year: 'numeric',
@@ -340,10 +399,12 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
         contenido: 'Este documento ha sido procesado y avalado digitalmente a través del sistema de firmas electrónicas. La autenticidad e integridad del contenido está garantizada mediante tecnología criptográfica.'
       };
 
-      console.log('✍️ Datos de firma electrónica:', {
+      console.log('✍️ Datos del documento:', {
+        titulo: data.titulo,
+        autores: data.autores,
+        institucion: data.institucion,
         hasSignature: !!req.body.signatureData,
-        signatureMethod: req.body.signatureMethod,
-        signatureLength: req.body.signatureData ? req.body.signatureData.length : 0
+        templateUsed: templateName
       });
 
       // Crear PDF base (hoja en blanco tamaño carta)
@@ -354,9 +415,11 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
       const tempBlankPath = path.join(tempDir, `blank_${Date.now()}.pdf`);
       fs.writeFileSync(tempBlankPath, blankPdfBytes);
 
-      // Renderizar PDF con plantilla
+      // Renderizar PDF con plantilla usando el sistema modular
       const avaladoFilePath = path.join(__dirname, "../downloads", `avalado_${Date.now()}.pdf`);
-      await renderPdfWithTemplate(tempBlankPath, avaladoFilePath, data, fieldConfig);
+
+      // El TemplateManager manejará la configuración específica de la plantilla
+      await renderPdfWithTemplate(tempBlankPath, avaladoFilePath, data, { templateName });
 
       // Insertar metadatos de firma
       const finalPdfBytes = fs.readFileSync(avaladoFilePath);

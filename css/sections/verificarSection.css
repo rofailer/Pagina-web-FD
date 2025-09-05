@@ -264,6 +264,7 @@
 
 .alert-message.warning .alert-icon::before {
   content: "!";
+  color: #6c757d;
 }
 
 .alert-message.info .alert-icon::before {

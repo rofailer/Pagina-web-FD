@@ -26,6 +26,20 @@ CREATE TABLE user_keys (
   FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Crear tabla para configuración global de templates
+CREATE TABLE global_template_config (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  template_name VARCHAR(50) NOT NULL DEFAULT 'clasico',
+  logo_path TEXT DEFAULT NULL,
+  institution_name VARCHAR(255) DEFAULT 'Universidad Ejemplo',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Insertar configuración por defecto
+INSERT INTO global_template_config (template_name, institution_name) VALUES
+('clasico', 'Universidad Ejemplo');
+
 -- Insertar usuarios admin y owner (contraseña: 123)
 INSERT INTO users (nombre, usuario, password, rol) VALUES
 ('Administrador', 'admin', '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe', 'admin'),
