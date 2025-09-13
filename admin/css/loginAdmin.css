@@ -1,0 +1,361 @@
+/* Estilos específicos para la página de acceso administrativo */
+.admin-access-page {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  background: linear-gradient(
+      135deg,
+      rgba(var(--primary-rgb, 102, 126, 234), 0.7) 0%,
+      rgba(var(--secondary-rgb, 118, 75, 162), 0.7) 100%
+    ),
+    url("../../../recursos/Fondo.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  transition: background 0.3s ease;
+}
+
+.access-container {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  padding: 40px;
+  width: 100%;
+  max-width: 500px;
+  text-align: center;
+}
+
+.access-header {
+  margin-bottom: 30px;
+}
+
+.access-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 10px;
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--secondary-color) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: all 0.3s ease;
+}
+
+.access-subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.access-form {
+  margin: 30px 0 0 0;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 16px;
+  transition: all 0.2s;
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.access-btn {
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--secondary-color) 100%
+  );
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.access-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(var(--primary-rgb), 0.4);
+}
+
+.access-btn:active {
+  transform: translateY(0);
+}
+
+.access-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.access-btn.secondary {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+}
+
+.access-btn.secondary:hover {
+  box-shadow: 0 10px 15px -3px rgba(100, 116, 139, 0.3);
+}
+
+.access-btn.tertiary {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  border: 1px solid #6b7280;
+}
+
+.access-btn.tertiary:hover {
+  box-shadow: 0 10px 15px -3px rgba(107, 114, 128, 0.3);
+}
+
+/* Contenedor principal de botones */
+.button-container {
+  margin-top: 20px;
+}
+
+/* Contenedor de botones secundarios */
+.secondary-buttons {
+  margin-top: 15px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+}
+
+.secondary-buttons.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Fila de botones para disposición horizontal */
+.button-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.button-row .access-btn {
+  flex: 1;
+  margin-top: 0;
+  min-width: 0;
+}
+
+/* Responsive: en móviles, los botones se apilan verticalmente */
+@media (max-width: 480px) {
+  .button-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .button-row .access-btn {
+    width: 100%;
+  }
+}
+
+/* Estilos para iconos SVG en botones */
+.btn-icon {
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.access-btn:hover .btn-icon {
+  transform: translateX(-2px);
+}
+
+.access-btn.tertiary:hover .btn-icon {
+  transform: translateX(-3px);
+}
+
+/* Ajustar el layout de los botones con iconos */
+.button-row .access-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.button-row .access-btn .btn-text {
+  flex: 1;
+  text-align: center;
+}
+
+/* Mejorar la jerarquía visual */
+.access-btn.primary {
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--secondary-color) 100%
+  );
+  font-size: 1.1rem;
+  padding: 16px 24px;
+}
+
+.access-btn.secondary,
+.access-btn.tertiary {
+  font-size: 0.9rem;
+  padding: 12px 18px;
+  opacity: 0.9;
+}
+
+.access-btn.secondary:hover,
+.access-btn.tertiary:hover {
+  opacity: 1;
+}
+
+/* Espaciado mejorado */
+.button-container + .secondary-buttons {
+  margin-top: 20px;
+}
+
+/* Transiciones suaves para todos los elementos */
+.access-form * {
+  transition: all 0.3s ease;
+}
+
+.password-only-mode .access-subtitle {
+  color: #059669;
+}
+
+.current-user-info {
+  background: color-mix(in srgb, var(--primary-color) 8%, white);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 30%, transparent);
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.current-user-info .user-label {
+  font-size: 0.85rem;
+  color: var(--primary-color);
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.current-user-info .user-email {
+  font-size: 1rem;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.access-alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.access-alert.error {
+  background: rgba(239, 68, 68, 0.05);
+  border-left-color: #ef4444;
+  color: #991b1b;
+}
+
+.access-alert.success {
+  background: rgba(16, 185, 129, 0.05);
+  border-left-color: #10b981;
+  color: #065f46;
+}
+
+.access-info {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.access-info h4 {
+  color: #1e293b;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.access-info ul {
+  text-align: left;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.loading-spinner {
+  display: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 10px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.btn-loading .loading-spinner {
+  display: inline-block;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .access-container {
+    padding: 30px 20px;
+    margin: 10px;
+  }
+
+  .access-title {
+    font-size: 1.5rem;
+  }
+
+  .access-subtitle {
+    font-size: 1rem;
+  }
+}

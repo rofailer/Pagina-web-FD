@@ -22,7 +22,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const configResponse = await fetch('/api/global-template-config');
         if (configResponse.ok) {
             window.globalTemplateConfig = await configResponse.json();
-            console.log('📋 Configuración global cargada en signSteps:', window.globalTemplateConfig);
         }
     } catch (error) {
         console.warn('Warning: No se pudo cargar la configuración global:', error);
@@ -756,10 +755,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     async function loadUserKeys() {
         try {
             // Método 1: Descarga directa (más simple)
-            console.log("� Iniciando descarga directa...");
-            // Eliminar línea que causa error
-
-            // Código de descarga problemático eliminado
 
             showNotification("¡Documento descargado correctamente!", "success");
 
@@ -962,7 +957,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             item.addEventListener('click', function (e) {
                 e.preventDefault();
-                console.log("🖱️ Click en llave:", keyId);
                 if (keyId) {
                     selectKey(parseInt(keyId));
                 }
@@ -972,12 +966,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             item.style.cursor = 'pointer';
         });
 
-        console.log("🔗 Event listeners agregados a", keyItems.length, "llaves");
     }
 
     // --- Función CENTRALIZADA para seleccionar una llave ---
     window.selectKey = async function (keyId) {
-        console.log("🔑 Seleccionando llave ID:", keyId);
 
         try {
             // Llamar al backend para establecer la llave activa
@@ -1036,7 +1028,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // --- Función para refrescar llaves desde otras secciones ---
     window.refreshSignKeys = function () {
-        console.log("🔄 Refrescando llaves en sección de firmar...");
         if (currentStep === 2) {
             loadUserKeys();
         }
@@ -1044,20 +1035,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // --- Función para actualizar la selección visual ---
     function updateKeySelection(keyId) {
-        console.log("🎨 Actualizando selección visual para llave:", keyId);
 
         // Remover selección anterior de todos los elementos
         const allKeyItems = document.querySelectorAll('.key-item');
         allKeyItems.forEach(item => {
             item.classList.remove('selected');
-            console.log("Removiendo 'selected' de:", item.getAttribute('data-key-id'));
         });
 
         // Seleccionar nueva llave
         const selectedItem = document.querySelector(`[data-key-id="${keyId}"]`);
         if (selectedItem) {
             selectedItem.classList.add('selected');
-            console.log("✅ Agregando 'selected' a llave:", keyId);
 
             // Agregar efecto visual adicional
             selectedItem.style.transform = 'scale(1.02)';
@@ -1410,13 +1398,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             formData.append('signatureData', signatureData);
             formData.append('signatureMethod', signatureMethod);
 
-            console.log('🚀 Generando PDF final con firma electrónica:', {
-                titulo: tempDocumentData.titulo,
-                autores: tempDocumentData.autores,
-                hasSignature: !!signatureData,
-                signatureMethod: signatureMethod
-            });
-
             // Realizar petición al servidor para generar PDF final con firma
             const token = localStorage.getItem("token");
             const response = await fetch('/sign-document', {
@@ -1438,7 +1419,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 downloadUrl = result.downloadUrl;
 
                 showNotification('¡Documento firmado digitalmente generado exitosamente!', 'success');
-                console.log("📂 PDF final con firma generado:", downloadUrl);
 
                 setTimeout(() => {
                     showStep(4); // Ir al paso final de descarga
@@ -1472,21 +1452,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Función global para limpiar formularios cuando se sale de la sección firmar
     window.cleanSignFormsOnSectionExit = function (targetSection) {
-        // Solo limpiar si:
-        // 1. Nos vamos de la sección firmar
-        // 2. Y el proceso está en curso (para preservar datos después de completar)
-        // 3. Y NO estamos en el paso 4 (descarga) - para permitir navegación libre después de descargar
         if (targetSection !== 'firmar' && window.firmaEnCurso && currentStep < 4) {
-            console.log("🧹 Limpiando formularios al salir de la sección firmar");
-            // Marcar proceso como completado al navegar
             window.firmaEnCurso = false;
             limpiarFormulariosFirmar(false, true); // Sin notificación, resetear downloadUrl
         } else if (targetSection !== 'firmar' && currentStep === 4) {
-            // Si estamos en el paso 4 y navegamos, marcar proceso como completado
-            // pero NO limpiar formularios NI downloadUrl (permitir volver y seguir descargando)
-            console.log("✅ Proceso de firma marcado como completado al navegar desde paso 4");
             window.firmaEnCurso = false;
-            // NO llamar limpiarFormulariosFirmar para preservar downloadUrl
+
         }
     };
 
@@ -1538,7 +1509,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 // ✅ MODERNIZADO - Usar directamente el nombre de la plantilla
                 selectedTemplate = this.getAttribute('data-template');
 
-                console.log('📄 Plantilla seleccionada:', selectedTemplate);
+                // Plantilla seleccionada: ${selectedTemplate}
 
                 // Guardar selección
                 localStorage.setItem('selectedTemplate', selectedTemplate);
@@ -1599,7 +1570,6 @@ function improveDownloadExperience() {
 
 // Función global para limpiar formularios cuando se hace logout
 window.cleanSignFormsOnLogout = function () {
-    console.log('🧹 Limpiando formularios de firma por logout...');
 
     // Limpiar variables de estado
     currentStep = 1;
@@ -1636,5 +1606,4 @@ window.cleanSignFormsOnLogout = function () {
     // Resetear pasos
     showStep(1);
 
-    console.log('✅ Formularios de firma limpiados completamente');
 };

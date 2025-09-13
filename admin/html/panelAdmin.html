@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel Administrativo</title>
+
+    <!-- CSS del sistema administrativo -->
+    <link rel="stylesheet" href="../css/admin.css" />
+    <link rel="stylesheet" href="../css/admin-components.css" />
+    <link rel="stylesheet" href="../css/admin-responsive.css" />
+    <link rel="stylesheet" href="../css/panelAdmin.css" />
+    <link rel="stylesheet" href="../css/preview-icon.css" />
+    <link rel="stylesheet" href="../../css/themeSelector.css" />
+    <link rel="stylesheet" href="../../css/visualConfig.css" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
+
+    <!-- Inicialización temprana del tema - NO aplica tema, solo prepara para themeManager -->
+    <script>
+      (function () {
+        // Solo preparar configuración inicial, NO aplicar tema
+        // themeManager.js se encargará de aplicar el tema correcto
+        const availableThemes = [
+          "orange",
+          "blue",
+          "green",
+          "purple",
+          "red",
+          "teal",
+          "dark",
+        ];
+
+        // Leer configuración actual para que themeManager la considere
+        const storedTheme = localStorage.getItem("selectedTheme");
+        const storedCustomColor = localStorage.getItem("customColor");
+
+        // NO aplicar tema aquí - dejar que themeManager.js lo haga
+        // Esto evita conflictos entre la inicialización y el sistema unificado
+      })();
+
+      // Verificación inicial de autenticación
+      (function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenId = urlParams.get("tid");
+        const token = localStorage.getItem("token");
+
+        // Si no hay tokenId ni token, redirigir al login
+        if (!tokenId && !token) {
+          console.log(
+            "🔐 No hay token de administración, redirigiendo al login"
+          );
+          window.location.href = "/admin/html/loginAdminPanel.html";
+          return;
+        }
+
+        // Si hay token pero no tokenId, dejar que panelAdmin.js valide el token
+        if (!tokenId && token) {
+          console.log(
+            "🔐 Token existente encontrado, validando con panelAdmin.js"
+          );
+          // No redirigir, dejar que panelAdmin.js maneje la validación
+          return;
+        }
+
+        // Si hay tokenId, proceder normalmente (dejará que panelAdmin.js lo maneje)
+        console.log(
+          "🔐 TokenId presente, procediendo con autenticación normal"
+        );
+      })();
+    </script>
+  </head>
+  <body class="admin-body" data-bg="default">
+    <!-- Header administrativo -->
+    <header class="admin-header">
+      <div class="admin-header-content">
+        <!-- Botón hamburguesa para móvil -->
+        <button
+          class="admin-mobile-toggle"
+          id="mobileToggleBtn"
+          aria-label="Abrir menú"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M3 12h18M3 6h18M3 18h18"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+        <div class="admin-logo">
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            class="admin-logo-icon"
+          >
+            <rect
+              x="3"
+              y="4"
+              width="18"
+              height="18"
+              rx="2"
+              ry="2"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <line
+              x1="16"
+              y1="2"
+              x2="16"
+              y2="6"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <line
+              x1="8"
+              y1="2"
+              x2="8"
+              y2="6"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <line
+              x1="3"
+              y1="10"
+              x2="21"
+              y2="10"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <path d="M8 14h.01" stroke="currentColor" stroke-width="2" />
+            <path d="M12 14h.01" stroke="currentColor" stroke-width="2" />
+            <path d="M16 14h.01" stroke="currentColor" stroke-width="2" />
+            <path d="M8 18h.01" stroke="currentColor" stroke-width="2" />
+            <path d="M12 18h.01" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <div class="admin-logo-text">
+            <h1>Panel de Administración</h1>
+            <span id="adminHeaderSubtitle">Sistema de Firmas Digitales</span>
+          </div>
+        </div>
+
+        <div class="admin-header-actions">
+          <!-- Botón para volver al sitio principal -->
+          <button
+            class="admin-btn secondary main-site-btn"
+            id="mainSiteBtn"
+            onclick="goToMainSite()"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <polyline
+                points="9,22 9,12 15,12 15,22"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+            </svg>
+            Ir al Sitio
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Layout principal -->
+    <div class="admin-layout">
+      <!-- Sidebar de navegación -->
+      <aside class="admin-sidebar">
+        <nav class="admin-nav">
+          <div class="admin-nav-section">
+            <h3>Configuración</h3>
+            <button
+              class="admin-nav-item active"
+              data-tab="configuracion-general"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="3"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+              <span>Configuración General</span>
+            </button>
+          </div>
+
+          <div class="admin-nav-section">
+            <h3>Usuarios</h3>
+            <button class="admin-nav-item" data-tab="gestion-usuarios">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <circle
+                  cx="12"
+                  cy="7"
+                  r="4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+              <span>Gestión de Usuarios</span>
+            </button>
+          </div>
+
+          <div class="admin-nav-section">
+            <h3>Personalización</h3>
+            <button class="admin-nav-item" data-tab="personalizacion-visual">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M12 6a6 6 0 0 0 0 12c3.31 0 6-2.69 6-6"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+              <span>Personalización Visual</span>
+            </button>
+
+            <button class="admin-nav-item" data-tab="temas-colores">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span>Temas y Colores</span>
+            </button>
+
+            <button class="admin-nav-item" data-tab="configuracion-pdf">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <polyline
+                  points="14,2 14,8 20,8"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <line
+                  x1="16"
+                  y1="13"
+                  x2="8"
+                  y2="13"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <line
+                  x1="16"
+                  y1="17"
+                  x2="8"
+                  y2="17"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <polyline
+                  points="10,9 9,9 8,9"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+              <span>Configuración PDF</span>
+            </button>
+          </div>
+
+          <div class="admin-nav-section">
+            <h3>Sistema</h3>
+            <button class="admin-nav-item" data-tab="base-datos">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <ellipse
+                  cx="12"
+                  cy="5"
+                  rx="9"
+                  ry="3"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+              <span>Base de Datos</span>
+            </button>
+
+            <button class="admin-nav-item" data-tab="sistema-avanzado">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="3"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+              <span>Sistema Avanzado</span>
+            </button>
+          </div>
+        </nav>
+
+        <!-- Contenedor para botón móvil -->
+        <div class="admin-sidebar-mobile-actions" id="sidebarMobileActions">
+          <button
+            class="admin-btn secondary main-site-btn-mobile"
+            onclick="goToMainSite()"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <polyline
+                points="9,22 9,12 15,12 15,22"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+            </svg>
+            <span>Volver al Sitio</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Contenido principal -->
+      <main class="admin-main">
+        <!-- Dashboard de métricas -->
+        <div class="admin-metrics" id="adminMetrics">
+          <div class="metric-card">
+            <div class="metric-icon users">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <circle
+                  cx="12"
+                  cy="7"
+                  r="4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+            <div class="metric-content">
+              <h4>Usuarios Totales</h4>
+              <span class="metric-value" id="totalUsers">--</span>
+              <span class="metric-change positive">+3 este mes</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon documents">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <polyline
+                  points="14,2 14,8 20,8"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <line
+                  x1="16"
+                  y1="13"
+                  x2="8"
+                  y2="13"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <line
+                  x1="16"
+                  y1="17"
+                  x2="8"
+                  y2="17"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+            <div class="metric-content">
+              <h4>Documentos Firmados</h4>
+              <span class="metric-value" id="totalDocs">--</span>
+              <span class="metric-change positive">+12 esta semana</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon keys">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+            <div class="metric-content">
+              <h4>Llaves Activas</h4>
+              <span class="metric-value" id="totalKeys">--</span>
+              <span class="metric-change neutral">Sin cambios</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon status">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M9 12l2 2 4-4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+            <div class="metric-content">
+              <h4>Estado del Sistema</h4>
+              <span class="metric-value text">Óptimo</span>
+              <span class="metric-change positive">100% uptime</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contenido de pestañas -->
+        <div class="admin-content">
+          <!-- TAB 1: CONFIGURACIÓN GENERAL -->
+          <div class="admin-tab-content active" id="tab-configuracion-general">
+            <h2>Configuración General del Sitio</h2>
+            <p class="tab-description">
+              Personaliza los elementos principales de tu sitio web
+            </p>
+
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <polyline
+                    points="3.27,6.96 12,12.01 20.73,6.96"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <line
+                    x1="12"
+                    y1="22.08"
+                    x2="12"
+                    y2="12"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Identidad del Sitio
+              </h3>
+
+              <div class="admin-form-grid">
+                <div class="admin-form-group">
+                  <label for="siteTitle_general">Título de la Página</label>
+                  <input
+                    type="text"
+                    id="siteTitle_general"
+                    placeholder="Firmas Digitales FD"
+                    class="admin-input"
+                  />
+                  <span class="admin-input-help"
+                    >Se muestra en la pestaña del navegador</span
+                  >
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="headerTitle_general">Título del Header</label>
+                  <input
+                    type="text"
+                    id="headerTitle_general"
+                    placeholder="Firmas Digitales FD"
+                    class="admin-input"
+                  />
+                  <span class="admin-input-help"
+                    >Se muestra en el encabezado del sitio</span
+                  >
+                  <div class="admin-preview">
+                    <strong>Vista previa:</strong>
+                    <span id="headerTitlePreview">Firmas Digitales FD</span>
+                  </div>
+                </div>
+
+                <div class="admin-form-group full-width">
+                  <label for="footerText">Texto del Footer</label>
+                  <textarea
+                    id="footerText"
+                    rows="2"
+                    class="admin-input"
+                    placeholder="© 2025 Firmas Digitales FD. Todos los derechos reservados."
+                  ></textarea>
+                  <span class="admin-input-help"
+                    >Texto que aparece en la parte inferior del sitio</span
+                  >
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="faviconUpload">Favicon del Sitio</label>
+                  <div class="admin-file-upload">
+                    <input
+                      type="file"
+                      id="faviconUpload"
+                      accept="image/*"
+                      class="admin-file-input"
+                    />
+                    <label for="faviconUpload" class="admin-file-label">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        />
+                        <polyline
+                          points="7,10 12,15 17,10"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        />
+                        <line
+                          x1="12"
+                          y1="15"
+                          x2="12"
+                          y2="3"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        />
+                      </svg>
+                      Seleccionar Archivo
+                    </label>
+                    <div
+                      class="favicon-preview"
+                      id="faviconPreview"
+                      style="display: none"
+                    >
+                      <img id="faviconPreviewImg" alt="Favicon preview" />
+                      <span>Vista previa del favicon</span>
+                    </div>
+                  </div>
+                  <span class="admin-input-help"
+                    >Icono que aparece en la pestaña del navegador (recomendado:
+                    32x32px)</span
+                  >
+                </div>
+              </div>
+
+              <div class="admin-actions">
+                <button class="admin-btn primary" onclick="saveGeneralConfig()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <polyline
+                      points="17,21 17,13 7,13 7,21"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <polyline
+                      points="7,3 7,8 15,8"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  Guardar Cambios
+                </button>
+                <button class="admin-btn secondary" onclick="previewChanges()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <circle
+                      cx="11"
+                      cy="11"
+                      r="8"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <path
+                      d="M21 21l-4.35-4.35"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  Vista Previa
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: GESTIÓN DE USUARIOS -->
+          <div class="admin-tab-content" id="tab-gestion-usuarios">
+            <h2>Gestión de Usuarios</h2>
+            <p class="tab-description">
+              Administra las cuentas de usuario y sus permisos
+            </p>
+
+            <div class="admin-section">
+              <div class="admin-section-header">
+                <h3>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <circle
+                      cx="9"
+                      cy="7"
+                      r="4"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <path
+                      d="M22 21v-2a4 4 0 0 0-3-3.87"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <path
+                      d="M16 3.13a4 4 0 0 1 0 7.75"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  Crear Nuevo Usuario
+                </h3>
+                <button class="admin-btn primary" onclick="toggleUserForm()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <line
+                      x1="12"
+                      y1="5"
+                      x2="12"
+                      y2="19"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <line
+                      x1="5"
+                      y1="12"
+                      x2="19"
+                      y2="12"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  Nuevo Usuario
+                </button>
+              </div>
+
+              <!-- Formulario de creación de usuario (oculto por defecto) -->
+              <div
+                class="user-form-container"
+                id="userFormContainer"
+                style="display: none"
+              >
+                <form class="admin-form" id="createUserForm">
+                  <div class="admin-form-grid">
+                    <div class="admin-form-group">
+                      <label for="userFullName">Nombre Completo *</label>
+                      <input
+                        type="text"
+                        id="userFullName"
+                        required
+                        class="admin-input"
+                        placeholder="Juan Pérez García"
+                      />
+                    </div>
+
+                    <div class="admin-form-group">
+                      <label for="userIdNumber">Número de ID *</label>
+                      <input
+                        type="text"
+                        id="userIdNumber"
+                        required
+                        class="admin-input"
+                        placeholder="12345678"
+                      />
+                    </div>
+
+                    <div class="admin-form-group">
+                      <label for="userName">Nombre de Usuario *</label>
+                      <input
+                        type="text"
+                        id="userName"
+                        required
+                        class="admin-input"
+                        placeholder="jperez"
+                      />
+                      <span class="admin-input-help"
+                        >Solo letras, números y guiones bajos</span
+                      >
+                    </div>
+
+                    <div class="admin-form-group">
+                      <label for="userPassword">Contraseña *</label>
+                      <div class="password-input-container">
+                        <input
+                          type="password"
+                          id="userPassword"
+                          required
+                          class="admin-input"
+                          placeholder="••••••••"
+                        />
+                        <button
+                          type="button"
+                          class="password-toggle"
+                          onclick="togglePasswordVisibility('userPassword')"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                          >
+                            <path
+                              d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                              stroke="currentColor"
+                              stroke-width="2"
+                            />
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="3"
+                              stroke="currentColor"
+                              stroke-width="2"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="admin-form-group">
+                      <label for="userRole">Rol del Usuario *</label>
+                      <select id="userRole" required class="admin-select">
+                        <option value="">Seleccionar rol...</option>
+                        <option value="profesor">Profesor</option>
+                        <option value="admin">Administrador</option>
+                      </select>
+                      <span class="admin-input-help"
+                        >Los administradores tienen acceso completo al
+                        sistema</span
+                      >
+                    </div>
+
+                    <div class="admin-form-group">
+                      <label for="userEmail">Correo Electrónico</label>
+                      <input
+                        type="email"
+                        id="userEmail"
+                        class="admin-input"
+                        placeholder="usuario@universidad.edu"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="admin-form-actions">
+                    <button type="submit" class="admin-btn success">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M20 6L9 17l-5-5"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        />
+                      </svg>
+                      Crear Usuario
+                    </button>
+                    <button
+                      type="button"
+                      class="admin-btn secondary"
+                      onclick="cancelUserForm()"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <line
+                          x1="18"
+                          y1="6"
+                          x2="6"
+                          y2="18"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        />
+                        <line
+                          x1="6"
+                          y1="6"
+                          x2="18"
+                          y2="18"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        />
+                      </svg>
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Lista de usuarios existentes -->
+              <div class="users-list-container">
+                <h4>Usuarios Existentes</h4>
+                <div class="users-list" id="usersList">
+                  <!-- Los usuarios se cargarán dinámicamente -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: PERSONALIZACIÓN -->
+          <div class="admin-tab-content" id="tab-personalizacion-visual">
+            <h2>Personalización Visual</h2>
+            <p class="tab-description">
+              Personaliza la apariencia visual completa del sitio web con fondos
+              dinámicos, favicon personalizado y elementos de branding
+            </p>
+
+            <!-- Sistema de Fondos Dinámicos -->
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    ry="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <circle
+                    cx="9"
+                    cy="9"
+                    r="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Fondos Dinámicos
+              </h3>
+
+              <div class="admin-form-grid">
+                <div class="admin-form-group full-width">
+                  <label>Fondo Global del Sitio</label>
+                  <div class="background-selector">
+                    <div class="background-option selected" data-bg="fondo1">
+                      <div class="bg-preview">
+                        <img
+                          src="../../../recursos/Fondo.jpg"
+                          alt="Fondo 1"
+                          style="
+                            width: 100%;
+                            height: 60px;
+                            object-fit: cover;
+                            border-radius: 4px;
+                          "
+                        />
+                      </div>
+                      <span>Fondo 1</span>
+                    </div>
+                    <div class="background-option" data-bg="fondo2">
+                      <div class="bg-preview">
+                        <img
+                          src="../../../recursos/Fondo2.jpg"
+                          alt="Fondo 2"
+                          style="
+                            width: 100%;
+                            height: 60px;
+                            object-fit: cover;
+                            border-radius: 4px;
+                          "
+                        />
+                      </div>
+                      <span>Fondo 2</span>
+                    </div>
+                  </div>
+                  <span class="admin-input-help"
+                    >Este fondo se aplicará a todas las páginas del sitio
+                    web</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Sistema de Favicon Dinámico -->
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Favicon Personalizado
+              </h3>
+
+              <div class="admin-form-grid">
+                <div class="admin-form-group">
+                  <label for="faviconUpload">Cambiar Favicon</label>
+                  <div class="favicon-preview">
+                    <img
+                      id="currentFavicon"
+                      src="../../favicon.ico"
+                      alt="Favicon actual"
+                      style="
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 4px;
+                        border: 1px solid #ddd;
+                      "
+                    />
+                    <span>Favicon actual</span>
+                  </div>
+                  <input
+                    type="file"
+                    id="faviconUpload"
+                    accept="image/x-icon,image/png,image/jpeg"
+                    class="admin-input"
+                  />
+                  <span class="admin-input-help"
+                    >Formato recomendado: ICO, PNG (32x32px)</span
+                  >
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="siteTitle">Título del Sitio</label>
+                  <input
+                    type="text"
+                    id="siteTitle"
+                    value="Firmas Digitales FD"
+                    class="admin-input"
+                  />
+                  <span class="admin-input-help"
+                    >Se muestra en la pestaña del navegador</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Elementos Dinámicos -->
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M4 7V4h16v3M4 7v13h16V7M4 7l8 6 8-6"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Elementos Dinámicos
+              </h3>
+
+              <div class="admin-form-grid">
+                <div class="admin-form-group">
+                  <label for="headerTitle">Título del Header</label>
+                  <input
+                    type="text"
+                    id="headerTitle"
+                    value="Firmas Digitales FD"
+                    class="admin-input"
+                  />
+                  <span class="admin-input-help"
+                    >Título que aparece en el header principal</span
+                  >
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="footerText">Texto del Footer</label>
+                  <input
+                    type="text"
+                    id="footerText"
+                    value="Firmas Digitales FD"
+                    class="admin-input"
+                  />
+                  <span class="admin-input-help"
+                    >Nombre de la empresa en el footer</span
+                  >
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="adminHeaderTitle">Título del Panel Admin</label>
+                  <input
+                    type="text"
+                    id="adminHeaderTitle"
+                    value="Sistema de Firmas Digitales"
+                    class="admin-input"
+                  />
+                  <span class="admin-input-help"
+                    >Título que aparece en el header del panel admin</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="admin-actions">
+              <button class="admin-btn primary" onclick="saveVisualConfig()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <polyline
+                    points="17,21 17,13 7,13 7,21"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <polyline
+                    points="7,3 7,8 15,8"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Aplicar Cambios Visuales
+              </button>
+              <button
+                class="admin-btn secondary"
+                onclick="previewVisualChanges()"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Vista Previa
+              </button>
+              <button class="admin-btn warning" onclick="resetVisualConfig()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path d="M3 3v5h5" stroke="currentColor" stroke-width="2" />
+                  <path
+                    d="M9 16.5L12 13.5 15 16.5"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Restablecer
+              </button>
+            </div>
+          </div>
+
+          <!-- TAB 3.5: TEMAS Y COLORES -->
+          <div class="admin-tab-content" id="tab-temas-colores">
+            <h2>Temas y Colores</h2>
+            <p class="tab-description">
+              Configura la apariencia y temas del sitio web. Los cambios se
+              aplicarán globalmente para todos los usuarios.
+            </p>
+
+            <!-- Sistema de Temas Dinámicos -->
+            <div class="admin-theme-selector">
+              <div class="theme-control-section">
+                <div class="theme-control-header">
+                  <svg
+                    class="theme-icon"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="5"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <path
+                      d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  <h3>Temas Predefinidos</h3>
+                </div>
+
+                <div class="theme-grid" id="adminThemeGrid">
+                  <div class="theme-option-card" data-theme="orange">
+                    <div
+                      class="theme-color-preview"
+                      style="background: #ff9545"
+                    ></div>
+                    <span class="theme-name">Naranja</span>
+                  </div>
+
+                  <div class="theme-option-card" data-theme="blue">
+                    <div
+                      class="theme-color-preview"
+                      style="background: #3b82f6"
+                    ></div>
+                    <span class="theme-name">Azul</span>
+                  </div>
+
+                  <div class="theme-option-card" data-theme="green">
+                    <div
+                      class="theme-color-preview"
+                      style="background: #10b981"
+                    ></div>
+                    <span class="theme-name">Verde</span>
+                  </div>
+
+                  <div class="theme-option-card" data-theme="purple">
+                    <div
+                      class="theme-color-preview"
+                      style="background: #8b5cf6"
+                    ></div>
+                    <span class="theme-name">Morado</span>
+                  </div>
+
+                  <div class="theme-option-card" data-theme="red">
+                    <div
+                      class="theme-color-preview"
+                      style="background: #ef4444"
+                    ></div>
+                    <span class="theme-name">Rojo</span>
+                  </div>
+
+                  <div class="theme-option-card" data-theme="teal">
+                    <div
+                      class="theme-color-preview"
+                      style="background: #14b8a6"
+                    ></div>
+                    <span class="theme-name">Teal</span>
+                  </div>
+                </div>
+
+                <!-- Color Personalizado -->
+                <div class="custom-color-section">
+                  <div class="custom-color-header">
+                    <h4>Color Personalizado</h4>
+                    <p class="custom-color-description">
+                      Elige un color personalizado para tu sitio web
+                    </p>
+                  </div>
+
+                  <div class="custom-color-input-group">
+                    <div class="color-input-wrapper">
+                      <input
+                        type="color"
+                        id="customColorPicker"
+                        class="custom-color-input"
+                        value="#ff9545"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      id="hexColorInput"
+                      class="hex-input"
+                      value="#ff9545"
+                      placeholder="#000000"
+                      maxlength="7"
+                    />
+                    <button class="apply-custom-btn" id="applyCustomColor">
+                      Aplicar
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="theme-actions">
+                  <button class="reset-theme" id="resetThemeBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        fill="none"
+                      />
+                      <path
+                        d="M3 3v5h5"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                    </svg>
+                    Restaurar por Defecto
+                  </button>
+
+                  <button class="save-global-theme" id="saveGlobalTheme">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                      <polyline
+                        points="17,21 17,13 7,13 7,21"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                      <polyline
+                        points="7,3 7,8 15,8"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                    </svg>
+                    Guardar Configuración Global
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 4: CONFIGURACIÓN PDF -->
+          <div class="admin-tab-content" id="tab-configuracion-pdf">
+            <h2>Configuración de PDFs</h2>
+            <p class="tab-description">
+              Personaliza las plantillas y configuraciones de documentos PDF
+            </p>
+
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <polyline
+                    points="14,2 14,8 20,8"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <line
+                    x1="16"
+                    y1="13"
+                    x2="8"
+                    y2="13"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <line
+                    x1="16"
+                    y1="17"
+                    x2="8"
+                    y2="17"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Configuración Institucional
+              </h3>
+
+              <div class="admin-form-grid">
+                <div class="admin-form-group full-width">
+                  <label for="institutionName">Nombre de la Institución</label>
+                  <input
+                    type="text"
+                    id="institutionName"
+                    class="admin-input"
+                    placeholder="Universidad Nacional de Colombia"
+                  />
+                  <span class="admin-input-help"
+                    >Este nombre aparecerá en todos los documentos PDF
+                    generados</span
+                  >
+                </div>
+              </div>
+
+              <div class="admin-actions">
+                <button class="admin-btn primary" onclick="savePdfConfig()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <polyline
+                      points="17,21 17,13 7,13 7,21"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <polyline
+                      points="7,3 7,8 15,8"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  Guardar Configuración
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 5: BASE DE DATOS -->
+          <div class="admin-tab-content" id="tab-base-datos">
+            <h2>Administración de Base de Datos</h2>
+            <p class="tab-description">
+              Monitorea y administra la base de datos del sistema
+            </p>
+
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <ellipse
+                    cx="12"
+                    cy="5"
+                    rx="9"
+                    ry="3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Estado de la Base de Datos
+              </h3>
+
+              <div class="db-status-container">
+                <div class="db-status-card">
+                  <div class="db-status-header">
+                    <div class="status-indicator online"></div>
+                    <h4>Conexión Establecida</h4>
+                  </div>
+                  <div class="db-status-details" id="dbStatusDetails">
+                    <!-- Se carga dinámicamente -->
+                  </div>
+                </div>
+              </div>
+
+              <div class="admin-actions">
+                <button
+                  class="admin-btn secondary"
+                  onclick="testDbConnection()"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <polyline
+                      points="22,12 18,12 15,21 9,3 6,12 2,12"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  Probar Conexión
+                </button>
+                <button class="admin-btn warning" onclick="backupDatabase()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <polyline
+                      points="7,10 12,15 17,10"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <line
+                      x1="12"
+                      y1="15"
+                      x2="12"
+                      y2="3"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  Crear Respaldo
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 6: SISTEMA AVANZADO -->
+          <div class="admin-tab-content" id="tab-sistema-avanzado">
+            <h2>Sistema Avanzado</h2>
+            <p class="tab-description">
+              Configuraciones avanzadas y logs del sistema
+            </p>
+
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <polyline
+                    points="14,2 14,8 20,8"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <line
+                    x1="16"
+                    y1="13"
+                    x2="8"
+                    y2="13"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <line
+                    x1="16"
+                    y1="17"
+                    x2="8"
+                    y2="17"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Logs de Actividad
+              </h3>
+
+              <div class="logs-container">
+                <div class="logs-header">
+                  <div class="logs-filters">
+                    <select class="admin-select" id="logFilter">
+                      <option value="all">Todas las actividades</option>
+                      <option value="admin">Solo administrativas</option>
+                      <option value="user">Solo usuarios</option>
+                      <option value="system">Solo sistema</option>
+                    </select>
+                    <button class="admin-btn secondary" onclick="refreshLogs()">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <polyline
+                          points="23,4 23,10 17,10"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        />
+                        <polyline
+                          points="1,20 1,14 7,14"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        />
+                        <path
+                          d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        />
+                      </svg>
+                      Actualizar
+                    </button>
+                  </div>
+                </div>
+                <div class="logs-list" id="systemLogs">
+                  <!-- Los logs se cargan dinámicamente -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Modal de confirmación -->
+    <div class="admin-modal" id="confirmModal" style="display: none">
+      <div class="admin-modal-content">
+        <div class="admin-modal-header">
+          <h3 id="confirmModalTitle">Confirmar Acción</h3>
+          <button class="admin-modal-close" onclick="closeConfirmModal()">
+            &times;
+          </button>
+        </div>
+        <div class="admin-modal-body">
+          <p id="confirmModalMessage">
+            ¿Estás seguro de que quieres realizar esta acción?
+          </p>
+        </div>
+        <div class="admin-modal-footer">
+          <button
+            class="admin-btn danger"
+            id="confirmModalBtn"
+            onclick="executeConfirmedAction()"
+          >
+            Confirmar
+          </button>
+          <button class="admin-btn secondary" onclick="closeConfirmModal()">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div class="admin-loading" id="adminLoading" style="display: none">
+      <div class="admin-loading-content">
+        <div class="admin-spinner"></div>
+        <p>Procesando...</p>
+      </div>
+    </div>
+
+    <!-- Script de validación de autenticación de máxima seguridad -->
+    <!-- Scripts del sistema administrativo -->
+    <script src="../../scripts/frontend/notifications.js"></script>
+    <script src="../../scripts/frontend/auth.frontend.js"></script>
+    <script src="../js/admin.frontend.js"></script>
+    <script src="../js/user-management.js"></script>
+    <script src="../js/advanced-config.js"></script>
+    <!-- Sistema unificado de temas -->
+    <script src="../../scripts/utils/themeManager.js"></script>
+    <script src="../../scripts/frontend/visualConfig.frontend.js"></script>
+    <script src="../js/panelAdmin.js"></script>
+  </body>
+</html>

@@ -91,6 +91,21 @@ CREATE TABLE global_template_config (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====================================
+-- 4.1. CREAR TABLA THEME_CONFIG (CONFIGURACIÓN GLOBAL DE TEMAS)
+-- ====================================
+
+CREATE TABLE theme_config (
+  id INT PRIMARY KEY DEFAULT 1,
+  selected_theme VARCHAR(50) NOT NULL DEFAULT 'orange',
+  custom_color VARCHAR(7) NULL,
+  timestamp BIGINT NOT NULL,
+  updated_by VARCHAR(100) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT single_row CHECK (id = 1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ====================================
 -- 5. CREAR TABLA USER_PREFERENCES (CONFIGURACIONES PERSONALIZADAS)
 -- ====================================
 
@@ -106,7 +121,25 @@ CREATE TABLE user_preferences (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====================================
--- 6. CREAR TABLA USER_ACTIVITY_LOG (AUDITORÍA)
+-- 6. CREAR TABLA VISUAL_CONFIG (CONFIGURACIÓN VISUAL GLOBAL)
+-- ====================================
+
+CREATE TABLE visual_config (
+  id INT PRIMARY KEY DEFAULT 1,
+  background VARCHAR(20) NOT NULL DEFAULT 'fondo1',
+  favicon VARCHAR(255) DEFAULT '../../favicon.ico',
+  site_title VARCHAR(255) DEFAULT 'Firmas Digitales FD',
+  header_title VARCHAR(255) DEFAULT 'Firmas Digitales FD',
+  footer_text TEXT,
+  admin_header_title VARCHAR(255) DEFAULT 'Panel Administrativo',
+  updated_by VARCHAR(100) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT single_visual_config CHECK (id = 1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ====================================
+-- 7. CREAR TABLA USER_ACTIVITY_LOG (AUDITORÍA)
 -- ====================================
 
 CREATE TABLE user_activity_log (
@@ -146,6 +179,14 @@ CREATE INDEX idx_user_activity_created_at ON user_activity_log(created_at);
 
 INSERT INTO global_template_config (template_name, institution_name) VALUES
 ('clasico', 'Universidad Ejemplo');
+
+-- Insertar configuración de tema por defecto
+INSERT INTO theme_config (id, selected_theme, custom_color, timestamp) VALUES
+(1, 'orange', NULL, UNIX_TIMESTAMP() * 1000);
+
+-- Insertar configuración visual por defecto
+INSERT INTO visual_config (id, background, favicon, site_title, header_title, footer_text, admin_header_title) VALUES
+(1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', 'Firmas Digitales FD', '© 2024 Firmas Digitales FD. Todos los derechos reservados.', 'Panel Administrativo');
 
 -- ====================================
 -- 9. INSERTAR USUARIOS ADMIN Y OWNER
@@ -262,37 +303,12 @@ INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address) VALUES
 ((SELECT id FROM users WHERE usuario = 'owner'), 'account_created', 'Cuenta de propietario creada durante la instalación del sistema', '127.0.0.1');
 
 -- ====================================
--- 12. PROCEDIMIENTOS ALMACENADOS ÚTILES (OPCIONAL)
--- ====================================
-
--- Procedimiento para obtener estadísticas de usuario
-DELIMITER $$
-CREATE PROCEDURE GetUserStats(IN userId INT)
-BEGIN
-    SELECT 
-        u.nombre_completo,
-        u.email,
-        u.organizacion,
-        u.ultimo_acceso,
-        COUNT(uk.id) as total_keys,
-        COUNT(CASE WHEN uk.expiration_date > NOW() THEN 1 END) as active_keys,
-        COUNT(CASE WHEN uk.expiration_date <= NOW() THEN 1 END) as expired_keys,
-        COUNT(ual.id) as total_activities
-    FROM users u
-    LEFT JOIN user_keys uk ON u.id = uk.user_id
-    LEFT JOIN user_activity_log ual ON u.id = ual.user_id
-    WHERE u.id = userId
-    GROUP BY u.id;
-END$$
-DELIMITER ;
-
--- ====================================
--- 13. VISTAS ÚTILES PARA CONSULTAS FRECUENTES
+-- 12. VISTAS ÚTILES PARA CONSULTAS FRECUENTES (SIMPLIFICADO)
 -- ====================================
 
 -- Vista para usuarios activos con información completa
 CREATE VIEW vista_usuarios_activos AS
-SELECT 
+SELECT
     u.id,
     u.usuario,
     u.nombre_completo,
@@ -312,7 +328,7 @@ GROUP BY u.id;
 
 -- Vista para actividad reciente
 CREATE VIEW vista_actividad_reciente AS
-SELECT 
+SELECT
     ual.id,
     u.nombre_completo,
     u.usuario,
@@ -342,7 +358,7 @@ SELECT 'TABLAS CREADAS:' as info;
 SELECT TABLE_NAME as tabla_creada 
 FROM INFORMATION_SCHEMA.TABLES 
 WHERE TABLE_SCHEMA = DATABASE() 
-AND TABLE_NAME IN ('users', 'user_keys', 'global_template_config', 'user_preferences', 'user_activity_log');
+AND TABLE_NAME IN ('users', 'user_keys', 'global_template_config', 'theme_config', 'user_preferences', 'user_activity_log');
 
 SELECT 'USUARIOS CREADOS:' as info;
 SELECT usuario, nombre_completo, email, rol, estado_cuenta 
@@ -358,12 +374,12 @@ FROM global_template_config;
 -- ====================================
 
 /*
-📋 RESUMEN DE LA INSTALACIÓN:
 
 ✅ TABLAS CREADAS:
 - users (expandida con 17 campos adicionales)
 - user_keys (llaves de cifrado)
 - global_template_config (configuración global)
+- theme_config (configuración global de temas)
 - user_preferences (preferencias personalizadas)
 - user_activity_log (auditoría y actividad)
 
@@ -382,12 +398,6 @@ FROM global_template_config;
 🔐 CREDENCIALES DE ACCESO:
 Usuario: admin | Contraseña: 123
 Usuario: owner | Contraseña: 123
-
-🚀 PRÓXIMOS PASOS:
-1. Verificar que el servidor Node.js tenga las nuevas rutas
-2. Probar el login con los usuarios creados
-3. Configurar el directorio uploads/profile-photos
-4. Personalizar la información de la institución
 
 ⚠️ IMPORTANTE:
 - Las contraseñas están hasheadas con bcrypt

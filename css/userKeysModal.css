@@ -1,3 +1,6 @@
+/* Importar sistema de temas */
+@import url("./themeSelector.css");
+
 /* Puedes poner esto en tu CSS global */
 .modal {
   position: fixed;
@@ -37,9 +40,6 @@
 #userKeysList button {
   margin-left: 10px;
 }
-
-/* Importar sistema de temas */
-@import url("./themeSelector.css");
 
 /* ===== MODAL DE LLAVES DEL USUARIO ===== */
 #keySelectModal .modal-content {

@@ -15,11 +15,11 @@ class ProfessionalPDFSystem {
         this.customInstitution = 'Universidad Firmas Digitales';
         this.templates = {};
 
-        console.log('🏗️ Inicializando sistema PDF Preview Frontend');
+        // Inicializando sistema PDF Preview Frontend
     }
 
     async init() {
-        console.log('⚡ Inicializando sistema de preview...');
+        // Inicializando sistema de preview
 
         // Cargar configuración global
         await this.loadGlobalConfig();
@@ -36,11 +36,10 @@ class ProfessionalPDFSystem {
         // Generar preview inicial
         await this.updatePreview();
 
-        console.log('✅ Sistema de preview inicializado correctamente');
     }
 
     async waitForTemplates() {
-        console.log('⏳ Esperando que las plantillas se carguen...');
+        // Esperando que las plantillas se carguen
 
         let attempts = 0;
         const maxAttempts = 50; // 5 segundos máximo
@@ -51,7 +50,7 @@ class ProfessionalPDFSystem {
                 window.MinimalTemplate &&
                 window.ElegantTemplate) {
 
-                console.log('✅ Todas las plantillas cargadas correctamente');
+                // Todas las plantillas cargadas correctamente
 
                 // Almacenar referencias a las plantillas
                 this.templates = {
@@ -73,12 +72,12 @@ class ProfessionalPDFSystem {
 
     async loadGlobalConfig() {
         try {
-            console.log('🔄 Cargando configuración global...');
+            // Cargando configuración global
             const response = await fetch('/api/global-template-config');
 
             if (response.ok) {
                 const config = await response.json();
-                console.log('📋 Configuración recibida:', config);
+                // Configuración recibida
 
                 this.selectedTemplate = config.selectedTemplate || 'clasico';
                 this.customInstitution = config.institutionName || 'Universidad Firmas Digitales';
@@ -94,11 +93,7 @@ class ProfessionalPDFSystem {
                     await this.loadLogoFromUrl(config.logo);
                 }
 
-                console.log('✅ Configuración aplicada:', {
-                    template: this.selectedTemplate,
-                    institution: this.customInstitution,
-                    hasLogo: !!this.globalLogo
-                });
+                // Configuración aplicada
             }
         } catch (error) {
             console.error('❌ Error cargando configuración:', error);
@@ -111,7 +106,6 @@ class ProfessionalPDFSystem {
             img.onload = () => {
                 this.globalLogo = img;
                 this.updatePreview();
-                console.log('🖼️ Logo cargado desde URL');
             };
             img.onerror = () => {
                 console.warn('⚠️ No se pudo cargar el logo');
@@ -123,7 +117,7 @@ class ProfessionalPDFSystem {
     }
 
     bindEvents() {
-        console.log('🔗 Vinculando eventos del sistema...');
+        // Vinculando eventos del sistema
 
         // Selección de plantillas
         const templateCards = document.querySelectorAll('.template-card');
@@ -164,11 +158,10 @@ class ProfessionalPDFSystem {
             resetBtn.addEventListener('click', () => this.resetTemplate());
         }
 
-        console.log('✅ Eventos vinculados correctamente');
+        // Eventos vinculados correctamente
     }
 
     selectTemplate(templateType) {
-        console.log(`🎨 Seleccionando plantilla: ${templateType}`);
         this.selectedTemplate = templateType;
         this.updateUI();
         this.updatePreview();
@@ -215,7 +208,7 @@ class ProfessionalPDFSystem {
     }
 
     async updatePreview() {
-        console.log(`🎨 Generando preview para plantilla: ${this.selectedTemplate}`);
+        // Generando preview para plantilla
 
         const canvas = document.getElementById('pdfPreviewCanvas');
         if (!canvas) {
@@ -245,8 +238,6 @@ class ProfessionalPDFSystem {
             // Renderizar usando las plantillas existentes
             await this.renderTemplateOnCanvas(ctx, canvas.width, canvas.height, previewData);
 
-            console.log(`✅ Preview generado exitosamente para: ${this.selectedTemplate}`);
-
         } catch (error) {
             console.error('❌ Error generando preview:', error);
             this.showPreviewError(ctx, canvas.width, canvas.height);
@@ -269,7 +260,6 @@ class ProfessionalPDFSystem {
 
     async renderTemplateOnCanvas(ctx, width, height, data) {
         const templateName = this.selectedTemplate;
-        console.log(`🖌️ Renderizando plantilla "${templateName}" en canvas`);
 
         // Verificar que la plantilla existe
         const template = this.templates[templateName];
@@ -306,7 +296,6 @@ class ProfessionalPDFSystem {
     }
 
     renderFallbackTemplate(ctx, width, height, data) {
-        console.log('🔄 Renderizando plantilla de fallback');
 
         // Plantilla básica de emergencia
         ctx.fillStyle = '#1f2937';
@@ -349,7 +338,6 @@ class ProfessionalPDFSystem {
             }
 
             ctx.drawImage(this.globalLogo, logoX, logoY, logoWidth, logoHeight);
-            console.log('🖼️ Logo dibujado en preview');
 
         } catch (error) {
             console.error('❌ Error dibujando logo:', error);
@@ -371,7 +359,6 @@ class ProfessionalPDFSystem {
 
     async saveGlobalConfig() {
         try {
-            console.log('💾 Guardando configuración global...');
 
             const response = await fetch('/api/save-global-template-config', {
                 method: 'POST',
@@ -388,7 +375,6 @@ class ProfessionalPDFSystem {
 
             if (response.ok) {
                 const result = await response.json();
-                console.log('✅ Configuración guardada:', result);
                 this.showNotification('Configuración guardada globalmente', 'success');
             } else {
                 const error = await response.json();
@@ -401,7 +387,6 @@ class ProfessionalPDFSystem {
     }
 
     applyTemplate() {
-        console.log('🚀 Aplicando plantilla:', this.selectedTemplate);
 
         const institutionInput = document.getElementById('institutionInput');
         if (institutionInput) {
@@ -412,7 +397,6 @@ class ProfessionalPDFSystem {
     }
 
     resetTemplate() {
-        console.log('🔄 Reseteando configuración de plantillas');
 
         this.selectedTemplate = 'clasico';
         this.globalLogo = null;
@@ -445,8 +429,6 @@ class ProfessionalPDFSystem {
     showNotification(message, type = 'info') {
         if (window.showNotification) {
             window.showNotification(message, type);
-        } else {
-            console.log(`${type.toUpperCase()}: ${message}`);
         }
     }
 
@@ -474,7 +456,7 @@ let professionalPDF;
 
 // Inicialización cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 DOM cargado, inicializando sistema PDF Preview...');
+    // DOM cargado, inicializando sistema PDF Preview
 
     // Dar tiempo a que las plantillas se carguen
     setTimeout(() => {
@@ -485,7 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Exponer globalmente
             window.professionalPDF = professionalPDF;
 
-            console.log('✅ Sistema PDF Preview inicializado y expuesto globalmente');
+            // Sistema PDF Preview inicializado y expuesto globalmente
         }
     }, 500); // Esperar 500ms para que las plantillas se carguen
 });
@@ -507,4 +489,4 @@ window.getDocumentData = function () {
 // Exportar clase para uso externo
 window.ProfessionalPDFSystem = ProfessionalPDFSystem;
 
-console.log('📄 Sistema PDF Preview cargado - Esperando inicialización del DOM');
+// Sistema PDF Preview cargado

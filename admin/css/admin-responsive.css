@@ -1,0 +1,732 @@
+/* ========================================
+   DISEÑO RESPONSIVO PARA PANEL ADMINISTRATIVO
+   ======================================== */
+
+/* BREAKPOINTS DEFINIDOS */
+/* Mobile: 0-767px */
+/* Tablet: 768-1023px */
+/* Desktop: 1024px+ */
+
+/* ========================================
+   TABLET RESPONSIVE (768px - 1023px)
+   ======================================== */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* OCULTAR BOTÓN HAMBURGUESA EN TABLET */
+  .admin-mobile-toggle {
+    display: none !important;
+  }
+
+  /* SIDEBAR AJUSTADO PARA TABLET */
+  .admin-sidebar {
+    width: 250px;
+  }
+
+  .admin-main {
+    margin-left: 250px;
+    padding: var(--admin-spacing-lg);
+  }
+
+  /* MÉTRICAS EN TABLET - MEJORADO */
+  .admin-metrics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--admin-spacing-lg);
+    padding: 0 var(--admin-spacing-lg);
+  }
+
+  .metric-card {
+    padding: var(--admin-spacing-lg);
+    gap: var(--admin-spacing-md);
+    min-height: 100px;
+  }
+
+  .metric-card .metric-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .metric-card .metric-value {
+    font-size: 1.8rem;
+  }
+
+  .metric-card .metric-value.text {
+    font-size: 1.2rem;
+  }
+
+  /* FORMULARIOS ADAPTADOS */
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+    gap: var(--admin-spacing-md);
+  }
+
+  /* HEADER AJUSTADO - MANTENER LAYOUT ORIGINAL EN TABLET */
+  .admin-header-content {
+    padding: 0 var(--admin-spacing-lg);
+  }
+
+  /* FORZAR layout original en tablet y desktop */
+  @media (min-width: 768px) {
+    .admin-header-content {
+      justify-content: space-between !important;
+      flex-direction: row !important;
+    }
+
+    .admin-logo {
+      justify-content: flex-start !important;
+      text-align: left !important;
+    }
+
+    .admin-logo-text h1 {
+      text-align: left !important;
+    }
+
+    .admin-logo-text span {
+      text-align: left !important;
+    }
+  }
+
+  /* ACCIONES ADMINISTRATIVAS */
+  .admin-actions {
+    flex-direction: column;
+    gap: var(--admin-spacing-sm);
+  }
+
+  .admin-actions .admin-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* GESTIÓN DE USUARIOS ADAPTADA */
+  .admin-user-header,
+  .admin-user-row {
+    grid-template-columns: 1fr auto;
+    gap: var(--admin-spacing-sm);
+  }
+
+  .admin-user-header span:nth-child(3),
+  .admin-user-header span:nth-child(4),
+  .admin-user-row > div:nth-child(3),
+  .admin-user-row > div:nth-child(4) {
+    display: none;
+  }
+
+  /* TEMPLATES PDF EN COLUMNA */
+  .pdf-template-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--admin-spacing-md);
+  }
+
+  /* MÉTRICAS MÓVILES - OPTIMIZADO */
+  .admin-metrics {
+    grid-template-columns: 1fr;
+    gap: var(--admin-spacing-md);
+    padding: 0 var(--admin-spacing-sm);
+  }
+
+  .metric-card {
+    padding: var(--admin-spacing-md);
+    gap: var(--admin-spacing-sm);
+    min-height: 80px;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .metric-card .metric-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  .metric-card .metric-content h4 {
+    font-size: 0.8rem;
+    margin-bottom: 2px;
+  }
+
+  .metric-card .metric-value {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+
+  .metric-card .metric-value.text {
+    font-size: 1.1rem;
+  }
+
+  .metric-card .metric-change {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+  }
+}
+
+/* ========================================
+   MOBILE RESPONSIVE (0px - 767px)
+   ======================================== */
+@media (max-width: 767px) {
+  /* LAYOUT MÓVIL */
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  /* HEADER MÓVIL - MEJORADO */
+  .admin-header {
+    position: relative;
+    height: auto;
+    min-height: 70px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  /* MOSTRAR BOTÓN HAMBURGUESA EN MÓVIL */
+  .admin-mobile-toggle {
+    display: flex !important;
+  }
+
+  .admin-header-content {
+    flex-direction: column;
+    gap: var(--admin-spacing-md);
+    padding: var(--admin-spacing-md);
+    padding-left: 50px; /* Espacio para el botón hamburguesa */
+    align-items: center; /* Cambiar de stretch a center para centrar horizontalmente */
+  }
+
+  .admin-logo {
+    width: auto; /* Cambiar de 100% a auto para que no se estire */
+    justify-content: flex-start;
+    margin-bottom: 0;
+    padding-bottom: var(--admin-spacing-sm);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--admin-spacing-md);
+  }
+
+  .admin-logo-icon {
+    width: 32px; /* Tamaño más pequeño como en desktop */
+    height: 32px;
+    flex-shrink: 0; /* Evitar que se comprima */
+  }
+
+  .admin-logo-text h1 {
+    font-size: 1.3rem;
+    text-align: left; /* Cambiar de center a left */
+    margin: 0;
+  }
+
+  .admin-logo-text span {
+    font-size: 0.85rem;
+    text-align: left; /* Cambiar de center a left */
+  }
+
+  /* OCULTAR BOTÓN DEL HEADER EN MÓVIL */
+  .admin-header-actions {
+    display: none !important;
+  }
+
+  /* MOSTRAR BOTÓN EN SIDEBAR MÓVIL */
+  .admin-sidebar-mobile-actions {
+    display: block !important;
+  }
+
+  .admin-logo-text span {
+    font-size: 0.75rem;
+  }
+
+  /* SIDEBAR MÓVIL */
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    background: white;
+    box-shadow: var(--admin-shadow-xl);
+    z-index: 9999;
+    transition: left 0.3s ease;
+    padding-top: 60px;
+  }
+
+  .admin-sidebar.mobile-open {
+    left: 0;
+  }
+
+  /* OVERLAY PARA SIDEBAR MÓVIL */
+  .admin-sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .admin-sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* CONTENIDO PRINCIPAL MÓVIL */
+  .admin-main {
+    margin-left: 0;
+    padding: var(--admin-spacing-md);
+    padding-top: var(--admin-spacing-xl);
+  }
+
+  /* MÉTRICAS MÓVIL */
+  .admin-metrics {
+    grid-template-columns: 1fr;
+    gap: var(--admin-spacing-md);
+    margin-top: var(--admin-spacing-lg);
+    margin-bottom: var(--admin-spacing-lg);
+  }
+
+  .metric-card {
+    padding: var(--admin-spacing-lg);
+  }
+
+  .metric-card .metric-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .metric-card .metric-value {
+    font-size: 1.5rem;
+  }
+
+  /* CONTENIDO DE PESTAÑAS MÓVIL */
+  .admin-tab-content {
+    padding: var(--admin-spacing-lg);
+  }
+
+  .admin-tab-content h2 {
+    font-size: 1.5rem;
+    margin-bottom: var(--admin-spacing-md);
+  }
+
+  .tab-description {
+    font-size: 0.875rem;
+    margin-bottom: var(--admin-spacing-lg);
+  }
+
+  /* SECCIONES ADMINISTRATIVAS MÓVIL */
+  .admin-section {
+    padding: var(--admin-spacing-lg);
+    margin-bottom: var(--admin-spacing-lg);
+  }
+
+  .admin-section h3 {
+    font-size: 1.125rem;
+    margin-bottom: var(--admin-spacing-md);
+  }
+
+  .admin-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--admin-spacing-md);
+  }
+
+  /* FORMULARIOS MÓVIL */
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+    gap: var(--admin-spacing-md);
+  }
+
+  .admin-input,
+  .admin-select,
+  .admin-textarea {
+    padding: var(--admin-spacing-md);
+    font-size: 16px; /* Prevenir zoom en iOS */
+  }
+
+  /* BOTONES MÓVIL */
+  .admin-btn {
+    padding: var(--admin-spacing-md) var(--admin-spacing-lg);
+    font-size: 0.875rem;
+    min-height: 48px; /* Tamaño táctil recomendado */
+  }
+
+  .admin-actions {
+    flex-direction: column;
+    gap: var(--admin-spacing-sm);
+    margin-top: var(--admin-spacing-md);
+    padding-top: var(--admin-spacing-md);
+  }
+
+  .admin-actions .admin-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* NAVEGACIÓN MÓVIL */
+  .admin-nav {
+    padding: var(--admin-spacing-md);
+  }
+
+  .admin-nav-item {
+    padding: var(--admin-spacing-md);
+    margin-bottom: var(--admin-spacing-sm);
+    font-size: 0.875rem;
+    min-height: 48px;
+  }
+
+  .admin-nav-item svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* SELECTOR DE TEMAS MÓVIL */
+  .admin-theme-selector {
+    grid-template-columns: 1fr;
+    gap: var(--admin-spacing-md);
+  }
+
+  .admin-theme-card {
+    display: flex;
+    align-items: center;
+    padding: var(--admin-spacing-md);
+  }
+
+  .theme-preview {
+    width: 80px;
+    height: 60px;
+    flex-shrink: 0;
+    margin-right: var(--admin-spacing-md);
+  }
+
+  .theme-info {
+    padding: 0;
+    text-align: left;
+    flex: 1;
+  }
+
+  /* GESTIÓN DE USUARIOS MÓVIL */
+  .admin-user-list {
+    overflow-x: auto;
+  }
+
+  .admin-user-header,
+  .admin-user-row {
+    grid-template-columns: minmax(250px, 1fr) auto;
+    min-width: 400px;
+  }
+
+  .admin-user-header span:not(:first-child):not(:last-child),
+  .admin-user-row > div:not(:first-child):not(:last-child) {
+    display: none;
+  }
+
+  .user-info {
+    min-width: 200px;
+  }
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.75rem;
+  }
+
+  .user-details h4 {
+    font-size: 0.875rem;
+  }
+
+  .user-details span {
+    font-size: 0.75rem;
+  }
+
+  .user-actions {
+    flex-direction: column;
+    gap: var(--admin-spacing-xs);
+  }
+
+  .user-action-btn {
+    padding: var(--admin-spacing-sm);
+    min-height: 40px;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* CONFIGURACIÓN PDF MÓVIL */
+  .pdf-template-grid {
+    grid-template-columns: 1fr;
+    gap: var(--admin-spacing-md);
+  }
+
+  .pdf-template-card {
+    display: flex;
+    align-items: center;
+    padding: var(--admin-spacing-md);
+  }
+
+  .pdf-template-preview {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+    margin-right: var(--admin-spacing-md);
+    border-bottom: none;
+    border-right: 1px solid var(--admin-border);
+  }
+
+  .pdf-template-preview svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .pdf-template-info {
+    padding: 0;
+    flex: 1;
+  }
+
+  /* BASE DE DATOS MÓVIL */
+  .db-config-grid {
+    grid-template-columns: 1fr;
+    gap: var(--admin-spacing-md);
+  }
+
+  .db-status-card {
+    padding: var(--admin-spacing-lg);
+  }
+
+  .db-status-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--admin-spacing-md);
+  }
+
+  /* INFORMACIÓN DEL SISTEMA MÓVIL */
+  .system-info-grid {
+    grid-template-columns: 1fr;
+    gap: var(--admin-spacing-md);
+  }
+
+  .system-info-item {
+    padding: var(--admin-spacing-md);
+  }
+
+  .system-info-item .value {
+    font-size: 1.125rem;
+  }
+
+  /* LOG VIEWER MÓVIL */
+  .log-viewer {
+    font-size: 0.7rem;
+    padding: var(--admin-spacing-md);
+    max-height: 300px;
+  }
+
+  .log-entry {
+    word-break: break-all;
+  }
+
+  /* ALERTAS MÓVIL */
+  .admin-alert {
+    padding: var(--admin-spacing-md);
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .admin-alert-icon {
+    margin: 0 auto var(--admin-spacing-sm);
+  }
+
+  /* MODALES MÓVIL */
+  .admin-modal-content {
+    width: 95%;
+    max-width: none;
+    margin: var(--admin-spacing-md);
+    max-height: calc(100vh - 2rem);
+  }
+
+  .admin-modal-header,
+  .admin-modal-body,
+  .admin-modal-footer {
+    padding: var(--admin-spacing-lg);
+  }
+
+  .admin-modal-footer {
+    flex-direction: column;
+    gap: var(--admin-spacing-sm);
+  }
+
+  .admin-modal-footer .admin-btn {
+    width: 100%;
+  }
+
+  /* NOTIFICACIONES MÓVIL */
+  .notification-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--admin-spacing-md);
+    padding: var(--admin-spacing-md);
+  }
+
+  .notification-info {
+    width: 100%;
+  }
+
+  /* TOOLTIPS MÓVIL - DESHABILITADOS */
+  .admin-tooltip .tooltip-content {
+    display: none;
+  }
+
+  /* BREADCRUMBS MÓVIL */
+  .admin-breadcrumbs {
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+    margin-bottom: var(--admin-spacing-md);
+  }
+
+  /* SCROLLBARS MÓVIL */
+  .admin-sidebar::-webkit-scrollbar,
+  .log-viewer::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .admin-sidebar::-webkit-scrollbar-track,
+  .log-viewer::-webkit-scrollbar-track {
+    background: var(--admin-surface);
+  }
+
+  .admin-sidebar::-webkit-scrollbar-thumb,
+  .log-viewer::-webkit-scrollbar-thumb {
+    background: var(--admin-border);
+    border-radius: 2px;
+  }
+}
+
+/* ========================================
+   MOBILE LANDSCAPE (480px - 767px)
+   ======================================== */
+@media (max-width: 767px) and (orientation: landscape) {
+  .admin-header {
+    min-height: 50px;
+  }
+
+  .admin-header-content {
+    padding: var(--admin-spacing-sm) var(--admin-spacing-md);
+  }
+
+  .admin-logo-text h1 {
+    font-size: 1.125rem;
+  }
+
+  .admin-main {
+    padding: var(--admin-spacing-sm) var(--admin-spacing-md);
+    padding-top: var(--admin-spacing-lg);
+  }
+
+  .admin-metrics {
+    grid-template-columns: repeat(2, 1fr);
+    margin-top: var(--admin-spacing-md);
+    margin-bottom: var(--admin-spacing-md);
+  }
+
+  .metric-card {
+    padding: var(--admin-spacing-md);
+  }
+
+  .admin-tab-content {
+    padding: var(--admin-spacing-md);
+  }
+
+  .admin-section {
+    padding: var(--admin-spacing-md);
+    margin-bottom: var(--admin-spacing-md);
+  }
+}
+
+/* ========================================
+   UTILIDADES RESPONSIVAS
+   ======================================== */
+
+/* OCULTAR EN MÓVIL */
+@media (max-width: 767px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* OCULTAR EN TABLET */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .hide-tablet {
+    display: none !important;
+  }
+}
+
+/* OCULTAR EN DESKTOP */
+@media (min-width: 1024px) {
+  /* OCULTAR BOTÓN HAMBURGUESA EN DESKTOP */
+  .admin-mobile-toggle {
+    display: none !important;
+  }
+
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* MOSTRAR SOLO EN MÓVIL */
+@media (min-width: 768px) {
+  .show-mobile-only {
+    display: none !important;
+  }
+}
+
+/* MOSTRAR SOLO EN TABLET */
+@media (max-width: 767px), (min-width: 1024px) {
+  .show-tablet-only {
+    display: none !important;
+  }
+}
+
+/* MOSTRAR SOLO EN DESKTOP */
+@media (max-width: 1023px) {
+  .show-desktop-only {
+    display: none !important;
+  }
+}
+
+/* ========================================
+   ANIMACIONES RESPONSIVAS
+   ======================================== */
+
+/* REDUCIR ANIMACIONES EN MÓVIL PARA PERFORMANCE */
+@media (max-width: 767px) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.2s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.2s !important;
+    transition-delay: 0s !important;
+  }
+
+  .admin-btn::before {
+    transition: none;
+  }
+
+  .admin-btn:hover::before {
+    left: -100%;
+  }
+}
+
+/* PREFERENCIA DE MOVIMIENTO REDUCIDO */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .admin-btn::before {
+    display: none;
+  }
+
+  .status-indicator {
+    animation: none;
+  }
+}

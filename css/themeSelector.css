@@ -6,14 +6,6 @@
    VARIABLES DE TEMAS
    ========================= */
 
-/* Tema por defecto - Naranja */
-:root {
-  --primary-color: #ff9545;
-  --primary-rgb: 255, 149, 69;
-  --secondary-color: #ff6b35;
-  --accent-color: #ff7b00;
-}
-
 /* Paletas de colores predefinidas */
 [data-theme="orange"] {
   --primary-color: #ff9545;
@@ -55,6 +47,155 @@
   --primary-rgb: 20, 184, 166;
   --secondary-color: #0d9488;
   --accent-color: #0f766e;
+}
+
+[data-theme="dark"] {
+  --primary-color: #6366f1;
+  --primary-rgb: 99, 102, 241;
+  --secondary-color: #4f46e5;
+  --accent-color: #4338ca;
+
+  /* Variables específicas del modo oscuro */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --overlay-bg: rgba(15, 23, 42, 0.9);
+}
+
+/* Estilos globales para modo oscuro */
+[data-theme="dark"] body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .header-container,
+[data-theme="dark"] header {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .perfil-container,
+[data-theme="dark"] .modal-content {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .perfil-tab-btn {
+  color: var(--text-secondary);
+  background-color: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .perfil-tab-btn.active {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+[data-theme="dark"] .config-category {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .setting-item {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .setting-label {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .setting-description {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .category-header h4 {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .quick-action-card {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .quick-action-card:hover {
+  background-color: var(--bg-tertiary);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .btn,
+[data-theme="dark"] button:not(.admin-mobile-toggle) {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+[data-theme="dark"] .section-container {
+  background-color: var(--bg-primary);
+}
+
+[data-theme="dark"] #inicioSection,
+[data-theme="dark"] #firmarSection,
+[data-theme="dark"] #verificarSection,
+[data-theme="dark"] #contactoSection {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Estilos específicos para login administrativo */
+[data-theme="dark"] .admin-access-page {
+  background: linear-gradient(
+    135deg,
+    var(--bg-secondary) 0%,
+    var(--bg-primary) 100%
+  );
+}
+
+[data-theme="dark"] .access-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .access-title {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .access-subtitle {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .form-input {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-input:focus {
+  background: var(--bg-primary);
+  border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .form-group label {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .current-user-info {
+  background: var(--bg-tertiary);
+  border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .current-user-info .user-email {
+  color: var(--text-primary);
 }
 
 /* =========================
@@ -168,9 +309,21 @@
   transform: translateX(4px);
 }
 
+.theme-option.preview {
+  background: rgba(255, 149, 69, 0.1);
+  border: 2px solid var(--primary-color);
+  color: var(--primary-color);
+  transform: translateX(2px);
+}
+
 .theme-option.active .theme-color {
   border-color: rgba(255, 255, 255, 1);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.theme-option.preview .theme-color {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(255, 149, 69, 0.2);
 }
 
 .theme-color {

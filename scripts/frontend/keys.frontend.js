@@ -41,11 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!Array.isArray(keys)) return;
 
             // Debug temporal: ver estructura de las llaves
-            console.log('Estructura de llaves recibidas:', keys);
-            if (keys.length > 0) {
-                console.log('Primera llave ejemplo:', keys[0]);
-                console.log('Campos disponibles:', Object.keys(keys[0]));
-            }
+            // Estructura de llaves recibidas (comentado para producción)
 
             // Obtener la llave activa para marcarla
             let activeKeyName = null;
@@ -167,13 +163,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             </div>
                         </div>
                         <div class="key-actions">
-                            <button class="key-action-btn key-download-btn clear-btn" onclick="downloadKey('${key.key_name}')" title="Descargar llave">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                                </svg>
-                            </button>
                             <button class="key-action-btn key-delete-btn clear-btn" onclick="event.stopPropagation(); deleteKey('${key.key_name}')" title="Eliminar llave">
                                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                                     <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

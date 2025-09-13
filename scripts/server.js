@@ -20,13 +20,12 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
-console.log('✅ Variables de entorno validadas correctamente');
-
 // =================== Crear directorios necesarios ===================
 function createRequiredDirectories() {
   const directories = [
     path.join(__dirname, '../uploads'),
     path.join(__dirname, '../uploads/profile-photos'),
+    path.join(__dirname, '../uploads/admin'),
     path.join(__dirname, '../downloads'),
     path.join(__dirname, '../llaves')
   ];
@@ -34,11 +33,9 @@ function createRequiredDirectories() {
   directories.forEach(dir => {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
-      console.log(`📁 Directorio creado: ${dir}`);
     }
   });
 
-  console.log('✅ Directorios del sistema verificados y creados');
 }
 
 // Crear directorios al iniciar el servidor
@@ -86,6 +83,7 @@ app.use("/scripts/templates", express.static(path.join(__dirname, "./templates")
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/recursos", express.static(path.join(__dirname, "../recursos")));
 app.use("/html", express.static(path.join(__dirname, "../html"), { maxAge: "1d" }));
+app.use("/admin", express.static(path.join(__dirname, "../admin"), { maxAge: "1d" }));
 // app.use("/downloads", express.static(path.join(__dirname, "../downloads")));
 
 // Configuración de multer para subir archivos
@@ -169,11 +167,15 @@ const authRoutes = require('./routes/auth.routes');
 const keysRoutes = require('./routes/keys.routes');
 const pdfTemplateRoutes = require('./routes/pdfTemplate.routes');
 const profileRoutes = require('./routes/profile.routes');
+const adminRoutes = require('./routes/admin.routes');
+const visualConfigRoutes = require('./routes/visualConfig.routes');
 
 app.use(authRoutes);
 app.use(keysRoutes);
 app.use('/api/pdf-template', pdfTemplateRoutes);
+app.use(adminRoutes);  // ✅ Sin prefijo - las rutas incluyen /api/admin/ completos
 app.use(profileRoutes);
+app.use('/api', visualConfigRoutes);
 
 // =================== Rutas para configuración de plantillas ===================
 
@@ -195,7 +197,6 @@ async function loadGlobalTemplateConfig() {
       globalTemplateConfig.selectedTemplate = rows[0].template_name;
       globalTemplateConfig.logo = rows[0].logo_path;
       globalTemplateConfig.institutionName = rows[0].institution_name;
-      console.log('✅ Configuración global cargada');
     }
   } catch (error) {
     console.error('❌ Error cargando configuración global:', error);
@@ -234,8 +235,6 @@ app.post('/api/save-global-template-config', authenticate, async (req, res) => {
       [globalTemplateConfig.selectedTemplate, globalTemplateConfig.logo, globalTemplateConfig.institutionName]
     );
 
-    console.log('✅ Configuración global guardada:', globalTemplateConfig);
-
     res.json({
       success: true,
       template: globalTemplateConfig.selectedTemplate,
@@ -252,9 +251,6 @@ app.post('/api/save-global-template-config', authenticate, async (req, res) => {
 // Ruta para obtener configuración global
 app.get('/api/global-template-config', (req, res) => {
   // Solo loggear ocasionalmente para evitar spam
-  if (Math.random() < 0.1) { // 10% de las veces
-    console.log('📋 Configuración global solicitada');
-  }
   res.json(globalTemplateConfig);
 });
 // Guardar configuración de plantilla (LEGACY - mantener por compatibilidad)
@@ -277,11 +273,6 @@ app.post('/api/save-template-config', authenticate, (req, res) => {
       globalTemplateConfig.logo = logo;
     }
 
-    console.log('💾 Configuración de plantilla guardada por:', req.userRole, {
-      template: globalTemplateConfig.selectedTemplate,
-      hasLogo: !!globalTemplateConfig.logo
-    });
-
     res.json({ success: true, message: 'Configuración guardada correctamente' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -301,6 +292,59 @@ app.get("/api/config", (req, res) => {
   if (!fs.existsSync(configPath)) return res.json({});
   const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
   res.json(config);
+});
+
+// Endpoint público para obtener configuración global de temas
+app.get('/api/global-theme-config', async (req, res) => {
+  try {
+    const pool = require('./db/pool');
+
+    // Intentar cargar desde base de datos
+    try {
+      const [rows] = await pool.execute(
+        'SELECT selected_theme, custom_color, timestamp, updated_by FROM theme_config WHERE id = 1'
+      );
+
+      if (rows.length > 0) {
+        const dbConfig = {
+          selectedTheme: rows[0].selected_theme,
+          customColor: rows[0].custom_color,
+          timestamp: rows[0].timestamp,
+          updatedBy: rows[0].updated_by
+        };
+
+        return res.json({
+          success: true,
+          theme: dbConfig
+        });
+      }
+    } catch (dbError) {
+      console.warn('Error leyendo configuración de BD:', dbError);
+    }
+
+    // Configuración por defecto si no hay nada en BD
+    const defaultConfig = {
+      selectedTheme: 'orange',
+      customColor: null,
+      timestamp: Date.now()
+    };
+
+    return res.json({
+      success: true,
+      theme: defaultConfig
+    });
+
+    res.json({
+      success: true,
+      theme: defaultConfig
+    });
+  } catch (error) {
+    console.error('Error obteniendo configuración global de tema:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
 });
 
 app.post("/api/config", authenticate, (req, res) => {
@@ -375,10 +419,6 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
       // Usar configuración global de plantillas unificada con el sistema modular
       let templateName = globalTemplateConfig.selectedTemplate; // 'clasico', 'moderno', etc.
 
-      console.log('🎨 Configuración de plantilla global:', {
-        templateName,
-        institutionName: globalTemplateConfig.institutionName
-      });
 
       // Datos a renderizar usando configuración global
       const data = {
@@ -396,16 +436,8 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
         signatureData: req.body.signatureData || null,
         signatureMethod: req.body.signatureMethod || null,
         // Agregar contenido básico del documento
-        contenido: 'Este documento ha sido procesado y avalado digitalmente a través del sistema de firmas electrónicas. La autenticidad e integridad del contenido está garantizada mediante tecnología criptográfica.'
+        contenido: 'Este documento ha sido procesado y avalado digitalmente a través del sistema de firmas Digitales. La autenticidad e integridad del contenido está garantizada mediante tecnología criptográfica.'
       };
-
-      console.log('✍️ Datos del documento:', {
-        titulo: data.titulo,
-        autores: data.autores,
-        institucion: data.institucion,
-        hasSignature: !!req.body.signatureData,
-        templateUsed: templateName
-      });
 
       // Crear PDF base (hoja en blanco tamaño carta)
       const { PDFDocument } = require('pdf-lib');
@@ -454,9 +486,6 @@ app.post("/extract-signer-info", authenticate, upload.single("signedFile"), asyn
       return res.status(400).json({ error: "No se proporcionó archivo firmado." });
     }
 
-    console.log("=== EXTRACTING SIGNER INFO ===");
-    console.log("File:", req.file.originalname);
-
     const signedFile = req.file;
     const pdfBytes = fs.readFileSync(signedFile.path);
 
@@ -464,9 +493,6 @@ app.post("/extract-signer-info", authenticate, upload.single("signedFile"), asyn
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const author = pdfDoc.getAuthor();
     const subject = pdfDoc.getSubject();
-
-    console.log("Author metadata:", author);
-    console.log("Subject metadata:", subject);
 
     // Limpiar archivo temporal
     fs.unlinkSync(signedFile.path);
@@ -527,7 +553,6 @@ app.post("/extract-signer-info", authenticate, upload.single("signedFile"), asyn
 app.get('/api/profesores', async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT id, nombre FROM users WHERE rol = 'profesor'");
-    console.log("Profesores encontrados (acceso público):", rows); // Debug
     res.json(rows);
   } catch (err) {
     console.error("Error SQL profesores:", err);
@@ -539,7 +564,6 @@ app.get('/api/profesores', async (req, res) => {
 app.get('/api/profesores-auth', authenticate, async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT id, nombre FROM users WHERE rol = 'profesor'");
-    console.log("Profesores encontrados (con auth):", rows); // Debug
     res.json(rows);
   } catch (err) {
     console.error("Error SQL profesores:", err);
@@ -553,25 +577,16 @@ app.post("/verify-document", authenticate, upload.fields([
 ]), async (req, res) => {
   const profesorId = req.body.profesorId;
 
-  console.log("=== VERIFY DOCUMENT REQUEST ===");
-  console.log("profesorId:", profesorId);
-  console.log("files:", req.files);
-  console.log("signedFile exists:", req.files?.signedFile?.[0] ? "YES" : "NO");
-  console.log("originalFile exists:", req.files?.originalFile?.[0] ? "YES" : "NO");
-
   // Validaciones iniciales
   if (!profesorId) {
-    console.log("ERROR: No profesorId provided");
     return res.status(400).json({ error: "ID del profesor/tutor es requerido." });
   }
 
   if (!req.files || !req.files.signedFile || !req.files.signedFile[0]) {
-    console.log("ERROR: No signedFile provided");
     return res.status(400).json({ error: "El archivo avalado es requerido." });
   }
 
   if (!req.files.originalFile || !req.files.originalFile[0]) {
-    console.log("ERROR: No originalFile provided");
     return res.status(400).json({ error: "El archivo original es requerido." });
   }
 
@@ -581,14 +596,12 @@ app.post("/verify-document", authenticate, upload.fields([
     // Verificar si los archivos son idénticos
     if (signedFile[0].originalname === originalFile[0].originalname &&
       signedFile[0].size === originalFile[0].size) {
-      console.log("WARNING: Files appear to be identical (same name and size)");
 
       // Verificar contenido para confirmar
       const signedContent = fs.readFileSync(signedFile[0].path);
       const originalContent = fs.readFileSync(originalFile[0].path);
 
       if (signedContent.equals(originalContent)) {
-        console.log("ERROR: Files are identical - same content");
         return res.status(400).json({
           error: "Los archivos subidos son idénticos. El archivo avalado debe ser diferente al archivo original."
         });

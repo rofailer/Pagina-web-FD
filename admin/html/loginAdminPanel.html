@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel Administrativo - Firmas Digitales FD</title>
+    <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
+
+    <!-- Meta tags para SEO -->
+    <meta
+      name="description"
+      content="Panel de administración para el sistema de firmas digitales"
+    />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!-- Estilos del panel administrativo -->
+    <link rel="stylesheet" href="../css/admin.css" />
+    <link rel="stylesheet" href="../css/admin-components.css" />
+    <link rel="stylesheet" href="../css/admin-responsive.css" />
+    <link rel="stylesheet" href="../css/loginAdmin.css" />
+
+    <!-- Sistema de Temas Dinámicos -->
+    <link rel="stylesheet" href="../../css/themeSelector.css" />
+
+    <!-- Fuentes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="admin-access-page" data-bg="fondo1">
+    <div class="access-container">
+      <div class="access-header">
+        <h1 class="access-title">Panel Administrativo</h1>
+        <p class="access-subtitle">
+          Accede al sistema de administración para gestionar usuarios,
+          configuraciones y monitorear el sistema.
+        </p>
+      </div>
+
+      <div id="alertContainer"></div>
+
+      <form class="access-form" id="adminAccessForm">
+        <!-- Campo de usuario - se oculta si ya hay sesión activa -->
+        <div class="form-group" id="emailGroup">
+          <label for="email">Usuario o Email</label>
+          <input
+            type="text"
+            id="email"
+            name="email"
+            class="form-input"
+            required
+            placeholder="usuario o email@ejemplo.com"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-input"
+            required
+            placeholder="Tu contraseña de administrador"
+          />
+        </div>
+
+        <!-- Contenedor de botones principal -->
+        <div class="button-container">
+          <button type="submit" class="access-btn primary" id="loginBtn">
+            <span class="loading-spinner"></span>
+            <span class="btn-text">Acceder al Panel</span>
+          </button>
+        </div>
+
+        <!-- Contenedor de botones secundarios (visible cuando hay sesión activa) -->
+        <div
+          class="secondary-buttons"
+          id="secondaryButtons"
+          style="display: none"
+        >
+          <div class="button-row">
+            <button
+              type="button"
+              class="access-btn tertiary"
+              onclick="window.location.href='/'"
+            >
+              <svg
+                class="btn-icon"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M19 12H5M5 12L12 19M5 12L12 5"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span class="btn-text">Volver al Sitio</span>
+            </button>
+
+            <button
+              type="button"
+              class="access-btn secondary"
+              id="changeUserBtn"
+            >
+              <svg
+                class="btn-icon"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span class="btn-text">Cambiar Usuario</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Inicialización temprana del tema - NO aplica tema, solo prepara para themeManager -->
+    <script>
+      (function () {
+        // Solo preparar configuración inicial, NO aplicar tema
+        // themeManager.js se encargará de aplicar el tema correcto
+        const availableThemes = [
+          "orange",
+          "blue",
+          "green",
+          "purple",
+          "red",
+          "teal",
+          "dark",
+        ];
+
+        // Leer configuración actual para que themeManager la considere
+        const storedTheme = localStorage.getItem("selectedTheme");
+        const storedCustomColor = localStorage.getItem("customColor");
+
+        // NO aplicar tema aquí - dejar que themeManager.js lo haga
+        // Esto evita conflictos entre la inicialización y el sistema unificado
+      })();
+    </script>
+
+    <!-- Sistema de Temas -->
+    <script src="../../scripts/utils/themeManager.js"></script>
+
+    <!-- Sistema de Autenticación -->
+    <script src="../../scripts/frontend/auth.frontend.js"></script>
+
+    <!-- Sistema de Configuración Visual -->
+    <script src="../../scripts/frontend/visualConfig.frontend.js"></script>
+
+    <!-- Script específico del login administrativo -->
+    <script src="../js/loginAdmin.js"></script>
+  </body>
+</html>

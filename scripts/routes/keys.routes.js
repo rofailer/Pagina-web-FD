@@ -215,11 +215,7 @@ router.delete("/delete-key", authenticate, async (req, res) => {
         try {
             const decryptedPrivateKey = decryptWithType(encryptedPrivateKey, password, encryptionType);
 
-            // Si llegamos aquí, la contraseña es correcta
-            console.log(`🗑️ Contraseña verificada para llave: ${keyName}`);
-
         } catch (decryptError) {
-            console.log(`❌ Contraseña incorrecta para llave: ${keyName}`);
             return res.status(401).json({ error: "Contraseña incorrecta" });
         }
 
@@ -237,7 +233,6 @@ router.delete("/delete-key", authenticate, async (req, res) => {
                 "UPDATE users SET active_key_id = NULL WHERE id = ?",
                 [userId]
             );
-            console.log(`🔄 Llave activa ${keyName} desactivada antes de eliminar`);
         }
 
         // Eliminar la llave de la base de datos
@@ -245,8 +240,6 @@ router.delete("/delete-key", authenticate, async (req, res) => {
             "DELETE FROM user_keys WHERE id = ? AND user_id = ?",
             [key.id, userId]
         );
-
-        console.log(`✅ Llave ${keyName} eliminada exitosamente para usuario ${userId}`);
 
         res.json({
             success: true,

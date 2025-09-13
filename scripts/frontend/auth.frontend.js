@@ -16,8 +16,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const goToCreateKeysBtn = document.getElementById("goToCreateKeysBtn");
     const skipCreateKeysBtn = document.getElementById("skipCreateKeysBtn");
 
+    // Sistema de renovación automática de tokens
+    let tokenRenewalInterval = null;
+    let lastActivityTime = Date.now();
+
     // Verificar autenticación al cargar
     checkAuthStatus();
+
+    // Recuperar tokens preservados del panel admin
+    restorePreservedTokens();
+
+    // Iniciar sistema de renovación automática
+    startTokenRenewalSystem();
 
     // Manejadores de eventos - verificar que los elementos existan
     if (loginBtn) {
@@ -99,26 +109,30 @@ document.addEventListener("DOMContentLoaded", () => {
         registerForm.addEventListener("submit", handleRegister);
     }
 
-    // Funciones
+    // Funciones auxiliares para manejo de modales
+    function closeModals() {
+        const loginModal = document.getElementById("loginModal");
+        const registerModal = document.getElementById("registerModal");
+        if (loginModal) loginModal.style.display = "none";
+        if (registerModal) registerModal.style.display = "none";
+    }
+
     function showLoginModal(e) {
         if (e) e.preventDefault();
         if (isAuthenticated()) {
             logoutUser();
         } else {
             closeModals();
-            loginModal.style.display = "block";
+            const loginModal = document.getElementById("loginModal");
+            if (loginModal) loginModal.style.display = "block";
         }
     }
 
     function showRegisterModal(e) {
         if (e) e.preventDefault();
         closeModals();
-        registerModal.style.display = "block";
-    }
-
-    function closeModals() {
-        loginModal.style.display = "none";
-        registerModal.style.display = "none";
+        const registerModal = document.getElementById("registerModal");
+        if (registerModal) registerModal.style.display = "block";
     }
 
     async function handleLogin(e) {
@@ -160,8 +174,12 @@ document.addEventListener("DOMContentLoaded", () => {
             // Cargar datos del perfil automáticamente después del login exitoso
             setTimeout(() => {
                 if (typeof loadUserData === 'function') {
-                    console.log('🔄 Cargando datos del perfil después del login exitoso');
                     loadUserData();
+                }
+
+                // Verificar acceso de owner y mostrar pestaña si corresponde
+                if (typeof checkOwnerAccess === 'function') {
+                    checkOwnerAccess();
                 }
             }, 500);
 
@@ -307,12 +325,42 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Función para recuperar tokens preservados del panel admin
+    function restorePreservedTokens() {
+        const preservedToken = sessionStorage.getItem("preserve_token");
+        const preservedAdminToken = sessionStorage.getItem("preserve_admin_token");
+
+        if (preservedToken) {
+            // Restaurar el token principal
+            localStorage.setItem("token", preservedToken);
+
+            // Si hay un token admin, usarlo también
+            if (preservedAdminToken) {
+                localStorage.setItem("admin_token", preservedAdminToken);
+            }
+
+            // Limpiar los tokens preservados
+            sessionStorage.removeItem("preserve_token");
+            sessionStorage.removeItem("preserve_admin_token");
+
+            console.log('🔄 Sesión restaurada desde el panel administrativo');
+
+            // Verificar el estado de autenticación con el token restaurado
+            checkAuthStatus();
+        }
+    }
+
     function logoutUser() {
         localStorage.removeItem("token");
         localStorage.removeItem("userRole");
         localStorage.removeItem("userName");
         localStorage.removeItem("user");
         localStorage.removeItem("keysGuideShown"); // Limpiar la marca de guía mostrada
+
+        // Detener sistema de renovación automática
+        if (window.stopTokenRenewalSystem) {
+            window.stopTokenRenewalSystem();
+        }
 
         // Limpiar estados de procesos en curso INMEDIATAMENTE
         window.firmaEnCurso = false;
@@ -391,7 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const token = localStorage.getItem("token");
             if (!token) return;
 
-            console.log('🔍 Verificando llaves del usuario después del login...');
+            // Verificando llaves del usuario después del login
 
             const response = await fetch("/user-keys", {
                 method: "GET",
@@ -403,17 +451,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('🔍 Llaves del usuario:', data);
+                // Llaves del usuario obtenidas
 
                 // Si no tiene llaves, mostrar el modal
                 if (!data.keys || data.keys.length === 0) {
-                    console.log('⚠️ Usuario sin llaves - mostrando modal de guía');
+                    // Usuario sin llaves - mostrando modal de guía
                     // Esperar un momento para que se complete la actualización de la UI
                     setTimeout(() => {
                         showCreateKeysGuide();
                     }, 800);
                 } else {
-                    console.log('✅ Usuario tiene llaves:', data.keys.length);
                 }
             } else {
                 console.error("Error obteniendo llaves del usuario:", response.status);
@@ -429,7 +476,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function navigateToKeysSection() {
-        console.log('🎯 Navegando a la sección de gestión de llaves...');
 
         // Cerrar modal si está abierto
         if (createKeysGuideModal) {
@@ -439,7 +485,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Si ya estamos en la página de perfil, activar directamente la pestaña
         const currentHash = window.location.hash;
         if (currentHash === '#perfil') {
-            console.log('✅ Ya estamos en perfil, activando pestaña directamente');
             activateKeysTab();
         } else {
             // Navegar a perfil y luego activar pestaña
@@ -453,21 +498,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function activateKeysTab() {
-        console.log('🔑 Activando pestaña de gestión de llaves...');
 
         const llavesTab = document.querySelector('.perfil-tab-btn[data-tab="gestion-llaves"]');
         if (llavesTab) {
-            console.log('✅ Pestaña encontrada, activando...');
             llavesTab.click();
         } else {
-            console.log('❌ Pestaña no encontrada, intentando con selector alternativo...');
             // Intentar con selector alternativo
             const llavesTabAlt = document.querySelector('[data-tab="gestion-llaves"]');
             if (llavesTabAlt) {
-                console.log('✅ Pestaña encontrada con selector alternativo');
                 llavesTabAlt.click();
             } else {
-                console.log('❌ No se pudo encontrar la pestaña de gestión de llaves');
             }
         }
     }
@@ -618,8 +658,71 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Sistema de renovación automática de tokens
+    function startTokenRenewalSystem() {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        // Renovar token cada 7 días si hay actividad reciente
+        tokenRenewalInterval = setInterval(async () => {
+            const timeSinceLastActivity = Date.now() - lastActivityTime;
+
+            // Si ha pasado más de 2 horas sin actividad, no renovar
+            if (timeSinceLastActivity > 2 * 60 * 60 * 1000) {
+                console.log('⏰ Sesión inactiva por más de 2 horas, no se renovará automáticamente');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/renew', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem("token", data.token);
+                    console.log('🔄 Token renovado automáticamente');
+                } else {
+                    console.log('⚠️ No se pudo renovar el token automáticamente');
+                }
+            } catch (error) {
+                console.log('Error renovando token:', error);
+            }
+        }, 7 * 24 * 60 * 60 * 1000); // 7 días
+
+        // Detectar actividad del usuario
+        ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'].forEach(event => {
+            document.addEventListener(event, () => {
+                lastActivityTime = Date.now();
+            }, { passive: true });
+        });
+
+        console.log('🔄 Sistema de renovación automática de tokens iniciado');
+    }
+
+    // Función para detener el sistema de renovación
+    function stopTokenRenewalSystem() {
+        if (tokenRenewalInterval) {
+            clearInterval(tokenRenewalInterval);
+            tokenRenewalInterval = null;
+            console.log('🛑 Sistema de renovación automática detenido');
+        }
+    }
+
+    // Exponer función para uso externo
+    window.stopTokenRenewalSystem = stopTokenRenewalSystem;
+
     // Exponer la función globalmente para uso en otros módulos
     window.loadUserProfilePhoto = loadUserProfilePhoto;
+
+    // Exponer funciones de modales globalmente para uso en otros módulos
+    window.showLoginModal = showLoginModal;
+    window.showRegisterModal = showRegisterModal;
+    window.closeModals = closeModals;
 
     // Eliminados event listeners del modal signAuthRequiredModal (ya no se usa)
 });

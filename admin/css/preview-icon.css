@@ -1,0 +1,32 @@
+/* ========================================
+   ICONO DE PREVIEW LIMPIO CON SVG
+   ========================================
+   Este archivo sobrescribe las reglas duplicadas en panelAdmin.css
+   y proporciona una implementación limpia del icono de preview usando SVG.
+   ======================================== */
+
+.theme-option-card.preview::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  transition: transform 0.2s ease;
+  /* SVG del icono de ojo */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+  background-size: 16px 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.theme-option-card.preview:hover::after {
+  transform: scale(1.1);
+}

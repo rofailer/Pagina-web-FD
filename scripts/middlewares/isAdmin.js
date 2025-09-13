@@ -1,7 +1,13 @@
 function isAdmin(req, res, next) {
-    if (req.userRole !== 'admin' && req.userRole !== 'owner') {
-        return res.status(403).json({ error: "Acceso solo para administradores" });
+
+    // Usar req.userRole que es establecido por el middleware authenticate
+    if (!req.userRole || (req.userRole !== 'admin' && req.userRole !== 'owner')) {
+        return res.status(403).json({
+            success: false,
+            message: "Acceso denegado. Se requieren permisos de administrador."
+        });
     }
+
     next();
 }
 

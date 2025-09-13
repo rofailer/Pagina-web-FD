@@ -1,181 +1,160 @@
 /**
  * ============================================
- * SISTEMA DE TEMAS DINÁMICOS
+ * SISTEMA UNIFICADO DE TEMAS
  * ============================================
  * 
- * Permite cambiar el color principal de toda la aplicación
- * de forma dinámica y persistente.
+ * Sistema centralizado para gestión de temas con:
+ * - Sincronización en tiempo real cross-tab/cross-device
+ * - Persistencia en servidor
+ * - Aplicación inmediata sin recargar
  * 
- * Características:
- * - 6 temas predefinidos
- * - Colores personalizados
- * - Persistencia en localStorage
- * - API para control programático
- * - Eventos personalizados
- * 
- * @author Tu Nombre
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 class ThemeManager {
     constructor() {
-        this.currentTheme = localStorage.getItem('selectedTheme') || 'orange';
-        this.customColor = localStorage.getItem('customColor') || null;
+        this.availableThemes = ['orange', 'blue', 'green', 'purple', 'red', 'teal', 'dark'];
+        this.currentTheme = 'orange';
+        this.customColor = null;
+        this.syncInterval = null;
+
         this.init();
     }
 
     /**
      * Inicializa el sistema de temas
      */
-    init() {
-        this.applyTheme(this.currentTheme);
+    async init() {
+        console.log('🎨 Inicializando sistema unificado de temas...');
+
+        // Cargar tema actual del servidor
+        await this.loadThemeFromServer();
+
+        // Configurar sincronización automática
+        this.startSync();
+
+        // Configurar listeners para cambios
         this.setupEventListeners();
-        this.updateActiveOption();
-        this.loadCustomColor();
+
+        console.log('🎨 Sistema de temas listo');
     }
 
     /**
-     * Configura los event listeners para el selector de temas
+     * Carga el tema actual desde el servidor
      */
-    setupEventListeners() {
-        const themeBtn = document.getElementById('themeBtn');
-        const themeDropdown = document.getElementById('themeDropdown');
-        const themeOptions = document.querySelectorAll('.theme-option');
+    async loadThemeFromServer() {
+        try {
+            const response = await fetch('/api/global-theme-config');
 
-        if (!themeBtn || !themeDropdown) {
-            console.warn('🎨 ThemeManager: Elementos del selector de temas no encontrados');
-            return;
-        }
+            if (response.ok) {
+                const data = await response.json();
 
-        // Toggle dropdown y decidir dirección (arriba/abajo)
-        themeBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            // Calcular espacio disponible por debajo del botón
-            const rect = themeBtn.getBoundingClientRect();
-            const spaceBelow = window.innerHeight - rect.bottom;
-            const estimatedHeight = 200; // altura aproximada del dropdown
-            if (spaceBelow < estimatedHeight) {
-                themeDropdown.classList.add('open-up');
+                if (data.success && data.theme) {
+                    this.applyServerTheme(data.theme);
+                } else {
+                    this.applyDefaultTheme();
+                }
             } else {
-                themeDropdown.classList.remove('open-up');
+                this.applyDefaultTheme();
             }
-            themeDropdown.classList.toggle('active');
-        });
+        } catch (error) {
+            console.warn('🎨 Error cargando tema del servidor, usando tema por defecto:', error);
+            this.applyDefaultTheme();
+        }
+    }
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', () => {
-            themeDropdown.classList.remove('active');
-        });
+    /**
+     * Aplica un tema recibido del servidor
+     */
+    applyServerTheme(themeConfig) {
+        if (themeConfig.selectedTheme === 'custom' && themeConfig.customColor) {
+            this.setCustomColor(themeConfig.customColor, false); // false = no sincronizar
+        } else if (this.availableThemes.includes(themeConfig.selectedTheme)) {
+            this.changeTheme(themeConfig.selectedTheme, false); // false = no sincronizar
+        } else {
+            this.applyDefaultTheme();
+        }
+    }
 
-        // Prevent dropdown from closing when clicking inside
-        themeDropdown.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-
-        // Theme selection
-        themeOptions.forEach(option => {
-            option.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const theme = option.dataset.theme;
-                this.changeTheme(theme);
-                themeDropdown.classList.remove('active');
-            });
-        });
+    /**
+     * Aplica el tema por defecto
+     */
+    applyDefaultTheme() {
+        this.changeTheme('orange', false);
     }
 
     /**
      * Cambia el tema actual
-     * @param {string} themeName - Nombre del tema a aplicar
      */
-    changeTheme(themeName) {
-        this.currentTheme = themeName;
-        this.applyTheme(themeName);
-        this.updateActiveOption();
-        this.saveTheme(themeName);
-
-        // Disparar evento personalizado
-        this.dispatchThemeEvent(themeName);
-
-        console.log(`🎨 Tema cambiado a: ${themeName}`);
-    }
-
-    /**
-     * Aplica un tema específico
-     * @param {string} themeName - Nombre del tema
-     */
-    applyTheme(themeName) {
-        document.documentElement.setAttribute('data-theme', themeName);
-
-        // Si es un tema personalizado, aplicar el color guardado
-        if (themeName === 'custom' && this.customColor) {
-            this.applyCustomColor(this.customColor);
-        }
-    }
-
-    /**
-     * Actualiza la opción activa en el dropdown
-     */
-    updateActiveOption() {
-        const options = document.querySelectorAll('.theme-option');
-        options.forEach(option => {
-            const isActive = option.dataset.theme === this.currentTheme;
-            option.classList.toggle('active', isActive);
-        });
-    }
-
-    /**
-     * Guarda el tema en localStorage
-     * @param {string} themeName - Nombre del tema
-     */
-    saveTheme(themeName) {
-        localStorage.setItem('selectedTheme', themeName);
-    }
-
-    /**
-     * Carga un color personalizado si existe
-     */
-    loadCustomColor() {
-        if (this.currentTheme === 'custom' && this.customColor) {
-            this.applyCustomColor(this.customColor);
-        }
-    }
-
-    /**
-     * Establece un color personalizado
-     * @param {string} hexColor - Color en formato hex (#rrggbb)
-     * @returns {boolean} - true si se aplicó correctamente
-     */
-    setCustomColor(hexColor) {
-        // Validar formato hex
-        if (!this.isValidHex(hexColor)) {
-            console.error('🎨 Color hex inválido:', hexColor);
+    changeTheme(themeName, syncToServer = true) {
+        if (!this.availableThemes.includes(themeName)) {
+            console.warn(`🎨 Tema inválido: ${themeName}`);
             return false;
         }
 
-        this.customColor = hexColor;
-        this.currentTheme = 'custom';
+        this.currentTheme = themeName;
+        this.customColor = null;
+        this.applyTheme(themeName);
 
-        this.applyCustomColor(hexColor);
-        this.saveCustomColor(hexColor);
-        this.dispatchThemeEvent('custom', hexColor);
+        if (syncToServer) {
+            this.saveToServer();
+        }
 
-        console.log(`🎨 Color personalizado aplicado: ${hexColor}`);
+        this.dispatchThemeEvent(themeName);
         return true;
     }
 
     /**
+     * Establece un color personalizado
+     */
+    setCustomColor(hexColor, syncToServer = true) {
+        if (!this.isValidHex(hexColor)) {
+            console.warn(`🎨 Color hex inválido: ${hexColor}`);
+            return false;
+        }
+
+        this.currentTheme = 'custom';
+        this.customColor = hexColor;
+        this.applyCustomColor(hexColor);
+
+        if (syncToServer) {
+            this.saveToServer();
+        }
+
+        this.dispatchThemeEvent('custom', hexColor);
+        return true;
+    }
+
+    /**
+     * Aplica un tema predefinido
+     */
+    applyTheme(themeName) {
+        const root = document.documentElement;
+
+        // Limpiar estilos personalizados
+        root.style.removeProperty('--primary-color');
+        root.style.removeProperty('--primary-rgb');
+        root.style.removeProperty('--secondary-color');
+        root.style.removeProperty('--accent-color');
+
+        // Aplicar tema
+        root.setAttribute('data-theme', themeName);
+    }
+
+    /**
      * Aplica un color personalizado
-     * @param {string} hexColor - Color en formato hex
      */
     applyCustomColor(hexColor) {
+        const root = document.documentElement;
         const rgb = this.hexToRgb(hexColor);
+
         if (!rgb) return;
 
-        const root = document.documentElement;
+        root.setAttribute('data-theme', 'custom');
         root.style.setProperty('--primary-color', hexColor);
         root.style.setProperty('--primary-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
 
-        // Generar colores secundarios automáticamente
+        // Generar colores derivados
         const secondary = this.adjustBrightness(hexColor, -15);
         const accent = this.adjustBrightness(hexColor, -8);
 
@@ -184,85 +163,176 @@ class ThemeManager {
     }
 
     /**
-     * Guarda el color personalizado
-     * @param {string} hexColor - Color a guardar
+     * Guarda la configuración actual en el servidor
      */
-    saveCustomColor(hexColor) {
-        localStorage.setItem('customColor', hexColor);
-        localStorage.setItem('selectedTheme', 'custom');
+    async saveToServer() {
+        try {
+            // Solo intentar guardar si hay token de admin disponible
+            const adminToken = localStorage.getItem('admin_token') || localStorage.getItem('token');
+            if (!adminToken) {
+                console.log('🎨 No hay token de admin disponible, omitiendo guardado automático');
+                return;
+            }
+
+            const themeData = {
+                selectedTheme: this.currentTheme,
+                customColor: this.customColor,
+                timestamp: Date.now()
+            };
+
+            const response = await fetch('/api/admin/save-theme-configuration', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${adminToken}`
+                },
+                body: JSON.stringify(themeData)
+            });
+
+            if (response.ok) {
+                console.log('🎨 Tema guardado en servidor');
+            } else {
+                console.warn('🎨 Error guardando tema en servidor:', response.status, response.statusText);
+            }
+        } catch (error) {
+            console.warn('🎨 Error de conexión al guardar tema:', error);
+        }
     }
 
     /**
-     * Dispara un evento personalizado de cambio de tema
-     * @param {string} themeName - Nombre del tema
-     * @param {string} customColor - Color personalizado (opcional)
+     * Inicia la sincronización automática
+     */
+    startSync() {
+        // Verificar cambios cada 5 segundos
+        this.syncInterval = setInterval(() => {
+            this.checkForUpdates();
+        }, 5000);
+
+        // También sincronizar cuando la ventana recibe foco
+        window.addEventListener('focus', () => {
+            this.checkForUpdates();
+        });
+    }
+
+    /**
+     * Verifica si hay actualizaciones del tema
+     */
+    async checkForUpdates() {
+        try {
+            const response = await fetch('/api/global-theme-config');
+
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data.success && data.theme) {
+                    const serverTheme = data.theme;
+
+                    // Verificar si el tema del servidor es diferente al actual
+                    if (this.isDifferentTheme(serverTheme)) {
+                        console.log('🎨 Detectado cambio de tema, sincronizando...');
+                        this.applyServerTheme(serverTheme);
+                    }
+                }
+            }
+        } catch (error) {
+            // Silencioso - no llenar la consola de errores
+        }
+    }
+
+    /**
+     * Verifica si un tema del servidor es diferente al actual
+     */
+    isDifferentTheme(serverTheme) {
+        if (serverTheme.selectedTheme !== this.currentTheme) {
+            return true;
+        }
+
+        if (serverTheme.selectedTheme === 'custom') {
+            return serverTheme.customColor !== this.customColor;
+        }
+
+        return false;
+    }
+
+    /**
+     * Configura event listeners
+     */
+    setupEventListeners() {
+        // Listener para cuando se cierra la ventana
+        window.addEventListener('beforeunload', () => {
+            if (this.syncInterval) {
+                clearInterval(this.syncInterval);
+            }
+        });
+    }
+
+    /**
+     * Dispara un evento de cambio de tema
      */
     dispatchThemeEvent(themeName, customColor = null) {
-        const eventDetail = {
-            theme: themeName,
-            timestamp: Date.now()
-        };
-
+        const eventDetail = { theme: themeName };
         if (customColor) {
             eventDetail.customColor = customColor;
         }
 
-        window.dispatchEvent(new CustomEvent('themeChanged', {
-            detail: eventDetail
-        }));
-    }
-
-    /**
-     * Obtiene el tema actual
-     * @returns {string} - Nombre del tema actual
-     */
-    getCurrentTheme() {
-        return this.currentTheme;
-    }
-
-    /**
-     * Obtiene el color personalizado actual
-     * @returns {string|null} - Color hex o null
-     */
-    getCustomColor() {
-        return this.customColor;
-    }
-
-    /**
-     * Obtiene todos los temas disponibles
-     * @returns {Array} - Lista de temas disponibles
-     */
-    getAvailableThemes() {
-        return ['orange', 'blue', 'green', 'purple', 'red', 'teal'];
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: eventDetail }));
     }
 
     /**
      * Resetea al tema por defecto
      */
-    resetToDefault() {
-        this.changeTheme('orange');
-        localStorage.removeItem('customColor');
-        this.customColor = null;
+    async resetToDefault() {
+        await this.changeTheme('orange', true);
+    }
+
+    /**
+     * Aplica un tema para preview (solo visual, no guarda ni sincroniza)
+     */
+    previewTheme(themeName) {
+        if (!this.availableThemes.includes(themeName)) {
+            console.warn(`🎨 Tema inválido para preview: ${themeName}`);
+            return false;
+        }
+
+        this.applyTheme(themeName);
+        console.log(`🎨 Preview aplicado: ${themeName}`);
+        return true;
+    }
+
+    /**
+     * Aplica un color personalizado para preview (solo visual, no guarda ni sincroniza)
+     */
+    previewCustomColor(hexColor) {
+        if (!this.isValidHex(hexColor)) {
+            console.warn(`🎨 Color hex inválido para preview: ${hexColor}`);
+            return false;
+        }
+
+        this.applyCustomColor(hexColor);
+        console.log(`🎨 Preview color aplicado: ${hexColor}`);
+        return true;
+    }
+
+    /**
+     * Restaura el tema actual aplicado (útil para salir del preview)
+     */
+    restoreCurrentTheme() {
+        if (this.currentTheme === 'custom' && this.customColor) {
+            this.applyCustomColor(this.customColor);
+        } else {
+            this.applyTheme(this.currentTheme);
+        }
+        console.log(`🎨 Tema restaurado: ${this.currentTheme}`);
     }
 
     // =========================
     // UTILIDADES
     // =========================
 
-    /**
-     * Valida si un string es un color hex válido
-     * @param {string} hex - String a validar
-     * @returns {boolean}
-     */
     isValidHex(hex) {
         return /^#[0-9A-F]{6}$/i.test(hex);
     }
 
-    /**
-     * Convierte hex a RGB
-     * @param {string} hex - Color hex
-     * @returns {Object|null} - {r, g, b} o null
-     */
     hexToRgb(hex) {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return result ? {
@@ -272,12 +342,6 @@ class ThemeManager {
         } : null;
     }
 
-    /**
-     * Ajusta el brillo de un color hex
-     * @param {string} hex - Color hex base
-     * @param {number} percent - Porcentaje de ajuste (-100 a 100)
-     * @returns {string} - Color hex ajustado
-     */
     adjustBrightness(hex, percent) {
         const num = parseInt(hex.replace("#", ""), 16);
         const amt = Math.round(2.55 * percent);
@@ -288,94 +352,41 @@ class ThemeManager {
         return "#" + (0x1000000 + R * 0x10000 + G * 0x100 + B)
             .toString(16).slice(1).toUpperCase();
     }
+
+    // =========================
+    // API PÚBLICA
+    // =========================
+
+    getCurrentTheme() { return this.currentTheme; }
+    getCustomColor() { return this.customColor; }
+    getAvailableThemes() { return this.availableThemes; }
 }
 
 // =========================
 // INICIALIZACIÓN Y API GLOBAL
 // =========================
 
-// Inicializar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', () => {
-    window.themeManager = new ThemeManager();
+// Inicializar automáticamente
+let themeManager;
 
-    // Log de inicialización
-    console.log('🎨 Sistema de temas inicializado');
-
-    // Ejemplo de listener para cambios de tema
-    window.addEventListener('themeChanged', (e) => {
-        console.log('🎨 Evento de cambio de tema:', e.detail);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        themeManager = new ThemeManager();
+        window.themeManager = themeManager;
     });
-});
+} else {
+    themeManager = new ThemeManager();
+    window.themeManager = themeManager;
+}
 
-// =========================
-// API GLOBAL
-// =========================
+// API global simplificada
+window.changeTheme = (theme) => themeManager?.changeTheme(theme) || false;
+window.setCustomColor = (color) => themeManager?.setCustomColor(color) || false;
+window.getCurrentTheme = () => themeManager?.getCurrentTheme() || 'orange';
+window.getCustomColor = () => themeManager?.getCustomColor() || null;
+window.resetTheme = () => themeManager?.resetToDefault();
 
-/**
- * Cambia el tema actual
- * @param {string} theme - Nombre del tema
- */
-window.changeTheme = (theme) => {
-    if (window.themeManager) {
-        return window.themeManager.changeTheme(theme);
-    }
-    console.warn('🎨 ThemeManager no está inicializado');
-};
-
-/**
- * Establece un color personalizado
- * @param {string} color - Color hex
- */
-window.setCustomColor = (color) => {
-    if (window.themeManager) {
-        return window.themeManager.setCustomColor(color);
-    }
-    console.warn('🎨 ThemeManager no está inicializado');
-};
-
-/**
- * Obtiene el tema actual
- * @returns {string}
- */
-window.getCurrentTheme = () => {
-    if (window.themeManager) {
-        return window.themeManager.getCurrentTheme();
-    }
-    return 'orange';
-};
-
-/**
- * Resetea al tema por defecto
- */
-window.resetTheme = () => {
-    if (window.themeManager) {
-        return window.themeManager.resetToDefault();
-    }
-    console.warn('🎨 ThemeManager no está inicializado');
-};
-
-// =========================
-// EJEMPLOS DE USO
-// =========================
-
-/*
-// Cambiar a un tema predefinido
-window.changeTheme('blue');
-
-// Establecer un color personalizado
-window.setCustomColor('#ff6b9d');
-
-// Escuchar cambios de tema
-window.addEventListener('themeChanged', (e) => {
-  console.log('Nuevo tema:', e.detail.theme);
-  if (e.detail.customColor) {
-    console.log('Color personalizado:', e.detail.customColor);
-  }
-});
-
-// Obtener el tema actual
-console.log('Tema actual:', window.getCurrentTheme());
-
-// Resetear al tema por defecto
-window.resetTheme();
-*/
+// Nuevas funciones de preview
+window.previewTheme = (theme) => themeManager?.previewTheme(theme) || false;
+window.previewCustomColor = (color) => themeManager?.previewCustomColor(color) || false;
+window.restoreCurrentTheme = () => themeManager?.restoreCurrentTheme();

@@ -5,7 +5,12 @@
   "scripts": {
     "start": "node scripts/server.js",
     "dev": "node scripts/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "db:setup": "node scripts/setup-db.js",
+    "db:backup": "node scripts/setup-db.js --backup",
+    "db:reset": "node scripts/setup-db.js --reset",
+    "db:status": "node scripts/setup-db.js --status",
+    "db:install": "node scripts/setup-db.js --install"
   },
   "keywords": [],
   "author": "",

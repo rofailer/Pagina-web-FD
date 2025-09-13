@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Función mejorada para limpiar formularios automáticamente
     function autoCleanFormsOnSectionChange(newSection) {
-        console.log(`🔄 Evaluando limpieza automática al cambiar a sección: ${newSection}`);
+        // Evaluando limpieza automática al cambiar a sección
 
         const currentProcesses = {
             firma: window.firmaEnCurso,
@@ -110,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 (processCompleted || !isProcessActive);
 
             if (shouldCleanWithProgress) {
-                console.log(`🧹 Limpiando proceso de ${processType} con progreso real`);
+                // Limpiando proceso con progreso real
 
                 if (processType === 'firma') {
                     // Limpiar con notificación porque había progreso real
@@ -168,9 +168,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
                 }
             } else if (isLeavingProcessSection && !hasProgress) {
-                console.log(`ℹ️ No se limpia ${processType} porque no hay progreso real que conservar`);
+                // No se limpia ${processType} porque no hay progreso real que conservar
             } else if (isLeavingProcessSection && hasProgress) {
-                console.log(`⚠️ No se limpia ${processType} porque tiene progreso real y está activo`);
+                // No se limpia proceso activo con progreso real
             }
         });
     }
@@ -226,7 +226,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (sectionKey === 'verificar') {
             // Cargar profesores automáticamente para la sección de verificar
             if (window.cargarProfesoresYMostrarPaso1) {
-                console.log("🔄 Sección verificar mostrada, cargando profesores automáticamente...");
+                // Sección verificar mostrada, cargando profesores automáticamente
                 window.cargarProfesoresYMostrarPaso1();
             }
         } else if (sectionKey === 'perfil') {
@@ -236,6 +236,12 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             if (window.loadActiveKey) {
                 window.loadActiveKey();
+            }
+            // Verificar acceso de owner para mostrar pestaña de configuraciones avanzadas
+            if (window.checkOwnerAccess) {
+                setTimeout(() => {
+                    window.checkOwnerAccess();
+                }, 200);
             }
         }
 
@@ -512,7 +518,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const currentSection = getCurrentSection();
 
             if (currentSection === 'firmar') {
-                console.log('🧹 Limpiando proceso de firma por confirmación del usuario');
+                // Limpiando proceso de firma por confirmación del usuario
                 if (window.limpiarFormulariosFirmar) {
                     window.limpiarFormulariosFirmar(true); // true = mostrar notificación porque el usuario confirmó
                 }
@@ -532,7 +538,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
             } else if (currentSection === 'verificar') {
-                console.log('🧹 Limpiando proceso de verificación por confirmación del usuario');
                 if (window.limpiarFormulariosVerificar) {
                     window.limpiarFormulariosVerificar(true); // true = mostrar notificación porque el usuario confirmó
                 }

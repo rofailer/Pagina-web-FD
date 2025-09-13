@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Firmas Digitales FD</title>
+    <title id="pageTitle">Firmas Digitales FD</title>
     <!-- Favicon -->
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
@@ -35,10 +35,12 @@
     <!-- CSS para módulo de eliminación de llaves -->
     <link rel="stylesheet" href="/css/deleteKey.css" />
 
-    <script src="/scripts/frontend/theme.js"></script>
+    <!-- CSS para personalización visual -->
+    <link rel="stylesheet" href="/css/visualConfig.css" />
+
   </head>
 
-  <body style="visibility: hidden">
+  <body style="visibility: hidden" data-bg="fondo1">
     <!-- Header con menú de autenticación -->
     <header>
       <div class="header-left">
@@ -142,56 +144,6 @@
     <!-- Menú móvil hamburguesa -->
     <div id="headerMobileMenu" class="header-mobile-menu" aria-hidden="true">
       <ul id="mobileMenuList"></ul>
-    </div>
-
-    <!-- Selector de tema flotante (reemplaza el botón de ayuda) -->
-    <div
-      class="theme-selector-container floating"
-      aria-label="Selector de tema"
-    >
-      <button id="themeBtn" class="theme-btn" title="Cambiar tema">
-        <div class="theme-icon">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="12" cy="12" r="5" />
-            <path
-              d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
-            />
-          </svg>
-        </div>
-      </button>
-      <div id="themeDropdown" class="theme-dropdown">
-        <div class="theme-option" data-theme="orange">
-          <div class="theme-color" style="background: #ff9545"></div>
-          <span>Naranja</span>
-        </div>
-        <div class="theme-option" data-theme="blue">
-          <div class="theme-color" style="background: #3b82f6"></div>
-          <span>Azul</span>
-        </div>
-        <div class="theme-option" data-theme="green">
-          <div class="theme-color" style="background: #10b981"></div>
-          <span>Verde</span>
-        </div>
-        <div class="theme-option" data-theme="purple">
-          <div class="theme-color" style="background: #8b5cf6"></div>
-          <span>Morado</span>
-        </div>
-        <div class="theme-option" data-theme="red">
-          <div class="theme-color" style="background: #ef4444"></div>
-          <span>Rojo</span>
-        </div>
-        <div class="theme-option" data-theme="teal">
-          <div class="theme-color" style="background: #14b8a6"></div>
-          <span>Teal</span>
-        </div>
-      </div>
     </div>
 
     <!-- Modal de Tutorial de Uso -->
@@ -607,80 +559,6 @@
       </div>
     </div>
 
-    <div id="registerModal" class="auth-modal">
-      <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h2>Registrarse</h2>
-        <form id="registerForm">
-          <input
-            type="text"
-            id="registerNombre"
-            placeholder="Nombre completo"
-            required
-          />
-          <input
-            type="text"
-            id="registerUsuario"
-            placeholder="Usuario"
-            required
-          />
-          <input
-            type="password"
-            id="registerPassword"
-            placeholder="Contraseña"
-            required
-          />
-          <button type="submit">
-            <svg
-              class="btn-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <path
-                d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <circle
-                cx="8.5"
-                cy="7"
-                r="4"
-                stroke="currentColor"
-                stroke-width="2"
-              />
-              <line
-                x1="20"
-                y1="8"
-                x2="20"
-                y2="14"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <line
-                x1="23"
-                y1="11"
-                x2="17"
-                y2="11"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            Crear cuenta
-          </button>
-        </form>
-        <p id="registerError" class="error-message"></p>
-        <p>¿Ya tienes cuenta? <a href="#" id="showLogin">Inicia sesión</a></p>
-      </div>
-    </div>
-
     <!-- Modal para seleccionar otra llave -->
     <div id="keySelectModal" class="modal" style="display: none">
       <div class="modal-content">
@@ -1064,14 +942,14 @@
         <div class="hero-section">
           <div class="hero-content">
             <h1 class="hero-title">
-              Firmas Electrónicas
+              Firmas Digitales
               <span class="hero-highlight">Seguras y Confiables</span>
             </h1>
             <p class="hero-description">
               Plataforma profesional para la autenticación criptográfica de
               documentos de investigación. Protege la integridad de trabajos de
               investigación, proyectos científicos y documentos profesionales
-              con tecnología de cifrado militar y firmas electrónicas.
+              con tecnología de cifrado militar y firmas digitales.
             </p>
             <div class="hero-buttons">
               <button
@@ -1369,7 +1247,7 @@
               </div>
               <h3 class="feature-title">Máxima Seguridad</h3>
               <p class="feature-description">
-                Cifrado militar AES-256 y llaves RSA de 4096 bits. Tus
+                Cifrado militar AES-256, llaves RSA de 4096 bits, entre otros. Tus
                 documentos están protegidos con la misma tecnología que usan
                 bancos y gobiernos.
               </p>
@@ -1451,7 +1329,7 @@
               </div>
               <h3 class="feature-title">Enfoque Investigativo</h3>
               <p class="feature-description">
-                Diseñado para la comunidad científica e investigativa. Protege
+                Diseñado para la comunidad académica e investigativa. Protege
                 trabajos de investigación, estudios, papers, tesis y documentos
                 de investigación profesional.
               </p>
@@ -1487,7 +1365,7 @@
               </div>
               <h3 class="feature-title">Validez Legal</h3>
               <p class="feature-description">
-                Firmas electrónicas con validez jurídica completa. Cumple con
+                Firmas Digitales con validez jurídica completa. Cumple con
                 estándares internacionales y normativas de autenticación
                 digital.
               </p>
@@ -2674,7 +2552,7 @@
               </div>
             </div>
 
-            <div class="perfil-tab-btn" data-tab="personalizacion-pdf">
+            <div class="perfil-tab-btn" data-tab="temas-colores">
               <div class="tab-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <path
@@ -2701,7 +2579,33 @@
               </div>
               <div class="tab-info">
                 <div class="tab-title">Personalización PDF</div>
-                <div class="tab-desc">Plantillas y logos</div>
+                <div class="tab-desc">Personalización de los estilos del AVAL</div>
+              </div>
+            </div>
+
+            <!-- CONFIGURACIONES AVANZADAS -->
+            <div class="perfil-tab-btn" data-tab="configuraciones-avanzadas">
+              <div class="tab-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </div>
+              <div class="tab-info">
+                <div class="tab-title">Configuraciones Avanzadas</div>
+                <div class="tab-desc">Panel de administración</div>
               </div>
             </div>
           </div>
@@ -2712,30 +2616,6 @@
             <div class="perfil-tab-content active" id="tab-datos-personales">
               <div class="tab-content-header">
                 <h3>
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    style="vertical-align: middle; margin-right: 8px"
-                  >
-                    <path
-                      d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="7"
-                      r="4"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
                   Datos Personales
                 </h3>
                 <p>Actualiza tu información personal y foto de perfil</p>
@@ -2874,7 +2754,7 @@
                   
                   <!-- Configuraciones -->
                   <div class="form-section-title">
-                    <h4>Configuraciones</h4>
+                    <h4>Configuraciones Adicionales</h4>
                   </div>
                   
                   <div class="form-row">
@@ -2960,42 +2840,6 @@
             <div class="perfil-tab-content" id="tab-historial-firma">
               <div class="tab-content-header">
                 <h3>
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    style="vertical-align: middle; margin-right: 8px"
-                  >
-                    <rect
-                      x="3"
-                      y="4"
-                      width="18"
-                      height="16"
-                      rx="2"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      fill="none"
-                    />
-                    <line
-                      x1="8"
-                      y1="10"
-                      x2="16"
-                      y2="10"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                    <line
-                      x1="8"
-                      y1="14"
-                      x2="13"
-                      y2="14"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                  </svg>
                   Historial de Firma
                 </h3>
                 <p>Consulta el historial completo de documentos firmados</p>
@@ -3357,35 +3201,6 @@
             <div class="perfil-tab-content" id="tab-gestion-llaves">
               <div class="tab-content-header">
                 <h3>
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    style="vertical-align: middle; margin-right: 8px"
-                  >
-                    <rect
-                      x="8"
-                      y="6"
-                      width="13"
-                      height="12"
-                      rx="1"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <circle cx="10" cy="12" r="1" fill="currentColor" />
-                    <path
-                      d="M3 15a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1z"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <path
-                      d="M7 15h1"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                  </svg>
                   Gestión de Llaves
                 </h3>
                 <p>Administra tus llaves digitales para firmar documentos</p>
@@ -3484,35 +3299,6 @@
 
               <div class="keys-list-container">
                 <h4>
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    style="vertical-align: middle; margin-right: 8px"
-                  >
-                    <rect
-                      x="8"
-                      y="6"
-                      width="13"
-                      height="12"
-                      rx="1"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <circle cx="10" cy="12" r="1" fill="currentColor" />
-                    <path
-                      d="M3 15a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1z"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <path
-                      d="M7 15h1"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                  </svg>
                   Mis Llaves Digitales
                 </h4>
                 <div class="keys-list" id="profileKeysList">
@@ -3524,7 +3310,7 @@
             <!-- TAB 4: CONFIGURACIÓN DE CIFRADO -->
             <div class="perfil-tab-content" id="tab-configuracion-cifrado">
               <div class="tab-content-header">
-                <h3>🔒 Configuración de Cifrado</h3>
+                <h3>Configuración de Cifrado</h3>
                 <p>
                   Selecciona el algoritmo de cifrado para proteger tus llaves
                 </p>
@@ -3599,37 +3385,9 @@
             </div>
 
             <!-- TAB 5: PERSONALIZACIÓN PDF PROFESIONAL -->
-            <div class="perfil-tab-content" id="tab-personalizacion-pdf">
+            <div class="perfil-tab-content" id="tab-temas-colores">
               <div class="tab-content-header">
                 <h3>
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    style="vertical-align: middle; margin-right: 8px"
-                  >
-                    <path
-                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <polyline
-                      points="14,2 14,8 20,8"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M9 12l2 2 4-4"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                    />
-                  </svg>
                   Plantillas PDF Profesionales
                 </h3>
                 <p>
@@ -3855,6 +3613,128 @@
 
               </div>
             </div>
+
+            <!-- TAB 6: CONFIGURACIONES AVANZADAS -->
+            <div class="perfil-tab-content" id="tab-configuraciones-avanzadas">
+              <div class="tab-content-header">
+                <h3>
+                  Configuraciones del Sistema
+                </h3>
+                <p>
+                  Personaliza la experiencia del sitio y accede a herramientas avanzadas de administración.
+                </p>
+              </div>
+
+              <!-- CONFIGURACIONES ORGANIZADAS POR CATEGORÍAS -->
+              <div class="advanced-config-panel">
+
+                <!-- CATEGORÍA 1: ADMINISTRACIÓN DEL SITIO (Solo Owner) -->
+                <div class="config-category" id="ownerAdminCategory" style="display: none;">
+                  <div class="category-header">
+                    <h4>
+                      Administración del Sitio
+                    </h4>
+                    <span class="category-badge owner">Solo Propietario</span>
+                  </div>
+                  
+                  <div class="admin-quick-actions">
+                    <div class="quick-action-card" onclick="openAdminPanel()">
+                      <div class="action-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                          <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+                          <path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                      </div>
+                      <div class="action-content">
+                        <h5>Panel de Administración Completo</h5>
+                        <p>Accede al dashboard principal con todas las herramientas de gestión</p>
+                      </div>
+                      <div class="action-arrow">→</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CATEGORÍA 2: CONFIGURACIONES GENERALES -->
+                <div class="config-category">
+                  <div class="category-header">
+                    <h4>
+                      Configuraciones de Apariencia
+                    </h4>
+                  </div>
+
+                  <div class="settings-grid">
+                    <!-- Modo Oscuro -->
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <div class="setting-label">Modo Oscuro</div>
+                        <div class="setting-description">Activa el tema oscuro para reducir la fatiga visual</div>
+                      </div>
+                      <div class="toggle-switch" onclick="toggleTheme('dark')">
+                        <div class="toggle-handle"></div>
+                      </div>
+                    </div>
+
+                    <!-- Animaciones -->
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <div class="setting-label">Animaciones Suaves</div>
+                        <div class="setting-description">Habilita transiciones y efectos visuales</div>
+                      </div>
+                      <div class="toggle-switch active" onclick="toggleSetting(this)">
+                        <div class="toggle-handle"></div>
+                      </div>
+                    </div>
+
+                    <!-- Notificaciones -->
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <div class="setting-label">Notificaciones del Sistema</div>
+                        <div class="setting-description">Recibe alertas sobre el estado del sistema</div>
+                      </div>
+                      <div class="toggle-switch active" onclick="toggleSetting(this)">
+                        <div class="toggle-handle"></div>
+                      </div>
+                    </div>
+
+                    <!-- Autoguardado -->
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <div class="setting-label">Autoguardado</div>
+                        <div class="setting-description">Guarda automáticamente los cambios en formularios</div>
+                      </div>
+                      <div class="toggle-switch active" onclick="toggleSetting(this)">
+                        <div class="toggle-handle"></div>
+                      </div>
+                    </div>
+
+                    <!-- Compresión de archivos -->
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <div class="setting-label">Compresión de Archivos</div>
+                        <div class="setting-description">Optimiza el tamaño de los PDFs generados</div>
+                      </div>
+                      <div class="toggle-switch" onclick="toggleSetting(this)">
+                        <div class="toggle-handle"></div>
+                      </div>
+                    </div>
+
+                    <!-- Validación extendida -->
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <div class="setting-label">Validación Extendida</div>
+                        <div class="setting-description">Verificación adicional en procesos de firma</div>
+                      </div>
+                      <div class="toggle-switch active" onclick="toggleSetting(this)">
+                        <div class="toggle-handle"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
@@ -3958,7 +3838,7 @@
         </p>
       </div>
       <div class="footer-divider" role="separator" aria-hidden="true"></div>
-      <p>&copy; 2025 Firmas Digitales FD. Todos los derechos reservados.</p>
+      <p>&copy; 2025 <span id="footerCompanyName">Firmas Digitales FD</span>. Todos los derechos reservados.</p>
     </footer>
 
     <!-- Scripts de frontend -->
@@ -3967,6 +3847,7 @@
     <script src="/scripts/frontend/keys.frontend.js"></script>
     <script src="/scripts/frontend/auth.frontend.js"></script>
     <script src="/scripts/frontend/userKeysModal.js"></script>
+    <script src="/scripts/frontend/auth.frontend.js"></script>
     <script src="/scripts/frontend/keyPassword.frontend.js"></script>
     <script src="/scripts/frontend/deleteKey.frontend.js"></script>
     <script src="/scripts/frontend/signSteps.js"></script>
@@ -3989,6 +3870,7 @@
 
     <!-- Sistema de Temas Dinámicos -->
     <script src="/scripts/utils/themeManager.js"></script>
+    <script src="/scripts/frontend/visualConfig.frontend.js"></script>
     <script src="/scripts/frontend/inicioTimelineReveal.js"></script>
   </body>
 </html>

@@ -14,8 +14,6 @@ window.showDeleteKeyModal = function (keyName) {
     const passwordInput = document.getElementById('deleteKeyPassword');
     const errorDiv = document.getElementById('deleteKeyError');
 
-    console.log('Elementos del modal:', { modal: !!modal, keyNameSpan: !!keyNameSpan, passwordInput: !!passwordInput, errorDiv: !!errorDiv });
-
     if (!modal) {
         console.error('Modal de eliminación no encontrado');
         alert('Error: Modal de eliminación no encontrado en el DOM');
@@ -34,13 +32,10 @@ window.showDeleteKeyModal = function (keyName) {
     modal.classList.add('show');
     if (passwordInput) passwordInput.focus();
 
-    console.log(`Modal de eliminación mostrado para la llave: ${keyName}`);
 };
 
 // Función global para eliminar llaves - disponible inmediatamente
 window.deleteKey = function (keyName) {
-    console.log(`deleteKey llamada con keyName: ${keyName}`);
-    console.log(`showDeleteKeyModal disponible: ${typeof showDeleteKeyModal}`);
 
     if (typeof showDeleteKeyModal === 'function') {
         showDeleteKeyModal(keyName);
@@ -49,8 +44,6 @@ window.deleteKey = function (keyName) {
         alert('Error: Funcionalidad de eliminación no disponible');
     }
 };
-
-console.log('Funciones globales definidas, window.deleteKey:', typeof window.deleteKey);
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -80,7 +73,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         currentKeyToDelete = null;
-        console.log('Modal de eliminación cerrado');
     }
 
     // Función para mostrar error
@@ -149,7 +141,6 @@ document.addEventListener("DOMContentLoaded", () => {
         setDeleteLoading(true);
 
         try {
-            console.log(`Intentando eliminar llave: ${currentKeyToDelete}`);
 
             const response = await fetch('/delete-key', {
                 method: 'DELETE',
@@ -166,7 +157,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
 
             if (data.success) {
-                console.log('Llave eliminada exitosamente');
 
                 // Guardar el nombre antes de cerrar el modal
                 const deletedKeyName = currentKeyToDelete;
@@ -260,12 +250,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    console.log('Módulo de eliminación de llaves inicializado');
 });
 
 // Función global para eliminar llaves - disponible inmediatamente
 window.deleteKey = function (keyName) {
-    console.log(`🗑️ Solicitud de eliminación para llave: ${keyName}`);
 
     if (typeof showDeleteKeyModal === 'function') {
         showDeleteKeyModal(keyName);

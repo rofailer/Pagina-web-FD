@@ -132,7 +132,6 @@ class TemplateManager {
 
         // Determinar el nombre de la plantilla
         const templateName = this.getTemplateName(templateConfig);
-        console.log('>>> Renderizando PDF con plantilla:', templateName);
 
         // Preparar datos del documento
         const documentData = this.prepareDocumentData(data);

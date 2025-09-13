@@ -2,12 +2,6 @@
 // PERFIL - JAVASCRIPT FUNCTIONS
 // ===========================
 
-// Función temporal para evitar errores mientras se migra la funcionalidad a keys.frontend.js
-function updateKeysCount() {
-    console.log('updateKeysCount: función temporal - la funcionalidad real está en keys.frontend.js');
-    // No hacer nada por ahora para evitar errores de elementos null
-}
-
 document.addEventListener('DOMContentLoaded', function () {
     initializeProfile();
     initializeTabs();
@@ -54,6 +48,9 @@ function initializeTabs() {
                     break;
                 case 'historial-firma':
                     loadHistorialFirma();
+                    break;
+                case 'configuraciones-avanzadas':
+                    loadAdvancedConfig();
                     break;
             }
         });
@@ -243,7 +240,7 @@ async function loadUserData() {
     // Verificar si hay un token válido antes de hacer la request
     const token = localStorage.getItem('token');
     if (!token) {
-        console.log('No hay token de autenticación, saltando carga de datos del usuario');
+        // No hay token de autenticación, saltando carga de datos del usuario
         return;
     }
 
@@ -258,7 +255,6 @@ async function loadUserData() {
 
         if (!response.ok) {
             if (response.status === 401 || response.status === 403) {
-                console.log('Token inválido o expirado, limpiando localStorage');
                 localStorage.removeItem('token');
                 return;
             }
@@ -298,7 +294,7 @@ async function loadUserData() {
 
 // Función para llenar los campos del formulario
 function fillFormFields(userData) {
-    console.log('📝 Llenando campos del formulario con datos:', userData);
+    // Llenando campos del formulario con datos
 
     const fieldMappings = {
         'userName': userData.nombre_completo || userData.nombre || '',
@@ -314,13 +310,13 @@ function fillFormFields(userData) {
         'userLanguage': userData.idioma || 'es'
     };
 
-    console.log('🎯 Mapeando campos:', fieldMappings);
+    // Mapeando campos
 
     for (const [fieldId, value] of Object.entries(fieldMappings)) {
         const field = document.getElementById(fieldId);
         if (field) {
             field.value = value;
-            console.log(`✅ Campo ${fieldId} llenado con: "${value}"`);
+            // Campo llenado
         } else {
             console.warn(`⚠️ Campo ${fieldId} no encontrado en el DOM`);
         }
@@ -330,16 +326,16 @@ function fillFormFields(userData) {
     const emailNotifications = document.getElementById('emailNotifications');
     if (emailNotifications) {
         emailNotifications.checked = userData.notificaciones_email || false;
-        console.log(`📧 Notificaciones email: ${emailNotifications.checked}`);
+        // Configurando notificaciones email
     }
 
     const twoFactorAuth = document.getElementById('twoFactorAuth');
     if (twoFactorAuth) {
         twoFactorAuth.checked = userData.autenticacion_2fa || false;
-        console.log(`🔐 Autenticación 2FA: ${twoFactorAuth.checked}`);
+        // Configurando autenticación 2FA
     }
 
-    console.log('✅ Formulario llenado completamente');
+    // Formulario llenado completamente
 }
 
 // Función para actualizar estadísticas del usuario
@@ -497,7 +493,7 @@ async function loadUserKeys() {
     // Verificar si hay un token válido antes de hacer la request
     const token = localStorage.getItem('token');
     if (!token) {
-        console.log('No hay token de autenticación, saltando carga de llaves');
+        // No hay token de autenticación, saltando carga de llaves
         keysList.innerHTML = '<p class="no-keys-message">Inicia sesión para ver tus llaves.</p>';
         return;
     }
@@ -524,7 +520,6 @@ async function loadUserKeys() {
             }
         } else {
             if (response.status === 401 || response.status === 403) {
-                console.log('Token inválido o expirado, limpiando localStorage');
                 localStorage.removeItem('token');
                 keysList.innerHTML = '<p class="no-keys-message">Sesión expirada. Inicia sesión nuevamente.</p>';
                 return;
@@ -561,14 +556,6 @@ function createKeyElement(key) {
             </div>
         </div>
         <div class="key-actions">
-            <button class="key-action-btn key-download-btn" onclick="event.stopPropagation(); downloadKey('${key.key_name}')">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                Descargar
-            </button>
             <button class="key-action-btn key-delete-btn" onclick="event.stopPropagation(); deleteKey('${key.key_name}')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -582,7 +569,6 @@ function createKeyElement(key) {
 }
 
 function showCreateKeyModal() {
-    console.log('showCreateKeyModal llamada - iniciando proceso de creación de llave');
 
     // Verificar el campo de nombre de llave primero
     const keyNameInput = document.getElementById('keyNameInput');
@@ -619,15 +605,11 @@ function showCreateKeyModal() {
     // Dar un pequeño delay para asegurar que todos los scripts estén cargados
     setTimeout(() => {
         // Mostrar el modal de contraseña para generar la llave
-        console.log('Verificando si existe showKeyPasswordModal:', typeof window.showKeyPasswordModal);
         if (typeof window.showKeyPasswordModal === 'function') {
-            console.log('Mostrando modal de contraseña');
             window.showKeyPasswordModal(async (keyPassword) => {
                 try {
                     const encryptionType = localStorage.getItem("encryptionType") || "aes-256-cbc";
                     const keyName = keyNameInput ? keyNameInput.value.trim() : "";
-
-                    console.log('Enviando solicitud de generación de llave:', { keyName, encryptionType });
 
                     const response = await fetch("/generate-keys", {
                         method: "POST",
@@ -638,14 +620,9 @@ function showCreateKeyModal() {
                         body: JSON.stringify({ keyPassword, encryptionType, keyName }),
                     });
 
-                    console.log('Respuesta del servidor:', response.status, response.statusText);
-
                     const data = await response.json();
-                    console.log('Datos recibidos:', data);
 
                     if (data.success) {
-                        console.log('Llave creada exitosamente');
-
                         // Usar el sistema de notificaciones de la página
                         if (typeof showNotification === 'function') {
                             showNotification(`Llave "${data.keyName}" generada correctamente`, 'success');
@@ -664,7 +641,6 @@ function showCreateKeyModal() {
                         // Recargar las llaves - con manejo de errores
                         try {
                             if (typeof window.loadKeys === "function") {
-                                console.log('Recargando llaves con window.loadKeys');
                                 window.loadKeys();
                             }
                         } catch (loadError) {
@@ -672,7 +648,6 @@ function showCreateKeyModal() {
                         }
 
                         try {
-                            console.log('Intentando recargar llaves del perfil');
                             if (typeof loadProfileKeys === "function") {
                                 loadProfileKeys();
                             }
@@ -716,13 +691,6 @@ function showCreateKeyModal() {
 
 // Hacer la función disponible globalmente para el onclick en HTML
 window.showCreateKeyModal = showCreateKeyModal;
-
-function downloadKey(keyName) {
-    showNotification(`Descargando llave: ${keyName}`, 'info');
-    // Aquí se conectará con la funcionalidad existente de descarga
-}
-
-// deleteKey function removed - now handled by deleteKey.frontend.js module
 
 // ===========================
 // CONFIGURACIÓN DE CIFRADO
@@ -897,21 +865,8 @@ function toggleSetting(toggle) {
     localStorage.setItem('advancedSettings', JSON.stringify(settings));
 }
 
-function loadAdvancedSettings() {
-    const settings = JSON.parse(localStorage.getItem('advancedSettings') || '{}');
-
-    document.querySelectorAll('.setting-item').forEach(item => {
-        const label = item.querySelector('.setting-label').textContent;
-        const toggle = item.querySelector('.toggle-switch');
-
-        if (settings.hasOwnProperty(label)) {
-            if (settings[label]) {
-                toggle.classList.add('active');
-            } else {
-                toggle.classList.remove('active');
-            }
-        }
-    });
+function loadAdvancedSettings_OBSOLETE() {
+    // Esta función fue movida al final del archivo con funcionalidad mejorada
 }
 
 // ===========================
@@ -971,11 +926,9 @@ function resetAllSettings() {
 // ===========================
 // UTILIDADES
 // ===========================
-// Las notificaciones ahora se manejan con el sistema global de notifications.js
 
 // ===== HISTORIAL DE FIRMA FUNCTIONS =====
 function loadHistorialFirma() {
-    console.log('Cargando historial de firma...');
 
     // Configurar filtros
     setupHistorialFilters();
@@ -998,7 +951,6 @@ function setupHistorialFilters() {
                 estado: estadoSelect?.value || ''
             };
 
-            console.log('Aplicando filtros:', filtros);
             filterHistorialDocuments(filtros);
         });
     }
@@ -1025,7 +977,6 @@ function setupHistorialActions() {
         btn.addEventListener('click', (e) => {
             const historialItem = e.target.closest('.historial-item');
             const nombreDoc = historialItem.querySelector('.documento-nombre').textContent;
-            console.log('Descargando documento:', nombreDoc);
 
             // Aquí iría la lógica para descargar el documento
             showNotification('Descargando documento firmado...', 'info');
@@ -1037,7 +988,6 @@ function setupHistorialActions() {
         btn.addEventListener('click', (e) => {
             const historialItem = e.target.closest('.historial-item');
             const nombreDoc = historialItem.querySelector('.documento-nombre').textContent;
-            console.log('Verificando firma del documento:', nombreDoc);
 
             // Aquí iría la lógica para verificar la firma
             showNotification('Verificando firma digital...', 'info');
@@ -1053,7 +1003,6 @@ function setupHistorialActions() {
         btn.addEventListener('click', (e) => {
             const historialItem = e.target.closest('.historial-item');
             const nombreDoc = historialItem.querySelector('.documento-nombre').textContent;
-            console.log('Mostrando detalles del documento:', nombreDoc);
 
             // Aquí se abriría un modal con los detalles completos
             showDocumentDetails(historialItem);
@@ -1098,14 +1047,12 @@ function setupHistorialPagination() {
 
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {
-            console.log('Página anterior');
             // Lógica de paginación
         });
     }
 
     if (nextBtn) {
         nextBtn.addEventListener('click', () => {
-            console.log('Página siguiente');
             // Lógica de paginación
         });
     }
@@ -1115,13 +1062,6 @@ function showDocumentDetails(historialItem) {
     const nombreDoc = historialItem.querySelector('.documento-nombre').textContent;
     const fecha = historialItem.querySelector('.fecha').textContent;
     const estado = historialItem.querySelector('.estado').textContent;
-
-    // Por ahora solo mostrar en consola, luego se puede crear un modal
-    console.log('Detalles del documento:', {
-        nombre: nombreDoc,
-        fecha: fecha,
-        estado: estado
-    });
 
     showNotification('Función de detalles en desarrollo', 'info');
 }
@@ -1919,3 +1859,156 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+/* ========================================
+   CONFIGURACIONES AVANZADAS - SOLO OWNER
+   ======================================== */
+
+// Cargar configuración avanzada
+function loadAdvancedConfig() {
+    const securityVerification = document.getElementById('securityVerification');
+    const adminAccessPanel = document.getElementById('adminAccessPanel');
+
+    // Resetear estado
+    if (securityVerification) securityVerification.style.display = 'block';
+    if (adminAccessPanel) adminAccessPanel.style.display = 'none';
+
+}
+
+// Verificar acceso del owner con contraseña
+// ===========================
+// FUNCIONES PARA CONFIGURACIONES AVANZADAS REORGANIZADAS
+// ===========================
+
+// Función para alternar entre tema actual y modo oscuro
+function toggleTheme(targetTheme) {
+    if (window.themeManager) {
+        const currentTheme = window.themeManager.getCurrentTheme();
+
+        if (currentTheme === targetTheme) {
+            // Si ya está en el tema objetivo, volver al tema por defecto
+            window.themeManager.changeTheme('orange');
+        } else {
+            // Cambiar al tema objetivo
+            window.themeManager.changeTheme(targetTheme);
+        }
+    }
+}
+
+// Función general para alternar configuraciones
+function toggleSetting(toggle) {
+    toggle.classList.toggle('active');
+
+    // Obtener el nombre de la configuración
+    const settingItem = toggle.closest('.setting-item');
+    const settingName = settingItem.querySelector('.setting-label').textContent;
+    const isEnabled = toggle.classList.contains('active');
+
+    // Guardar en localStorage
+    const settings = JSON.parse(localStorage.getItem('advancedSettings') || '{}');
+    settings[settingName] = isEnabled;
+    localStorage.setItem('advancedSettings', JSON.stringify(settings));
+
+    // Mostrar notificación
+    const status = isEnabled ? 'activado' : 'desactivado';
+    showNotification(`${settingName} ${status}`, 'success');
+}
+
+// Verificar si el usuario es owner y mostrar/ocultar secciones correspondientes
+function checkOwnerAccess() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        return;
+    }
+
+    // Verificar datos del usuario
+    fetch('/api/auth/me', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+        .then(response => response.json())
+        .then(userData => {
+            // Mostrar la categoría de administración solo si es owner
+            const ownerCategory = document.getElementById('ownerAdminCategory');
+            if (ownerCategory) {
+                if (userData.rol === 'owner') {
+                    ownerCategory.style.display = 'block';
+                } else {
+                    ownerCategory.style.display = 'none';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error verificando rol de usuario:', error);
+            // Ocultar por seguridad si hay error
+            const ownerCategory = document.getElementById('ownerAdminCategory');
+            if (ownerCategory) {
+                ownerCategory.style.display = 'none';
+            }
+        });
+}
+
+// Cargar configuraciones guardadas al inicializar - AHORA MANEJADO POR THEMEMANAGER.JS
+function loadAdvancedSettings() {
+    // Todas las configuraciones de temas ahora se manejan unificadamente
+    // No se necesita código adicional aquí
+}
+
+// Cargar otras configuraciones
+const settings = JSON.parse(localStorage.getItem('advancedSettings') || '{}');
+
+document.querySelectorAll('.setting-item').forEach(item => {
+    const label = item.querySelector('.setting-label')?.textContent;
+    const toggle = item.querySelector('.toggle-switch');
+
+    if (label && toggle && settings.hasOwnProperty(label)) {
+        if (settings[label]) {
+            toggle.classList.add('active');
+        } else {
+            toggle.classList.remove('active');
+        }
+    }
+});
+
+
+// Cancelar acceso al panel de owner
+function cancelOwnerAccess() {
+    const passwordInput = document.getElementById('ownerPassword');
+    if (passwordInput) passwordInput.value = '';
+
+    // Cambiar a otra pestaña
+    const datosPersonalesTab = document.querySelector('[data-tab="datos-personales"]');
+    if (datosPersonalesTab) {
+        datosPersonalesTab.click();
+    }
+}
+
+// Abrir panel de administración - redirige al login administrativo
+async function openAdminPanel() {
+    try {
+        showNotification('Redirigiendo al panel de administración...', 'info');
+
+        // Ir a la página de login administrativo en la misma pestaña
+        window.location.href = '/admin/html/loginAdminPanel.html';
+
+        showNotification('Panel de administración abierto correctamente', 'success');
+
+    } catch (error) {
+        console.error('Error abriendo panel de administración:', error);
+        showNotification(`Error: ${error.message}`, 'error');
+    }
+}
+
+// Verificar acceso de owner al cargar la página
+document.addEventListener('DOMContentLoaded', function () {
+    // Cargar configuraciones guardadas
+    loadAdvancedSettings();
+
+    // Verificar acceso de owner (esperar un poco para que se cargue la autenticación)
+    setTimeout(checkOwnerAccess, 1000);
+});
+
+// Exponer funciones globalmente para uso externo
+window.checkOwnerAccess = checkOwnerAccess;
+window.openAdminPanel = openAdminPanel;

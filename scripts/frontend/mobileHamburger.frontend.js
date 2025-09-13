@@ -478,38 +478,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Función adicional para debuggear elementos
     function debugElements() {
-        console.log("🔍 DEBUG - Estado de elementos:");
-        console.log("- menuBtn:", menuBtn ? "✅ Existe" : "❌ No existe");
-        console.log("- mobileMenu:", mobileMenu ? "✅ Existe" : "❌ No existe");
-        console.log("- backdrop:", backdrop ? "✅ Existe" : "❌ No existe");
-        console.log("- closeButton:", closeButton ? "✅ Existe" : "❌ No existe");
-        console.log("- isMenuOpen:", isMenuOpen);
+        // DEBUG - Estado de elementos (comentado para producción)
 
-        if (backdrop) {
-            console.log("- backdrop classList:", backdrop.classList.toString());
-            console.log("- backdrop style:", backdrop.style.cssText);
-            console.log(
-                "- backdrop zIndex:",
-                window.getComputedStyle(backdrop).zIndex,
-            );
-        }
-
-        if (mobileMenu) {
-            console.log("- mobileMenu classList:", mobileMenu.classList.toString());
-            console.log("- mobileMenu style:", mobileMenu.style.cssText);
-            console.log(
-                "- mobileMenu zIndex:",
-                window.getComputedStyle(mobileMenu).zIndex,
-            );
-        }
-
-        if (closeButton) {
-            console.log("- closeButton style:", closeButton.style.cssText);
-            console.log(
-                "- closeButton zIndex:",
-                window.getComputedStyle(closeButton).zIndex,
-            );
-        }
+        // Debugging de elementos (comentado para producción)
+        // if (backdrop) { ... }
+        // if (mobileMenu) { ... }
+        // if (closeButton) { ... }
     }
 
     // Exponer la función de debug globalmente

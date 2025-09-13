@@ -42,6 +42,7 @@ class NotificationManager {
                     background: #2196F3;
                     color: white;
                     padding: 12px 20px;
+                    border: none;
                     border-radius: 8px;
                     box-shadow: 0 2px 12px rgba(0,0,0,0.15);
                     font-weight: 500;
@@ -102,16 +103,18 @@ class NotificationManager {
                     position: absolute;
                     top: 6px;
                     right: 8px;
-                    color: rgba(255,255,255,0.8);
+                    color: white !important;
                     font-size: 16px;
                     cursor: pointer;
                     line-height: 1;
                     padding: 2px;
                     transition: color 0.2s;
+                    border: none;
+                    background: none;
                 }
 
                 .notification-close:hover {
-                    color: white;
+                    color: rgba(255,255,255,0.8) !important;
                 }
             `;
             document.head.appendChild(styles);
@@ -167,7 +170,7 @@ class NotificationManager {
         element.className = `notification-item ${type}`;
 
         element.innerHTML = `
-            <span class="notification-close">&times;</span>
+            <span class="notification-close" style="color: white !important;">&times;</span>
             <div style="padding-right: 25px;">${message}</div>
         `;
 

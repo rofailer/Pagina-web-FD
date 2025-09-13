@@ -47,10 +47,8 @@ const upload = multer({
 // OBTENER PERFIL COMPLETO DEL USUARIO
 // ====================================
 router.get('/api/profile', authenticate, async (req, res) => {
-    console.log('📊 Solicitando datos del perfil para usuario ID:', req.user.id);
 
     try {
-        console.log('📊 Consultando datos del perfil para usuario ID:', req.user.id);
 
         // Consultar datos del usuario con estructura expandida
         const [userRows] = await pool.query(`
@@ -63,7 +61,6 @@ router.get('/api/profile', authenticate, async (req, res) => {
       WHERE id = ?
     `, [req.user.id]);
 
-        console.log('👤 Datos del usuario encontrados:', userRows.length > 0 ? 'Sí' : 'No');
 
         if (userRows.length === 0) {
             console.log('❌ Usuario no encontrado con ID:', req.user.id);
@@ -71,9 +68,6 @@ router.get('/api/profile', authenticate, async (req, res) => {
         }
 
         const user = userRows[0];
-        console.log('📋 Campos de usuario cargados:', Object.keys(user));
-        console.log('📧 Email del usuario:', user.email || 'Sin email');
-        console.log('🏢 Organización del usuario:', user.organizacion || 'Sin organización');
 
         // Intentar obtener preferencias del usuario (puede no existir la tabla)
         let preferences = {};
@@ -108,7 +102,6 @@ router.get('/api/profile', authenticate, async (req, res) => {
             if (keyStats.length > 0) {
                 stats = keyStats[0];
             }
-            console.log('📊 Estadísticas de llaves:', stats);
         } catch (statsError) {
             console.log('⚠️ Error al obtener estadísticas de llaves:', statsError.message);
         }
@@ -207,7 +200,6 @@ async function cleanupOldUserPhotos(userId, excludeFile = null) {
             const photoPath = path.join(photosDir, photo);
             if (fs.existsSync(photoPath)) {
                 fs.unlinkSync(photoPath);
-                console.log(`🗑️ Foto antigua eliminada: ${photo}`);
             }
         });
 

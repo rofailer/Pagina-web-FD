@@ -16,12 +16,39 @@
   user-select: none;
 }
 
-/* Estilo base del body */
-body {
+/* Estilo base del body - Sistema de fondos dinámicos para páginas principales */
+body:not(.admin-body):not(.admin-access-page) {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: url("../recursos/Fondo2.jpg") no-repeat center center fixed;
+  background: linear-gradient(
+      135deg,
+      rgba(var(--primary-rgb, 102, 126, 234), 0.4) 0%,
+      rgba(var(--secondary-rgb, 118, 75, 162), 0.4) 100%
+    ),
+    url("../recursos/Fondo2.jpg") no-repeat center center fixed;
+  background-size: cover;
+  transition: background 0.3s ease;
+}
+
+/* Fondos dinámicos para páginas principales */
+body:not(.admin-body):not(.admin-access-page).bg-fondo1 {
+  background: linear-gradient(
+      135deg,
+      rgba(var(--primary-rgb, 102, 126, 234), 0.4) 0%,
+      rgba(var(--secondary-rgb, 118, 75, 162), 0.4) 100%
+    ),
+    url("../recursos/Fondo.jpg") no-repeat center center fixed;
+  background-size: cover;
+}
+
+body:not(.admin-body):not(.admin-access-page).bg-fondo2 {
+  background: linear-gradient(
+      135deg,
+      rgba(var(--primary-rgb, 102, 126, 234), 0.4) 0%,
+      rgba(var(--secondary-rgb, 118, 75, 162), 0.4) 100%
+    ),
+    url("../recursos/Fondo2.jpg") no-repeat center center fixed;
   background-size: cover;
 }
 

@@ -308,7 +308,7 @@
 
 /* Sección sin sesión iniciada - DISEÑO MEJORADO */
 .no-session-section {
-  padding: 30px 25px;
+  padding: 40px 25px 30px;
   text-align: center;
   background: linear-gradient(
     135deg,
@@ -318,27 +318,44 @@
   position: relative;
   opacity: 1;
   overflow: hidden;
+  /* Espacio para el botón X */
+  margin-top: 0;
 }
 
 .no-session-icon {
   width: 65px;
   height: 65px;
   border-radius: 50%;
-  margin: 0 auto 20px;
+  margin: 10px auto 20px;
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Fondo blanco/neutro para contrastar con el icono del color primario */
+  background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 8px 25px
-      color-mix(in srgb, var(--secondary-color) 20%, transparent 80%),
-    0 2px 8px color-mix(in srgb, var(--secondary-color) 15%, transparent 85%),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      color-mix(in srgb, var(--primary-color) 25%, transparent 75%),
+    0 2px 8px color-mix(in srgb, var(--primary-color) 20%, transparent 80%),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
   position: relative;
-  opacity: 0.95;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8' d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'/%3E%3C/svg%3E");
-  background-size: 32px 32px;
-  background-repeat: no-repeat;
-  background-position: center;
+  opacity: 1;
   z-index: 1;
+  /* Centrado perfecto y sin interferir con la X */
+  transform: translateX(0);
+}
+
+/* Icono de usuario con color primario usando CSS mask */
+.no-session-icon::before {
+  content: "";
+  width: 34px;
+  height: 34px;
+  background-color: var(--primary-color);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='black'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'/%3E%3C/svg%3E")
+    no-repeat center;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='black'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'/%3E%3C/svg%3E")
+    no-repeat center;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  display: block;
 }
 
 .no-session-message {

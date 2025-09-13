@@ -394,7 +394,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            console.log(`✅ Profesor seleccionado automáticamente: ${autoDetectedSigner.nombre} (ID: ${professorId})`);
         } else {
             console.warn(`⚠️ No se encontró elemento de profesor con ID: ${professorId}`);
         }
@@ -576,15 +575,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     return [];
                 }
 
-                console.log("✅ Respuesta exitosa, parseando JSON...");
                 return res.json();
             })
             .then(data => {
-                console.log("� Datos finales recibidos:");
-                console.log("   - Tipo:", typeof data);
-                console.log("   - Es array:", Array.isArray(data));
-                console.log("   - Longitud:", data?.length);
-                console.log("   - Contenido:", data);
 
                 if (!Array.isArray(data)) {
                     console.error("❌ Los datos no son un array:", data);
@@ -598,7 +591,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 if (data.length === 0) {
-                    console.log("⚠️ No se encontraron profesores en la base de datos");
                     professorsList.innerHTML = `
                         <div class="no-professors">
                             <p>No hay profesores registrados en el sistema.</p>
@@ -607,25 +599,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
-                console.log("✅ Profesores válidos recibidos, actualizando variables globales...");
                 allProfessors = data;
                 filteredProfessors = [...data];
 
-                console.log("🎨 Llamando a displayProfessors...");
                 displayProfessors(filteredProfessors);
 
-                console.log("🔧 Configurando search listeners...");
                 setupSearchListeners();
 
                 // Solo mostrar paso 1 si no estamos ya en él
                 if (currentStep !== 1) {
-                    console.log("📄 Mostrando paso 1...");
                     showStep(1);
-                } else {
-                    console.log("📄 Ya estamos en el paso 1, no es necesario cambiar");
                 }
-
-                console.log("🎉 cargarProfesoresYMostrarPaso1() completado exitosamente");
             })
             .catch(error => {
                 console.error("💥 ERROR EN FETCH:", error);
@@ -829,14 +813,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // --- Procesar verificación ---
         const signedFile = document.getElementById("signedFile").files[0];
         const formData = new FormData();
-
-        // Debug logs
-        console.log("=== FRONTEND DEBUG ===");
-        console.log("selectedProfesorId:", selectedProfesorId);
-        console.log("signedFile:", signedFile);
-        console.log("originalFile:", originalFile);
-        console.log("signedFile name:", signedFile?.name);
-        console.log("originalFile name:", originalFile?.name);
 
         formData.append("signedFile", signedFile);
         formData.append("originalFile", originalFile);
@@ -1317,7 +1293,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Marcar proceso en curso cuando se selecciona archivo para detección automática
                 window.verificacionEnCurso = true;
 
-                console.log(`🔍 Iniciando detección automática para: ${file.name}`);
                 detectSignerFromDocument(file).then(() => {
                     updateContinueBtnState();
                 });
@@ -1341,7 +1316,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const verifySection = document.getElementById("verifySection");
 
         if (currentHash === "verificar" && verifySection && verifySection.style.display !== "none") {
-            console.log("🔄 Página cargada ya en sección verificar, cargando profesores...");
             cargarProfesoresYMostrarPaso1();
         }
     }
@@ -1694,7 +1668,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Función global para limpiar formularios cuando se hace logout
 window.cleanVerifyFormsOnLogout = function () {
-    console.log('🧹 Limpiando formularios de verificación por logout...');
 
     // Limpiar variables de estado
     currentStep = 1;
@@ -1737,6 +1710,4 @@ window.cleanVerifyFormsOnLogout = function () {
 
     // Resetear pasos
     showStep(1);
-
-    console.log('✅ Formularios de verificación limpiados completamente');
 };
