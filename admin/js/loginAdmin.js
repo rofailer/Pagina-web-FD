@@ -2,8 +2,11 @@
  * Clase para manejar la autenticación del panel administrativo
  * Soporta dos modos: login completo y confirmación de contraseña
  */
+console.log("📜 loginAdmin.js cargado correctamente");
 class AdminAccess {
     constructor() {
+        console.log("🔧 Inicializando AdminAccess...");
+
         this.form = document.getElementById("adminAccessForm");
         this.loginBtn = document.getElementById("loginBtn");
         this.changeUserBtn = document.getElementById("changeUserBtn");
@@ -13,6 +16,13 @@ class AdminAccess {
         this.passwordInput = document.getElementById("password");
         this.secondaryButtons = document.getElementById("secondaryButtons");
 
+        console.log("📋 Elementos encontrados:", {
+            form: !!this.form,
+            loginBtn: !!this.loginBtn,
+            emailInput: !!this.emailInput,
+            passwordInput: !!this.passwordInput
+        });
+
         this.isPasswordOnlyMode = false;
         this.currentUserEmail = null; // Nota: almacena nombre de usuario, no email
 
@@ -20,8 +30,44 @@ class AdminAccess {
     }
 
     init() {
-        this.form.addEventListener("submit", this.handleLogin.bind(this));
-        this.changeUserBtn.addEventListener("click", this.switchToFullLogin.bind(this));
+        console.log("🚀 Iniciando AdminAccess...");
+
+        if (!this.form) {
+            console.error("❌ No se encontró el formulario adminAccessForm");
+            return;
+        }
+
+        // Agregar event listener con más debug
+        this.form.addEventListener("submit", (event) => {
+            console.log("🎯 Formulario enviado");
+            this.handleLogin(event);
+        });
+        console.log("✅ Event listener agregado al formulario");
+
+        // Agregar event listener al botón como backup
+        if (this.loginBtn) {
+            this.loginBtn.addEventListener("click", (event) => {
+                console.log("🔘 Botón login clickeado");
+                event.preventDefault();
+                event.stopPropagation();
+
+                // Crear un evento submit simulado
+                const fakeEvent = {
+                    type: 'submit',
+                    target: this.form,
+                    currentTarget: this.form,
+                    preventDefault: () => { }
+                };
+
+                this.handleLogin(fakeEvent);
+            });
+            console.log("✅ Event listener de respaldo agregado al botón login");
+        }
+
+        if (this.changeUserBtn) {
+            this.changeUserBtn.addEventListener("click", this.switchToFullLogin.bind(this));
+            console.log("✅ Event listener agregado al botón cambiar usuario");
+        }
 
         // Verificar si ya está autenticado
         this.checkAuthStatus();
@@ -150,21 +196,28 @@ class AdminAccess {
     }
 
     async handleLogin(event) {
-        event.preventDefault();
+        console.log("🔐 handleLogin ejecutado");
+
+        // Asegurar que preventDefault se ejecute
+        if (event && event.preventDefault) {
+            event.preventDefault();
+        }
 
         this.setLoading(true);
         this.clearAlerts();
 
         try {
             if (this.isPasswordOnlyMode) {
+                console.log("🔑 Modo solo contraseña");
                 // Modo solo contraseña - verificar contraseña con el token existente
                 await this.handlePasswordConfirmation();
             } else {
+                console.log("👤 Modo login completo");
                 // Modo login completo
                 await this.handleFullLogin();
             }
         } catch (error) {
-            console.error("Error de autenticación:", error);
+            console.error("❌ Error de autenticación:", error);
             this.showAlert("Error de conexión. Intenta nuevamente.", "error");
         } finally {
             this.setLoading(false);
@@ -194,6 +247,7 @@ class AdminAccess {
         });
 
         const result = await response.json();
+        console.log("🔑 Respuesta de verificación:", response.status, result);
 
         if (response.ok && result.token) {
             // Contraseña correcta, actualizar token y redirigir
@@ -210,11 +264,15 @@ class AdminAccess {
     }
 
     async handleFullLogin() {
+        console.log("🔐 handleFullLogin - Iniciando login completo");
+
         const formData = new FormData(this.form);
         const credentials = {
             usuario: formData.get("email"), // El backend espera 'usuario'
             password: formData.get("password"),
         };
+
+        console.log("📝 Enviando credenciales de login");
 
         const response = await fetch("/api/login", {
             method: "POST",
@@ -225,6 +283,7 @@ class AdminAccess {
         });
 
         const result = await response.json();
+        console.log("📡 Respuesta del servidor:", response.status, result);
 
         if (response.ok && result.token) {
             // Verificar permisos de administrador
@@ -273,13 +332,13 @@ class AdminAccess {
 
             if (response.ok) {
                 const data = await response.json();
-                window.location.href = `/admin/html/panelAdmin.html?tid=${data.tokenId}`;
+                window.location.href = `/panelAdmin?tid=${data.tokenId}`;
             } else {
-                window.location.href = "/admin/html/panelAdmin.html";
+                window.location.href = "/panelAdmin";
             }
         } catch (error) {
             // Fallback: ir directamente a panelAdmin.html
-            window.location.href = "/admin/html/panelAdmin.html";
+            window.location.href = "/panelAdmin";
         }
     }
 
@@ -320,7 +379,26 @@ class AdminAccess {
     }
 }
 
+// Función de prueba para la consola del navegador
+window.testLoginAdmin = function () {
+    console.log("🧪 Test ejecutado");
+    const adminAccess = window.adminAccessInstance;
+    if (adminAccess) {
+        console.log("✅ AdminAccess encontrado");
+        adminAccess.handleLogin({ preventDefault: () => { } });
+    } else {
+        console.error("❌ AdminAccess no encontrado");
+    }
+};
+
 // Inicializar cuando el DOM esté listo
 document.addEventListener("DOMContentLoaded", () => {
-    new AdminAccess();
+    console.log("📄 DOM cargado, inicializando AdminAccess...");
+    try {
+        const adminAccess = new AdminAccess();
+        window.adminAccessInstance = adminAccess; // Guardar referencia global para testing
+        console.log("✅ AdminAccess inicializado correctamente");
+    } catch (error) {
+        console.error("❌ Error al inicializar AdminAccess:", error);
+    }
 });

@@ -20,7 +20,7 @@
   if (!tokenId && !existingToken) {
     // No hay token de administración válido - redirigir a login
     console.error("❌ No se proporcionó token de administración válido");
-    window.location.href = "/admin/html/loginAdminPanel.html";
+    window.location.href = "/adminLogin";
     return;
   }
 
@@ -28,7 +28,7 @@
   if (tokenId) {
     exchangeTokenAndAuthenticate(tokenId);
   }
-  // Si no hay tokenId pero hay token existente, validar el token actual
+  // Si no hay tokenId pero hay token existente, validar el token actual con el servidor
   else if (existingToken) {
     validateExistingToken(existingToken);
   }
@@ -78,6 +78,9 @@
       localStorage.setItem("token", adminToken);
       localStorage.setItem("admin_token", adminToken);
 
+      // Mostrar información del usuario en el indicador
+      setTimeout(() => displayUserInfo(user), 100);
+
       // Sistema de renovación automática inteligente (cada 12 horas si hay actividad)
       startAdminTokenRenewal(adminToken);
 
@@ -96,37 +99,52 @@
       // Mostrar error específico en consola para debugging
       console.error("Detalles del error:", error.message);
       //Redirigir a página 403
-      window.location.href = "/html/403-unauthorized.html";
+      window.location.href = "/acceso-denegado";
     }
   }
 
-  // Función para validar token existente (para hard reset)
+  // Función para validar token existente (con validación estricta del servidor)
   async function validateExistingToken(token) {
     try {
-      console.log("🔄 Validando token existente para hard reset...");
+      console.log("🔄 Validando token existente con servidor...");
 
-      // Validar el token con el servidor
+      // Validar el token con el servidor de manera estricta
       const userResponse = await fetch("/api/auth/me", {
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         },
       });
 
       if (!userResponse.ok) {
-        throw new Error("Token inválido o expirado");
+        const errorData = await userResponse.json().catch(() => ({}));
+        throw new Error(`Token inválido: ${errorData.message || userResponse.statusText}`);
       }
 
       const user = await userResponse.json();
 
-      if (user.rol !== "owner") {
-        throw new Error(
-          "Acceso denegado: se requiere rol de propietario"
-        );
+      // Verificaciones adicionales de seguridad
+      if (!user || !user.id) {
+        throw new Error("Respuesta de usuario inválida del servidor");
       }
 
-      // Token válido - continuar normalmente
+      if (user.rol !== "owner") {
+        throw new Error("Acceso denegado: se requiere rol de propietario");
+      }
+
+      // Verificar que el usuario esté activo (si el campo existe)
+      if (user.activo !== undefined && user.activo === false) {
+        throw new Error("Cuenta de usuario inactiva");
+      }
+
+      // Token válido y usuario autorizado
       authenticationComplete = true;
-      console.log("✅ Token existente válido - continuando sesión");
+      console.log("✅ Token existente válido - usuario autorizado:", user.nombre || user.username);
+
+      // Mostrar información del usuario en el indicador
+      setTimeout(() => displayUserInfo(user), 100);
 
       // Sistema de renovación automática inteligente
       startAdminTokenRenewal(token);
@@ -141,15 +159,18 @@
       if (container) {
         container.style.display = "block";
       }
+
     } catch (error) {
-      console.error("Error validando token existente:", error);
+      console.error("❌ Error validando token existente:", error);
       console.error("Detalles del error:", error.message);
 
-      // Token inválido - redirigir a login
-      console.log("🔐 Token existente inválido - redirigiendo a login");
+      // Limpiar tokens inválidos
       localStorage.removeItem("token");
       localStorage.removeItem("admin_token");
-      window.location.href = "/admin/html/loginAdminPanel.html";
+
+      // Redirigir a login con mensaje de error
+      console.log("🔐 Token inválido - redirigiendo a login");
+      window.location.href = "/adminLogin?error=token_expired";
     }
   }
 
@@ -222,12 +243,12 @@
     console.log('🔄 Sistema de renovación automática de tokens administrativos iniciado');
   }
 
-  // Timeout de seguridad reducido (solo para debugging)
+  // Timeout de seguridad extendido (20 segundos para dar más tiempo)
   setTimeout(() => {
     if (!authenticationComplete) {
-      window.location.href = "/html/403-unauthorized.html";
+      window.location.href = "/acceso-denegado";
     }
-  }, 10000); // 10 segundos (reducido de 30)
+  }, 20000); // 20 segundos (extendido de 10)
 })();
 
 // Función para ir al sitio principal manteniendo la sesión
@@ -282,6 +303,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Ejecutar configuración avanzada
       adminPanel.setupAdvancedFeatures();
+
+      // Configurar formulario de creación de usuario
+      const createUserForm = document.getElementById('createUserForm');
+      if (createUserForm) {
+        createUserForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          await createUser();
+        });
+      }
+
+      // Cargar automáticamente la lista de tablas al inicializar
+      const tryRefreshTables = () => {
+        if (window.adminPanel && window.adminPanel.refreshTables) {
+          const token = localStorage.getItem('token');
+          if (token) {
+            console.log('🔄 Cargando tablas automáticamente...');
+            window.adminPanel.refreshTables();
+            return true;
+          }
+        }
+        return false;
+      };
+
+      // Intentar cargar tablas inmediatamente
+      if (!tryRefreshTables()) {
+        // Si no se pudo cargar inmediatamente, intentar con delay
+        setTimeout(() => {
+          if (!tryRefreshTables()) {
+            // Último intento con delay más largo
+            setTimeout(tryRefreshTables, 1000);
+          }
+        }, 500);
+      }
     }
 
     // El sistema de temas es manejado por themeManager.js
@@ -836,4 +890,198 @@ function initializeMobileSidebar() {
 
   // Ejecutar una vez al cargar para asegurar estado correcto
   resetSidebarForDesktop();
+}
+
+// Función para mostrar información del usuario en el indicador del header
+/* ========================================
+   FUNCIONES DE GESTIÓN DE USUARIOS
+   ======================================== */
+
+// Función para mostrar/ocultar el formulario de creación de usuario
+function toggleUserForm() {
+  const formContainer = document.getElementById('userFormContainer');
+  if (formContainer) {
+    const isVisible = formContainer.style.display !== 'none';
+    formContainer.style.display = isVisible ? 'none' : 'block';
+
+    // Si se muestra el formulario, hacer scroll hacia él
+    if (!isVisible) {
+      setTimeout(() => {
+        formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }
+}
+
+// Función para cancelar el formulario de creación de usuario
+function cancelUserForm() {
+  const formContainer = document.getElementById('userFormContainer');
+  const form = document.getElementById('createUserForm');
+
+  if (formContainer) {
+    formContainer.style.display = 'none';
+  }
+
+  if (form) {
+    form.reset();
+  }
+}
+
+// Función para mostrar/ocultar contraseña
+function togglePasswordVisibility(inputId) {
+  const input = document.getElementById(inputId);
+  const button = input?.nextElementSibling;
+
+  if (input && button) {
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+
+    // Cambiar el icono del botón
+    const svg = button.querySelector('svg');
+    if (svg) {
+      svg.innerHTML = isPassword ?
+        `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><path d="m15 9-6 6m0-6 6 6"/>` :
+        `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+    }
+  }
+}
+
+// Función para crear un nuevo usuario
+async function createUser() {
+  try {
+    const form = document.getElementById('createUserForm');
+    if (!form) {
+      console.error('Formulario de creación de usuario no encontrado');
+      return;
+    }
+
+    const formData = new FormData(form);
+    const userData = {
+      name: formData.get('name'),
+      email: formData.get('email'),
+      password: formData.get('password'),
+      role: formData.get('role')
+    };
+
+    // Validaciones básicas
+    if (!userData.name || !userData.email || !userData.password || !userData.role) {
+      showNotification('Todos los campos son obligatorios', 'warning');
+      return;
+    }
+
+    // Mostrar loading
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creando...';
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showNotification('Sesión expirada. Por favor, inicia sesión nuevamente.', 'error');
+      return;
+    }
+
+    const response = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(userData)
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+
+      // Limpiar formulario y ocultar
+      form.reset();
+      cancelUserForm();
+
+      // Recargar lista de usuarios si existe
+      if (typeof adminPanel !== 'undefined' && adminPanel.userManagement) {
+        adminPanel.userManagement.loadUsers();
+      }
+
+      showNotification('Usuario creado correctamente', 'success');
+    } else {
+      const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+      showNotification(errorData.message || 'Error al crear usuario', 'error');
+    }
+  } catch (error) {
+    console.error('Error creando usuario:', error);
+    showNotification('Error al crear usuario', 'error');
+  } finally {
+    // Restaurar botón
+    const submitBtn = document.querySelector('#createUserForm button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Crear Usuario';
+    }
+  }
+}
+
+// Función para mostrar información del usuario en el indicador del header
+function displayUserInfo(user) {
+  const userIndicator = document.getElementById('admin-user-indicator');
+
+  if (!userIndicator || !user) {
+    console.warn('Indicador de usuario o datos de usuario no disponibles');
+    return;
+  }
+
+  // Obtener iniciales del nombre para el avatar
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  // Obtener rol en español
+  const getRoleInSpanish = (role) => {
+    const roleMap = {
+      'owner': 'Propietario',
+      'admin': 'Administrador',
+      'user': 'Usuario'
+    };
+    return roleMap[role] || role;
+  };
+
+  // Actualizar avatar
+  const avatarElement = userIndicator.querySelector('.admin-user-avatar');
+  if (avatarElement) {
+    avatarElement.textContent = getInitials(user.nombre || user.username || 'Usuario');
+  }
+
+  // Actualizar nombre
+  const nameElement = userIndicator.querySelector('.admin-user-name');
+  if (nameElement) {
+    nameElement.textContent = user.nombre || user.username || 'Usuario';
+  }
+
+  // Actualizar rol
+  const roleElement = userIndicator.querySelector('.admin-user-role');
+  if (roleElement) {
+    roleElement.textContent = getRoleInSpanish(user.rol || 'user');
+  }
+
+  // Mostrar el indicador
+  userIndicator.style.display = 'flex';
+
+  console.log('👤 Información del usuario mostrada en el indicador:', {
+    nombre: user.nombre || user.username,
+    rol: user.rol,
+    id: user.id
+  });
+}
+
+// Función para ocultar el indicador de usuario (útil para logout)
+function hideUserIndicator() {
+  const userIndicator = document.getElementById('admin-user-indicator');
+  if (userIndicator) {
+    userIndicator.style.display = 'none';
+  }
 }

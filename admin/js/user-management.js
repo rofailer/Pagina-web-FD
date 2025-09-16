@@ -225,38 +225,45 @@ class UserManagement {
     }
 
     setupUserRowEvents() {
-        // Cambio de rol
-        document.querySelectorAll('.role-selector').forEach(select => {
-            select.addEventListener('change', (e) => {
+        const container = document.getElementById('usersList');
+        if (!container) return;
+
+        // Usar event delegation para mejor rendimiento y evitar problemas con elementos recreados
+        container.addEventListener('change', (e) => {
+            // Cambio de rol
+            if (e.target.classList.contains('role-selector')) {
                 this.changeUserRole(e.target.dataset.userId, e.target.value);
-            });
-        });
+            }
 
-        // Toggle de estado
-        document.querySelectorAll('[data-action="toggle-status"]').forEach(toggle => {
-            toggle.addEventListener('change', (e) => {
+            // Toggle de estado
+            if (e.target.hasAttribute('data-action') && e.target.getAttribute('data-action') === 'toggle-status') {
                 this.toggleUserStatus(e.target.dataset.userId, e.target.checked);
-            });
+            }
+
+            // Selección múltiple
+            if (e.target.classList.contains('user-checkbox')) {
+                this.updateBulkActions();
+            }
         });
 
-        // Menús de acciones
-        document.querySelectorAll('.action-toggle').forEach(toggle => {
-            toggle.addEventListener('click', (e) => {
+        container.addEventListener('click', (e) => {
+            // Menús de acciones
+            if (e.target.closest('.action-toggle')) {
+                const toggle = e.target.closest('.action-toggle');
                 e.stopPropagation();
-                this.toggleActionMenu(e.target.dataset.userId);
-            });
-        });
+                this.toggleActionMenu(toggle.dataset.userId);
+            }
 
-        // Acciones específicas
-        document.querySelectorAll('.action-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                const action = e.target.dataset.action;
-                const userId = e.target.dataset.userId;
+            // Acciones específicas
+            if (e.target.closest('.action-item')) {
+                const item = e.target.closest('.action-item');
+                const action = item.dataset.action;
+                const userId = item.dataset.userId;
                 this.handleUserAction(action, userId);
-            });
+            }
         });
 
-        // Seleccionar todos
+        // Seleccionar todos (fuera del contenedor de usuarios)
         const selectAll = document.getElementById('selectAllUsers');
         if (selectAll) {
             selectAll.addEventListener('change', (e) => {
@@ -629,6 +636,84 @@ class UserManagement {
         } catch (error) {
             console.error('Error cambiando estado:', error);
             this.adminPanel.showNotification('Error al cambiar estado del usuario', 'error');
+        }
+    }
+
+    async deleteUser(userId) {
+        try {
+            const user = this.users.find(u => u.id === userId);
+            if (!user) {
+                this.adminPanel.showNotification('Usuario no encontrado', 'error');
+                return;
+            }
+
+            // Confirmación de eliminación
+            const confirmed = confirm(`¿Estás seguro de que quieres eliminar al usuario "${user.name}"? Esta acción no se puede deshacer.`);
+            if (!confirmed) return;
+
+            this.adminPanel.showLoading('Eliminando usuario...');
+
+            const response = await fetch(`${this.adminPanel.apiBase}/users/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (response.ok) {
+                // Remover usuario de la lista local
+                this.users = this.users.filter(u => u.id !== userId);
+
+                // Re-renderizar la lista
+                this.applyFilters();
+
+                this.adminPanel.showNotification('Usuario eliminado correctamente', 'success');
+            } else {
+                const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+                throw new Error(errorData.message || 'Error al eliminar usuario');
+            }
+        } catch (error) {
+            console.error('Error eliminando usuario:', error);
+            this.adminPanel.showNotification(error.message || 'Error al eliminar usuario', 'error');
+        } finally {
+            this.adminPanel.hideLoading();
+        }
+    }
+
+    async createUser(userData) {
+        try {
+            this.adminPanel.showLoading('Creando usuario...');
+
+            const response = await fetch(`${this.adminPanel.apiBase}/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(userData)
+            });
+
+            if (response.ok) {
+                const newUser = await response.json();
+
+                // Agregar usuario a la lista local
+                this.users.push(newUser.user || newUser);
+
+                // Re-renderizar la lista
+                this.applyFilters();
+
+                this.adminPanel.showNotification('Usuario creado correctamente', 'success');
+                return newUser;
+            } else {
+                const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+                throw new Error(errorData.message || 'Error al crear usuario');
+            }
+        } catch (error) {
+            console.error('Error creando usuario:', error);
+            this.adminPanel.showNotification(error.message || 'Error al crear usuario', 'error');
+            throw error;
+        } finally {
+            this.adminPanel.hideLoading();
         }
     }
 

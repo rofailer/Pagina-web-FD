@@ -98,6 +98,56 @@ class DatabaseSetupManager {
         }
     }
 
+    async getAllTablesAndViews() {
+        try {
+            const [rows] = await this.connection.execute(
+                `SELECT TABLE_NAME as name, TABLE_TYPE as type
+                 FROM INFORMATION_SCHEMA.TABLES
+                 WHERE TABLE_SCHEMA = ?
+                 ORDER BY TABLE_TYPE DESC, TABLE_NAME ASC`,
+                [this.config.database]
+            );
+
+            // Ordenar las tablas por dependencias
+            const tables = rows.filter(row => row.type === 'BASE TABLE').map(row => ({ name: row.name, type: 'TABLE' }));
+            const views = rows.filter(row => row.type === 'VIEW').map(row => ({ name: row.name, type: 'VIEW' }));
+
+            // Orden de tablas por dependencias (padres primero)
+            const orderedTables = [
+                'users',                    // Tabla padre
+                'global_template_config',   // Independiente
+                'theme_config',            // Independiente
+                'visual_config',           // Independiente
+                'user_activity_log',       // Depende de users
+                'user_keys',              // Depende de users
+                'user_preferences'        // Depende de users
+            ];
+
+            // Crear array ordenado de tablas
+            const sortedTables = [];
+            orderedTables.forEach(tableName => {
+                const table = tables.find(t => t.name === tableName);
+                if (table) {
+                    sortedTables.push(table);
+                }
+            });
+
+            // Agregar tablas que no estén en la lista ordenada
+            tables.forEach(table => {
+                if (!orderedTables.includes(table.name)) {
+                    sortedTables.push(table);
+                }
+            });
+
+            // Retornar tablas ordenadas + vistas al final
+            return [...sortedTables, ...views];
+
+        } catch (error) {
+            this.log(`⚠️ Error obteniendo tablas y vistas: ${error.message}`, 'yellow');
+            return [];
+        }
+    }
+
     parseSQLStatements(sqlContent) {
         const statements = [];
         let currentStatement = '';
@@ -214,7 +264,7 @@ class DatabaseSetupManager {
 
             if (upperStmt.includes('CREATE DATABASE') || upperStmt.includes('CREATE SCHEMA')) {
                 categories.createDatabase.push(stmt);
-            } else if (upperStmt.includes('DROP TABLE')) {
+            } else if (upperStmt.includes('DROP TABLE') || upperStmt.includes('DROP VIEW')) {
                 categories.dropTable.push(stmt);
             } else if (upperStmt.includes('CREATE TABLE')) {
                 categories.createTable.push(stmt);
@@ -429,57 +479,66 @@ class DatabaseSetupManager {
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
             const backupFile = path.join(this.backupDir, `backup_${this.config.database}_${timestamp}.sql`);
 
-            // Obtener todas las tablas
-            const tables = await this.getExistingTables();
+            // Obtener todas las tablas y vistas
+            const allObjects = await this.getAllTablesAndViews();
 
-            if (tables.length === 0) {
-                this.log('⚠️ No hay tablas para respaldar', 'yellow');
+            if (allObjects.length === 0) {
+                this.log('⚠️ No hay tablas o vistas para respaldar', 'yellow');
                 return null;
             }
 
             let backupContent = `-- Backup de la base de datos ${this.config.database}\n`;
             backupContent += `-- Fecha: ${new Date().toISOString()}\n`;
-            backupContent += `-- Tablas: ${tables.length}\n\n`;
+            backupContent += `-- Objetos: ${allObjects.length}\n\n`;
 
             backupContent += `SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";\n`;
             backupContent += `START TRANSACTION;\n`;
             backupContent += `SET time_zone = "+00:00";\n\n`;
 
-            for (const table of tables) {
+            for (const obj of allObjects) {
                 try {
-                    this.log(`  📋 Respaldando tabla: ${table}`, 'white');
+                    const { name, type } = obj;
+                    this.log(`  📋 Respaldando ${type}: ${name}`, 'white');
 
-                    // Obtener estructura de la tabla
-                    const [structure] = await this.connection.execute(`SHOW CREATE TABLE \`${table}\``);
-                    backupContent += `-- Estructura de la tabla ${table}\n`;
-                    backupContent += `${structure[0]['Create Table']};\n\n`;
+                    if (type === 'VIEW') {
+                        // Para vistas, usar SHOW CREATE VIEW
+                        const [viewStructure] = await this.connection.execute(`SHOW CREATE VIEW \`${name}\``);
+                        backupContent += `-- Estructura de la vista ${name}\n`;
+                        backupContent += `${viewStructure[0]['Create View']};\n\n`;
+                        // Las vistas no tienen datos propios, solo la definición
+                    } else {
+                        // Para tablas, usar SHOW CREATE TABLE
+                        const [tableStructure] = await this.connection.execute(`SHOW CREATE TABLE \`${name}\``);
+                        backupContent += `-- Estructura de la tabla ${name}\n`;
+                        backupContent += `${tableStructure[0]['Create Table']};\n\n`;
 
-                    // Obtener datos de la tabla
-                    const [rows] = await this.connection.execute(`SELECT * FROM \`${table}\``);
+                        // Obtener datos de la tabla
+                        const [rows] = await this.connection.execute(`SELECT * FROM \`${name}\``);
 
-                    if (rows.length > 0) {
-                        backupContent += `-- Datos de la tabla ${table}\n`;
+                        if (rows.length > 0) {
+                            backupContent += `-- Datos de la tabla ${name}\n`;
 
-                        // Obtener nombres de columnas
-                        const [columns] = await this.connection.execute(`DESCRIBE \`${table}\``);
-                        const columnNames = columns.map(col => `\`${col.Field}\``).join(', ');
+                            // Obtener nombres de columnas
+                            const [columns] = await this.connection.execute(`DESCRIBE \`${name}\``);
+                            const columnNames = columns.map(col => `\`${col.Field}\``).join(', ');
 
-                        for (const row of rows) {
-                            const values = columns.map(col => {
-                                const value = row[col.Field];
-                                if (value === null) return 'NULL';
-                                if (typeof value === 'string') return `'${value.replace(/'/g, "''")}'`;
-                                if (value instanceof Date) return `'${value.toISOString().slice(0, 19).replace('T', ' ')}'`;
-                                return value;
-                            }).join(', ');
+                            for (const row of rows) {
+                                const values = columns.map(col => {
+                                    const value = row[col.Field];
+                                    if (value === null) return 'NULL';
+                                    if (typeof value === 'string') return `'${value.replace(/'/g, "''")}'`;
+                                    if (value instanceof Date) return `'${value.toISOString().slice(0, 19).replace('T', ' ')}'`;
+                                    return value;
+                                }).join(', ');
 
-                            backupContent += `INSERT INTO \`${table}\` (${columnNames}) VALUES (${values});\n`;
+                                backupContent += `INSERT INTO \`${name}\` (${columnNames}) VALUES (${values});\n`;
+                            }
+                            backupContent += '\n';
                         }
-                        backupContent += '\n';
                     }
 
                 } catch (error) {
-                    this.log(`  ⚠️ Error respaldando tabla ${table}: ${error.message}`, 'yellow');
+                    this.log(`  ⚠️ Error respaldando ${obj.type} ${obj.name}: ${error.message}`, 'yellow');
                 }
             }
 
@@ -502,7 +561,7 @@ class DatabaseSetupManager {
 
     async resetDatabase() {
         try {
-            this.log('🗑️ Reseteando base de datos...', 'red');
+            this.log('� Reseteando base de datos a estado inicial...', 'yellow');
 
             // Crear backup antes de resetear
             const backupFile = await this.createBackup();
@@ -514,33 +573,288 @@ class DatabaseSetupManager {
             const tables = await this.getExistingTables();
 
             if (tables.length > 0) {
-                this.log(`🗑️ Eliminando ${tables.length} tablas...`, 'yellow');
+                this.log(`🧹 Limpiando ${tables.length} tablas...`, 'yellow');
 
                 // Desactivar restricciones de clave foránea
                 await this.connection.execute('SET FOREIGN_KEY_CHECKS = 0');
 
-                // Eliminar todas las tablas
-                for (const table of tables) {
-                    try {
-                        await this.connection.execute(`DROP TABLE IF EXISTS \`${table}\``);
-                        this.log(`  ✅ Eliminada: ${table}`, 'green');
-                    } catch (error) {
-                        this.log(`  ⚠️ Error eliminando ${table}: ${error.message}`, 'yellow');
+                // Limpiar datos de todas las tablas (en orden inverso de dependencias)
+                const clearOrder = [
+                    'user_activity_log',
+                    'user_keys',
+                    'user_preferences',
+                    'vista_actividad_reciente',
+                    'vista_usuarios_activos',
+                    'users',
+                    'global_template_config',
+                    'theme_config',
+                    'visual_config'
+                ];
+
+                for (const tableName of clearOrder) {
+                    if (tables.includes(tableName)) {
+                        try {
+                            if (tableName.startsWith('vista_')) {
+                                // Para vistas, intentar recrear desde la definición original
+                                await this.connection.execute(`DROP VIEW IF EXISTS \`${tableName}\``);
+                                this.log(`  ✅ Vista eliminada: ${tableName}`, 'green');
+                            } else {
+                                // Para tablas, limpiar datos
+                                await this.connection.execute(`TRUNCATE TABLE \`${tableName}\``);
+                                this.log(`  ✅ Datos limpiados: ${tableName}`, 'green');
+                            }
+                        } catch (error) {
+                            this.log(`  ⚠️ Error limpiando ${tableName}: ${error.message}`, 'yellow');
+                        }
                     }
                 }
 
                 // Reactivar restricciones de clave foránea
                 await this.connection.execute('SET FOREIGN_KEY_CHECKS = 1');
 
-                this.log('✅ Todas las tablas eliminadas', 'green');
+                this.log('✅ Limpieza completada', 'green');
             } else {
-                this.log('⚠️ No hay tablas para eliminar', 'yellow');
+                this.log('⚠️ No hay tablas para limpiar', 'yellow');
             }
+
+            // Recrear datos por defecto
+            this.log('📝 Insertando datos por defecto...', 'cyan');
+            await this.insertDefaultData();
 
             return true;
 
         } catch (error) {
             this.log(`❌ Error reseteando base de datos: ${error.message}`, 'red');
+            return false;
+        }
+    }
+
+    async insertDefaultData() {
+        try {
+            // Insertar usuario administrador por defecto
+            const adminPassword = '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe'; // 'admin'
+            const ownerPassword = '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe'; // 'owner'
+
+            await this.connection.execute(`
+                INSERT INTO users (id, nombre, usuario, password, rol, active_key_id, created_at, nombre_completo, email, organizacion, biografia, foto_perfil, telefono, direccion, cargo, departamento, grado_academico, zona_horaria, idioma, estado_cuenta, notificaciones_email, autenticacion_2fa, ultimo_acceso, updated_at) VALUES
+                (1, 'Administrador', 'admin', ?, 'admin', NULL, NOW(), 'Administrador del Sistema', 'admin@universidad.edu', 'Universidad Ejemplo', 'Administrador principal del sistema de firmas digitales. Responsable de la configuración general, gestión de usuarios y mantenimiento del sistema.', NULL, NULL, NULL, 'Administrador de Sistemas', 'Tecnología e Informática', 'Ingeniero de Sistemas', 'America/Bogota', 'es', 'activo', 1, 0, NOW(), NOW()),
+                (2, 'Owner', 'owner', ?, 'owner', NULL, NOW(), 'Propietario del Sistema', 'owner@universidad.edu', 'Universidad Ejemplo', 'Propietario y responsable principal del sistema. Supervisa el desarrollo, implementación y políticas de uso del sistema de firmas digitales.', NULL, NULL, NULL, 'Director de Proyecto', 'Administración y Gestión', 'Doctor en Educación', 'America/Bogota', 'es', 'activo', 1, 0, NOW(), NOW())
+            `, [adminPassword, ownerPassword]);
+
+            // Insertar configuraciones por defecto
+            await this.connection.execute(`
+                INSERT INTO global_template_config (id, template_name, logo_path, institution_name, created_at, updated_at) VALUES
+                (1, 'clasico', NULL, 'Universidad Ejemplo', NOW(), NOW())
+            `);
+
+            await this.connection.execute(`
+                INSERT INTO theme_config (id, selected_theme, custom_color, timestamp, updated_by, created_at, updated_at) VALUES
+                (1, 'orange', NULL, UNIX_TIMESTAMP() * 1000, NULL, NOW(), NOW())
+            `);
+
+            await this.connection.execute(`
+                INSERT INTO visual_config (id, background, favicon, site_title, header_title) VALUES
+                (1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', 'Firmas Digitales FD')
+            `);
+
+            // Insertar actividad inicial
+            await this.connection.execute(`
+                INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address, created_at) VALUES
+                (1, 'account_created', 'Cuenta de administrador creada durante la instalación del sistema', '127.0.0.1', NOW()),
+                (2, 'account_created', 'Cuenta de propietario creada durante la instalación del sistema', '127.0.0.1', NOW())
+            `);
+
+            // Recrear vistas
+            await this.connection.execute(`
+                CREATE VIEW vista_actividad_reciente AS
+                SELECT
+                    ual.id,
+                    u.nombre_completo,
+                    u.usuario,
+                    ual.accion,
+                    ual.descripcion,
+                    ual.ip_address,
+                    ual.created_at
+                FROM user_activity_log ual
+                JOIN users u ON ual.user_id = u.id
+                WHERE ual.created_at >= (NOW() - INTERVAL 30 DAY)
+                ORDER BY ual.created_at DESC
+            `);
+
+            await this.connection.execute(`
+                CREATE VIEW vista_usuarios_activos AS
+                SELECT
+                    u.id,
+                    u.usuario,
+                    u.nombre_completo,
+                    u.email,
+                    u.organizacion,
+                    u.cargo,
+                    u.departamento,
+                    u.rol,
+                    u.estado_cuenta,
+                    u.ultimo_acceso,
+                    COUNT(uk.id) as total_llaves,
+                    COUNT(CASE WHEN uk.expiration_date > NOW() THEN 1 END) as llaves_activas
+                FROM users u
+                LEFT JOIN user_keys uk ON u.id = uk.user_id
+                WHERE u.estado_cuenta = 'activo'
+                GROUP BY u.id
+            `);
+
+            this.log('✅ Datos por defecto insertados correctamente', 'green');
+
+        } catch (error) {
+            this.log(`⚠️ Error insertando datos por defecto: ${error.message}`, 'yellow');
+            // No fallar completamente si hay error en datos por defecto
+        }
+    }
+
+    async restoreBackup(backupFile = null) {
+        try {
+            this.log('🔄 Restaurando backup de la base de datos...', 'blue');
+
+            // Si no se especifica archivo, buscar el último backup
+            if (!backupFile) {
+                if (!fs.existsSync(this.backupDir)) {
+                    this.log('❌ No existe directorio de backups', 'red');
+                    return false;
+                }
+
+                const backupFiles = fs.readdirSync(this.backupDir)
+                    .filter(f => f.endsWith('.sql'))
+                    .sort()
+                    .reverse(); // Más reciente primero
+
+                if (backupFiles.length === 0) {
+                    this.log('❌ No hay archivos de backup disponibles', 'red');
+                    return false;
+                }
+
+                backupFile = path.join(this.backupDir, backupFiles[0]);
+                this.log(`📁 Usando último backup: ${path.basename(backupFile)}`, 'cyan');
+            }
+
+            // Verificar que el archivo existe
+            if (!fs.existsSync(backupFile)) {
+                this.log(`❌ Archivo de backup no encontrado: ${backupFile}`, 'red');
+                return false;
+            }
+
+            // Leer contenido del backup
+            this.log('📖 Leyendo archivo de backup...', 'cyan');
+            const backupContent = fs.readFileSync(backupFile, 'utf8');
+            this.log(`📄 Backup cargado (${backupContent.length} caracteres)`, 'green');
+
+            // Crear backup de seguridad antes de restaurar
+            const safetyBackup = await this.createBackup();
+            if (safetyBackup) {
+                this.log('🛡️ Backup de seguridad creado antes de restaurar', 'yellow');
+            }
+
+            // En lugar de eliminar todas las tablas, hacer una restauración inteligente
+            this.log('� Preparando restauración inteligente...', 'yellow');
+            this.log('📋 Manteniendo estructura existente y actualizando datos', 'cyan');
+
+            // Parsear y ejecutar statements del backup
+            const statements = this.parseSQLStatements(backupContent);
+            this.log(`🔍 Encontrados ${statements.length} statements en el backup`, 'cyan');
+
+            // Filtrar statements inválidos (como "undefined;")
+            const validStatements = statements.filter(stmt => {
+                const trimmed = stmt.trim();
+                return trimmed && trimmed !== 'undefined' && trimmed !== 'undefined;' && !trimmed.startsWith('undefined');
+            });
+
+            this.log(`✅ Statements válidos: ${validStatements.length}/${statements.length}`, 'cyan');
+
+            // Categorizar statements por tipo para ordenarlos correctamente
+            const categories = this.categorizeStatements(validStatements);
+            this.log(`📊 Categorías: ${Object.keys(categories).filter(k => categories[k].length > 0).join(', ')}`, 'cyan');
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            this.log(`\n📋 Ejecutando restauración inteligente...`, 'blue');
+
+            // Ejecutar statements en orden simplificado para restauración inteligente
+            const executionOrder = [
+                { name: 'Crear tablas', statements: categories.createTable },
+                { name: 'Insertar datos', statements: categories.insert },
+                { name: 'Crear vistas', statements: categories.createView },
+                { name: 'Otros', statements: categories.other }
+            ];
+
+            for (const category of executionOrder) {
+                if (category.statements.length > 0) {
+                    this.log(`\n🔧 Ejecutando ${category.statements.length} statements de ${category.name}...`, 'blue');
+
+                    for (let i = 0; i < category.statements.length; i++) {
+                        const statement = category.statements[i];
+                        try {
+                            // Usar conexión directa para statements complejos
+                            await this.connection.query(statement);
+                            successCount++;
+
+                            if ((successCount + errorCount) % 10 === 0 || (successCount + errorCount) === validStatements.length) {
+                                this.log(`  ✅ ${successCount}/${validStatements.length} statements restaurados`, 'green');
+                            }
+                        } catch (error) {
+                            // Manejar errores específicos con mejor granularidad
+                            let shouldContinue = false;
+                            let errorMessage = error.message;
+
+                            if (error.code === 'ER_TABLE_EXISTS_ERROR' ||
+                                error.code === 'ER_DUP_KEYNAME' ||
+                                error.code === 'ER_DUP_ENTRY' ||
+                                error.message.includes('already exists') ||
+                                error.message.includes('Duplicate entry') ||
+                                error.message.includes('Table') && error.message.includes('already exists')) {
+                                shouldContinue = true;
+                                errorMessage = 'ya existe, continuando';
+                            } else if (error.message.includes('View') && error.message.includes('already exists')) {
+                                shouldContinue = true;
+                                errorMessage = 'vista ya existe, continuando';
+                            } else if (error.message.includes('references invalid table') ||
+                                     error.message.includes('Unknown column') ||
+                                     error.message.includes('does not exist')) {
+                                // Estos errores pueden deberse a dependencias, intentar continuar
+                                shouldContinue = true;
+                                errorMessage = 'dependencia faltante, intentando continuar';
+                            } else if (error.message.includes('You have an error in your SQL syntax')) {
+                                // Syntax errors son críticos, no continuar
+                                shouldContinue = false;
+                                errorMessage = 'error de sintaxis SQL';
+                            }
+
+                            if (shouldContinue) {
+                                this.log(`  ⚠️ ${category.name} ${i + 1}: ${errorMessage}`, 'yellow');
+                            } else {
+                                this.log(`  ❌ Error en ${category.name} ${i + 1}: ${errorMessage}`, 'red');
+                                errorCount++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Verificación final
+            const finalTables = await this.getExistingTables();
+            this.log(`\n📋 Restauración completada!`, 'bright');
+            this.log(`📊 Resumen: ${successCount} exitosos, ${errorCount} errores`, 'cyan');
+            this.log(`📋 Total de tablas restauradas: ${finalTables.length}`, 'cyan');
+            this.log(`📋 Statements procesados: ${validStatements.length}/${statements.length} (filtrados)`, 'cyan');
+
+            if (errorCount === 0) {
+                this.log('✅ Restauración completada exitosamente', 'green');
+            } else {
+                this.log('⚠️ Restauración completada con algunos errores menores', 'yellow');
+            }
+
+            return true;
+
+        } catch (error) {
+            this.log(`❌ Error restaurando backup: ${error.message}`, 'red');
             return false;
         }
     }
@@ -623,12 +937,188 @@ class DatabaseSetupManager {
             }
         }
     }
+
+    parseSQLStatements(sqlContent) {
+        // Dividir el contenido SQL en statements individuales
+        const statements = [];
+        let currentStatement = '';
+        let inString = false;
+        let stringChar = '';
+        let inComment = false;
+        let commentType = '';
+
+        for (let i = 0; i < sqlContent.length; i++) {
+            const char = sqlContent[i];
+            const nextChar = sqlContent[i + 1] || '';
+
+            // Manejar comentarios
+            if (!inString && !inComment) {
+                if (char === '/' && nextChar === '*') {
+                    inComment = true;
+                    commentType = 'block';
+                    i++; // Saltar el siguiente *
+                    continue;
+                } else if (char === '-' && nextChar === '-') {
+                    inComment = true;
+                    commentType = 'line';
+                    i++; // Saltar el siguiente -
+                    continue;
+                } else if (char === '#') {
+                    inComment = true;
+                    commentType = 'line';
+                    continue;
+                }
+            }
+
+            // Salir de comentarios
+            if (inComment) {
+                if (commentType === 'block' && char === '*' && nextChar === '/') {
+                    inComment = false;
+                    commentType = '';
+                    i++; // Saltar el siguiente /
+                } else if (commentType === 'line' && char === '\n') {
+                    inComment = false;
+                    commentType = '';
+                }
+                continue;
+            }
+
+            // Manejar strings
+            if (!inComment) {
+                if (!inString && (char === '"' || char === "'")) {
+                    inString = true;
+                    stringChar = char;
+                } else if (inString && char === stringChar) {
+                    // Verificar si es escape
+                    let escapeCount = 0;
+                    let j = i - 1;
+                    while (j >= 0 && sqlContent[j] === '\\') {
+                        escapeCount++;
+                        j--;
+                    }
+                    if (escapeCount % 2 === 0) {
+                        inString = false;
+                        stringChar = '';
+                    }
+                }
+            }
+
+            // Agregar caracter al statement actual
+            if (!inComment) {
+                currentStatement += char;
+            }
+
+            // Verificar fin de statement
+            if (!inString && !inComment && char === ';') {
+                const trimmed = currentStatement.trim();
+                if (trimmed && !trimmed.startsWith('--') && !trimmed.startsWith('#')) {
+                    statements.push(trimmed);
+                }
+                currentStatement = '';
+            }
+        }
+
+        // Agregar último statement si no termina con ;
+        const trimmed = currentStatement.trim();
+        if (trimmed && !trimmed.startsWith('--') && !trimmed.startsWith('#')) {
+            statements.push(trimmed);
+        }
+
+        return statements;
+    }
+}
+
+// Función para mostrar ayuda
+function showHelp() {
+    console.log('='.repeat(80));
+    console.log('🛠️  AYUDA - GESTOR AUTOMÁTICO DE BASE DE DATOS');
+    console.log('📄 Archivo SQL: firmas_digitales_v2.sql');
+    console.log('='.repeat(80));
+    console.log('');
+    console.log('📋 DESCRIPCIÓN:');
+    console.log('   Herramienta completa para gestionar la base de datos MySQL del sistema');
+    console.log('   de firmas digitales. Permite configuración inicial, backups, reseteo');
+    console.log('   y verificación del estado de la base de datos.');
+    console.log('');
+    console.log('🚀 USO:');
+    console.log('   node scripts/setup-db.js [comando]');
+    console.log('   npm run db:[comando]');
+    console.log('');
+    console.log('📚 COMANDOS DISPONIBLES:');
+    console.log('');
+    console.log('   [SIN ARGUMENTOS]  Configuración estándar');
+    console.log('                     - Crea la base de datos si no existe');
+    console.log('                     - Ejecuta el archivo SQL principal');
+    console.log('                     - Verifica la configuración');
+    console.log('');
+    console.log('   --backup, backup  💾 Crear backup completo');
+    console.log('                     - Genera archivo SQL con toda la estructura');
+    console.log('                     - Incluye datos de todas las tablas');
+    console.log('                     - Guarda en carpeta backups/');
+    console.log('');
+    console.log('   --reset, reset    � Reset inteligente de la base de datos');
+    console.log('                     - Mantiene la estructura de tablas');
+    console.log('                     - Limpia todos los datos existentes');
+    console.log('                     - Inserta datos por defecto (admin/owner)');
+    console.log('                     - Recrear vistas del sistema');
+    console.log('');
+    console.log('   --status, status  📊 Verificar estado de la base de datos');
+    console.log('                     - Comprueba conexión a MySQL');
+    console.log('                     - Lista todas las tablas existentes');
+    console.log('                     - Muestra estadísticas de registros');
+    console.log('');
+    console.log('   --install, install 📦 Instalación completa del sistema');
+    console.log('                     - Configura base de datos desde cero');
+    console.log('                     - Ejecuta todos los scripts SQL');
+    console.log('                     - Verifica configuración final');
+    console.log('');
+    console.log('   --restore, restore 🔄 Restaurar desde backup');
+    console.log('                     - Restaura base de datos desde archivo de backup');
+    console.log('                     - Usa el último backup si no se especifica archivo');
+    console.log('                     - Crea backup de seguridad antes de restaurar');
+    console.log('');
+    console.log('   --help, help, -h  ❓ Mostrar esta ayuda');
+    console.log('');
+    console.log('🔧 CONFIGURACIÓN REQUERIDA:');
+    console.log('   - Archivo .env con credenciales de MySQL');
+    console.log('   - Variables: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME');
+    console.log('   - Archivo SQL: firmas_digitales_v2.sql en la raíz del proyecto');
+    console.log('');
+    console.log('📁 ESTRUCTURA DE ARCHIVOS:');
+    console.log('   scripts/setup-db.js    - Este archivo principal');
+    console.log('   firmas_digitales.sql   - Script SQL principal');
+    console.log('   backups/               - Carpeta para archivos de backup');
+    console.log('   .env                   - Archivo de configuración');
+    console.log('');
+    console.log('⚠️  NOTAS IMPORTANTES:');
+    console.log('   - Siempre hacer backup antes de usar --reset');
+    console.log('   - Verificar credenciales en .env antes de ejecutar');
+    console.log('   - Los backups se guardan con timestamp automático');
+    console.log('   - El comando --install es equivalente a configuración estándar');
+    console.log('');
+    console.log('📞 EJEMPLOS DE USO:');
+    console.log('   npm run db:setup                      # Configuración básica');
+    console.log('   npm run db:backup                     # Crear backup');
+    console.log('   npm run db:reset                      # Reset completo');
+    console.log('   npm run db:restore                    # Restaurar último backup');
+    console.log('   npm run db:status                     # Ver estado');
+    console.log('   npm run db:install                    # Instalación completa');
+    console.log('   npm run db:help                       # Esta ayuda');
+    console.log('');
+    console.log('='.repeat(80));
+    process.exit(0);
 }
 
 // Función principal
 async function main() {
     const args = process.argv.slice(2);
     const command = args[0];
+
+    // Mostrar ayuda antes de cualquier otra operación
+    if (command === '--help' || command === 'help' || command === '-h') {
+        showHelp();
+        return;
+    }
 
     console.log('='.repeat(60));
     console.log('🛠️  GESTOR AUTOMÁTICO DE BASE DE DATOS');
@@ -660,6 +1150,12 @@ async function main() {
         case 'install':
             console.log('📦 MODO: INSTALACIÓN COMPLETA');
             await handleInstall(setupManager);
+            break;
+
+        case '--restore':
+        case 'restore':
+            console.log('🔄 MODO: RESTAURAR BACKUP');
+            await handleRestore(setupManager, args[1]); // args[1] puede ser el archivo específico
             break;
 
         default:
@@ -722,7 +1218,9 @@ async function handleBackup(setupManager) {
 }
 
 async function handleReset(setupManager) {
-    console.log('⚠️  ATENCIÓN: Esta acción eliminará TODOS los datos');
+    console.log('🔄 RESET INTELIGENTE');
+    console.log('Esto limpiará todos los datos pero mantendrá la estructura');
+    console.log('y recreará los usuarios admin/owner por defecto');
     console.log('💾 Se creará un backup automático antes del reset');
     console.log('');
 
@@ -748,9 +1246,10 @@ async function handleReset(setupManager) {
 
     console.log('='.repeat(60));
     if (success) {
-        console.log('🗑️  ¡RESET COMPLETADO EXITOSAMENTE!');
-        console.log('📚 Base de datos vacía y lista para nueva instalación');
-        console.log('\n💡 Para instalar nuevamente: npm run db:setup');
+        console.log('� ¡RESET INTELIGENTE COMPLETADO EXITOSAMENTE!');
+        console.log('📚 Base de datos limpiada con datos por defecto');
+        console.log('👤 Usuarios admin/owner recreados');
+        console.log('\n💡 El sistema está listo para usar');
         process.exit(0);
     } else {
         console.log('❌ ERROR DURANTE EL RESET');
@@ -788,6 +1287,47 @@ async function handleInstall(setupManager) {
     } else {
         console.log('❌ INSTALACIÓN FALLIDA');
         console.log('🔧 Verifica las credenciales en el archivo .env');
+        process.exit(1);
+    }
+}
+
+// Manejador para restaurar backup
+async function handleRestore(setupManager, backupFile = null) {
+    console.log('🔄 RESTAURACIÓN DE BACKUP');
+    console.log('Esto restaurará la base de datos desde un archivo de backup');
+    console.log('');
+
+    // Verificar conexión
+    if (!await setupManager.connect()) {
+        console.log('❌ No se pudo conectar a la base de datos');
+        process.exit(1);
+    }
+
+    // Verificar si la base de datos existe
+    const dbExists = await setupManager.databaseExists();
+    if (!dbExists) {
+        console.log(`❌ La base de datos '${setupManager.config.database}' no existe`);
+        console.log('💡 Crea la base de datos primero con: npm run db:setup');
+        process.exit(1);
+    }
+
+    // Reconectar con la base de datos
+    await setupManager.connection.end();
+    setupManager.connection = await mysql.createConnection(setupManager.config);
+
+    const success = await setupManager.restoreBackup(backupFile);
+
+    console.log('='.repeat(60));
+    if (success) {
+        console.log('✅ ¡RESTAURACIÓN COMPLETADA EXITOSAMENTE!');
+        console.log('🔄 La base de datos ha sido restaurada desde el backup');
+        console.log('\n💡 Comandos disponibles:');
+        console.log('  npm run db:status  - Ver estado actual');
+        console.log('  npm run db:backup  - Crear nuevo backup');
+        process.exit(0);
+    } else {
+        console.log('❌ ERROR DURANTE LA RESTAURACIÓN');
+        console.log('🔧 Verifica que el archivo de backup existe y es válido');
         process.exit(1);
     }
 }

@@ -203,10 +203,10 @@ class ThemeManager {
      * Inicia la sincronización automática
      */
     startSync() {
-        // Verificar cambios cada 5 segundos
+        // Verificar cambios cada 30 segundos (reducido de 5 para menos ruido en logs)
         this.syncInterval = setInterval(() => {
             this.checkForUpdates();
-        }, 5000);
+        }, 30000);
 
         // También sincronizar cuando la ventana recibe foco
         window.addEventListener('focus', () => {

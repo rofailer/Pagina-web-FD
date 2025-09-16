@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (protectedSections.includes(sectionKey) && !token) {
             // Redirigir a la página de error 403
-            window.location.href = '/403';
+            window.location.href = '/acceso-denegado';
             return false;
         }
 
@@ -620,7 +620,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (protectedSections.includes(sectionKey) && !token) {
             // Redirigir a la página de error 403 y salir
-            window.location.href = '/403';
+            window.location.href = '/acceso-denegado';
             return;
         }
 

@@ -1990,7 +1990,7 @@ async function openAdminPanel() {
         showNotification('Redirigiendo al panel de administración...', 'info');
 
         // Ir a la página de login administrativo en la misma pestaña
-        window.location.href = '/admin/html/loginAdminPanel.html';
+        window.location.href = '/adminLogin';
 
         showNotification('Panel de administración abierto correctamente', 'success');
 

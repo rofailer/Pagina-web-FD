@@ -46,10 +46,41 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
 
-// Logging middleware para debug (solo en desarrollo)
+// Logging middleware optimizado (solo en desarrollo)
 if (process.env.NODE_ENV !== 'production') {
+  // Cache para evitar logs repetidos
+  const logCache = new Map();
+  const LOG_CACHE_DURATION = 30000; // 30 segundos
+
   app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    const now = Date.now();
+    const cacheKey = `${req.method} ${req.url}`;
+
+    // Solo loggear si no se ha loggeado recientemente o es una ruta importante
+    const shouldLog = !logCache.has(cacheKey) ||
+      (now - logCache.get(cacheKey)) > LOG_CACHE_DURATION ||
+      !req.url.includes('/api/global-theme-config') ||
+      !req.url.includes('/api/global-template-config') ||
+      req.url === '/' ||
+      req.url.startsWith('/admin') ||
+      req.url.startsWith('/panelAdmin') ||
+      req.url.startsWith('/adminLogin') ||
+      req.url.includes('/api/login') ||
+      req.url.includes('/api/auth/me') ||
+      req.url.includes('/api/admin/generate-admin-token');
+
+    if (shouldLog) {
+      console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+      logCache.set(cacheKey, now);
+
+      // Limpiar cache antigua
+      for (const [key, timestamp] of logCache.entries()) {
+        if (now - timestamp > LOG_CACHE_DURATION) {
+          logCache.delete(key);
+        }
+      }
+    }
+
     next();
   });
 }
@@ -84,7 +115,26 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/recursos", express.static(path.join(__dirname, "../recursos")));
 app.use("/html", express.static(path.join(__dirname, "../html"), { maxAge: "1d" }));
 app.use("/admin", express.static(path.join(__dirname, "../admin"), { maxAge: "1d" }));
+// Rutas específicas para archivos del admin
+app.use("/admin/css", express.static(path.join(__dirname, "../admin/css"), { maxAge: "1d" }));
+app.use("/admin/js", express.static(path.join(__dirname, "../admin/js"), {
+  maxAge: "1d",
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  }
+}));
 // app.use("/downloads", express.static(path.join(__dirname, "../downloads")));
+
+// Servir favicon desde la raíz
+app.use("/favicon.ico", express.static(path.join(__dirname, "../favicon.ico"), { maxAge: "1d" }));
+
+// Middleware para manejar rutas .well-known (Chrome DevTools, etc.)
+app.use('/.well-known', (req, res) => {
+  // Responder con 404 silencioso para evitar logs innecesarios
+  res.status(404).end();
+});
 
 // Configuración de multer para subir archivos
 const upload = multer({ dest: path.join(__dirname, "../uploads") });
@@ -100,44 +150,47 @@ const upload = multer({ dest: path.join(__dirname, "../uploads") });
   }
 });
 
-// =================== Health checks y rutas básicas ===================
-// Ruta para favicon
-app.get("/favicon.ico", (req, res) => {
-  const faviconPath = path.join(__dirname, "../favicon.ico");
+// =================== MIDDLEWARE PARA MODO OFFLINE ===================
 
-  if (fs.existsSync(faviconPath)) {
-    res.sendFile(faviconPath);
-  } else {
-    // Si no existe, usar el logotipo como fallback
-    const logoPath = path.join(__dirname, "../recursos/logotipo-de-github.png");
-    if (fs.existsSync(logoPath)) {
-      res.sendFile(logoPath);
-    } else {
-      res.status(204).send(); // No Content - evita el error 404
+// Middleware para detectar estado de base de datos
+app.use(async (req, res, next) => {
+  // Solo verificar para rutas que requieren BD
+  const dbRequiredRoutes = ['/api/auth/login', '/api/auth/register', '/api/keys', '/api/documents'];
+
+  const requiresDb = dbRequiredRoutes.some(route => req.path.startsWith(route));
+
+  if (requiresDb) {
+    try {
+      const pool = require('./db/pool');
+      const connection = await pool.getConnection();
+      connection.release();
+      // BD está disponible
+      res.locals.dbAvailable = true;
+    } catch (error) {
+      // BD no está disponible
+      res.locals.dbAvailable = false;
+
+      // Para rutas de API, devolver error específico
+      if (req.path.startsWith('/api/')) {
+        return res.status(503).json({
+          success: false,
+          message: 'Base de datos no disponible. Por favor, instala la base de datos desde el panel de administración.',
+          offline: true,
+          installUrl: '/panelAdmin'
+        });
+      }
     }
   }
+
+  next();
 });
 
-// Health check simple para Railway
-app.get("/health", (req, res) => {
-  res.status(200).send("OK");
-});
+// =================== RUTAS QUE FUNCIONAN EN MODO OFFLINE ===================
 
-// Health check alternativo
-app.get("/ping", (req, res) => {
-  res.status(200).json({ status: "alive" });
-});
-
-// Ruta específica para manejar acceso no autorizado
-app.get("/403", (req, res) => {
-  const filePath = path.join(__dirname, "../html/403-unauthorized.html");
-  res.sendFile(filePath);
-});
-
-// Ruta principal simplificada para Railway health check
+// Ruta principal - funciona sin BD
 app.get("/", (req, res) => {
   try {
-    const filePath = path.join(__dirname, "../html/index.html"); // ✅ CORREGIDO - Usar index.html
+    const filePath = path.join(__dirname, "../html/index.html");
 
     if (!fs.existsSync(filePath)) {
       console.error(`Archivo no encontrado: ${filePath}`);
@@ -159,6 +212,86 @@ app.get("/", (req, res) => {
     }
   }
 });
+
+// Panel de administración - funciona sin BD (para instalar BD)
+app.get('/panelAdmin', (req, res) => {
+  const filePath = path.join(__dirname, "../admin/html/panelAdmin.html");
+  if (!fs.existsSync(filePath)) {
+    console.error(`Archivo no encontrado: ${filePath}`);
+    return res.status(404).send("Panel de administración no encontrado");
+  }
+  res.sendFile(filePath);
+});
+
+// Login de administración - funciona sin BD
+app.get('/adminLogin', (req, res) => {
+  const filePath = path.join(__dirname, "../admin/html/loginAdminPanel.html");
+  if (!fs.existsSync(filePath)) {
+    console.error(`Archivo no encontrado: ${filePath}`);
+    return res.status(404).send("Página de login de administración no encontrada");
+  }
+  res.sendFile(filePath);
+});
+
+
+// =================== RUTAS LIMPIAS PARA SECCIONES PRINCIPALES ===================
+
+// Rutas limpias que redirigen a hashes en la página principal
+app.get('/inicio', (req, res) => res.redirect('/#inicio'));
+app.get('/firmar', (req, res) => res.redirect('/#firmar'));
+app.get('/verificar', (req, res) => res.redirect('/#verificar'));
+app.get('/perfil', (req, res) => res.redirect('/#perfil'));
+app.get('/contacto', (req, res) => res.redirect('/#contacto'));
+
+// =================== RUTAS LIMPIAS PARA PANEL DE ADMINISTRACIÓN ===================
+
+// Ruta limpia para panel de administración principal
+app.get('/panelAdmin', (req, res) => {
+  const filePath = path.join(__dirname, "../admin/html/panelAdmin.html");
+  if (!fs.existsSync(filePath)) {
+    console.error(`Archivo no encontrado: ${filePath}`);
+    return res.status(404).send("Panel de administración no encontrado");
+  }
+  res.sendFile(filePath);
+});
+
+// Ruta limpia para login de administración
+app.get('/adminLogin', (req, res) => {
+  const filePath = path.join(__dirname, "../admin/html/loginAdminPanel.html");
+  if (!fs.existsSync(filePath)) {
+    console.error(`Archivo no encontrado: ${filePath}`);
+    return res.status(404).send("Página de login de administración no encontrada");
+  }
+  res.sendFile(filePath);
+});
+
+// Alias para /admin -> redirige a /panelAdmin
+app.get('/admin', (req, res) => res.redirect('/panelAdmin'));
+
+// =================== RUTAS LIMPIAS PARA PÁGINAS DE ERROR ===================
+
+// Ruta limpia para página 403 (acceso denegado)
+app.get('/acceso-denegado', (req, res) => {
+  const filePath = path.join(__dirname, "../html/403-unauthorized.html");
+  if (!fs.existsSync(filePath)) {
+    console.error(`Archivo no encontrado: ${filePath}`);
+    return res.status(404).send("Página de error no encontrada");
+  }
+  res.sendFile(filePath);
+});
+
+// Alias para /forbidden -> redirige a /acceso-denegado
+app.get('/forbidden', (req, res) => res.redirect('/acceso-denegado'));
+
+// =================== REDIRECCIONES PARA COMPATIBILIDAD ===================
+
+// Redirecciones de URLs antiguas a nuevas rutas limpias
+app.get('/admin/html/panelAdmin.html', (req, res) => res.redirect(301, '/panelAdmin'));
+app.get('/admin/html/loginAdminPanel.html', (req, res) => res.redirect(301, '/adminLogin'));
+
+// Redirecciones para página 403
+app.get('/403', (req, res) => res.redirect(301, '/acceso-denegado'));
+app.get('/forbidden', (req, res) => res.redirect(301, '/acceso-denegado'));
 
 
 // =================== Routers backend ===================
@@ -693,6 +826,16 @@ app.get('/owner-only', authenticate, isOwner, (req, res) => {
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Error interno del servidor' });
+});
+
+// =================== Manejo de rutas no encontradas ===================
+app.use((req, res) => {
+  console.log(`❌ Ruta no encontrada: ${req.method} ${req.path}`);
+  res.status(404).json({
+    success: false,
+    error: 'Ruta no encontrada',
+    message: `La ruta ${req.method} ${req.path} no existe`
+  });
 });
 
 // =================== Rutas de descarga ===================

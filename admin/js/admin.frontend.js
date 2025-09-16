@@ -11,6 +11,9 @@ class AdminPanel {
         this.users = [];
         this.apiBase = '/api/admin';
 
+        // Instanciar UserManagement
+        this.userManagement = new UserManagement(this);
+
         // Bindear métodos al contexto
         this.handleTabChange = this.handleTabChange.bind(this);
         this.handleFormSubmit = this.handleFormSubmit.bind(this);
@@ -37,9 +40,29 @@ class AdminPanel {
 
     }
 
-    /* ========================================
-       CONFIGURACIÓN DE EVENTOS
-       ======================================== */
+    // Helper para manejar respuestas de forma segura
+    async safeJsonResponse(response) {
+        try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return await response.json();
+            } else {
+                // Si no es JSON, devolver un objeto de error genérico
+                return {
+                    success: false,
+                    error: 'Respuesta no válida del servidor',
+                    message: `Tipo de contenido: ${contentType || 'desconocido'}`
+                };
+            }
+        } catch (error) {
+            console.error('Error parseando respuesta JSON:', error);
+            return {
+                success: false,
+                error: 'Error de parsing JSON',
+                message: error.message
+            };
+        }
+    }
     setupEventListeners() {
         // Navegación de pestañas
         document.querySelectorAll('.admin-nav-item').forEach(item => {
@@ -228,7 +251,7 @@ class AdminPanel {
             }
         } catch (error) {
             console.error('Error cargando configuración:', error);
-            this.showNotification('Error al cargar la configuración', 'error');
+            window.showNotification('Error al cargar la configuración', 'error');
         } finally {
             this.hideLoading();
         }
@@ -276,13 +299,14 @@ class AdminPanel {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
                 body: JSON.stringify(config)
             });
 
             if (response.ok) {
                 this.config = { ...this.config, ...config };
-                this.showNotification('Configuración guardada correctamente', 'success');
+                window.showNotification('Configuración guardada correctamente', 'success');
 
                 // Actualizar título en tiempo real
                 this.updateLivePreview();
@@ -291,7 +315,7 @@ class AdminPanel {
             }
         } catch (error) {
             console.error('Error guardando configuración:', error);
-            this.showNotification('Error al guardar la configuración', 'error');
+            window.showNotification('Error al guardar la configuración', 'error');
         } finally {
             this.hideLoading();
         }
@@ -301,37 +325,45 @@ class AdminPanel {
        GESTIÓN DE USUARIOS
        ======================================== */
     setupUserManagement() {
-        // Event listeners específicos para usuarios
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('user-action-btn')) {
-                const action = e.target.dataset.action;
-                const userId = e.target.dataset.userId;
+        // Delegar a UserManagement class para manejo de eventos
+        // Los eventos específicos se manejan en UserManagement.setupAdvancedEventListeners()
+    }
 
-                switch (action) {
-                    case 'edit':
-                        this.editUser(userId);
-                        break;
-                    case 'delete':
-                        this.deleteUser(userId);
-                        break;
-                    case 'toggle-status':
-                        this.toggleUserStatus(userId);
-                        break;
-                }
-            }
-        });
+    // Delegar métodos de usuario a UserManagement
+    editUser(userId) {
+        return this.userManagement.editUser(userId);
+    }
+
+    deleteUser(userId) {
+        return this.userManagement.deleteUser(userId);
+    }
+
+    toggleUserStatus(userId) {
+        // Este método necesita ser implementado en UserManagement o encontrar el usuario y su estado actual
+        const user = this.users.find(u => u.id === userId);
+        if (user) {
+            const isActive = user.status === 'active';
+            return this.userManagement.toggleUserStatus(userId, !isActive);
+        }
     }
 
     async loadUsers() {
         try {
-            const response = await fetch(`${this.apiBase}/users`);
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${this.apiBase}/users`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             if (response.ok) {
                 this.users = await response.json();
-                this.renderUsersList();
+                // Pasar usuarios a UserManagement y renderizar
+                this.userManagement.users = this.users;
+                this.userManagement.applyFilters();
             }
         } catch (error) {
             console.error('Error cargando usuarios:', error);
-            this.showNotification('Error al cargar usuarios', 'error');
+            window.showNotification('Error al cargar usuarios', 'error');
         }
     }
 
@@ -442,6 +474,7 @@ class AdminPanel {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
                 body: JSON.stringify(userData)
             });
@@ -449,18 +482,20 @@ class AdminPanel {
             if (response.ok) {
                 const newUser = await response.json();
                 this.users.push(newUser);
-                this.renderUsersList();
+                // Actualizar UserManagement y re-renderizar
+                this.userManagement.users = this.users;
+                this.userManagement.applyFilters();
                 this.updateMetrics();
 
                 document.getElementById('createUserModal').remove();
-                this.showNotification('Usuario creado correctamente', 'success');
+                window.showNotification('Usuario creado correctamente', 'success');
             } else {
-                const error = await response.json();
-                throw new Error(error.message || 'Error al crear usuario');
+                const errorData = await this.safeJsonResponse(response);
+                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
             }
         } catch (error) {
             console.error('Error creando usuario:', error);
-            this.showNotification(error.message || 'Error al crear usuario', 'error');
+            window.showNotification(error.message || 'Error al crear usuario', 'error');
         }
     }
 
@@ -625,46 +660,514 @@ class AdminPanel {
         this.isLoading = false;
     }
 
-    showNotification(message, type = 'info', duration = 5000) {
-        const notification = document.createElement('div');
-        notification.className = `admin-notification ${type}`;
-        notification.innerHTML = `
-            <div class="notification-content">
-                <span>${message}</span>
-                <button class="notification-close">×</button>
+    // Función para refrescar la lista de tablas
+    async refreshTables() {
+        try {
+            window.showNotification('Actualizando lista de tablas...', 'info');
+            await this.loadDatabaseStatus();
+            window.showNotification('Lista de tablas actualizada', 'success');
+        } catch (error) {
+            console.error('Error refrescando tablas:', error);
+            window.showNotification('Error al actualizar tablas', 'error');
+        }
+    }
+
+    // Función para cargar estado de base de datos
+    async loadDatabaseStatus() {
+        try {
+            const response = await fetch(`${this.apiBase}/database/status`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.displayDatabaseStatus(data.status);
+            } else {
+                this.displayDatabaseNotFound();
+            }
+        } catch (error) {
+            console.error('Error cargando estado de BD:', error);
+            this.displayDatabaseNotFound();
+        }
+    }
+
+    // Función para mostrar estado de base de datos
+    displayDatabaseStatus(dbStatus) {
+        const statusCard = document.getElementById('dbStatusCard');
+        const statusTitle = document.getElementById('dbStatusTitle');
+        const statusDetails = document.getElementById('dbStatusDetails');
+        const statusIndicator = document.getElementById('dbStatusIndicator');
+
+        if (!statusCard || !statusTitle || !statusDetails || !statusIndicator) return;
+
+        if (dbStatus.connected) {
+            statusTitle.textContent = 'Conexión Establecida';
+            statusDetails.textContent = `Base de datos: ${dbStatus.database || 'Desconocida'}`;
+            statusIndicator.className = 'db-status-indicator online';
+            statusCard.classList.remove('error');
+        } else {
+            statusTitle.textContent = 'Conexión Fallida';
+            statusDetails.textContent = dbStatus.error || 'No se pudo conectar';
+            statusIndicator.className = 'db-status-indicator offline';
+            statusCard.classList.add('error');
+        }
+    }
+
+    // Función para probar conexión a base de datos
+    async testDatabaseConnection() {
+        try {
+            window.showNotification('Probando conexión a base de datos...', 'info');
+
+            const response = await fetch(`${this.apiBase}/database/test-connection`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                window.showNotification('Conexión exitosa a la base de datos', 'success');
+                await this.loadDatabaseStatus(); // Recargar estado
+            } else {
+                throw new Error(data.message || 'Error de conexión');
+            }
+        } catch (error) {
+            console.error('Error probando conexión:', error);
+            window.showNotification(`Error de conexión: ${error.message}`, 'error');
+        }
+    }
+
+    // Función para crear respaldo de base de datos
+    async backupDatabase() {
+        try {
+            window.showNotification('Creando respaldo de base de datos...', 'info');
+
+            const response = await fetch(`${this.apiBase}/database/backup`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                window.showNotification('Respaldo creado exitosamente', 'success');
+            } else {
+                throw new Error(data.message || 'Error al crear respaldo');
+            }
+        } catch (error) {
+            console.error('Error creando respaldo:', error);
+            window.showNotification(`Error al crear respaldo: ${error.message}`, 'error');
+        }
+    }
+
+    // Función para limpiar resultados
+    clearResults() {
+        const resultsContent = document.getElementById('resultsContent');
+        const dbResultsSection = document.getElementById('dbResultsSection');
+
+        if (resultsContent) {
+            resultsContent.innerHTML = `
+                <div class="no-results">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                        <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" stroke="currentColor" stroke-width="2"/>
+                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <p>Selecciona una tabla para ver sus datos</p>
+                </div>
+            `;
+        }
+
+        if (dbResultsSection) {
+            dbResultsSection.style.display = 'none';
+        }
+
+        window.showNotification('Resultados limpiados', 'info');
+    }
+
+    // Función para mostrar datos de tabla
+    async showTableData(tableName, page = 1, limit = 10) {
+        try {
+            this.showResultsLoading('Cargando datos de tabla...');
+
+            const response = await fetch(`${this.apiBase}/database/table-data`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ tableName, page, limit })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                const html = this.createDataTableHtml(data.data, data.columns, tableName, page, data.totalPages);
+                document.getElementById('resultsContent').innerHTML = html;
+            } else {
+                throw new Error(data.message || 'Error al cargar datos de tabla');
+            }
+        } catch (error) {
+            console.error('Error mostrando datos de tabla:', error);
+            document.getElementById('resultsContent').innerHTML = `
+                <div class="error-message">
+                    <p>Error al cargar datos: ${error.message}</p>
+                </div>
+            `;
+            window.showNotification('Error al cargar datos de tabla', 'error');
+        } finally {
+            this.hideResultsLoading();
+        }
+    }
+
+    // Función para crear tabla HTML con datos
+    createDataTableHtml(data, columns, tableName, currentPage, totalPages) {
+        if (!data || data.length === 0) {
+            return `
+                <div class="no-data">
+                    <p>No hay datos en esta tabla</p>
+                </div>
+            `;
+        }
+
+        const tableHtml = `
+            <div class="table-data-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            ${columns.map(col => `<th>${col}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(row => `
+                            <tr>
+                                ${columns.map(col => `<td>${row[col] || '—'}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ${totalPages > 1 ? `
+                    <div class="table-pagination">
+                        <button onclick="adminPanel.showTableData('${tableName}', ${currentPage - 1}, 10)" ${currentPage <= 1 ? 'disabled' : ''}>
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            Anterior
+                        </button>
+                        <span>Página ${currentPage} de ${totalPages}</span>
+                        <button onclick="adminPanel.showTableData('${tableName}', ${currentPage + 1}, 10)" ${currentPage >= totalPages ? 'disabled' : ''}>
+                            Siguiente
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </button>
+                    </div>
+                ` : ''}
             </div>
         `;
 
-        // Posicionar notificación
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10001;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            padding: 16px;
-            border-left: 4px solid var(--admin-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'});
-            max-width: 400px;
-            animation: slideInRight 0.3s ease;
-        `;
+        return tableHtml;
+    }
 
-        document.body.appendChild(notification);
+    // Función auxiliar para mostrar loading en resultados
+    showResultsLoading(message = 'Cargando...') {
+        const resultsContent = document.getElementById('resultsContent');
+        if (resultsContent) {
+            resultsContent.innerHTML = `
+                <div class="db-loading">
+                    <div class="spinner"></div>
+                    <span>${message}</span>
+                </div>
+            `;
+        }
+    }
 
-        // Auto cerrar
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.style.animation = 'slideOutRight 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
+    hideResultsLoading() {
+        // El contenido se reemplaza cuando se cargan los datos
+    }
+
+    // Función para manejar click en tabla y mostrar detalles
+    async handleTableClick(tableName) {
+        try {
+            this.showResultsLoading('Cargando detalles de tabla...');
+
+            const response = await fetch(`${this.apiBase}/database/table-details`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ tableName })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
             }
-        }, duration);
 
-        // Cerrar manual
-        notification.querySelector('.notification-close').addEventListener('click', () => {
-            notification.style.animation = 'slideOutRight 0.3s ease';
-            setTimeout(() => notification.remove(), 300);
-        });
+            const data = await response.json();
+
+            if (data.success) {
+                const detailsHtml = this.createTableDetailsHtml(data.details, tableName);
+                document.getElementById('resultsContent').innerHTML = detailsHtml;
+            } else {
+                throw new Error(data.message || 'Error al cargar detalles de tabla');
+            }
+        } catch (error) {
+            console.error('Error mostrando detalles de tabla:', error);
+            document.getElementById('resultsContent').innerHTML = `
+                <div class="error-message">
+                    <p>Error al cargar detalles: ${error.message}</p>
+                </div>
+            `;
+            window.showNotification('Error al cargar detalles de tabla', 'error');
+        } finally {
+            this.hideResultsLoading();
+        }
+    }
+
+    // Función para crear HTML de detalles de tabla
+    createTableDetailsHtml(details, tableName) {
+        return `
+            <div class="table-details-header">
+                <h3>Detalles de Tabla: ${tableName}</h3>
+                <div class="table-info">
+                    <span class="info-item">Registros: ${details.rowCount || 'N/A'}</span>
+                    <span class="info-item">Columnas: ${details.columns?.length || 0}</span>
+                </div>
+            </div>
+
+            ${details.columns ? `
+                <div class="table-structure">
+                    <h4>Estructura de Columnas</h4>
+                    <div class="columns-list">
+                        ${details.columns.map(col => `
+                            <div class="column-item">
+                                <div class="column-name">${col.name}</div>
+                                <div class="column-type">${col.type}</div>
+                                <div class="${col.nullable ? 'column-nullable' : 'column-not-null'}">
+                                    ${col.nullable ? 'Nullable' : 'Not Null'}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
+            <div class="table-preview">
+                <h4>Vista Previa de Datos</h4>
+                <div class="preview-controls">
+                    <button onclick="adminPanel.showTableData('${tableName}', 1, 10)" class="admin-btn primary">
+                        Ver primeros 10 registros
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    // Función para ejecutar comandos de base de datos
+    async runDbCommand(command) {
+        try {
+            this.showResultsLoading('Ejecutando comando...');
+
+            const response = await fetch(`${this.apiBase}/database/command`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ command })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.showCommandResult(data.message || 'Comando ejecutado correctamente', 'success');
+            } else {
+                throw new Error(data.message || 'Error al ejecutar comando');
+            }
+        } catch (error) {
+            console.error('Error ejecutando comando:', error);
+            this.showCommandResult(`Error: ${error.message}`, 'error');
+        } finally {
+            this.hideResultsLoading();
+        }
+    }
+
+    // Función para mostrar resultados en el visor
+    showCommandResult(message, type = 'info') {
+        const dbResultsSection = document.getElementById('dbResultsSection');
+        const dbResultsContent = document.getElementById('dbResultsContent');
+
+        if (dbResultsSection && dbResultsContent) {
+            dbResultsSection.style.display = 'block';
+            dbResultsContent.innerHTML = `
+                <div class="result-item ${type}">
+                    ${message}
+                </div>
+            `;
+        }
+    }
+
+    // Función para mostrar/ocultar loading en el visor de resultados
+    showResultsLoading(message = 'Cargando...') {
+        const resultsContent = document.getElementById('resultsContent');
+        if (resultsContent) {
+            resultsContent.innerHTML = `
+                <div class="db-loading">
+                    <div class="spinner"></div>
+                    <span>${message}</span>
+                </div>
+            `;
+        }
+    }
+
+    hideResultsLoading() {
+        // El contenido se reemplaza cuando se cargan los datos
+    }
+
+    // Función para manejar click en tabla y mostrar detalles
+    async handleTableClick(tableName) {
+        try {
+            this.showResultsLoading('Cargando detalles de tabla...');
+
+            const response = await fetch(`${this.apiBase}/database/table-details`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ tableName })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                const detailsHtml = this.createTableDetailsHtml(data.details, tableName);
+                document.getElementById('resultsContent').innerHTML = detailsHtml;
+            } else {
+                throw new Error(data.message || 'Error al cargar detalles de tabla');
+            }
+        } catch (error) {
+            console.error('Error mostrando detalles de tabla:', error);
+            document.getElementById('resultsContent').innerHTML = `
+                <div class="error-message">
+                    <p>Error al cargar detalles: ${error.message}</p>
+                </div>
+            `;
+            window.showNotification('Error al cargar detalles de tabla', 'error');
+        } finally {
+            this.hideResultsLoading();
+        }
+    }
+
+    // Función para crear HTML de detalles de tabla
+    createTableDetailsHtml(details, tableName) {
+        return `
+            <div class="table-details-header">
+                <h3>Detalles de Tabla: ${tableName}</h3>
+                <div class="table-info">
+                    <span class="info-item">Registros: ${details.rowCount || 'N/A'}</span>
+                    <span class="info-item">Columnas: ${details.columns?.length || 0}</span>
+                </div>
+            </div>
+
+            ${details.columns ? `
+                <div class="table-structure">
+                    <h4>Estructura de Columnas</h4>
+                    <div class="columns-list">
+                        ${details.columns.map(col => `
+                            <div class="column-item">
+                                <div class="column-name">${col.name}</div>
+                                <div class="column-type">${col.type}</div>
+                                <div class="${col.nullable ? 'column-nullable' : 'column-not-null'}">
+                                    ${col.nullable ? 'Nullable' : 'Not Null'}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
+            <div class="table-preview">
+                <h4>Vista Previa de Datos</h4>
+                <div class="preview-controls">
+                    <button onclick="adminPanel.showTableData('${tableName}', 1, 10)" class="admin-btn primary">
+                        Ver primeros 10 registros
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    // Función para ejecutar comandos de base de datos
+    async runDbCommand(command) {
+        try {
+            this.showResultsLoading('Ejecutando comando...');
+
+            const response = await fetch(`${this.apiBase}/database/command`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ command })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.showCommandResult(data.message || 'Comando ejecutado correctamente', 'success');
+            } else {
+                throw new Error(data.message || 'Error al ejecutar comando');
+            }
+        } catch (error) {
+            console.error('Error ejecutando comando:', error);
+            this.showCommandResult(`Error: ${error.message}`, 'error');
+        } finally {
+            this.hideResultsLoading();
+        }
+    }
+
+    // Función para mostrar resultados en el visor
+    showCommandResult(message, type = 'info') {
+        const dbResultsSection = document.getElementById('dbResultsSection');
+        const dbResultsContent = document.getElementById('dbResultsContent');
+
+        if (dbResultsSection && dbResultsContent) {
+            dbResultsSection.style.display = 'block';
+            dbResultsContent.innerHTML = `
+                <div class="result-item ${type}">
+                    ${message}
+                </div>
+            `;
+        }
     }
 
     handleFormSubmit(event) {
@@ -702,19 +1205,20 @@ class AdminPanel {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
                 body: JSON.stringify({ enabled })
             });
 
             if (response.ok) {
-                this.showNotification(
+                window.showNotification(
                     `Modo mantenimiento ${enabled ? 'activado' : 'desactivado'}`,
                     'success'
                 );
             }
         } catch (error) {
             console.error('Error cambiando modo mantenimiento:', error);
-            this.showNotification('Error al cambiar modo mantenimiento', 'error');
+            window.showNotification('Error al cambiar modo mantenimiento', 'error');
         }
     }
 
@@ -758,12 +1262,15 @@ class AdminPanel {
 
             const response = await fetch(`${this.apiBase}/upload`, {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
                 body: formData
             });
 
             if (response.ok) {
                 const result = await response.json();
-                this.showNotification('Archivo subido correctamente', 'success');
+                window.showNotification('Archivo subido correctamente', 'success');
 
                 // Actualizar configuración si es necesario
                 if (input.dataset.configKey) {
@@ -774,7 +1281,7 @@ class AdminPanel {
             }
         } catch (error) {
             console.error('Error subiendo archivo:', error);
-            this.showNotification('Error al subir archivo', 'error');
+            window.showNotification('Error al subir archivo', 'error');
         } finally {
             this.hideLoading();
         }
@@ -783,6 +1290,295 @@ class AdminPanel {
     /* ========================================
        CONFIGURACIÓN DE BASE DE DATOS
        ======================================== */
+    async loadDatabaseStatus() {
+        try {
+            this.showLoading('Cargando estado de la base de datos...');
+
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${this.apiBase}/database/status`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const dbStatus = await response.json();
+                this.displayDatabaseStatus(dbStatus);
+
+                // Cargar tablas automáticamente después del estado
+                await this.refreshTables();
+            } else {
+                // Manejar diferentes tipos de error
+                if (response.status === 404) {
+                    console.log('📊 Base de datos no encontrada o ruta no existe');
+                    this.displayDatabaseNotFound();
+                } else if (response.status === 401) {
+                    console.log('🔐 Error de autenticación');
+                    window.showNotification('Sesión expirada. Por favor, inicia sesión nuevamente.', 'error');
+                } else if (response.status === 500) {
+                    console.log('🔧 Error interno del servidor');
+                    window.showNotification('Error interno del servidor', 'error');
+                } else {
+                    console.error('❌ Error desconocido:', response.status, response.statusText);
+                    window.showNotification(`Error al cargar estado: ${response.status}`, 'error');
+                }
+            }
+        } catch (error) {
+            console.error('Error cargando estado de BD:', error);
+            window.showNotification('Error al cargar estado de la base de datos', 'error');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    displayDatabaseStatus(dbStatus) {
+        const statusDetails = document.getElementById('dbStatusDetails');
+        const statusIndicator = document.getElementById('dbStatusIndicator');
+        const statusTitle = document.getElementById('dbStatusTitle');
+        const installBtn = document.getElementById('installDbBtn');
+        const backupBtn = document.getElementById('backupDbBtn');
+        const optimizeBtn = document.getElementById('optimizeDbBtn');
+        const testBtn = document.getElementById('testDbBtn');
+
+        if (!statusDetails) return;
+
+        // Actualizar información del sistema
+        const mysqlVersion = document.getElementById('mysqlVersion');
+        const dbName = document.getElementById('dbName');
+        const tableCount = document.getElementById('tableCount');
+        const dbSize = document.getElementById('dbSize');
+
+        if (mysqlVersion) mysqlVersion.textContent = dbStatus.version || '--';
+        if (dbName) dbName.textContent = dbStatus.database || '--';
+        if (tableCount) tableCount.textContent = dbStatus.tableCount || 0;
+        if (dbSize) dbSize.textContent = dbStatus.size || '--';
+
+        const statusClass = dbStatus.online ? 'online' : 'offline';
+        const statusText = dbStatus.online ? 'Conectado' : 'Desconectado';
+
+        statusDetails.innerHTML = `
+            <div class="db-metric">
+                <span class="db-metric-label">Estado:</span>
+                <span class="db-metric-value ${statusClass}">${statusText}</span>
+            </div>
+            <div class="db-metric">
+                <span class="db-metric-label">Versión:</span>
+                <span class="db-metric-value">${dbStatus.version || 'N/A'}</span>
+            </div>
+            <div class="db-metric">
+                <span class="db-metric-label">Tablas:</span>
+                <span class="db-metric-value">${dbStatus.tableCount || 0}</span>
+            </div>
+            <div class="db-metric">
+                <span class="db-metric-label">Tamaño:</span>
+                <span class="db-metric-value">${dbStatus.size || 'N/A'}</span>
+            </div>
+        `;
+
+        // Actualizar indicador de estado
+        if (statusIndicator) {
+            statusIndicator.className = `status-indicator ${statusClass}`;
+        }
+        if (statusTitle) {
+            statusTitle.textContent = dbStatus.online ? 'Conexión Establecida' : 'Sin Conexión';
+        }
+
+        // Mostrar/ocultar botones según estado
+        if (installBtn) installBtn.style.display = dbStatus.online ? 'none' : 'inline-flex';
+        if (backupBtn) backupBtn.style.display = dbStatus.online ? 'inline-flex' : 'none';
+        if (optimizeBtn) optimizeBtn.style.display = dbStatus.online ? 'inline-flex' : 'none';
+        if (testBtn) testBtn.style.display = 'inline-flex';
+    }
+
+    displayDatabaseNotFound() {
+        const statusDetails = document.getElementById('dbStatusDetails');
+        if (!statusDetails) return;
+
+        statusDetails.innerHTML = `
+            <div class="db-error-message">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="#ef4444" stroke-width="2"/>
+                    <path d="M12 8v4M12 16h.01" stroke="#ef4444" stroke-width="2"/>
+                </svg>
+                <h4>Base de Datos No Encontrada</h4>
+                <p>La base de datos no está instalada o no se puede conectar.</p>
+                <button class="admin-btn primary" onclick="adminPanel.installDatabase()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 4v16m8-8H4" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Instalar Base de Datos
+                </button>
+            </div>
+        `;
+
+        // Actualizar indicador de estado
+        const statusIndicator = document.querySelector('.status-indicator');
+        if (statusIndicator) {
+            statusIndicator.className = 'status-indicator offline';
+        }
+    }
+
+    async loadPdfConfiguration() {
+        try {
+            this.showLoading('Cargando configuración PDF...');
+
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${this.apiBase}/pdf/config`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const pdfConfig = await response.json();
+                this.populatePdfConfiguration(pdfConfig);
+            } else {
+                console.error('Error en la respuesta:', response.status, response.statusText);
+                window.showNotification('Error al cargar configuración PDF', 'error');
+            }
+        } catch (error) {
+            console.error('Error cargando configuración PDF:', error);
+            window.showNotification('Error al cargar configuración PDF', 'error');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    populatePdfConfiguration(pdfConfig) {
+        // Llenar campos de configuración PDF
+        const fields = {
+            'institutionName': pdfConfig.institutionName || '',
+            'pdfTemplate': pdfConfig.template || 'default',
+            'fontSize': pdfConfig.fontSize || 12,
+            'marginTop': pdfConfig.margins?.top || 20,
+            'marginBottom': pdfConfig.margins?.bottom || 20,
+            'marginLeft': pdfConfig.margins?.left || 15,
+            'marginRight': pdfConfig.margins?.right || 15
+        };
+
+        Object.entries(fields).forEach(([fieldId, value]) => {
+            const element = document.getElementById(fieldId);
+            if (element) {
+                if (element.type === 'checkbox') {
+                    element.checked = value;
+                } else {
+                    element.value = value;
+                }
+            }
+        });
+    }
+
+    async installDatabase() {
+        try {
+            const progressContainer = document.getElementById('dbInstallProgress');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const progressStatus = document.getElementById('progressStatus');
+            const installBtn = document.getElementById('installDbBtn');
+
+            // Mostrar barra de progreso
+            if (progressContainer) progressContainer.style.display = 'block';
+            if (installBtn) installBtn.disabled = true;
+
+            // Simular progreso
+            this.updateInstallProgress(10, 'Preparando instalación...');
+
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${this.apiBase}/database/install`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            this.updateInstallProgress(50, 'Instalando estructura de base de datos...');
+
+            if (response.ok) {
+                this.updateInstallProgress(80, 'Configurando datos iniciales...');
+
+                const result = await response.json();
+
+                this.updateInstallProgress(100, 'Instalación completada');
+
+                // Ocultar progreso después de un momento
+                setTimeout(() => {
+                    if (progressContainer) progressContainer.style.display = 'none';
+                    if (installBtn) installBtn.disabled = false;
+                }, 2000);
+
+                window.showNotification('Base de datos instalada correctamente', 'success');
+
+                // Recargar estado de BD
+                setTimeout(() => {
+                    this.loadDatabaseStatus();
+                }, 1000);
+
+            } else {
+                const error = await response.json();
+                throw new Error(error.message || 'Error al instalar base de datos');
+            }
+        } catch (error) {
+            console.error('Error instalando BD:', error);
+
+            // Ocultar progreso en caso de error
+            const progressContainer = document.getElementById('dbInstallProgress');
+            const installBtn = document.getElementById('installDbBtn');
+            if (progressContainer) progressContainer.style.display = 'none';
+            if (installBtn) installBtn.disabled = false;
+
+            window.showNotification(`Error al instalar base de datos: ${error.message}`, 'error');
+        }
+    }
+
+    updateInstallProgress(percentage, status) {
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const progressStatus = document.getElementById('progressStatus');
+
+        if (progressFill) progressFill.style.width = `${percentage}%`;
+        if (progressText) progressText.textContent = `${percentage}%`;
+        if (progressStatus) progressStatus.textContent = status;
+    }
+
+    displayDatabaseNotFound() {
+        const statusDetails = document.getElementById('dbStatusDetails');
+        const statusIndicator = document.getElementById('dbStatusIndicator');
+        const statusTitle = document.getElementById('dbStatusTitle');
+        const installBtn = document.getElementById('installDbBtn');
+        const backupBtn = document.getElementById('backupDbBtn');
+        const optimizeBtn = document.getElementById('optimizeDbBtn');
+
+        if (!statusDetails) return;
+
+        statusDetails.innerHTML = `
+            <div class="db-error-message">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="#ef4444" stroke-width="2"/>
+                    <path d="M12 8v4M12 16h.01" stroke="#ef4444" stroke-width="2"/>
+                </svg>
+                <h4>Base de Datos No Encontrada</h4>
+                <p>La base de datos no está instalada o no se puede conectar.</p>
+                <p class="db-error-hint">Haz clic en "Instalar Base de Datos" para configurar el sistema.</p>
+            </div>
+        `;
+
+        // Actualizar indicador de estado
+        if (statusIndicator) {
+            statusIndicator.className = 'status-indicator offline';
+        }
+        if (statusTitle) {
+            statusTitle.textContent = 'Base de Datos No Disponible';
+        }
+
+        // Mostrar solo botón de instalación
+        if (installBtn) installBtn.style.display = 'inline-flex';
+        if (backupBtn) backupBtn.style.display = 'none';
+        if (optimizeBtn) optimizeBtn.style.display = 'none';
+    }
+
     setupDatabaseConfig() {
         // Event listeners para la pestaña de base de datos
         const testConnectionBtn = document.getElementById('testDatabaseConnection');
@@ -805,44 +1601,928 @@ class AdminPanel {
         try {
             this.showLoading('Probando conexión...');
 
-            const response = await fetch(`${this.apiBase}/status`);
-            const status = await response.json();
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${this.apiBase}/status`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
 
-            if (status.online) {
-                showNotification('Conexión a la base de datos exitosa', 'success');
+            if (response.ok) {
+                const status = await response.json();
+
+                if (status.online) {
+                    window.showNotification('Conexión a la base de datos exitosa', 'success');
+                } else {
+                    window.showNotification('No se pudo conectar a la base de datos', 'error');
+                }
             } else {
-                showNotification('No se pudo conectar a la base de datos', 'error');
+                // Manejar errores HTTP
+                if (response.status === 404) {
+                    window.showNotification('Ruta de estado no encontrada', 'error');
+                } else if (response.status === 401) {
+                    window.showNotification('Sesión expirada. Por favor, inicia sesión nuevamente.', 'error');
+                } else {
+                    window.showNotification(`Error al probar conexión: ${response.status}`, 'error');
+                }
             }
         } catch (error) {
             console.error('Error probando conexión:', error);
-            showNotification('Error al probar conexión a la base de datos', 'error');
+            window.showNotification('Error al probar conexión a la base de datos', 'error');
         } finally {
             this.hideLoading();
         }
     }
 
     async backupDatabase() {
+        const backupBtn = document.getElementById('backupDbBtn');
+        const originalText = backupBtn.innerHTML;
+
         try {
-            this.showLoading('Creando respaldo...');
-            showNotification('Función de respaldo en desarrollo', 'info');
+            // Cambiar el botón a estado de carga
+            backupBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="spinning">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <div class="btn-content">
+                    <span class="btn-title">Creando...</span>
+                    <span class="btn-description">Procesando respaldo</span>
+                </div>
+            `;
+            backupBtn.disabled = true;
+
+            // Mostrar notificación de inicio
+            window.showNotification('Iniciando creación de respaldo...', 'info');
+
+            // Llamar a la API de respaldo
+            const response = await fetch('/api/admin/database/backup', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Éxito
+                backupBtn.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <polyline points="20,6 9,17 4,12" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <div class="btn-content">
+                        <span class="btn-title">Completado</span>
+                        <span class="btn-description">Respaldo creado</span>
+                    </div>
+                `;
+
+                window.showNotification(`✅ Respaldo creado correctamente: ${result.backupFile}`, 'success');
+
+                // Restaurar el botón después de 3 segundos
+                setTimeout(() => {
+                    backupBtn.innerHTML = originalText;
+                    backupBtn.disabled = false;
+                }, 3000);
+
+            } else {
+                throw new Error(result.message || 'Error desconocido');
+            }
+
         } catch (error) {
             console.error('Error creando respaldo:', error);
-            showNotification('Error al crear respaldo de la base de datos', 'error');
-        } finally {
-            this.hideLoading();
+
+            // Mostrar error en el botón
+            backupBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
+                    <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <div class="btn-content">
+                    <span class="btn-title">Error</span>
+                    <span class="btn-description">Intente nuevamente</span>
+                </div>
+            `;
+
+            window.showNotification('❌ Error al crear respaldo: ' + error.message, 'error');
+
+            // Restaurar el botón después de 5 segundos
+            setTimeout(() => {
+                backupBtn.innerHTML = originalText;
+                backupBtn.disabled = false;
+            }, 5000);
         }
+    }
+
+    async restoreDatabase() {
+        try {
+            // Mostrar confirmación antes de proceder
+            const confirmed = await this.showRestoreConfirmation();
+            if (!confirmed) return;
+
+            // Mostrar loading
+            this.showResultsLoading('Restaurando base de datos desde backup...');
+            window.showNotification('🔄 Iniciando restauración desde backup...', 'info');
+
+            // Llamar a la API de restauración
+            const response = await fetch('/api/admin/database/restore', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Éxito
+                this.showCommandResult(`✅ Restauración completada exitosamente:\n${result.message}`, 'success');
+                window.showNotification('✅ Base de datos restaurada correctamente desde backup', 'success');
+
+                // Actualizar estado de la base de datos
+                setTimeout(() => {
+                    this.loadDatabaseStatus();
+                    this.refreshTables();
+                }, 2000);
+
+            } else {
+                throw new Error(result.message || 'Error desconocido en restauración');
+            }
+
+        } catch (error) {
+            console.error('Error restaurando base de datos:', error);
+            this.showCommandResult(`❌ Error en restauración:\n${error.message}`, 'error');
+            window.showNotification('❌ Error al restaurar base de datos: ' + error.message, 'error');
+        } finally {
+            this.hideResultsLoading();
+        }
+    }
+
+    async showRestoreConfirmation() {
+        return new Promise((resolve) => {
+            const modalHTML = `
+                <div class="admin-modal show" id="restoreConfirmModal">
+                    <div class="admin-modal-content">
+                        <button class="admin-modal-close" data-action="cancel">×</button>
+
+                        <div class="admin-modal-header">
+                            <h3>
+                                <svg class="warning-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Confirmar Restauración
+                            </h3>
+                        </div>
+
+                        <div class="restore-confirm-warning">
+                            <h3>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Advertencia Importante
+                            </h3>
+                            <p>
+                                Está a punto de restaurar la base de datos desde un archivo de respaldo.
+                                Esta operación sobrescribirá todos los datos actuales.
+                            </p>
+                            <p>Al confirmar la restauración:</p>
+                            <ul>
+                                <li>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                                        <circle cx="12" cy="16" r="1" stroke="currentColor" stroke-width="2"/>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2"/>
+                                    </svg>
+                                    <span>Se creará automáticamente un respaldo de seguridad de los datos actuales</span>
+                                </li>
+                                <li>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+                                        <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                                        <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2"/>
+                                        <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/>
+                                    </svg>
+                                    <span>Los datos del archivo de respaldo reemplazarán completamente la base de datos</span>
+                                </li>
+                                <li>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                                        <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2"/>
+                                    </svg>
+                                    <span>Esta operación puede tardar varios minutos dependiendo del tamaño del respaldo</span>
+                                </li>
+                                <li>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span>Se recomienda hacer esta operación durante horas de bajo uso del sistema</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="admin-modal-footer">
+                            <button type="button" class="admin-btn secondary" data-action="cancel">
+                                Cancelar
+                            </button>
+                            <button type="button" class="admin-btn primary" data-action="confirm">
+                                Confirmar Restauración
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Agregar event listeners después de insertar el HTML
+            const modal = document.getElementById('restoreConfirmModal');
+            const cancelBtn = modal.querySelector('[data-action="cancel"]');
+            const confirmBtn = modal.querySelector('[data-action="confirm"]');
+            const closeBtn = modal.querySelector('.admin-modal-close');
+
+            const handleCancel = () => {
+                modal.remove();
+                resolve(false);
+            };
+
+            const handleConfirm = () => {
+                modal.remove();
+                resolve(true);
+            };
+
+            cancelBtn.addEventListener('click', handleCancel);
+            confirmBtn.addEventListener('click', handleConfirm);
+            closeBtn.addEventListener('click', handleCancel);
+
+            // Cerrar con Escape
+            const handleEscape = (e) => {
+                if (e.key === 'Escape') {
+                    handleCancel();
+                    document.removeEventListener('keydown', handleEscape);
+                }
+            };
+            document.addEventListener('keydown', handleEscape);
+        });
     }
 
     async optimizeDatabase() {
         try {
             this.showLoading('Optimizando base de datos...');
-            showNotification('Función de optimización en desarrollo', 'info');
+            window.showNotification('Función de optimización en desarrollo', 'info');
         } catch (error) {
             console.error('Error optimizando BD:', error);
-            showNotification('Error al optimizar la base de datos', 'error');
+            window.showNotification('Error al optimizar la base de datos', 'error');
         } finally {
             this.hideLoading();
         }
+    }
+
+    /* ========================================
+       FUNCIONES DE BASE DE DATOS PARA EL NUEVO LAYOUT
+       ======================================== */
+
+    // Función principal para ejecutar comandos de base de datos
+    async runDbCommand(command) {
+        try {
+            this.showResultsLoading(`Ejecutando comando: ${command}...`);
+
+            // Mostrar en el visor de resultados
+            this.showCommandResult(`Ejecutando: npm run db:${command}`, 'info');
+
+            // Usar GET para comandos de solo lectura, POST para comandos que modifican
+            const isReadOnlyCommand = ['status', 'tables'].includes(command);
+            const method = isReadOnlyCommand ? 'GET' : 'POST';
+
+            const response = await fetch(`${this.apiBase}/database/${command}`, {
+                method: method,
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+
+                if (result.success) {
+                    this.showCommandResult(`✅ Comando ${command} ejecutado correctamente:\n${JSON.stringify(result, null, 2)}`, 'success');
+                    window.showNotification(`Comando ${command} ejecutado correctamente`, 'success');
+
+                    // Actualizar tablas si el comando fue exitoso
+                    if (['create', 'migrate', 'seed', 'reset'].includes(command)) {
+                        setTimeout(() => this.refreshTables(), 1000);
+                    }
+                } else {
+                    this.showCommandResult(`❌ Error en comando ${command}:\n${result.error || 'Error desconocido'}`, 'error');
+                    window.showNotification(`Error en comando ${command}`, 'error');
+                }
+            } else {
+                // Manejar errores HTTP
+                if (response.status === 404) {
+                    this.showCommandResult(`❌ Error: Ruta no encontrada para comando ${command}`, 'error');
+                    window.showNotification(`Comando ${command} no encontrado`, 'error');
+                } else if (response.status === 401) {
+                    this.showCommandResult(`❌ Error: Sesión expirada`, 'error');
+                    window.showNotification(`Sesión expirada. Por favor, inicia sesión nuevamente.`, 'error');
+                } else {
+                    const errorData = await this.safeJsonResponse(response);
+                    this.showCommandResult(`❌ Error ${response.status}: ${errorData.message || response.statusText}`, 'error');
+                    window.showNotification(`Error en comando ${command}: ${response.status}`, 'error');
+                }
+            }
+        } catch (error) {
+            console.error(`Error ejecutando comando ${command}:`, error);
+            this.showCommandResult(`❌ Error de conexión ejecutando ${command}:\n${error.message}`, 'error');
+            window.showNotification(`Error ejecutando comando ${command}`, 'error');
+        } finally {
+            this.hideResultsLoading();
+        }
+    }
+
+    // Función para mostrar resultados en el visor
+    showCommandResult(message, type = 'info') {
+        const resultsContent = document.getElementById('resultsContent');
+        if (!resultsContent) return;
+
+        const timestamp = new Date().toLocaleTimeString();
+        const resultDiv = document.createElement('div');
+        resultDiv.className = `command-result ${type}`;
+        resultDiv.innerHTML = `
+            <div class="result-header">
+                <span class="result-time">${timestamp}</span>
+                <span class="result-type ${type}">${type.toUpperCase()}</span>
+            </div>
+            <pre class="result-message">${message}</pre>
+        `;
+
+        // Limpiar mensaje de "no results" si existe
+        const noResults = resultsContent.querySelector('.no-results');
+        if (noResults) {
+            noResults.remove();
+        }
+
+        resultsContent.appendChild(resultDiv);
+        resultsContent.scrollTop = resultsContent.scrollHeight;
+    }
+
+    // Función para refrescar la lista de tablas
+    async refreshTables() {
+        try {
+            const tablesList = document.getElementById('tablesList');
+            if (!tablesList) return;
+
+            tablesList.innerHTML = `
+                <div class="db-loading">
+                    <div class="spinner"></div>
+                    <span>Actualizando tablas...</span>
+                </div>
+            `;
+
+            const response = await fetch(`${this.apiBase}/database/tables`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+
+                if (result.success && result.tables) {
+                    tablesList.innerHTML = '';
+
+                    if (result.tables.length === 0) {
+                        tablesList.innerHTML = `
+                            <div class="no-tables">
+                                <p>No hay tablas en la base de datos</p>
+                            </div>
+                        `;
+                    } else {
+                        result.tables.forEach(table => {
+                            const tableItem = document.createElement('div');
+                            tableItem.className = 'table-item';
+                            tableItem.innerHTML = `
+                                <span class="table-name">${table.name}</span>
+                                <span class="table-count">${table.rows || 0} registros</span>
+                            `;
+
+                            // Agregar event listener para click
+                            tableItem.addEventListener('click', () => {
+                                this.handleTableClick(table.name);
+                            });
+
+                            // Agregar clase para indicar que es clickeable
+                            tableItem.style.cursor = 'pointer';
+                            tableItem.title = `Click para ver detalles de ${table.name}`;
+
+                            tablesList.appendChild(tableItem);
+                        });
+                    }
+
+                    window.showNotification('Lista de tablas actualizada', 'success');
+                } else {
+                    tablesList.innerHTML = `
+                        <div class="error-message">
+                            <p>Error al cargar tablas</p>
+                        </div>
+                    `;
+                    window.showNotification('Error al actualizar tablas', 'error');
+                }
+            } else {
+                // Manejar errores HTTP
+                if (response.status === 404) {
+                    tablesList.innerHTML = `
+                        <div class="error-message">
+                            <p>Ruta no encontrada. Verifica la configuración del servidor.</p>
+                        </div>
+                    `;
+                } else if (response.status === 401) {
+                    tablesList.innerHTML = `
+                        <div class="error-message">
+                            <p>Sesión expirada. Por favor, inicia sesión nuevamente.</p>
+                        </div>
+                    `;
+                } else {
+                    tablesList.innerHTML = `
+                        <div class="error-message">
+                            <p>Error ${response.status}: ${response.statusText}</p>
+                        </div>
+                    `;
+                }
+                window.showNotification(`Error al cargar tablas: ${response.status}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error refrescando tablas:', error);
+            const tablesList = document.getElementById('tablesList');
+            if (tablesList) {
+                tablesList.innerHTML = `
+                    <div class="error-message">
+                        <p>Error de conexión</p>
+                    </div>
+                `;
+            }
+            window.showNotification('Error al conectar con la base de datos', 'error');
+        }
+    }
+
+    // Función para limpiar resultados
+    clearResults() {
+        const resultsContent = document.getElementById('resultsContent');
+        if (!resultsContent) return;
+
+        resultsContent.innerHTML = `
+            <div class="no-results">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+                    <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <p>Realiza una operación para ver los resultados aquí</p>
+            </div>
+        `;
+
+        window.showNotification('Resultados limpiados', 'info');
+    }
+
+    // Función para mostrar/ocultar loading en el visor de resultados
+    showResultsLoading(message = 'Cargando...') {
+        const resultsContent = document.getElementById('resultsContent');
+        if (!resultsContent) return;
+
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'command-result loading';
+        loadingDiv.id = 'loadingResult';
+        loadingDiv.innerHTML = `
+            <div class="db-loading">
+                <div class="spinner"></div>
+                <span>${message}</span>
+            </div>
+        `;
+
+        resultsContent.appendChild(loadingDiv);
+        resultsContent.scrollTop = resultsContent.scrollHeight;
+    }
+
+    hideResultsLoading() {
+        const loadingResult = document.getElementById('loadingResult');
+        if (loadingResult) {
+            loadingResult.remove();
+        }
+    }
+
+    // Función para manejar click en tabla y mostrar detalles
+    async handleTableClick(tableName) {
+        try {
+            // Verificar estado de autenticación antes de proceder
+            const isAuthenticated = await this.checkAuthStatus();
+            if (!isAuthenticated) {
+                return; // La función checkAuthStatus ya maneja la redirección
+            }
+
+            const resultsContent = document.getElementById('dbResultsContent');
+            const resultsSection = document.getElementById('dbResultsSection');
+
+            if (!resultsContent || !resultsSection) return;
+
+            // Mostrar sección de resultados
+            resultsSection.style.display = 'block';
+
+            // Mostrar loading
+            resultsContent.innerHTML = `
+                <div class="db-loading">
+                    <div class="spinner"></div>
+                    <span>Cargando detalles de la tabla ${tableName}...</span>
+                </div>
+            `;
+
+            // Verificar que tenemos un token válido
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error('❌ No hay token de autenticación disponible');
+                window.showNotification('Sesión expirada. Por favor, inicia sesión nuevamente.', 'error');
+                // Redirigir al login después de un breve delay
+                setTimeout(() => {
+                    window.location.href = '/adminLogin';
+                }, 2000);
+                return;
+            }
+
+            console.log('🔐 Token encontrado, haciendo petición a table-details...');
+
+            // Hacer petición para obtener detalles de la tabla
+            const response = await fetch(`${this.apiBase}/database/table-details`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ tableName })
+            });
+
+            console.log('📡 Respuesta de table-details:', response.status, response.statusText);
+
+            if (response.ok) {
+                const result = await response.json();
+
+                if (result.success) {
+                    // Mostrar detalles de la tabla
+                    resultsContent.innerHTML = `
+                        <div class="table-details-header">
+                            <h3>Detalles de la tabla: ${tableName}</h3>
+                            <div class="table-info">
+                                <span class="info-item">Registros: ${result.rowCount || 0}</span>
+                                <span class="info-item">Columnas: ${result.columns?.length || 0}</span>
+                            </div>
+                        </div>
+
+                        <div class="table-structure">
+                            <h4>Estructura de la tabla</h4>
+                            <div class="columns-list">
+                                ${result.columns?.map(col => `
+                                    <div class="column-item">
+                                        <span class="column-name">${col.name}</span>
+                                        <span class="column-type">${col.type}</span>
+                                        ${col.nullable ? '<span class="column-nullable">NULL</span>' : '<span class="column-not-null">NOT NULL</span>'}
+                                    </div>
+                                `).join('') || '<p>No se pudo obtener la estructura</p>'}
+                            </div>
+                        </div>
+
+                        <div class="table-preview">
+                            <h4>Vista previa de datos</h4>
+                            <div class="preview-controls">
+                                <button class="admin-btn secondary" onclick="adminPanel.showTableData('${tableName}', 1)">
+                                    Ver primeros 10 registros
+                                </button>
+                            </div>
+                        </div>
+                    `;
+
+                    window.showNotification(`Detalles de ${tableName} cargados`, 'success');
+                } else {
+                    resultsContent.innerHTML = `
+                        <div class="error-message">
+                            <p>Error al cargar detalles: ${result.error || 'Error desconocido'}</p>
+                        </div>
+                    `;
+                    window.showNotification('Error al cargar detalles de la tabla', 'error');
+                }
+            } else {
+                // Manejar errores específicos
+                if (response.status === 401) {
+                    console.error('❌ Error 401: Token inválido o expirado');
+                    window.showNotification('Sesión expirada. Redirigiendo al login...', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/adminLogin';
+                    }, 2000);
+                } else if (response.status === 403) {
+                    console.error('❌ Error 403: No tienes permisos para acceder a esta función');
+                    window.showNotification('No tienes permisos para acceder a esta función', 'error');
+                } else if (response.status === 404) {
+                    console.error('❌ Error 404: Ruta no encontrada');
+                    window.showNotification('Servicio no disponible. Contacta al administrador.', 'error');
+                } else {
+                    console.error(`❌ Error ${response.status}: ${response.statusText}`);
+                    window.showNotification(`Error al cargar detalles: ${response.status}`, 'error');
+                }
+
+                resultsContent.innerHTML = `
+                    <div class="error-message">
+                        <p>Error ${response.status}: ${response.statusText}</p>
+                        <p>Revisa la consola para más detalles.</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error al manejar click en tabla:', error);
+            const resultsContent = document.getElementById('dbResultsContent');
+            if (resultsContent) {
+                resultsContent.innerHTML = `
+                    <div class="error-message">
+                        <p>Error de conexión</p>
+                    </div>
+                `;
+            }
+            window.showNotification('Error al conectar con la base de datos', 'error');
+        }
+    }
+
+    // Función para mostrar datos de tabla
+    async showTableData(tableName, page = 1, limit = 10) {
+        try {
+            const resultsContent = document.getElementById('dbResultsContent');
+
+            if (!resultsContent) return;
+
+            // Mostrar loading
+            resultsContent.innerHTML += `
+                <div class="table-data-loading">
+                    <div class="spinner"></div>
+                    <span>Cargando datos...</span>
+                </div>
+            `;
+
+            const response = await fetch(`${this.apiBase}/database/table-data`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ tableName, page, limit })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    // Crear tabla HTML con los datos
+                    const tableHtml = this.createDataTableHtml(result.data, result.columns, tableName, page, result.totalPages);
+                    resultsContent.innerHTML = tableHtml;
+                    window.showNotification(`Datos de ${tableName} cargados`, 'success');
+                } else {
+                    resultsContent.innerHTML += `
+                        <div class="error-message">
+                            <p>No se pudieron cargar los datos</p>
+                        </div>
+                    `;
+                    window.showNotification('Error al cargar datos de la tabla', 'error');
+                }
+            } else {
+                resultsContent.innerHTML += `
+                    <div class="error-message">
+                        <p>Error ${response.status}: ${response.statusText}</p>
+                    </div>
+                `;
+                window.showNotification(`Error al cargar datos: ${response.status}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error al cargar datos de tabla:', error);
+            const resultsContent = document.getElementById('dbResultsContent');
+            if (resultsContent) {
+                resultsContent.innerHTML += `
+                    <div class="error-message">
+                        <p>Error de conexión</p>
+                    </div>
+                `;
+            }
+            window.showNotification('Error al conectar con la base de datos', 'error');
+        }
+    }
+
+    // Función para crear tabla HTML con datos
+    createDataTableHtml(data, columns, tableName, currentPage, totalPages) {
+        if (!data || data.length === 0) {
+            return `
+                <div class="table-details-header">
+                    <h3>Datos de la tabla: ${tableName}</h3>
+                </div>
+                <div class="no-data">
+                    <p>No hay datos en esta tabla</p>
+                </div>
+            `;
+        }
+
+        const headers = columns.map(col => `<th>${col.name}</th>`).join('');
+        const rows = data.map(row => {
+            const cells = columns.map(col => `<td>${row[col.name] || ''}</td>`).join('');
+            return `<tr>${cells}</tr>`;
+        }).join('');
+
+        const pagination = totalPages > 1 ? `
+            <div class="table-pagination">
+                <button class="admin-btn secondary" onclick="adminPanel.showTableData('${tableName}', ${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>
+                    Anterior
+                </button>
+                <span>Página ${currentPage} de ${totalPages}</span>
+                <button class="admin-btn secondary" onclick="adminPanel.showTableData('${tableName}', ${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>
+                    Siguiente
+                </button>
+            </div>
+        ` : '';
+
+        return `
+            <div class="table-details-header">
+                <h3>Datos de la tabla: ${tableName}</h3>
+                <div class="table-info">
+                    <span class="info-item">Mostrando ${data.length} registros</span>
+                </div>
+            </div>
+
+            <div class="table-data-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>${headers}</tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+                ${pagination}
+            </div>
+        `;
+    }
+
+    // Función de diagnóstico para verificar estado de autenticación
+    async checkAuthStatus() {
+        try {
+            // Mostrar resultados en el panel de base de datos
+            const resultsContent = document.getElementById('dbResultsContent');
+            const resultsSection = document.getElementById('dbResultsSection');
+
+            if (resultsContent && resultsSection) {
+                resultsSection.style.display = 'block';
+                resultsContent.innerHTML = `
+                    <div class="db-loading">
+                        <div class="spinner"></div>
+                        <span>Verificando estado de autenticación...</span>
+                    </div>
+                `;
+            }
+
+            const token = localStorage.getItem('token');
+            const adminToken = localStorage.getItem('admin_token');
+
+            let diagnosticResults = [];
+
+            // Verificar tokens locales
+            diagnosticResults.push({
+                type: 'info',
+                title: 'Tokens Locales',
+                details: [
+                    `Token normal: ${token ? '✅ Presente' : '❌ No encontrado'}`,
+                    `Token admin: ${adminToken ? '✅ Presente' : '❌ No encontrado'}`
+                ]
+            });
+
+            console.log('🔍 Estado de autenticación:');
+            console.log('- Token normal:', token ? '✅ Presente' : '❌ No encontrado');
+            console.log('- Token admin:', adminToken ? '✅ Presente' : '❌ No encontrado');
+
+            if (!token) {
+                diagnosticResults.push({
+                    type: 'error',
+                    title: 'Error de Autenticación',
+                    details: ['No hay token de autenticación disponible']
+                });
+
+                this.showDiagnosticResults(diagnosticResults);
+                window.showNotification('No hay token de autenticación. Redirigiendo al login...', 'error');
+                setTimeout(() => {
+                    window.location.href = '/adminLogin';
+                }, 2000);
+                return false;
+            }
+
+            // Verificar token con el servidor
+            diagnosticResults.push({
+                type: 'info',
+                title: 'Verificación con Servidor',
+                details: ['Verificando token con el servidor...']
+            });
+
+            const response = await fetch('/api/auth/me', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const userData = await response.json();
+                diagnosticResults.push({
+                    type: 'success',
+                    title: 'Autenticación Exitosa',
+                    details: [
+                        `Usuario: ${userData.usuario}`,
+                        `Rol: ${userData.rol}`,
+                        'Token válido y activo'
+                    ]
+                });
+
+                console.log('✅ Token válido para usuario:', userData.usuario, '- Rol:', userData.rol);
+                this.showDiagnosticResults(diagnosticResults);
+                return true;
+            } else {
+                diagnosticResults.push({
+                    type: 'error',
+                    title: 'Token Inválido',
+                    details: [
+                        `Código de respuesta: ${response.status}`,
+                        'El token ha expirado o es inválido'
+                    ]
+                });
+
+                console.error('❌ Token inválido o expirado');
+                this.showDiagnosticResults(diagnosticResults);
+                window.showNotification('Token expirado. Redirigiendo al login...', 'error');
+                localStorage.removeItem('token');
+                localStorage.removeItem('admin_token');
+                setTimeout(() => {
+                    window.location.href = '/adminLogin';
+                }, 2000);
+                return false;
+            }
+        } catch (error) {
+            const diagnosticResults = [{
+                type: 'error',
+                title: 'Error de Conexión',
+                details: [
+                    'Error verificando autenticación',
+                    `Detalles: ${error.message}`
+                ]
+            }];
+
+            this.showDiagnosticResults(diagnosticResults);
+            console.error('❌ Error verificando autenticación:', error);
+            window.showNotification('Error de conexión. Verifica tu conexión a internet.', 'error');
+            return false;
+        }
+    }
+
+    // Función auxiliar para mostrar resultados del diagnóstico
+    showDiagnosticResults(results) {
+        const resultsContent = document.getElementById('dbResultsContent');
+        const resultsSection = document.getElementById('dbResultsSection');
+
+        if (!resultsContent || !resultsSection) return;
+
+        resultsSection.style.display = 'block';
+
+        const resultsHtml = results.map(result => {
+            const iconClass = result.type === 'success' ? 'check-circle' :
+                result.type === 'error' ? 'x-circle' : 'info';
+
+            return `
+                <div class="diagnostic-result ${result.type}">
+                    <div class="diagnostic-header">
+                        <svg class="diagnostic-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            ${result.type === 'success' ?
+                    '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2"/><polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" stroke-width="2"/>' :
+                    result.type === 'error' ?
+                        '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/><line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>' :
+                        '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 16v-4" stroke="currentColor" stroke-width="2"/><path d="M12 8h.01" stroke="currentColor" stroke-width="2"/>'}
+                        </svg>
+                        <span class="diagnostic-title">${result.title}</span>
+                    </div>
+                    <div class="diagnostic-details">
+                        ${result.details.map(detail => `<div class="diagnostic-detail">${detail}</div>`).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        resultsContent.innerHTML = `
+            <div class="diagnostic-summary">
+                <h4>Resultado del Diagnóstico de Autenticación</h4>
+                <div class="diagnostic-results">
+                    ${resultsHtml}
+                </div>
+            </div>
+        `;
+
+        // Scroll to bottom
+        resultsContent.scrollTop = resultsContent.scrollHeight;
     }
 }
 
@@ -858,62 +2538,269 @@ document.addEventListener('DOMContentLoaded', () => {
     adminPanel = new AdminPanel();
 });
 
-// Agregar estilos CSS para las animaciones de notificaciones
-const notificationStyles = document.createElement('style');
-notificationStyles.textContent = `
-    @keyframes slideInRight {
-        from {
-            opacity: 0;
-            transform: translateX(100%);
+/* ========================================
+   SISTEMA DE NOTIFICACIONES APILADAS PARA ADMIN
+   ======================================== */
+
+class AdminNotificationManager {
+    constructor() {
+        this.notifications = [];
+        this.container = null;
+        this.maxNotifications = 5;
+        this.init();
+    }
+
+    init() {
+        // Crear contenedor si no existe
+        if (!document.getElementById('admin-notification-container')) {
+            this.container = document.createElement('div');
+            this.container.id = 'admin-notification-container';
+            this.container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10001; display: flex; flex-direction: column; gap: 10px; max-width: 450px; pointer-events: none;';
+            document.body.appendChild(this.container);
+        } else {
+            this.container = document.getElementById('admin-notification-container');
         }
-        to {
-            opacity: 1;
-            transform: translateX(0);
+    }
+
+    show(message, type = 'info', duration = 3500) {
+        // Crear notificación
+        const notification = this.createNotification(message, type);
+
+        // Agregar al contenedor
+        this.container.appendChild(notification);
+        this.notifications.push(notification);
+
+        // Gestionar límite de notificaciones
+        if (this.notifications.length > this.maxNotifications) {
+            const oldest = this.notifications.shift();
+            this.removeNotification(oldest);
         }
-    }
-    
-    @keyframes slideOutRight {
-        from {
-            opacity: 1;
-            transform: translateX(0);
+
+        // Auto-remover
+        if (duration > 0) {
+            setTimeout(() => {
+                this.removeNotification(notification);
+            }, duration);
         }
-        to {
-            opacity: 0;
-            transform: translateX(100%);
+
+        // Animar entrada
+        requestAnimationFrame(() => {
+            notification.style.transform = 'translateX(0)';
+            notification.style.opacity = '1';
+        });
+
+        return notification;
+    }
+
+    createNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = 'admin-notification ' + type;
+
+        // Aplicar estilos usando propiedades individuales
+        Object.assign(notification.style, {
+            background: this.getBackgroundColor(type),
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            padding: '16px 20px',
+            borderLeft: '4px solid ' + this.getBorderColor(type),
+            transform: 'translateX(100%)',
+            opacity: '0',
+            transition: 'all 0.3s ease',
+            pointerEvents: 'auto',
+            position: 'relative',
+            overflow: 'hidden'
+        });
+
+        // Crear contenido HTML de forma segura
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'notification-content';
+
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'notification-icon';
+        iconDiv.innerHTML = this.getIcon(type);
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'notification-text';
+        textDiv.textContent = message;
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'notification-close';
+        closeBtn.setAttribute('aria-label', 'Cerrar notificaci\u00f3n');
+        closeBtn.textContent = '\u00d7';
+
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'notification-progress';
+        Object.assign(progressDiv.style, {
+            position: 'absolute',
+            bottom: '0',
+            left: '0',
+            height: '3px',
+            background: this.getProgressColor(type),
+            width: '100%',
+            transformOrigin: 'left',
+            animation: 'notificationProgress 3.5s linear forwards'
+        });
+
+        // Ensamblar elementos
+        contentDiv.appendChild(iconDiv);
+        contentDiv.appendChild(textDiv);
+        contentDiv.appendChild(closeBtn);
+        notification.appendChild(contentDiv);
+        notification.appendChild(progressDiv);
+
+        // Evento para cerrar
+        notification.querySelector('.notification-close').addEventListener('click', () => {
+            this.removeNotification(notification);
+        });
+
+        return notification;
+    }
+
+    removeNotification(notification) {
+        if (!notification || !notification.parentNode) return;
+
+        // Animar salida
+        notification.style.transform = 'translateX(100%)';
+        notification.style.opacity = '0';
+
+        // Remover del array
+        const index = this.notifications.indexOf(notification);
+        if (index > -1) {
+            this.notifications.splice(index, 1);
         }
+
+        // Remover del DOM después de la animación
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 300);
     }
-    
-    .admin-notification {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    getBackgroundColor(type) {
+        const colors = {
+            success: '#f0fdf4',
+            error: '#fef2f2',
+            warning: '#fffbeb',
+            info: '#eff6ff'
+        };
+        return colors[type] || colors.info;
     }
-    
-    .notification-content {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
+
+    getBorderColor(type) {
+        const colors = {
+            success: '#22c55e',
+            error: '#ef4444',
+            warning: '#f59e0b',
+            info: '#3b82f6'
+        };
+        return colors[type] || colors.info;
     }
-    
-    .notification-close {
-        background: none;
-        border: none;
-        font-size: 18px;
-        cursor: pointer;
-        color: #64748b;
-        padding: 0;
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+
+    getProgressColor(type) {
+        const colors = {
+            success: '#22c55e',
+            error: '#ef4444',
+            warning: '#f59e0b',
+            info: '#3b82f6'
+        };
+        return colors[type] || colors.info;
     }
-    
-    .notification-close:hover {
-        color: #374151;
+
+    getIcon(type) {
+        const icons = {
+            success: '\u2713',
+            error: '\u2717',
+            warning: '\u26a0',
+            info: '\u2139'
+        };
+        const iconSpan = document.createElement('span');
+        iconSpan.style.fontSize = '18px';
+        iconSpan.style.color = this.getBorderColor(type);
+        iconSpan.textContent = icons[type] || icons.info;
+        return iconSpan.outerHTML;
     }
+}
+
+// Agregar estilos CSS para las animaciones
+const notificationStyles = `
+@keyframes notificationProgress {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(100%); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideOutRight {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(100%); }
+}
+
+.admin-notification {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.notification-content {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.notification-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.notification-text {
+    flex: 1;
+    color: #374151;
+    font-weight: 500;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #9ca3af;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.notification-close:hover {
+    color: #374151;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.notification-progress {
+    border-radius: 0 0 8px 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .notification-text { color: #e5e7eb; }
+    .notification-close:hover { background: rgba(255, 255, 255, 0.1); }
+}
 `;
 
-document.head.appendChild(notificationStyles);
+// Inyectar estilos si no existen
+if (!document.getElementById('admin-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'admin-notification-styles';
+    style.textContent = notificationStyles;
+    document.head.appendChild(style);
+}
 
 /* ========================================
    EXPORTAR PARA OTROS MÓDULOS

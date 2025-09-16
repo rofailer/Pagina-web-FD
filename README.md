@@ -64,9 +64,20 @@ Este proyecto es un sistema web completo para la **firma y verificación de docu
    JWT_SECRET=un_secreto_seguro
    ```
 
-5. **Importa el esquema de la base de datos:**
+5. **Configura la base de datos automáticamente:**
 
-   - Usa XAMPP y phpMyAdmin o tu cliente favorito para importar `firmas_digitales.sql`.
+   ```sh
+   # Opción 1: Configuración completa (recomendado)
+   npm run setup-db
+
+   # Opción 2: Solo crear tablas (si la BD ya existe)
+   npm run setup-tables
+
+   # Opción 3: Resetear base de datos completa
+   npm run reset-db
+   ```
+
+   Estos comandos automatizan la creación de la base de datos, tablas, y datos iniciales.
 
 6. **Inicia el servidor:**
    ```sh
@@ -84,6 +95,31 @@ Este proyecto es un sistema web completo para la **firma y verificación de docu
 4. Firma documentos PDF y descarga el archivo firmado.
 5. Verifica documentos firmados subiendo el PDF original y el firmado.
 
+### 👨‍💼 Panel de Administración
+
+El sistema incluye un panel de administración completo accesible para usuarios con rol `admin`:
+
+#### Funcionalidades del panel:
+
+- **Configuración visual**: Personalizar logo, colores, título, footer, fondo
+- **Gestión de usuarios**: Ver, editar y administrar usuarios del sistema
+- **Métricas del sistema**: Estadísticas en tiempo real de uso
+- **Configuración de base de datos**:
+  - Instalación automática de primera vez
+  - Verificación de estado de BD
+  - Backup y restauración
+  - Reset de base de datos
+- **Gestión de llaves**: Supervisar llaves activas del sistema
+- **Configuración del sistema**: Ajustes globales y personalización
+
+#### Acceso al panel:
+
+1. Inicia sesión con un usuario administrador
+2. Accede a `/admin` o usa el menú de navegación
+3. Gestiona todas las configuraciones desde la interfaz web
+
+Para más detalles sobre el panel de administración, consulta la documentación específica.
+
 ---
 
 ## 🗄️ Base de datos
@@ -94,6 +130,46 @@ Este proyecto es un sistema web completo para la **firma y verificación de docu
   npm install express mysql2 bcryptjs jsonwebtoken cors dotenv
   ```
 - Importa el archivo `firmas_digitales.sql` para crear las tablas necesarias.
+
+### 🛠️ Sistema de Gestión Automática de Base de Datos
+
+El proyecto incluye un sistema avanzado de configuración automática de base de datos con las siguientes características:
+
+#### Comandos NPM disponibles:
+
+```sh
+# Configuración completa de primera vez
+npm run setup-db
+
+# Crear solo las tablas (BD ya existe)
+npm run setup-tables
+
+# Resetear completamente la base de datos
+npm run reset-db
+
+# Crear backup de la BD actual
+npm run backup-db
+
+# Ver estado de la base de datos
+npm run db-status
+```
+
+#### Características del sistema:
+
+- **Auto-detección**: Detecta automáticamente si la BD existe o no
+- **Backup automático**: Crea respaldos con timestamp antes de modificaciones
+- **Recuperación inteligente**: Restaura desde backup si hay errores
+- **Validación completa**: Verifica integridad de tablas y datos
+- **Manejo de errores**: Mensajes claros y opciones de recuperación
+- **Configuración flexible**: Soporta diferentes entornos y configuraciones
+
+#### Archivos relacionados:
+
+- `scripts/setup-db.js`: Motor principal del sistema de configuración
+- `firmas_digitales_v2.sql`: Esquema actualizado de la base de datos
+- `DATABASE_SETUP_GUIDE.md`: Documentación completa del sistema
+
+Para más detalles, consulta `DATABASE_SETUP_GUIDE.md`.
 
 ---
 
@@ -115,11 +191,13 @@ Este proyecto es un sistema web completo para la **firma y verificación de docu
 - [cors](https://www.npmjs.com/package/cors)
 - [dotenv](https://www.npmjs.com/package/dotenv)
 - [pdf-lib](https://www.npmjs.com/package/pdf-lib)
+- [multer](https://www.npmjs.com/package/multer) (para manejo de archivos)
+- [fs-extra](https://www.npmjs.com/package/fs-extra) (para operaciones de archivos)
 
 Instala todas con:
 
 ```sh
-npm install express mysql2 bcryptjs jsonwebtoken cors dotenv pdf-lib
+npm install express mysql2 bcryptjs jsonwebtoken cors dotenv pdf-lib multer fs-extra
 ```
 
 ---
@@ -131,6 +209,27 @@ npm install express mysql2 bcryptjs jsonwebtoken cors dotenv pdf-lib
 - Realiza respaldos periódicos de la base de datos.
 - Usa contraseñas seguras para tus llaves privadas.
 - El sistema está pensado para uso académico y prototipos; revisa los requisitos de seguridad para producción.
+
+### 📚 Documentación adicional
+
+- `DATABASE_SETUP_GUIDE.md`: Guía completa del sistema de configuración de base de datos
+- `docs/SISTEMA_TEMAS.md`: Documentación del sistema de temas y personalización visual
+- `CAMBIOS_PDF_PERSONALIZACION.txt`: Registro de cambios en el sistema de personalización PDF
+
+### 🔧 Troubleshooting
+
+#### Problemas comunes con la base de datos:
+
+- **Error de conexión**: Verifica credenciales en `.env` y que MySQL esté ejecutándose
+- **Tablas no existen**: Ejecuta `npm run setup-db` para configuración automática
+- **Error de puerto**: Asegúrate de que el puerto 3307 esté disponible en XAMPP
+
+#### Problemas con OpenSSL:
+
+- **Comando no encontrado**: Agrega OpenSSL al PATH del sistema
+- **Error de firma**: Verifica que las llaves sean válidas y no expiradas
+
+Para problemas específicos del sistema de base de datos, consulta `DATABASE_SETUP_GUIDE.md`.
 
 ---
 

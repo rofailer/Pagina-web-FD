@@ -478,22 +478,6 @@
     flex: 1;
   }
 
-  /* BASE DE DATOS MÓVIL */
-  .db-config-grid {
-    grid-template-columns: 1fr;
-    gap: var(--admin-spacing-md);
-  }
-
-  .db-status-card {
-    padding: var(--admin-spacing-lg);
-  }
-
-  .db-status-icon {
-    width: 48px;
-    height: 48px;
-    margin-bottom: var(--admin-spacing-md);
-  }
-
   /* INFORMACIÓN DEL SISTEMA MÓVIL */
   .system-info-grid {
     grid-template-columns: 1fr;
@@ -530,26 +514,22 @@
     margin: 0 auto var(--admin-spacing-sm);
   }
 
-  /* MODALES MÓVIL */
+  /* MODALES MÓVIL - DISEÑO MODERNO */
   .admin-modal-content {
     width: 95%;
-    max-width: none;
-    margin: var(--admin-spacing-md);
-    max-height: calc(100vh - 2rem);
+    padding: 20px;
+    margin: 20px;
   }
 
-  .admin-modal-header,
-  .admin-modal-body,
-  .admin-modal-footer {
-    padding: var(--admin-spacing-lg);
+  .admin-modal-header h3 {
+    font-size: 20px;
   }
 
   .admin-modal-footer {
     flex-direction: column;
-    gap: var(--admin-spacing-sm);
   }
 
-  .admin-modal-footer .admin-btn {
+  .admin-btn {
     width: 100%;
   }
 

@@ -5,17 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Panel Administrativo</title>
 
-    <!-- CSS del sistema administrativo -->
-    <link rel="stylesheet" href="../css/admin.css" />
-    <link rel="stylesheet" href="../css/admin-components.css" />
-    <link rel="stylesheet" href="../css/admin-responsive.css" />
-    <link rel="stylesheet" href="../css/panelAdmin.css" />
-    <link rel="stylesheet" href="../css/preview-icon.css" />
-    <link rel="stylesheet" href="../../css/themeSelector.css" />
-    <link rel="stylesheet" href="../../css/visualConfig.css" />
+    <link rel="stylesheet" href="/admin/css/admin.css" />
+    <link rel="stylesheet" href="/admin/css/admin-components.css" />
+    <link rel="stylesheet" href="/admin/css/secciones/admin-user-management.css" />
+    <link rel="stylesheet" href="/admin/css/admin-responsive.css" />
+    <link rel="stylesheet" href="/admin/css/panelAdmin.css" />
+    <link rel="stylesheet" href="/admin/css/preview-icon.css" />
+    <link rel="stylesheet" href="/admin/css/secciones/database.css" />
+    <link rel="stylesheet" href="/css/themeSelector.css" />
+    <link rel="stylesheet" href="/css/visualConfig.css" />
+    <link rel="stylesheet" href="/css/restoreConfirmModal.css" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
 
     <!-- Inicialización temprana del tema - NO aplica tema, solo prepara para themeManager -->
     <script>
@@ -51,7 +53,7 @@
           console.log(
             "🔐 No hay token de administración, redirigiendo al login"
           );
-          window.location.href = "/admin/html/loginAdminPanel.html";
+          window.location.href = "/adminLogin";
           return;
         }
 
@@ -68,6 +70,76 @@
         console.log(
           "🔐 TokenId presente, procediendo con autenticación normal"
         );
+      })();
+
+      // Script para mejorar formularios administrativos
+      (function() {
+        document.addEventListener('DOMContentLoaded', function() {
+          // Manejar efectos de foco en grupos de formulario
+          const formGroups = document.querySelectorAll('.admin-form-group');
+
+          formGroups.forEach(group => {
+            const input = group.querySelector('.admin-input, .admin-select, .admin-textarea');
+
+            if (input) {
+              input.addEventListener('focus', function() {
+                group.classList.add('focused');
+              });
+
+              input.addEventListener('blur', function() {
+                if (!this.value.trim()) {
+                  group.classList.remove('focused');
+                }
+              });
+
+              // Mantener estado focused si hay valor
+              if (input.value.trim()) {
+                group.classList.add('focused');
+              }
+            }
+          });
+
+          // Mejorar experiencia de select
+          const selects = document.querySelectorAll('.admin-select');
+          selects.forEach(select => {
+            select.addEventListener('change', function() {
+              const group = this.closest('.admin-form-group');
+              if (group && this.value) {
+                group.classList.add('focused');
+              }
+            });
+          });
+
+          // Función para toggle de contraseña
+          window.togglePasswordVisibility = function(inputId) {
+            const input = document.getElementById(inputId);
+            const toggleBtn = input.nextElementSibling;
+
+            if (input && toggleBtn) {
+              const isPassword = input.type === 'password';
+              input.type = isPassword ? 'text' : 'password';
+
+              // Actualizar el icono del botón
+              const svg = toggleBtn.querySelector('svg');
+              if (svg) {
+                if (isPassword) {
+                  // Cambiar a icono de "ocultar"
+                  svg.innerHTML = `
+                    <path d="M2.99902 3L20.999 21M9.8433 9.91364C9.32066 10.4536 8.99902 11.1892 8.99902 12C8.99902 13.6569 10.3422 15 11.999 15C12.8215 15 13.5667 14.669 14.1086 14.133M6.49902 6.64715C4.59972 7.90034 3.15305 9.78394 2.45703 12C3.73128 16.0571 7.52159 19 11.9992 19C13.9881 19 15.8414 18.4194 17.3988 17.4184M10.999 5.04939C11.328 5.01673 11.6617 5 11.9992 5C16.4769 5 20.2672 7.94291 21.5414 12C21.2607 12.894 20.8577 13.7338 20.3522 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  `;
+                } else {
+                  // Cambiar a icono de "mostrar"
+                  svg.innerHTML = `
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                  `;
+                }
+              }
+
+              // Sin animación
+            }
+          };
+        });
       })();
     </script>
   </head>
@@ -145,6 +217,16 @@
         </div>
 
         <div class="admin-header-actions">
+          <!-- Indicador de usuario activo -->
+          <div class="admin-user-indicator" id="admin-user-indicator" style="display: none;">
+            <div class="admin-user-avatar">U</div>
+            <div class="admin-user-info">
+              <span class="admin-user-name">Cargando...</span>
+              <span class="admin-user-role">Verificando...</span>
+            </div>
+            <div class="admin-user-status"></div>
+          </div>
+
           <!-- Botón para volver al sitio principal -->
           <button
             class="admin-btn secondary main-site-btn"
@@ -712,6 +794,7 @@
                       <input
                         type="text"
                         id="userFullName"
+                        name="name"
                         required
                         class="admin-input"
                         placeholder="Juan Pérez García"
@@ -723,6 +806,7 @@
                       <input
                         type="text"
                         id="userIdNumber"
+                        name="idNumber"
                         required
                         class="admin-input"
                         placeholder="12345678"
@@ -734,6 +818,7 @@
                       <input
                         type="text"
                         id="userName"
+                        name="username"
                         required
                         class="admin-input"
                         placeholder="jperez"
@@ -749,6 +834,7 @@
                         <input
                           type="password"
                           id="userPassword"
+                          name="password"
                           required
                           class="admin-input"
                           placeholder="••••••••"
@@ -783,10 +869,11 @@
 
                     <div class="admin-form-group">
                       <label for="userRole">Rol del Usuario *</label>
-                      <select id="userRole" required class="admin-select">
+                      <select id="userRole" name="role" required class="admin-select">
                         <option value="">Seleccionar rol...</option>
-                        <option value="profesor">Profesor</option>
+                        <option value="user">Usuario</option>
                         <option value="admin">Administrador</option>
+                        <option value="owner">Propietario</option>
                       </select>
                       <span class="admin-input-help"
                         >Los administradores tienen acceso completo al
@@ -795,10 +882,12 @@
                     </div>
 
                     <div class="admin-form-group">
-                      <label for="userEmail">Correo Electrónico</label>
+                      <label for="userEmail">Correo Electrónico *</label>
                       <input
                         type="email"
                         id="userEmail"
+                        name="email"
+                        required
                         class="admin-input"
                         placeholder="usuario@universidad.edu"
                       />
@@ -1360,89 +1449,185 @@
           </div>
 
           <!-- TAB 5: BASE DE DATOS -->
-          <div class="admin-tab-content" id="tab-base-datos">
+          <div class="admin-tab-content active" id="tab-base-datos">
             <h2>Administración de Base de Datos</h2>
             <p class="tab-description">
-              Monitorea y administra la base de datos del sistema
+              Monitorea y administra la base de datos del sistema con comandos avanzados.
             </p>
 
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <ellipse
-                    cx="12"
-                    cy="5"
-                    rx="9"
-                    ry="3"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <path
-                    d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <path
-                    d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Estado de la Base de Datos
-              </h3>
+            <!-- ADMINISTRACIÓN DE BASE DE DATOS -->
+            <div class="db-main-section">
+              <!-- PANEL IZQUIERDO: COMANDOS -->
+              <div class="db-operations-panel">
+                <!-- Header -->
+                <div class="db-section-title">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <ellipse cx="12" cy="5" rx="8" ry="3" stroke="currentColor" stroke-width="2"/>
+                    <path d="M4 5v6c0 2.5 3.5 4.5 8 4.5s8-2 8-4.5V5" stroke="currentColor" stroke-width="2"/>
+                    <path d="M4 11v6c0 2.5 3.5 4.5 8 4.5s8-2 8-4.5v-6" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  <h3>Base de Datos</h3>
+                </div>
 
-              <div class="db-status-container">
-                <div class="db-status-card">
-                  <div class="db-status-header">
-                    <div class="status-indicator online"></div>
-                    <h4>Conexión Establecida</h4>
+                <!-- Estado de conexión -->
+                <div class="db-status-section">
+                  <div class="db-status-card" id="dbStatusCard">
+                    <div class="db-status-layout">
+                      <div class="db-status-info">
+                        <div class="db-status-details">
+                          <h5 id="dbStatusTitle">
+                            <span>Verificando...</span>
+                            <div class="db-status-indicator" id="dbStatusIndicator"></div>
+                          </h5>
+                          <p id="dbStatusDetails">Conectando a la base de datos</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div class="db-status-details" id="dbStatusDetails">
-                    <!-- Se carga dinámicamente -->
+                </div>
+
+                <!-- Comandos -->
+                <div class="db-commands-section">
+                  <h4>Comandos</h4>
+                  <div class="db-commands-grid">
+                    <button class="db-cmd-btn" onclick="adminPanel.testDatabaseConnection()" title="Probar conexión">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                      <span>Probar</span>
+                    </button>
+
+                    <button class="db-cmd-btn" id="backupDbBtn" onclick="adminPanel.backupDatabase()" title="Crear respaldo">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2"/>
+                        <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2"/>
+                        <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                      <span>Backup</span>
+                    </button>
+
+                    <button class="db-cmd-btn" onclick="adminPanel.runDbCommand('reset')" title="Reiniciar datos">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <polyline points="23,4 23,10 17,10" stroke="currentColor" stroke-width="2"/>
+                        <polyline points="1,20 1,14 7,14" stroke="currentColor" stroke-width="2"/>
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                      <span>Reset</span>
+                    </button>
+
+                    <button class="db-cmd-btn" onclick="adminPanel.restoreDatabase()" title="Restaurar desde backup">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2"/>
+                        <polyline points="17,8 12,3 7,8" stroke="currentColor" stroke-width="2"/>
+                        <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                      <span>Restaurar</span>
+                    </button>
+
+                    <button class="db-cmd-btn" onclick="adminPanel.runDbCommand('status')" title="Ver estado">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                      <span>Estado</span>
+                    </button>
                   </div>
                 </div>
               </div>
 
-              <div class="admin-actions">
-                <button
-                  class="admin-btn secondary"
-                  onclick="testDbConnection()"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <polyline
-                      points="22,12 18,12 15,21 9,3 6,12 2,12"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                  </svg>
-                  Probar Conexión
-                </button>
-                <button class="admin-btn warning" onclick="backupDatabase()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <polyline
-                      points="7,10 12,15 17,10"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <line
-                      x1="12"
-                      y1="15"
-                      x2="12"
-                      y2="3"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                  </svg>
-                  Crear Respaldo
-                </button>
+              <!-- PANEL CENTRAL: RESULTADOS -->
+              <div class="db-results-panel">
+                <!-- Header simplificado -->
+                <div class="db-viewer-header">
+                  <h3>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                      <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="2"/>
+                      <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="2"/>
+                      <line x1="6" y1="8" x2="6" y2="8" stroke="currentColor" stroke-width="2"/>
+                      <line x1="10" y1="8" x2="10" y2="8" stroke="currentColor" stroke-width="2"/>
+                      <line x1="14" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="2"/>
+                      <line x1="18" y1="8" x2="18" y2="8" stroke="currentColor" stroke-width="2"/>
+                      <line x1="6" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="2"/>
+                      <line x1="10" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="2"/>
+                      <line x1="14" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="2"/>
+                      <line x1="18" y1="12" x2="18" y2="12" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Resultados
+                  </h3>
+                  <div class="action-buttons">
+                    <button class="clear-btn" onclick="adminPanel.clearResults()" title="Limpiar">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                      <span>Limpiar</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Contenido directo -->
+                <div class="results-content" id="resultsContent">
+                  <div class="no-results">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+                      <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+                      <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+                      <line x1="6" y1="8" x2="18" y2="8" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+                      <line x1="6" y1="12" x2="18" y2="12" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+                      <circle cx="9" cy="10" r="1" fill="currentColor" opacity="0.5"/>
+                      <circle cx="15" cy="10" r="1" fill="currentColor" opacity="0.5"/>
+                      <circle cx="12" cy="14" r="1" fill="currentColor" opacity="0.5"/>
+                    </svg>
+                    <p>Selecciona una tabla para ver sus datos</p>
+                  </div>
+                </div>
+
+                <!-- Resultados de comandos -->
+                <div class="db-command-results" id="dbResultsSection" style="display: none">
+                  <div class="db-results-header">
+                    <h4>Información de Tablas</h4>
+                  </div>
+                  <div class="db-results-content" id="dbResultsContent">
+                    <div class="db-loading">
+                      <div class="spinner"></div>
+                      <span>Ejecutando comando...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PANEL DERECHO: TABLAS -->
+              <div class="db-tables-panel">
+                <!-- Header simplificado -->
+                <div class="db-viewer-header">
+                  <h3>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                      <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="2"/>
+                      <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Tablas
+                  </h3>
+                  <button class="refresh-btn" onclick="adminPanel.refreshTables()" title="Actualizar">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <polyline points="23,4 23,10 17,10" stroke="currentColor" stroke-width="2"/>
+                      <polyline points="1,20 1,14 7,14" stroke="currentColor" stroke-width="2"/>
+                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                <!-- Lista directa -->
+                <div class="tables-list" id="tablesList">
+                  <div class="db-loading">
+                    <div class="spinner"></div>
+                    <span>Cargando...</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
           <!-- TAB 6: SISTEMA AVANZADO -->
           <div class="admin-tab-content" id="tab-sistema-avanzado">
@@ -1569,14 +1754,14 @@
 
     <!-- Script de validación de autenticación de máxima seguridad -->
     <!-- Scripts del sistema administrativo -->
-    <script src="../../scripts/frontend/notifications.js"></script>
-    <script src="../../scripts/frontend/auth.frontend.js"></script>
-    <script src="../js/admin.frontend.js"></script>
-    <script src="../js/user-management.js"></script>
-    <script src="../js/advanced-config.js"></script>
+    <script src="/scripts/frontend/notifications.js"></script>
+    <script src="/scripts/frontend/auth.frontend.js"></script>
+    <script src="/admin/js/admin.frontend.js"></script>
+    <script src="/admin/js/user-management.js"></script>
+    <script src="/admin/js/advanced-config.js"></script>
     <!-- Sistema unificado de temas -->
-    <script src="../../scripts/utils/themeManager.js"></script>
-    <script src="../../scripts/frontend/visualConfig.frontend.js"></script>
-    <script src="../js/panelAdmin.js"></script>
+    <script src="/scripts/utils/themeManager.js"></script>
+    <script src="/scripts/frontend/visualConfig.frontend.js"></script>
+    <script src="/admin/js/panelAdmin.js"></script>
   </body>
 </html>
