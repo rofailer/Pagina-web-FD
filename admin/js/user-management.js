@@ -12,6 +12,15 @@ class UserManagement {
         this.init();
     }
 
+    // Helper para obtener headers de autenticación
+    getAuthHeaders() {
+        const token = localStorage.getItem('token');
+        return {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+    }
+
     init() {
         this.setupAdvancedEventListeners();
         this.loadUserRoles();
@@ -52,10 +61,26 @@ class UserManagement {
 
     async loadUserRoles() {
         try {
-            const response = await fetch(`${this.adminPanel.apiBase}/user-roles`);
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.warn('No hay token disponible para cargar roles');
+                return;
+            }
+
+            const response = await fetch(`${this.adminPanel.apiBase}/user-roles`, {
+                method: 'GET',
+                headers: this.getAuthHeaders()
+            });
+
             if (response.ok) {
-                const roles = await response.json();
-                this.renderRoleFilters(roles);
+                const data = await response.json();
+                if (data.success && data.data) {
+                    this.renderRoleFilters(data.data);
+                } else {
+                    console.error('Respuesta inválida del servidor:', data);
+                }
+            } else {
+                console.error('Error en la respuesta:', response.status, response.statusText);
             }
         } catch (error) {
             console.error('Error cargando roles:', error);
@@ -416,9 +441,7 @@ class UserManagement {
 
             const response = await fetch(`${this.adminPanel.apiBase}/users/${this.currentEditUser.id}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify(userData)
             });
 
@@ -686,10 +709,7 @@ class UserManagement {
 
             const response = await fetch(`${this.adminPanel.apiBase}/users`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify(userData)
             });
 

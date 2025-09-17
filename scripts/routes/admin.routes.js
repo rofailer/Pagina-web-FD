@@ -2387,4 +2387,55 @@ router.post('/api/admin/database/table-data', authenticateAdmin, async (req, res
     }
 });
 
+/* ========================================
+   ENDPOINT: OBTENER ROLES DE USUARIO
+   ======================================== */
+
+router.get('/api/admin/user-roles', authenticate, isAdmin, async (req, res) => {
+    try {
+        console.log('🔍 Solicitando lista de roles de usuario');
+
+        // Roles disponibles en el sistema
+        const availableRoles = [
+            {
+                id: 'user',
+                name: 'Usuario',
+                description: 'Usuario estándar con permisos básicos',
+                permissions: ['read', 'sign'],
+                color: '#3b82f6'
+            },
+            {
+                id: 'admin',
+                name: 'Administrador',
+                description: 'Administrador con permisos avanzados',
+                permissions: ['read', 'write', 'delete', 'admin'],
+                color: '#f59e0b'
+            },
+            {
+                id: 'owner',
+                name: 'Propietario',
+                description: 'Propietario del sistema con permisos totales',
+                permissions: ['read', 'write', 'delete', 'admin', 'owner'],
+                color: '#ef4444'
+            }
+        ];
+
+        console.log('✅ Roles obtenidos exitosamente:', availableRoles.length);
+
+        res.json({
+            success: true,
+            message: 'Roles obtenidos exitosamente',
+            data: availableRoles
+        });
+
+    } catch (error) {
+        console.error('❌ Error obteniendo roles de usuario:', error);
+               res.status(500).json({
+            success: false,
+            message: 'Error al obtener roles de usuario',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
