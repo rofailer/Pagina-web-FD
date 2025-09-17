@@ -31,6 +31,11 @@ class AdminAccess {
 
         if (this.loginBtn) {
             this.loginBtn.addEventListener("click", (event) => {
+                console.log("🖱️ BOTÓN LOGIN CLICK DETECTADO");
+                console.log("🖱️ Event:", event.type);
+                console.log("🖱️ Button disabled:", this.loginBtn.disabled);
+                console.log("🖱️ Password value:", this.passwordInput ? this.passwordInput.value : "NO INPUT");
+
                 if (this.loginBtn.disabled) {
                     event.preventDefault();
                     return;
@@ -192,6 +197,10 @@ class AdminAccess {
     }
 
     async handleLogin(event) {
+        console.log("🎯 HANDLE LOGIN INICIADO");
+        console.log("🎯 Event type:", event ? event.type : "NO EVENT");
+        console.log("🎯 isPasswordOnlyMode:", this.isPasswordOnlyMode);
+
         if (event && event.preventDefault) {
             event.preventDefault();
         }
@@ -201,12 +210,14 @@ class AdminAccess {
 
         try {
             if (this.isPasswordOnlyMode) {
+                console.log("🔑 Ejecutando modo solo contraseña");
                 await this.handlePasswordConfirmation();
             } else {
+                console.log("👤 Ejecutando modo login completo");
                 await this.handleFullLogin();
             }
         } catch (error) {
-            console.error("Error de autenticación:", error);
+            console.error("❌ Error de autenticación:", error);
             this.showAlert("Error de conexión. Intenta nuevamente.", "error");
         } finally {
             this.setLoading(false);
@@ -214,6 +225,11 @@ class AdminAccess {
     }
 
     async handlePasswordConfirmation() {
+        console.log("🚨🚨🚨 HANDLE PASSWORD CONFIRMATION EJECUTADO 🚨🚨🚨");
+        console.log("🔍 Timestamp:", new Date().toISOString());
+        console.log("🔍 this.passwordInput:", this.passwordInput);
+        console.log("🔍 this.currentUserEmail:", this.currentUserEmail);
+
         const password = this.passwordInput.value;
 
         if (!password.trim()) {
