@@ -3,6 +3,10 @@ node_modules/
 *.log
 npm-debug.log*
 
+# Environment files
+.env
+.env.production
+
 # Archivos temporales
 uploads/*
 !uploads/.gitkeep
