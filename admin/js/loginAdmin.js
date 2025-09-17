@@ -48,8 +48,23 @@ class AdminAccess {
         if (this.loginBtn) {
             this.loginBtn.addEventListener("click", (event) => {
                 console.log("🔘 Botón login clickeado");
+                console.log("🔘 Estado del botón:", {
+                    disabled: this.loginBtn.disabled,
+                    classList: this.loginBtn.classList.toString(),
+                    textContent: this.loginBtn.querySelector('.btn-text').textContent
+                });
+
+                // Verificar si el botón está deshabilitado
+                if (this.loginBtn.disabled) {
+                    console.log("🚫 Botón está deshabilitado, ignorando click");
+                    event.preventDefault();
+                    return;
+                }
+
                 event.preventDefault();
                 event.stopPropagation();
+
+                console.log("✅ Procesando click del botón...");
 
                 // Crear un evento submit simulado
                 const fakeEvent = {
@@ -132,7 +147,17 @@ class AdminAccess {
             console.log("  - Display:", window.getComputedStyle(this.loginBtn).display);
             console.log("  - Visibility:", window.getComputedStyle(this.loginBtn).visibility);
             console.log("  - Opacity:", window.getComputedStyle(this.loginBtn).opacity);
+            console.log("  - Disabled:", this.loginBtn.disabled);
+            console.log("  - Cursor:", window.getComputedStyle(this.loginBtn).cursor);
+            console.log("  - Pointer events:", window.getComputedStyle(this.loginBtn).pointerEvents);
             console.log("  - Text content:", this.loginBtn.querySelector('.btn-text').textContent);
+            console.log("  - Classes:", this.loginBtn.classList.toString());
+
+            // Si el botón está deshabilitado, intentar habilitarlo
+            if (this.loginBtn.disabled) {
+                console.log("⚠️ Botón está deshabilitado, intentando habilitarlo...");
+                this.forceEnableButton();
+            }
         } else {
             console.log("  - ❌ Botón loginBtn no encontrado");
         }
@@ -141,6 +166,22 @@ class AdminAccess {
         if (secondaryButtons) {
             console.log("  - Secondary buttons display:", window.getComputedStyle(secondaryButtons).display);
             console.log("  - Secondary buttons visibility:", window.getComputedStyle(secondaryButtons).visibility);
+        }
+    }
+
+    forceEnableButton() {
+        console.log("🔧 Forzando habilitación del botón...");
+        if (this.loginBtn) {
+            this.loginBtn.disabled = false;
+            this.loginBtn.classList.remove('btn-loading');
+            this.loginBtn.style.pointerEvents = 'auto';
+            this.loginBtn.style.cursor = 'pointer';
+
+            // Restaurar texto apropiado
+            const btnText = this.isPasswordOnlyMode ? "Confirmar Acceso" : "Acceder al Panel";
+            this.loginBtn.querySelector('.btn-text').textContent = btnText;
+
+            console.log("✅ Botón forzado a habilitado");
         }
     }
 
@@ -156,11 +197,15 @@ class AdminAccess {
         // Mostrar información del usuario actual
         this.showCurrentUserInfo(usuario);
 
-        // Asegurar que el botón principal esté visible y tenga el texto correcto
+        // Asegurar que el botón principal esté visible y habilitado
         if (this.loginBtn) {
             this.loginBtn.style.display = 'block';
+            this.loginBtn.disabled = false; // Asegurar que esté habilitado
+            this.loginBtn.classList.remove('btn-loading'); // Remover estado de carga
+            this.loginBtn.style.pointerEvents = 'auto'; // Asegurar que reciba clicks
+            this.loginBtn.style.cursor = 'pointer'; // Cursor de pointer
             this.loginBtn.querySelector('.btn-text').textContent = 'Confirmar Acceso';
-            console.log("✅ Botón principal configurado para modo solo contraseña");
+            console.log("✅ Botón principal configurado y habilitado para modo solo contraseña");
         }
 
         // Mostrar botones secundarios con animación
@@ -419,19 +464,26 @@ class AdminAccess {
     }
 
     setLoading(loading) {
+        console.log("🔄 Cambiando estado de carga:", loading);
         if (loading) {
             this.loginBtn.classList.add("btn-loading");
             this.loginBtn.disabled = true;
-            this.changeUserBtn.disabled = true;
+            this.loginBtn.style.pointerEvents = 'none'; // Bloquear clicks durante carga
+            this.loginBtn.style.cursor = 'not-allowed'; // Cursor de no permitido
+            if (this.changeUserBtn) this.changeUserBtn.disabled = true;
             this.loginBtn.querySelector(".btn-text").textContent = "Verificando...";
+            console.log("⏳ Botón en estado de carga");
         } else {
             this.loginBtn.classList.remove("btn-loading");
             this.loginBtn.disabled = false;
-            this.changeUserBtn.disabled = false;
+            this.loginBtn.style.pointerEvents = 'auto'; // Permitir clicks
+            this.loginBtn.style.cursor = 'pointer'; // Cursor normal
+            if (this.changeUserBtn) this.changeUserBtn.disabled = false;
 
             // Restaurar texto apropiado según el modo
             const btnText = this.isPasswordOnlyMode ? "Confirmar Acceso" : "Acceder al Panel";
             this.loginBtn.querySelector(".btn-text").textContent = btnText;
+            console.log("✅ Botón habilitado, texto restaurado:", btnText);
         }
     }
 
@@ -464,6 +516,32 @@ window.testLoginAdmin = function () {
         adminAccess.handleLogin({ preventDefault: () => { } });
     } else {
         console.error("❌ AdminAccess no encontrado");
+    }
+};
+
+// Función para verificar y arreglar el estado del botón
+window.fixLoginButton = function () {
+    console.log("🔧 Ejecutando fixLoginButton...");
+    const adminAccess = window.adminAccessInstance;
+    if (adminAccess) {
+        console.log("✅ AdminAccess encontrado, verificando botón...");
+        adminAccess.debugButtonVisibility();
+        adminAccess.forceEnableButton();
+        setTimeout(() => adminAccess.debugButtonVisibility(), 100);
+    } else {
+        console.error("❌ AdminAccess no encontrado");
+        // Intentar encontrar el botón directamente
+        const loginBtn = document.getElementById('loginBtn');
+        if (loginBtn) {
+            console.log("🔧 Arreglando botón directamente...");
+            loginBtn.disabled = false;
+            loginBtn.classList.remove('btn-loading');
+            loginBtn.style.pointerEvents = 'auto';
+            loginBtn.style.cursor = 'pointer';
+            console.log("✅ Botón arreglado directamente");
+        } else {
+            console.error("❌ Botón loginBtn no encontrado");
+        }
     }
 };
 

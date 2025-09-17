@@ -154,6 +154,8 @@
   width: 100%;
   visibility: visible !important; /* Forzar visibilidad completa */
   opacity: 1 !important; /* Asegurar opacidad completa */
+  pointer-events: auto !important; /* Asegurar que reciba clicks */
+  cursor: pointer !important; /* Cursor de pointer */
 }
 
 /* Contenedor de botones secundarios */
@@ -391,4 +393,16 @@
   .access-subtitle {
     font-size: 1rem;
   }
+}
+
+/* Reglas adicionales para asegurar funcionalidad del botón */
+.button-container #loginBtn:not(.btn-loading):not(:disabled) {
+  pointer-events: auto !important; /* Asegurar clicks cuando no esté cargando */
+  cursor: pointer !important;
+}
+
+/* Asegurar que el botón sea clickeable en modo solo contraseña */
+.password-only-mode .button-container #loginBtn:not(.btn-loading):not(:disabled) {
+  pointer-events: auto !important;
+  cursor: pointer !important;
 }
