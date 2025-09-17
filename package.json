@@ -5,8 +5,6 @@
   "scripts": {
     "start": "node scripts/server.js",
     "dev": "node scripts/server.js",
-    "build": "echo 'No build step required'",
-    "install:production": "npm ci --omit=dev",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:setup": "node scripts/setup-db.js",
     "db:backup": "node scripts/setup-db.js --backup",
