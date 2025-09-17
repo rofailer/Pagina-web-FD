@@ -143,9 +143,17 @@
   box-shadow: 0 10px 15px -3px rgba(107, 114, 128, 0.3);
 }
 
-/* Contenedor principal de botones */
+/* Contenedor principal de botones - SIEMPRE visible */
 .button-container {
   margin-top: 20px;
+  display: block !important; /* Forzar visibilidad */
+}
+
+.button-container #loginBtn {
+  display: block !important; /* Asegurar que el botón principal sea visible */
+  width: 100%;
+  visibility: visible !important; /* Forzar visibilidad completa */
+  opacity: 1 !important; /* Asegurar opacidad completa */
 }
 
 /* Contenedor de botones secundarios */
@@ -225,6 +233,8 @@
   );
   font-size: 1.1rem;
   padding: 16px 24px;
+  position: relative;
+  z-index: 10; /* Asegurar que esté por encima de otros elementos */
 }
 
 .access-btn.secondary,
@@ -237,6 +247,29 @@
 .access-btn.secondary:hover,
 .access-btn.tertiary:hover {
   opacity: 1;
+}
+
+/* Asegurar que el botón principal sea siempre visible en modo solo contraseña */
+.secondary-buttons.show + .button-container,
+.button-container:has(#loginBtn) {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Estilos específicos para el botón de confirmar en modo solo contraseña */
+.password-only-mode + .access-form .button-container #loginBtn {
+  background: linear-gradient(
+    135deg,
+    #059669 0%,
+    #047857 100%
+  ) !important;
+  box-shadow: 0 4px 14px 0 rgba(5, 150, 105, 0.3);
+}
+
+.password-only-mode + .access-form .button-container #loginBtn:hover {
+  box-shadow: 0 6px 20px 0 rgba(5, 150, 105, 0.4);
+  transform: translateY(-1px);
 }
 
 /* Espaciado mejorado */

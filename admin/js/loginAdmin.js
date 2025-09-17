@@ -74,8 +74,11 @@ class AdminAccess {
     }
 
     async checkAuthStatus() {
+        console.log("🔍 Verificando estado de autenticación...");
         const token = localStorage.getItem("token");
+
         if (token) {
+            console.log("📋 Token encontrado, verificando validez...");
             try {
                 // Verificar si el token es válido y obtener datos del usuario
                 const response = await fetch("/api/auth/me", {
@@ -86,33 +89,63 @@ class AdminAccess {
 
                 if (response.ok) {
                     const userData = await response.json();
+                    console.log("✅ Usuario autenticado:", userData.usuario, "- Rol:", userData.rol);
 
                     // Verificar si es admin/owner
                     if (userData.rol === "owner" || userData.rol === "admin") {
+                        console.log("👑 Usuario es admin/owner, configurando modo solo contraseña");
                         // Configurar modo solo contraseña (usar 'usuario' no 'email')
                         this.setupPasswordOnlyMode(userData.usuario);
                     } else {
+                        console.log("❌ Usuario no es admin/owner, eliminando token");
                         // No es admin, eliminar token y mostrar login completo
                         localStorage.removeItem("token");
                         this.setupFullLoginMode();
                     }
                 } else {
+                    console.log("❌ Token inválido, configurando modo login completo");
                     // Token inválido, eliminar y mostrar login completo
                     localStorage.removeItem("token");
                     this.setupFullLoginMode();
                 }
             } catch (error) {
+                console.error("❌ Error de red verificando token:", error);
                 // Error de red o token inválido
                 localStorage.removeItem("token");
                 this.setupFullLoginMode();
             }
         } else {
+            console.log("📋 No hay token, configurando modo login completo");
             // No hay token, mostrar login completo
             this.setupFullLoginMode();
+        }
+
+        // Debug: verificar estado final del botón
+        setTimeout(() => {
+            this.debugButtonVisibility();
+        }, 100);
+    }
+
+    debugButtonVisibility() {
+        console.log("🔧 Debug - Estado del botón:");
+        if (this.loginBtn) {
+            console.log("  - Display:", window.getComputedStyle(this.loginBtn).display);
+            console.log("  - Visibility:", window.getComputedStyle(this.loginBtn).visibility);
+            console.log("  - Opacity:", window.getComputedStyle(this.loginBtn).opacity);
+            console.log("  - Text content:", this.loginBtn.querySelector('.btn-text').textContent);
+        } else {
+            console.log("  - ❌ Botón loginBtn no encontrado");
+        }
+
+        const secondaryButtons = document.getElementById('secondaryButtons');
+        if (secondaryButtons) {
+            console.log("  - Secondary buttons display:", window.getComputedStyle(secondaryButtons).display);
+            console.log("  - Secondary buttons visibility:", window.getComputedStyle(secondaryButtons).visibility);
         }
     }
 
     setupPasswordOnlyMode(usuario) {
+        console.log("🔑 Configurando modo solo contraseña para usuario:", usuario);
         this.isPasswordOnlyMode = true;
         this.currentUserEmail = usuario;
 
@@ -123,22 +156,44 @@ class AdminAccess {
         // Mostrar información del usuario actual
         this.showCurrentUserInfo(usuario);
 
+        // Asegurar que el botón principal esté visible y tenga el texto correcto
+        if (this.loginBtn) {
+            this.loginBtn.style.display = 'block';
+            this.loginBtn.querySelector('.btn-text').textContent = 'Confirmar Acceso';
+            console.log("✅ Botón principal configurado para modo solo contraseña");
+        }
+
         // Mostrar botones secundarios con animación
         const secondaryButtons = document.getElementById('secondaryButtons');
-        secondaryButtons.style.display = 'block';
-        setTimeout(() => secondaryButtons.classList.add('show'), 50);
+        if (secondaryButtons) {
+            secondaryButtons.style.display = 'block';
+            setTimeout(() => secondaryButtons.classList.add('show'), 50);
+        }
 
-        // Cambiar textos
-        document.querySelector('.access-title').textContent = 'Confirmar Acceso';
-        document.querySelector('.access-subtitle').innerHTML = 'Ingresa tu contraseña para acceder al panel administrativo.';
-        document.querySelector('.access-subtitle').classList.add('password-only-mode');
-        this.loginBtn.querySelector('.btn-text').textContent = 'Confirmar Acceso';
+        // Cambiar textos del header
+        const titleElement = document.querySelector('.access-title');
+        const subtitleElement = document.querySelector('.access-subtitle');
+
+        if (titleElement) {
+            titleElement.textContent = 'Confirmar Acceso';
+        }
+        if (subtitleElement) {
+            subtitleElement.innerHTML = 'Ingresa tu contraseña para acceder al panel administrativo.';
+            subtitleElement.classList.add('password-only-mode');
+        }
 
         // Enfocar el campo de contraseña
-        setTimeout(() => this.passwordInput.focus(), 100);
+        setTimeout(() => {
+            if (this.passwordInput) {
+                this.passwordInput.focus();
+            }
+        }, 100);
+
+        console.log("✅ Modo solo contraseña configurado correctamente");
     }
 
     setupFullLoginMode() {
+        console.log("🔄 Configurando modo login completo");
         this.isPasswordOnlyMode = false;
         this.currentUserEmail = null;
 
@@ -149,19 +204,40 @@ class AdminAccess {
         // Ocultar información de usuario actual
         this.removeCurrentUserInfo();
 
+        // Asegurar que el botón principal esté visible con el texto correcto
+        if (this.loginBtn) {
+            this.loginBtn.style.display = 'block';
+            this.loginBtn.querySelector('.btn-text').textContent = 'Acceder al Panel';
+            console.log("✅ Botón principal configurado para modo login completo");
+        }
+
         // Ocultar botones secundarios con animación
         const secondaryButtons = document.getElementById('secondaryButtons');
-        secondaryButtons.classList.remove('show');
-        setTimeout(() => secondaryButtons.style.display = 'none', 300);
+        if (secondaryButtons) {
+            secondaryButtons.classList.remove('show');
+            setTimeout(() => secondaryButtons.style.display = 'none', 300);
+        }
 
         // Restaurar textos originales
-        document.querySelector('.access-title').textContent = 'Panel Administrativo';
-        document.querySelector('.access-subtitle').innerHTML = 'Accede al sistema de administración para gestionar usuarios, configuraciones y monitorear el sistema.';
-        document.querySelector('.access-subtitle').classList.remove('password-only-mode');
-        this.loginBtn.querySelector('.btn-text').textContent = 'Acceder al Panel';
+        const titleElement = document.querySelector('.access-title');
+        const subtitleElement = document.querySelector('.access-subtitle');
+
+        if (titleElement) {
+            titleElement.textContent = 'Panel Administrativo';
+        }
+        if (subtitleElement) {
+            subtitleElement.innerHTML = 'Accede al sistema de administración para gestionar usuarios, configuraciones y monitorear el sistema.';
+            subtitleElement.classList.remove('password-only-mode');
+        }
 
         // Enfocar el campo de email
-        setTimeout(() => this.emailInput.focus(), 100);
+        setTimeout(() => {
+            if (this.emailInput) {
+                this.emailInput.focus();
+            }
+        }, 100);
+
+        console.log("✅ Modo login completo configurado correctamente");
     }
 
     showCurrentUserInfo(usuario) {
