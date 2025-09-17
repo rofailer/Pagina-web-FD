@@ -1,4 +1,6 @@
-require('dotenv').config();
+require('dotenv').config({
+  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env'
+});
 const express = require("express");
 const app = express();
 const path = require("path");
@@ -210,6 +212,32 @@ app.get("/", (req, res) => {
     if (!res.headersSent) {
       res.status(200).send("App is running - Exception occurred");
     }
+  }
+});
+
+// Health check endpoint para Railway
+app.get('/health', async (req, res) => {
+  try {
+    // Verificar conexión a la base de datos
+    const connection = await pool.getConnection();
+    await connection.ping();
+    connection.release();
+
+    res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'connected',
+      environment: process.env.NODE_ENV || 'development'
+    });
+  } catch (error) {
+    console.error('Health check failed:', error.message);
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      database: 'disconnected'
+    });
   }
 });
 
