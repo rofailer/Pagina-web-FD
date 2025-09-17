@@ -1,6 +1,23 @@
 # Sistema de Firmas Digitales
 
-Este proyecto es un sistema web completo para la **firma y verificación de documentos PDF** usando criptografía de llaves públicas y privadas. Incluye gestión de usuarios, llaves, configuración visual, panel de administración, menú responsive, y más.
+Es## ⚙️ Instalación
+
+1. **Clona el repositorio:**
+
+   ```sh
+   git clone <URL_DEL_REPOSITORIO>
+   cd <NOMBRE_DEL_PROYECTO>
+   ```
+
+2. **Instala las dependencias:**
+
+   ```sh
+   npm install
+   ```
+
+   > **Nota:** El proyecto está configurado para usar la sintaxis moderna de npm (`--omit=dev`) en lugar de la obsoleta (`--production`). Esto elimina la advertencia "npm warn config production Use `--omit=dev` instead."
+
+--- un sistema web completo para la **firma y verificación de documentos PDF** usando criptografía de llaves públicas y privadas. Incluye gestión de usuarios, llaves, configuración visual, panel de administración, menú responsive, y más.
 
 ---
 

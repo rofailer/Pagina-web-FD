@@ -151,36 +151,6 @@ router.post('/api/admin/exchange-admin-token', async (req, res) => {
     }
 });
 
-// Intercambiar tokenId por token real
-router.post('/api/admin/exchange-admin-token', async (req, res) => {
-    try {
-        const { tokenId } = req.body;
-
-        if (!tokenId || !adminTokens.has(tokenId)) {
-            return res.status(401).json({ error: 'Token ID inválido' });
-        }
-
-        const tokenData = adminTokens.get(tokenId);
-
-        // Verificar expiración
-        if (tokenData.expiresAt < Date.now()) {
-            adminTokens.delete(tokenId);
-            return res.status(401).json({ error: 'Token expirado' });
-        }
-
-        // Devolver token y eliminar el tokenId (un solo uso)
-        adminTokens.delete(tokenId);
-
-        res.json({
-            success: true,
-            token: tokenData.token
-        });
-    } catch (error) {
-        console.error('Error intercambiando token:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
-});
-
 /* ========================================
    MIDDLEWARE DE ADMINISTRACIÓN
    ======================================== */

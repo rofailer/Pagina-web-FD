@@ -446,6 +446,8 @@ class AdminAccess {
 
     async generateAdminTokenAndRedirect(userToken) {
         console.log("🔄 Generando token de admin y redirigiendo...");
+        console.log("🔑 Token usado:", userToken ? userToken.substring(0, 20) + "..." : "null");
+
         try {
             // Generar token de administración
             console.log("📡 Enviando solicitud a /api/admin/generate-admin-token");
@@ -457,27 +459,45 @@ class AdminAccess {
                 }
             });
 
-            console.log("📡 Respuesta del servidor:", response.status);
+            console.log("📡 Respuesta del servidor:", response.status, response.statusText);
 
             if (response.ok) {
                 const data = await response.json();
-                console.log("✅ Token de admin generado:", data);
+                console.log("✅ Token de admin generado exitosamente:", {
+                    success: data.success,
+                    tokenId: data.tokenId ? data.tokenId.substring(0, 10) + "..." : "null",
+                    expiresIn: data.expiresIn
+                });
+
                 const redirectUrl = `/panelAdmin?tid=${data.tokenId}`;
-                console.log("🔗 Redirigiendo a:", redirectUrl);
+                console.log("🔗 URL de redirección calculada:", redirectUrl);
+                console.log("🌐 Ejecutando window.location.href =", redirectUrl);
 
                 // Forzar redirección inmediata
                 window.location.href = redirectUrl;
-                return; // Asegurar que no se ejecuta código después
+
+                // Este código no debería ejecutarse si la redirección funciona
+                console.log("⚠️ ADVERTENCIA: La redirección no funcionó correctamente");
+                return;
             } else {
                 const errorData = await response.text();
-                console.error("❌ Error generando token de admin:", response.status, errorData);
-                console.log("🔗 Redirigiendo a /panelAdmin (fallback)");
+                console.error("❌ Error generando token de admin:", {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorData
+                });
+
+                console.log("🔗 Intentando redirección fallback a /panelAdmin");
                 window.location.href = "/panelAdmin";
                 return;
             }
         } catch (error) {
-            console.error("❌ Error de red generando token de admin:", error);
-            console.log("🔗 Redirigiendo a /panelAdmin (fallback por error)");
+            console.error("❌ Error de red generando token de admin:", {
+                message: error.message,
+                stack: error.stack
+            });
+
+            console.log("🔗 Intentando redirección fallback por error a /panelAdmin");
             window.location.href = "/panelAdmin";
             return;
         }
@@ -579,6 +599,38 @@ window.testRedirect = function () {
         }
     } else {
         console.error("❌ No hay token en localStorage");
+    }
+};
+
+// Función para probar el endpoint de generación de token
+window.testGenerateToken = async function () {
+    console.log("🧪 Probando endpoint /api/admin/generate-admin-token...");
+    const token = localStorage.getItem("token");
+    if (!token) {
+        console.error("❌ No hay token en localStorage");
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/generate-admin-token', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log("📡 Respuesta:", response.status, response.statusText);
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log("✅ Respuesta exitosa:", data);
+        } else {
+            const error = await response.text();
+            console.error("❌ Error en respuesta:", error);
+        }
+    } catch (error) {
+        console.error("❌ Error de red:", error);
     }
 };
 
