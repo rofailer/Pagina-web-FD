@@ -127,7 +127,7 @@ app.use("/admin/js", express.static(path.join(__dirname, "../admin/js"), {
     }
   }
 }));
-// app.use("/downloads", express.static(path.join(__dirname, "../downloads")));
+app.use("/downloads", express.static(path.join(__dirname, "../downloads")));
 
 // Servir favicon desde la raíz
 app.use("/favicon.ico", express.static(path.join(__dirname, "../favicon.ico"), { maxAge: "1d" }));
@@ -855,13 +855,19 @@ app.use((req, res) => {
 // =================== Rutas de descarga ===================
 app.get('/downloads/:file', (req, res) => {
   const filePath = path.join(__dirname, '../downloads', req.params.file);
+
+  // Verificar si el archivo existe
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Archivo no encontrado' });
+  }
+
+  // Servir el archivo sin eliminarlo (para permitir múltiples descargas)
   res.download(filePath, (err) => {
-    if (!err) {
-      // Elimina el archivo después de descargarlo exitosamente
-      fs.unlink(filePath, (e) => {
-        if (e) console.error("Error al borrar archivo descargado:", e);
-      });
+    if (err) {
+      console.error('Error al descargar archivo:', err);
     }
+    // Nota: Ya no eliminamos el archivo automáticamente para permitir descargas múltiples
+    // Los archivos se pueden limpiar periódicamente o manualmente si es necesario
   });
 });
 
