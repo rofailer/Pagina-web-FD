@@ -245,14 +245,7 @@ app.get('/health', async (req, res) => {
 // REMOVIDO: Esta ruta estaba duplicada, se mantiene solo la versión más abajo
 
 // Login de administración - funciona sin BD
-app.get('/adminLogin', (req, res) => {
-  const filePath = path.join(__dirname, "../admin/html/loginAdminPanel.html");
-  if (!fs.existsSync(filePath)) {
-    console.error(`Archivo no encontrado: ${filePath}`);
-    return res.status(404).send("Página de login de administración no encontrada");
-  }
-  res.sendFile(filePath);
-});
+// REMOVIDO: Ruta duplicada, se mantiene la versión más abajo
 
 
 // =================== RUTAS LIMPIAS PARA SECCIONES PRINCIPALES ===================

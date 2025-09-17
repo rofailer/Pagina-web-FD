@@ -221,6 +221,9 @@ class AdminAccess {
             return;
         }
 
+        console.log("🔐 Iniciando verificación de contraseña...");
+        console.log("👤 Usuario actual:", this.currentUserEmail);
+
         const response = await fetch("/api/login", {
             method: "POST",
             headers: {
@@ -232,16 +235,22 @@ class AdminAccess {
             }),
         });
 
+        console.log("📡 Respuesta de login:", response.status, response.statusText);
+
         const result = await response.json();
+        console.log("📋 Datos de respuesta:", result);
 
         if (response.ok && result.token) {
+            console.log("✅ Login exitoso, guardando token...");
             localStorage.setItem("token", result.token);
             this.showAlert("Acceso confirmado. Redirigiendo...", "success");
 
             setTimeout(() => {
+                console.log("⏰ Iniciando redirección...");
                 this.redirectToAdminPanel(result.token);
             }, 1000);
         } else {
+            console.log("❌ Login fallido:", result.message || "Error desconocido");
             this.showAlert("Contraseña incorrecta.", "error");
         }
     }
@@ -295,7 +304,11 @@ class AdminAccess {
     }
 
     async redirectToAdminPanel(userToken) {
+        console.log("🔄 Iniciando redirección al panel admin...");
+        console.log("🔑 Token usado:", userToken ? userToken.substring(0, 20) + "..." : "null");
+
         try {
+            console.log("📡 Enviando solicitud a /api/admin/generate-admin-token");
             const response = await fetch('/api/admin/generate-admin-token', {
                 method: 'POST',
                 headers: {
@@ -304,16 +317,48 @@ class AdminAccess {
                 }
             });
 
+            console.log("📡 Respuesta del servidor:", {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok
+            });
+
             if (response.ok) {
                 const data = await response.json();
-                window.location.href = `/panelAdmin?tid=${data.tokenId}`;
+                console.log("✅ Token de admin generado exitosamente:", {
+                    success: data.success,
+                    tokenId: data.tokenId ? data.tokenId.substring(0, 10) + "..." : "null",
+                    expiresIn: data.expiresIn
+                });
+
+                const redirectUrl = `${window.location.origin}/panelAdmin?tid=${data.tokenId}`;
+                console.log("🔗 URL de redirección calculada:", redirectUrl);
+                console.log("🌐 Ejecutando window.location.href =", redirectUrl);
+
+                // Forzar redirección inmediata
+                window.location.href = redirectUrl;
+                console.log("✅ Redirección ejecutada");
+
             } else {
-                // Fallback: redirigir sin token especial
-                window.location.href = "/panelAdmin";
+                const errorText = await response.text();
+                console.error("❌ Error generando token de admin:", {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorText
+                });
+
+                console.log("🔗 Intentando redirección fallback a /panelAdmin");
+                window.location.href = `${window.location.origin}/panelAdmin`;
             }
         } catch (error) {
-            // Fallback: redirigir sin token especial
-            window.location.href = "/panelAdmin";
+            console.error("❌ Error de red generando token de admin:", {
+                message: error.message,
+                name: error.name,
+                stack: error.stack ? error.stack.substring(0, 200) : "No stack"
+            });
+
+            console.log("🔗 Intentando redirección fallback por error a /panelAdmin");
+            window.location.href = `${window.location.origin}/panelAdmin`;
         }
     }
 
@@ -356,6 +401,38 @@ class AdminAccess {
         this.alertContainer.innerHTML = "";
     }
 }
+
+// Función para probar redirección manual desde consola
+window.testRedirect = function() {
+    console.log("🧪 Probando redirección manual...");
+    const token = localStorage.getItem("token");
+    if (token) {
+        console.log("✅ Token encontrado, probando redirección...");
+        const adminAccess = window.adminAccessInstance;
+        if (adminAccess) {
+            adminAccess.redirectToAdminPanel(token);
+        } else {
+            console.error("❌ AdminAccess no encontrado");
+        }
+    } else {
+        console.error("❌ No hay token en localStorage");
+    }
+};
+
+// Función para verificar estado del sistema
+window.debugAdminLogin = function() {
+    console.log("🔍 Debug AdminLogin:");
+    console.log("  - Token en localStorage:", !!localStorage.getItem("token"));
+    console.log("  - AdminAccess instance:", !!window.adminAccessInstance);
+    console.log("  - Current URL:", window.location.href);
+    console.log("  - Origin:", window.location.origin);
+
+    const adminAccess = window.adminAccessInstance;
+    if (adminAccess) {
+        console.log("  - Modo contraseña:", adminAccess.isPasswordOnlyMode);
+        console.log("  - Usuario actual:", adminAccess.currentUserEmail);
+    }
+};
 
 // Inicializar cuando el DOM esté listo
 document.addEventListener("DOMContentLoaded", () => {
