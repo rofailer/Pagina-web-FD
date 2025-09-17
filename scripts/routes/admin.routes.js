@@ -123,6 +123,39 @@ router.post('/api/admin/exchange-admin-token', async (req, res) => {
     try {
         const { tokenId } = req.body;
 
+        if (!tokenId) {
+            return res.status(400).json({ error: 'Token ID requerido' });
+        }
+
+        // Buscar token en memoria
+        const tokenData = adminTokens.get(tokenId);
+
+        if (!tokenData) {
+            return res.status(404).json({ error: 'Token ID inválido o expirado' });
+        }
+
+        // Verificar si el token no ha expirado
+        if (tokenData.expiresAt < Date.now()) {
+            adminTokens.delete(tokenId); // Limpiar token expirado
+            return res.status(404).json({ error: 'Token ID expirado' });
+        }
+
+        res.json({
+            success: true,
+            token: tokenData.token,
+            expiresAt: tokenData.expiresAt
+        });
+    } catch (error) {
+        console.error('Error intercambiando token de admin:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Intercambiar tokenId por token real
+router.post('/api/admin/exchange-admin-token', async (req, res) => {
+    try {
+        const { tokenId } = req.body;
+
         if (!tokenId || !adminTokens.has(tokenId)) {
             return res.status(401).json({ error: 'Token ID inválido' });
         }

@@ -242,14 +242,7 @@ app.get('/health', async (req, res) => {
 });
 
 // Panel de administración - funciona sin BD (para instalar BD)
-app.get('/panelAdmin', (req, res) => {
-  const filePath = path.join(__dirname, "../admin/html/panelAdmin.html");
-  if (!fs.existsSync(filePath)) {
-    console.error(`Archivo no encontrado: ${filePath}`);
-    return res.status(404).send("Panel de administración no encontrado");
-  }
-  res.sendFile(filePath);
-});
+// REMOVIDO: Esta ruta estaba duplicada, se mantiene solo la versión más abajo
 
 // Login de administración - funciona sin BD
 app.get('/adminLogin', (req, res) => {

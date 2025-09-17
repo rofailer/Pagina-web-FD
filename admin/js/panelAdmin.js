@@ -20,17 +20,76 @@
   if (!tokenId && !existingToken) {
     // No hay token de administración válido - redirigir a login
     console.error("❌ No se proporcionó token de administración válido");
+    console.log("🔍 Estado de autenticación:", { tokenId, existingToken });
     window.location.href = "/adminLogin";
+    return;
+  }
+
+  // Si hay existingToken pero no tokenId, verificar si es válido
+  if (!tokenId && existingToken) {
+    console.log("🔍 Verificando token existente en localStorage...");
+    validateExistingToken(existingToken);
     return;
   }
 
   // Si hay tokenId, intercambiar por token real
   if (tokenId) {
+    console.log("🔄 Intercambiando tokenId por token real:", tokenId);
     exchangeTokenAndAuthenticate(tokenId);
   }
-  // Si no hay tokenId pero hay token existente, validar el token actual con el servidor
-  else if (existingToken) {
-    validateExistingToken(existingToken);
+
+  async function validateExistingToken(token) {
+    try {
+      console.log("🔍 Validando token existente...");
+
+      const response = await fetch("/api/auth/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.error("❌ Token existente inválido");
+        localStorage.removeItem("token");
+        localStorage.removeItem("admin_token");
+        window.location.href = "/adminLogin?error=token_expired";
+        return;
+      }
+
+      const user = await response.json();
+      console.log("✅ Token válido para usuario:", user.usuario, "- Rol:", user.rol);
+
+      if (user.rol !== "owner" && user.rol !== "admin") {
+        console.error("❌ Usuario no tiene permisos de admin");
+        window.location.href = "/acceso-denegado";
+        return;
+      }
+
+      // Token válido - continuar con la inicialización
+      console.log("✅ Autenticación exitosa con token existente");
+      authenticationComplete = true;
+      localStorage.setItem("admin_token", token);
+
+      // Mostrar información del usuario en el indicador
+      setTimeout(() => displayUserInfo(user), 100);
+
+      // Sistema de renovación automática inteligente (cada 12 horas si hay actividad)
+      startAdminTokenRenewal(token);
+
+      // Ocultar loading y mostrar panel
+      const loading = document.getElementById("admin-loading");
+      if (loading) {
+        loading.style.display = "none";
+      }
+
+      console.log("✅ Panel de administración inicializado correctamente");
+
+    } catch (error) {
+      console.error("❌ Error validando token existente:", error);
+      localStorage.removeItem("token");
+      localStorage.removeItem("admin_token");
+      window.location.href = "/adminLogin?error=connection_error";
+    }
   }
 
   async function exchangeTokenAndAuthenticate(tid) {

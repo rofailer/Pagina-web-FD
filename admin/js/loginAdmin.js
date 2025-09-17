@@ -373,10 +373,14 @@ class AdminAccess {
         if (response.ok && result.token) {
             // Contraseña correcta, actualizar token y redirigir
             localStorage.setItem("token", result.token);
+            console.log("✅ Token actualizado en localStorage");
+            console.log("🚀 Iniciando redirección a panel admin...");
 
             this.showAlert("Acceso confirmado. Redirigiendo...", "success");
 
+            // Pequeño delay para mostrar el mensaje de éxito
             setTimeout(() => {
+                console.log("⏰ Ejecutando redirección...");
                 this.generateAdminTokenAndRedirect(result.token);
             }, 1000);
         } else {
@@ -441,8 +445,10 @@ class AdminAccess {
     }
 
     async generateAdminTokenAndRedirect(userToken) {
+        console.log("🔄 Generando token de admin y redirigiendo...");
         try {
             // Generar token de administración
+            console.log("📡 Enviando solicitud a /api/admin/generate-admin-token");
             const response = await fetch('/api/admin/generate-admin-token', {
                 method: 'POST',
                 headers: {
@@ -451,15 +457,29 @@ class AdminAccess {
                 }
             });
 
+            console.log("📡 Respuesta del servidor:", response.status);
+
             if (response.ok) {
                 const data = await response.json();
-                window.location.href = `/panelAdmin?tid=${data.tokenId}`;
+                console.log("✅ Token de admin generado:", data);
+                const redirectUrl = `/panelAdmin?tid=${data.tokenId}`;
+                console.log("🔗 Redirigiendo a:", redirectUrl);
+
+                // Forzar redirección inmediata
+                window.location.href = redirectUrl;
+                return; // Asegurar que no se ejecuta código después
             } else {
+                const errorData = await response.text();
+                console.error("❌ Error generando token de admin:", response.status, errorData);
+                console.log("🔗 Redirigiendo a /panelAdmin (fallback)");
                 window.location.href = "/panelAdmin";
+                return;
             }
         } catch (error) {
-            // Fallback: ir directamente a panelAdmin.html
+            console.error("❌ Error de red generando token de admin:", error);
+            console.log("🔗 Redirigiendo a /panelAdmin (fallback por error)");
             window.location.href = "/panelAdmin";
+            return;
         }
     }
 
@@ -542,6 +562,23 @@ window.fixLoginButton = function () {
         } else {
             console.error("❌ Botón loginBtn no encontrado");
         }
+    }
+};
+
+// Función para probar redirección manual
+window.testRedirect = function () {
+    console.log("🔗 Probando redirección manual...");
+    const token = localStorage.getItem("token");
+    if (token) {
+        console.log("✅ Token encontrado, probando redirección...");
+        const adminAccess = window.adminAccessInstance;
+        if (adminAccess) {
+            adminAccess.generateAdminTokenAndRedirect(token);
+        } else {
+            console.error("❌ AdminAccess no encontrado");
+        }
+    } else {
+        console.error("❌ No hay token en localStorage");
     }
 };
 
