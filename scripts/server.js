@@ -26,7 +26,6 @@ if (!process.env.JWT_SECRET) {
 function createRequiredDirectories() {
   const directories = [
     path.join(__dirname, '../uploads'),
-    path.join(__dirname, '../uploads/profile-photos'),
     path.join(__dirname, '../uploads/admin'),
     path.join(__dirname, '../downloads'),
     path.join(__dirname, '../llaves')
@@ -62,7 +61,6 @@ if (process.env.NODE_ENV !== 'production') {
     const shouldLog = !logCache.has(cacheKey) ||
       (now - logCache.get(cacheKey)) > LOG_CACHE_DURATION ||
       !req.url.includes('/api/global-theme-config') ||
-      !req.url.includes('/api/global-template-config') ||
       req.url === '/' ||
       req.url.startsWith('/admin') ||
       req.url.startsWith('/panelAdmin') ||
@@ -72,7 +70,6 @@ if (process.env.NODE_ENV !== 'production') {
       req.url.includes('/api/admin/generate-admin-token');
 
     if (shouldLog) {
-      console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
       logCache.set(cacheKey, now);
 
       // Limpiar cache antigua
@@ -89,6 +86,14 @@ if (process.env.NODE_ENV !== 'production') {
 
 // Configuración de archivos estáticos ANTES de las rutas
 app.use("/css", express.static(path.join(__dirname, "../css"), { maxAge: "1d" }));
+app.use("/scripts", express.static(path.join(__dirname, "./"), {
+  maxAge: "1d",
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  }
+}));
 app.use("/scripts/frontend", express.static(path.join(__dirname, "./frontend"), {
   maxAge: "1d",
   setHeaders: (res, path) => {
@@ -116,7 +121,6 @@ app.use("/scripts/templates", express.static(path.join(__dirname, "./templates")
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/recursos", express.static(path.join(__dirname, "../recursos")));
 app.use("/html", express.static(path.join(__dirname, "../html"), { maxAge: "1d" }));
-app.use("/admin", express.static(path.join(__dirname, "../admin"), { maxAge: "1d" }));
 // Rutas específicas para archivos del admin
 app.use("/admin/css", express.static(path.join(__dirname, "../admin/css"), { maxAge: "1d" }));
 app.use("/admin/js", express.static(path.join(__dirname, "../admin/js"), {
@@ -127,6 +131,7 @@ app.use("/admin/js", express.static(path.join(__dirname, "../admin/js"), {
     }
   }
 }));
+app.use("/admin", express.static(path.join(__dirname, "../admin"), { maxAge: "1d" }));
 app.use("/downloads", express.static(path.join(__dirname, "../downloads")));
 
 // Servir favicon desde la raíz
@@ -327,110 +332,11 @@ app.use('/api', visualConfigRoutes);
 // =================== Rutas para configuración de plantillas ===================
 
 // ========================================
-// CONFIGURACIÓN GLOBAL DE TEMPLATES UNIFICADA
+// CONFIGURACIÓN GLOBAL DE PDF - SISTEMA MODERNIZADO
 // ========================================
-
-let globalTemplateConfig = {
-  selectedTemplate: 'clasico',
-  logo: null,
-  institutionName: 'Universidad Ejemplo'
-};
-
-// Cargar configuración desde la base de datos al iniciar
-async function loadGlobalTemplateConfig() {
-  try {
-    const [rows] = await pool.query("SELECT * FROM global_template_config ORDER BY id DESC LIMIT 1");
-    if (rows.length > 0) {
-      globalTemplateConfig.selectedTemplate = rows[0].template_name;
-      globalTemplateConfig.logo = rows[0].logo_path;
-      globalTemplateConfig.institutionName = rows[0].institution_name;
-    }
-  } catch (error) {
-    console.error('❌ Error cargando configuración global:', error);
-  }
-}
-
-// Llamar al cargar la aplicación
-loadGlobalTemplateConfig();
-
-// Ruta para guardar configuración global (solo para owners)
-app.post('/api/save-global-template-config', authenticate, async (req, res) => {
-  try {
-    // Verificar que el usuario sea owner
-    const [userRows] = await pool.query("SELECT rol FROM users WHERE id = ?", [req.userId]);
-    if (userRows.length === 0 || userRows[0].rol !== 'owner') {
-      return res.status(403).json({ error: 'Solo los owners pueden cambiar la configuración global' });
-    }
-
-    const { template, logo, institutionName } = req.body;
-
-    if (template) {
-      globalTemplateConfig.selectedTemplate = template;
-    }
-
-    if (logo !== undefined) {
-      globalTemplateConfig.logo = logo;
-    }
-
-    if (institutionName) {
-      globalTemplateConfig.institutionName = institutionName;
-    }
-
-    // Guardar en la base de datos
-    await pool.query(
-      "UPDATE global_template_config SET template_name = ?, logo_path = ?, institution_name = ? WHERE id = 1",
-      [globalTemplateConfig.selectedTemplate, globalTemplateConfig.logo, globalTemplateConfig.institutionName]
-    );
-
-    res.json({
-      success: true,
-      template: globalTemplateConfig.selectedTemplate,
-      hasLogo: !!globalTemplateConfig.logo,
-      institutionName: globalTemplateConfig.institutionName
-    });
-
-  } catch (error) {
-    console.error('❌ Error guardando configuración global:', error);
-    res.status(500).json({ error: 'Error guardando configuración' });
-  }
-});
-
-// Ruta para obtener configuración global
-app.get('/api/global-template-config', (req, res) => {
-  // Solo loggear ocasionalmente para evitar spam
-  res.json(globalTemplateConfig);
-});
-// Guardar configuración de plantilla (LEGACY - mantener por compatibilidad)
-app.post('/api/save-template-config', authenticate, (req, res) => {
-  try {
-    if (req.userRole !== 'admin' && req.userRole !== 'owner') {
-      return res.status(403).json({
-        success: false,
-        error: 'Solo los propietarios y administradores pueden cambiar la configuración de plantillas'
-      });
-    }
-
-    const { template, logo } = req.body;
-
-    if (template) {
-      globalTemplateConfig.selectedTemplate = template;
-    }
-
-    if (logo !== undefined) {
-      globalTemplateConfig.logo = logo;
-    }
-
-    res.json({ success: true, message: 'Configuración guardada correctamente' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Obtener configuración de plantilla (LEGACY - mantener por compatibilidad)
-app.get('/api/template-config', (req, res) => {
-  // Log reducido para legacy endpoint
-  res.json(globalTemplateConfig);
-});
+// ✅ La configuración global ahora se maneja a través del controlador pdfTemplate.controller.js
+// ✅ Usa la tabla global_pdf_config en lugar de archivos JSON o global_template_config
+// ✅ Todas las rutas están disponibles en /api/pdf-template/*
 
 // =================== Rutas de configuración ===================
 const configPath = path.join(__dirname, "../config.json");
@@ -508,7 +414,131 @@ app.post("/api/config", authenticate, (req, res) => {
   }
 });
 
+// =================== Rutas de administración ===================
+
+// Configurar multer para logos (en memoria)
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB máximo
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten archivos de imagen'), false);
+    }
+  }
+});
+
+// Endpoint para subir logo institucional
+app.post("/api/upload/logo", authenticate, logoUpload.single("logo"), async (req, res) => {
+  if (req.userRole !== "admin") {
+    return res.status(403).json({ error: "No tienes permisos para realizar esta acción" });
+  }
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No se proporcionó ningún archivo" });
+    }
+
+    // El archivo ya está en memoria como buffer
+    const logoBuffer = req.file.buffer;
+    const logoMimetype = req.file.mimetype;
+
+    // Guardar en la base de datos
+    await pool.query(
+      "UPDATE visual_config SET logo_data = ?, logo_mimetype = ? WHERE id = 1",
+      [logoBuffer, logoMimetype]
+    );
+
+    // Retornar URL del logo para preview
+    const logoDataUrl = `data:${logoMimetype};base64,${logoBuffer.toString('base64')}`;
+
+    res.json({
+      success: true,
+      message: "Logo subido correctamente",
+      logoDataUrl: logoDataUrl
+    });
+
+  } catch (err) {
+    console.error("Error al subir logo:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
 // =================== Rutas de firma y verificación ===================
+// ====================================
+// ENDPOINT TEMPORAL PARA DEBUG - VERIFICAR USUARIOS Y LLAVES
+// ====================================
+app.get("/debug/users", async (req, res) => {
+  try {
+    const [users] = await pool.query(
+      "SELECT id, nombre, usuario, active_key_id FROM users WHERE rol = 'profesor' LIMIT 5"
+    );
+
+    const userDetails = [];
+    for (const user of users) {
+      const [keys] = await pool.query(
+        "SELECT id, key_name, created_at, expiration_date FROM user_keys WHERE user_id = ? AND id = ?",
+        [user.id, user.active_key_id]
+      );
+
+      userDetails.push({
+        id: user.id,
+        nombre: user.nombre,
+        usuario: user.usuario,
+        active_key_id: user.active_key_id,
+        has_active_key: keys.length > 0,
+        active_key: keys.length > 0 ? {
+          id: keys[0].id,
+          name: keys[0].key_name,
+          created: keys[0].created_at,
+          expires: keys[0].expiration_date
+        } : null
+      });
+    }
+
+    res.json({ users: userDetails });
+  } catch (error) {
+    console.error('Error checking users:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ====================================
+// ENDPOINT TEMPORAL PARA DEBUG - VERIFICAR CONFIG VISUAL
+// ====================================
+app.get("/debug/visual-config", async (req, res) => {
+  try {
+    const [pdfConfigRows] = await pool.query(
+      "SELECT selected_template, color_config, font_config, layout_config, border_config, visual_config FROM global_pdf_config WHERE id = 1"
+    );
+
+    const [visualConfigRows] = await pool.query(
+      "SELECT institution_name, logo_data, logo_mimetype FROM visual_config WHERE id = 1"
+    );
+
+    const pdfConfig = pdfConfigRows.length > 0 ? pdfConfigRows[0] : null;
+    const visualConfig = visualConfigRows.length > 0 ? visualConfigRows[0] : null;
+
+    const response = {
+      pdfConfig: pdfConfig ? {
+        selected_template: pdfConfig.selected_template,
+        visual_config: typeof pdfConfig.visual_config === 'string' ? JSON.parse(pdfConfig.visual_config || '{}') : pdfConfig.visual_config
+      } : null,
+      visualConfig: visualConfig ? {
+        institution_name: visualConfig.institution_name,
+        has_logo_data: !!visualConfig.logo_data,
+        logo_mimetype: visualConfig.logo_mimetype
+      } : null
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error checking visual config:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/sign-document", authenticate, upload.single("document"), async (req, res) => {
   const userId = req.userId;
   const keyPassword = req.body.keyPassword;
@@ -563,25 +593,71 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
         [userId]
       );
 
-      // Usar configuración global de plantillas unificada con el sistema modular
-      let templateName = globalTemplateConfig.selectedTemplate; // 'clasico', 'moderno', etc.
+      // Cargar configuración global de PDF desde la base de datos
+      const [pdfConfigRows] = await pool.query(
+        "SELECT selected_template, color_config, font_config, layout_config, border_config, visual_config FROM global_pdf_config WHERE id = 1"
+      );
 
+      // Cargar configuración visual (incluyendo logo)
+      const [visualConfigRows] = await pool.query(
+        "SELECT institution_name, logo_data, logo_mimetype FROM visual_config WHERE id = 1"
+      );
+
+      // Configuración por defecto si no existe
+      const defaultPdfConfig = {
+        selected_template: 'clasico',
+        color_config: JSON.stringify({ primary: '#1f2937', secondary: '#4b5563', accent: '#f59e0b' }),
+        font_config: JSON.stringify({ title: 'Times-Bold', body: 'Times-Roman', signature: 'Times-Bold' }),
+        layout_config: JSON.stringify({ marginTop: 60, marginBottom: 60, marginLeft: 50, marginRight: 50, titleSize: 28, bodySize: 14 }),
+        border_config: JSON.stringify({ style: 'solid', width: 1, color: '#1f2937' }),
+        visual_config: JSON.stringify({ showInstitution: true, showAuthors: true, showDate: true, showAvalador: true, showSignature: true, showLogo: true, showBackground: false })
+      };
+
+      const defaultInstitutionName = 'Firmas Digitales FD';
+
+      // Usar configuración de la base de datos o valores por defecto
+      const pdfConfig = pdfConfigRows.length > 0 ? pdfConfigRows[0] : defaultPdfConfig;
+      const institutionName = visualConfigRows.length > 0 ? visualConfigRows[0].institution_name : defaultInstitutionName;
+
+      // Preparar datos del logo para la función drawLogo
+      let logoData = null;
+      if (visualConfigRows.length > 0 && visualConfigRows[0].logo_data && Buffer.isBuffer(visualConfigRows[0].logo_data) && visualConfigRows[0].logo_data.length > 0) {
+        logoData = {
+          buffer: visualConfigRows[0].logo_data,
+          mimetype: visualConfigRows[0].logo_mimetype || 'image/png'
+        };
+      }
+
+      // Preparar configuración completa para el template manager
+      const templateConfig = {
+        selectedTemplate: pdfConfig.selected_template,
+        colorConfig: typeof pdfConfig.color_config === 'string' ? JSON.parse(pdfConfig.color_config || '{}') : pdfConfig.color_config,
+        fontConfig: typeof pdfConfig.font_config === 'string' ? JSON.parse(pdfConfig.font_config || '{}') : pdfConfig.font_config,
+        layoutConfig: typeof pdfConfig.layout_config === 'string' ? JSON.parse(pdfConfig.layout_config || '{}') : pdfConfig.layout_config,
+        borderConfig: typeof pdfConfig.border_config === 'string' ? JSON.parse(pdfConfig.border_config || '{}') : pdfConfig.border_config,
+        visualConfig: typeof pdfConfig.visual_config === 'string' ? JSON.parse(pdfConfig.visual_config || '{}') : pdfConfig.visual_config
+      };
+
+      // Usar configuración global de plantillas unificada con el sistema modular
+      let templateName = pdfConfig.selected_template; // 'clasico', 'moderno', etc.
 
       // Datos a renderizar usando configuración global
       const data = {
         titulo: req.body.titulo || 'DOCUMENTO OFICIAL AVALADO',
         autores: req.body.autores || userInfo[0].nombre,
-        institucion: req.body.institucion || globalTemplateConfig.institutionName,
+        institucion: req.body.institucion || institutionName,
         avalador: `Avalado por: ${userInfo[0].nombre}`,
         fecha: new Date().toLocaleDateString('es-CO', {
           year: 'numeric',
           month: 'long',
           day: 'numeric'
         }),
-        logo: globalTemplateConfig.logo || path.join(__dirname, '../recursos', 'logotipo-de-github.png'),
-        // Agregar datos de firma electrónica
-        signatureData: req.body.signatureData || null,
-        signatureMethod: req.body.signatureMethod || null,
+        logoData: logoData, // Cambiar de logo a logoData
+        // Agregar datos de firma electrónica solo si existen
+        ...(req.body.signatureData && req.body.signatureData !== 'null' && req.body.signatureData !== 'undefined' && req.body.signatureData !== 'NaN' && req.body.signatureData.trim() !== '' ? {
+          signatureData: req.body.signatureData,
+          signatureMethod: req.body.signatureMethod
+        } : {}),
         // Agregar contenido básico del documento
         contenido: 'Este documento ha sido procesado y avalado digitalmente a través del sistema de firmas Digitales. La autenticidad e integridad del contenido está garantizada mediante tecnología criptográfica.'
       };
@@ -598,7 +674,7 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
       const avaladoFilePath = path.join(__dirname, "../downloads", `avalado_${Date.now()}.pdf`);
 
       // El TemplateManager manejará la configuración específica de la plantilla
-      await renderPdfWithTemplate(tempBlankPath, avaladoFilePath, data, { templateName });
+      await renderPdfWithTemplate(tempBlankPath, avaladoFilePath, data, templateConfig);
 
       // Insertar metadatos de firma
       const finalPdfBytes = fs.readFileSync(avaladoFilePath);
@@ -844,7 +920,6 @@ app.use((err, req, res, next) => {
 
 // =================== Manejo de rutas no encontradas ===================
 app.use((req, res) => {
-  console.log(`❌ Ruta no encontrada: ${req.method} ${req.path}`);
   res.status(404).json({
     success: false,
     error: 'Ruta no encontrada',
@@ -873,8 +948,6 @@ app.get('/downloads/:file', (req, res) => {
 
 // =================== Inicio del servidor ===================
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // =================== Manejo de errores del servidor ===================
@@ -898,28 +971,23 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // =================== Graceful shutdown ===================
 process.on('SIGTERM', () => {
-  console.log('🚨 SIGTERM recibido. Iniciando graceful shutdown...');
 
   server.close((err) => {
     if (err) {
       console.error('❌ Error al cerrar servidor:', err);
     } else {
-      console.log('✅ Servidor cerrado correctamente.');
     }
     process.exit(0);
   });
 
   // Forzar cierre después de 10 segundos
   setTimeout(() => {
-    console.log('⚠️ Forzando cierre después de timeout');
     process.exit(1);
   }, 10000);
 });
 
 process.on('SIGINT', () => {
-  console.log('🚨 SIGINT recibido. Cerrando servidor gracefully...');
   server.close(() => {
-    console.log('✅ Servidor cerrado.');
     process.exit(0);
   });
 });

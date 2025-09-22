@@ -7,11 +7,13 @@
     "dev": "node scripts/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:setup": "node scripts/setup-db.js",
+    "db:sync": "node scripts/setup-db.js --sync",
     "db:backup": "node scripts/setup-db.js --backup",
     "db:reset": "node scripts/setup-db.js --reset",
     "db:status": "node scripts/setup-db.js --status",
     "db:install": "node scripts/setup-db.js --install",
     "db:restore": "node scripts/setup-db.js --restore",
+    "db:drop-all": "node scripts/setup-db.js --drop-all",
     "db:help": "node scripts/setup-db.js --help"
   },
   "keywords": [],

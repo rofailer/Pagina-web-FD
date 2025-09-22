@@ -85,13 +85,13 @@ Es## ⚙️ Instalación
 
    ```sh
    # Opción 1: Configuración completa (recomendado)
-   npm run setup-db
+   npm run db:setup
 
-   # Opción 2: Solo crear tablas (si la BD ya existe)
-   npm run setup-tables
+   # Opción 2: Sincronización inteligente (recomendado para actualizaciones)
+   npm run db:sync
 
    # Opción 3: Resetear base de datos completa
-   npm run reset-db
+   npm run db:reset
    ```
 
    Estos comandos automatizan la creación de la base de datos, tablas, y datos iniciales.
@@ -156,37 +156,59 @@ El proyecto incluye un sistema avanzado de configuración automática de base de
 
 ```sh
 # Configuración completa de primera vez
-npm run setup-db
+npm run db:setup
 
-# Crear solo las tablas (BD ya existe)
-npm run setup-tables
+# 🔄 SINCRONIZACIÓN INTELIGENTE (NUEVO)
+npm run db:sync
 
-# Resetear completamente la base de datos
-npm run reset-db
+# 💾 Crear backup de la BD actual
+npm run db:backup
 
-# Crear backup de la BD actual
-npm run backup-db
+# 🗑️ Eliminar TODAS las tablas (irreversible)
+npm run db:drop-all
 
-# Ver estado de la base de datos
-npm run db-status
+# 🔄 Resetear completamente la base de datos
+npm run db:reset
+
+# 📊 Ver estado de la base de datos
+npm run db:status
+
+# 📦 Instalación completa del sistema
+npm run db:install
+
+# 🔄 Restaurar desde backup
+npm run db:restore
+
+# ❓ Mostrar ayuda completa
+npm run db:help
 ```
 
 #### Características del sistema:
 
+- **Sincronización inteligente**: Compara tablas existentes con el archivo SQL y sincroniza automáticamente
 - **Auto-detección**: Detecta automáticamente si la BD existe o no
 - **Backup automático**: Crea respaldos con timestamp antes de modificaciones
+- **Eliminación selectiva**: Puede eliminar tablas obsoletas y crear tablas faltantes
 - **Recuperación inteligente**: Restaura desde backup si hay errores
 - **Validación completa**: Verifica integridad de tablas y datos
 - **Manejo de errores**: Mensajes claros y opciones de recuperación
 - **Configuración flexible**: Soporta diferentes entornos y configuraciones
 
+#### Funciones principales:
+
+- **`db:sync`**: Sincronización inteligente que elimina tablas obsoletas y crea tablas faltantes
+- **`db:drop-all`**: Elimina completamente todas las tablas del schema (usar con precaución)
+- **`db:backup`**: Crea backup completo con timestamp automático
+- **`db:restore`**: Restaura desde el último backup o archivo específico
+- **`db:status`**: Muestra estadísticas completas de la base de datos
+
 #### Archivos relacionados:
 
 - `scripts/setup-db.js`: Motor principal del sistema de configuración
 - `firmas_digitales_v2.sql`: Esquema actualizado de la base de datos
-- `DATABASE_SETUP_GUIDE.md`: Documentación completa del sistema
+- `backups/`: Directorio para archivos de backup automáticos
 
-Para más detalles, consulta `DATABASE_SETUP_GUIDE.md`.
+Para más detalles sobre cada comando, ejecuta `npm run db:help`.
 
 ---
 
@@ -229,24 +251,28 @@ npm install express mysql2 bcryptjs jsonwebtoken cors dotenv pdf-lib multer fs-e
 
 ### 📚 Documentación adicional
 
-- `DATABASE_SETUP_GUIDE.md`: Guía completa del sistema de configuración de base de datos
+- `scripts/setup-db.js`: Sistema completo de gestión automática de base de datos
+- `firmas_digitales_v2.sql`: Esquema actualizado de la base de datos
 - `docs/SISTEMA_TEMAS.md`: Documentación del sistema de temas y personalización visual
 - `CAMBIOS_PDF_PERSONALIZACION.txt`: Registro de cambios en el sistema de personalización PDF
+- Ejecuta `npm run db:help` para documentación completa de comandos de base de datos
 
 ### 🔧 Troubleshooting
 
 #### Problemas comunes con la base de datos:
 
 - **Error de conexión**: Verifica credenciales en `.env` y que MySQL esté ejecutándose
-- **Tablas no existen**: Ejecuta `npm run setup-db` para configuración automática
+- **Tablas no existen**: Ejecuta `npm run db:setup` para configuración automática
+- **Tablas desactualizadas**: Usa `npm run db:sync` para sincronización inteligente
 - **Error de puerto**: Asegúrate de que el puerto 3307 esté disponible en XAMPP
+- **Necesitas limpiar todo**: Usa `npm run db:drop-all` seguido de `npm run db:setup` (⚠️ irreversible)
 
 #### Problemas con OpenSSL:
 
 - **Comando no encontrado**: Agrega OpenSSL al PATH del sistema
 - **Error de firma**: Verifica que las llaves sean válidas y no expiradas
 
-Para problemas específicos del sistema de base de datos, consulta `DATABASE_SETUP_GUIDE.md`.
+Para problemas específicos del sistema de base de datos, ejecuta `npm run db:help`.
 
 ---
 

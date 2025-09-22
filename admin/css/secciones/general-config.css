@@ -1,0 +1,497 @@
+/* ===========================================
+   CONFIGURACIÓN GENERAL - Panel Administrativo
+   ===========================================
+
+   Estilos específicos de configuración general
+   Los componentes compartidos están en admin-shared.css
+   =========================================== */
+
+/* ========================================
+   ESTILOS ESPECÍFICOS DE CONFIGURACIÓN GENERAL
+   ======================================== */
+
+/* ========================================
+   SECCIONES ADMINISTRATIVAS
+   ======================================== */
+
+.admin-section {
+  margin-bottom: var(--admin-spacing-2xl);
+  padding: var(--admin-spacing-xl);
+  background: var(--admin-surface);
+  border-radius: var(--admin-radius-lg);
+  border: 1px solid var(--admin-border);
+}
+
+.admin-section h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--admin-spacing-md);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--admin-text);
+  margin-bottom: var(--admin-spacing-lg);
+  padding-bottom: var(--admin-spacing-md);
+  border-bottom: 2px solid var(--admin-border);
+}
+
+.admin-section h3 svg {
+  color: var(--admin-accent);
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.admin-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--admin-spacing-lg);
+}
+
+.admin-section-header h3 {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* ========================================
+   FORMULARIOS DE CONFIGURACIÓN GENERAL
+   ======================================== */
+
+/* Grid de formulario */
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--admin-spacing-lg);
+  margin-bottom: var(--admin-spacing-lg);
+}
+
+.admin-form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+/* Botón general de guardar configuración */
+.global-config-actions {
+  margin-top: var(--admin-spacing-3xl);
+  padding-top: var(--admin-spacing-xl);
+  border-top: 1px solid var(--admin-border-light);
+  display: flex;
+  justify-content: center;
+}
+
+.admin-btn.large {
+  padding: var(--admin-spacing-lg) var(--admin-spacing-2xl);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Sección de favicon inline junto al título */
+.favicon-inline-section {
+  display: flex;
+  align-items: center;
+  gap: var(--admin-spacing-lg);
+  margin: var(--admin-spacing-md) 0;
+  padding: var(--admin-spacing-md);
+  background: var(--admin-bg-light);
+  border-radius: var(--admin-radius);
+  border: 1px solid var(--admin-border-light);
+}
+
+.favicon-inline-section .favicon-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--admin-spacing-xs);
+  background: var(--admin-primary);
+  border-radius: 8px;
+  padding: var(--admin-spacing-sm);
+}
+
+.favicon-inline-section .favicon-preview img {
+  width: 80px;
+  height: 80px;
+  border-radius: 3px;
+}
+
+.favicon-inline-section .favicon-preview span {
+  font-size: 0.8rem;
+  color: white;
+  font-weight: 500;
+}
+
+.favicon-inline-section .favicon-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--admin-spacing-xs);
+  flex: 1;
+}
+
+.favicon-inline-section .favicon-controls label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--admin-text);
+}
+
+.favicon-inline-section .favicon-controls .admin-input-help {
+  font-size: 0.8rem;
+  color: var(--admin-text-secondary);
+  margin-top: var(--admin-spacing-xs);
+}
+
+/* ========================================
+   SECCIÓN IDENTIDAD INSTITUCIONAL + FAVICON
+   ======================================== */
+
+.admin-section-content {
+  display: flex;
+  gap: var(--admin-spacing-xl);
+  align-items: flex-start;
+  margin: var(--admin-spacing-lg) 0;
+}
+
+.admin-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--admin-spacing-md);
+  padding: var(--admin-spacing-lg);
+  background: var(--admin-bg-light);
+  border-radius: var(--admin-radius);
+  border: 1px solid var(--admin-border-light);
+}
+
+.field-header {
+  margin-bottom: var(--admin-spacing-sm);
+}
+
+.field-header h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--admin-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--admin-spacing-sm);
+}
+
+.field-header h4::before {
+  content: "";
+  width: 4px;
+  height: 16px;
+  background: var(--admin-accent);
+  border-radius: 2px;
+}
+
+.field-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--admin-spacing-sm);
+}
+
+/* Campo específico de institución */
+.institution-field .field-content {
+  gap: var(--admin-spacing-xs);
+}
+
+.institution-field .admin-input {
+  width: 100%;
+}
+
+.institution-field .admin-input-help {
+  font-size: 0.8rem;
+  color: var(--admin-text-secondary);
+  margin-top: var(--admin-spacing-xs);
+}
+
+/* Campo específico de favicon */
+.favicon-field .field-content {
+  display: flex;
+  align-items: center;
+  gap: var(--admin-spacing-lg);
+}
+
+.favicon-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--admin-spacing-xs);
+  min-width: 80px;
+  background: var(--admin-primary);
+  border-radius: 8px;
+  padding: var(--admin-spacing-sm);
+}
+
+.favicon-preview img {
+  width: 80px;
+  height: 80px;
+  border-radius: 4px;
+}
+
+.favicon-preview span {
+  font-size: 1.2rem;
+  color: white;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.favicon-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--admin-spacing-xs);
+  flex: 1;
+}
+
+.favicon-controls label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--admin-text);
+}
+
+.favicon-controls .admin-input-help {
+  font-size: 0.8rem;
+  color: var(--admin-text-secondary);
+  margin-top: var(--admin-spacing-xs);
+}
+
+/* ========================================
+   ACCIONES ADMINISTRATIVAS
+   ======================================== */
+
+.admin-actions {
+  display: flex;
+  gap: var(--admin-spacing-md);
+  padding-top: var(--admin-spacing-lg);
+  border-top: 1px solid var(--admin-border);
+  margin-top: var(--admin-spacing-lg);
+}
+
+/* ========================================
+   FORMULARIOS DE ACCIONES
+   ======================================== */
+
+.admin-form-actions {
+  display: flex;
+  gap: var(--admin-spacing-md);
+  padding-top: var(--admin-spacing-lg);
+  border-top: 1px solid var(--admin-border);
+  margin-top: var(--admin-spacing-lg);
+  justify-content: flex-end;
+}
+
+.admin-form-actions .admin-btn {
+  min-width: 120px;
+}
+
+.admin-form-actions .admin-btn:hover {
+  transform: translateY(-1px);
+}
+
+.admin-form-actions .admin-btn:active {
+  transform: translateY(0);
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
+  .admin-section {
+    margin-bottom: var(--admin-spacing-xl);
+    padding: var(--admin-spacing-lg);
+  }
+
+  .admin-section h3 {
+    font-size: 1.1rem;
+    gap: var(--admin-spacing-sm);
+  }
+
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+    gap: var(--admin-spacing-md);
+  }
+
+  .admin-form-group.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .admin-actions {
+    flex-direction: column;
+    gap: var(--admin-spacing-sm);
+  }
+
+  .admin-form-actions {
+    flex-direction: column;
+    gap: var(--admin-spacing-sm);
+  }
+
+  .admin-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .admin-file-label {
+    padding: var(--admin-spacing-md);
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-section {
+    padding: var(--admin-spacing-md);
+  }
+
+  .admin-section h3 {
+    font-size: 1rem;
+    gap: var(--admin-spacing-sm);
+  }
+
+  .admin-form-group label {
+    font-size: 0.85rem;
+  }
+
+  .admin-input,
+  .admin-select,
+  .admin-textarea {
+    padding: var(--admin-spacing-sm);
+    font-size: 0.85rem;
+  }
+
+  .admin-btn {
+    padding: var(--admin-spacing-sm) var(--admin-spacing-md);
+    font-size: 0.8rem;
+  }
+
+  /* Responsive para favicon inline */
+  .favicon-inline-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--admin-spacing-md);
+  }
+
+  .favicon-inline-section .favicon-controls {
+    width: 100%;
+  }
+
+  /* Responsive para sección identidad + favicon */
+  .admin-section-content {
+    gap: var(--admin-spacing-lg);
+    flex-wrap: wrap;
+  }
+
+  .admin-field {
+    flex: 1 1 300px;
+    min-width: 280px;
+    padding: var(--admin-spacing-md);
+  }
+
+  .favicon-field .field-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--admin-spacing-md);
+  }
+
+  .favicon-preview {
+    align-self: center;
+  }
+
+  .favicon-controls {
+    width: 100%;
+  }
+}
+
+/* ========================================
+   ESTILOS DE BOTONES PARA CONFIGURACIÓN GENERAL
+   ======================================== */
+
+/* Botones principales de configuración */
+.visual-config-btn {
+  padding: var(--admin-spacing-md) var(--admin-spacing-xl);
+  border: none;
+  border-radius: var(--admin-radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--admin-transition);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--admin-spacing-sm);
+  text-decoration: none;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.visual-config-btn.primary {
+  background: var(--admin-primary);
+  color: white;
+}
+
+.visual-config-btn.primary:hover {
+  background: var(--admin-secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--admin-shadow-md);
+}
+
+.visual-config-btn.secondary {
+  background: var(--admin-surface);
+  color: var(--admin-text-secondary);
+  border: 1px solid var(--admin-border);
+}
+
+.visual-config-btn.secondary:hover {
+  background: var(--admin-primary);
+  color: white;
+  border-color: var(--admin-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--admin-shadow-md);
+}
+
+.visual-config-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Botón específico de seleccionar archivo */
+.select-file-btn {
+  background: var(--admin-primary);
+  color: white;
+  border: 2px solid var(--admin-primary);
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.select-file-btn:hover {
+  background: var(--admin-secondary);
+  border-color: var(--admin-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.select-file-btn:active {
+  transform: translateY(0);
+}
+
+.select-file-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Responsive para botones */
+@media (max-width: 768px) {
+  .visual-config-btn,
+  .select-file-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

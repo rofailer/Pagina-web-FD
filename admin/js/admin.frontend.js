@@ -19,6 +19,109 @@ class AdminPanel {
         this.handleFormSubmit = this.handleFormSubmit.bind(this);
         // Eliminado: this.handleMobileToggle = this.handleMobileToggle.bind(this);
 
+        // Definir método updateInstitutionPreviews
+        this.updateInstitutionPreviews = (institutionName) => {
+            // Actualizar vista previa del header
+            const headerPreview = document.getElementById('headerPreview');
+            if (headerPreview) {
+                headerPreview.textContent = institutionName;
+            }
+
+            // Actualizar vista previa del footer
+            const footerPreview = document.getElementById('footerPreview');
+            if (footerPreview) {
+                footerPreview.textContent = institutionName;
+            }
+
+            // Actualizar vista previa del título
+            const titlePreview = document.getElementById('titlePreview');
+            if (titlePreview) {
+                titlePreview.textContent = institutionName;
+            }
+        };
+
+        // Definir método updateLiveInstitutionName
+        this.updateLiveInstitutionName = (institutionName) => {
+            // Actualizar título de la página
+            document.title = institutionName;
+
+            // Actualizar elementos del header si existen
+            const headerTitles = document.querySelectorAll('.site-title, .header-title, [data-institution-name]');
+            headerTitles.forEach(element => {
+                element.textContent = institutionName;
+            });
+
+            // Actualizar elementos del footer si existen
+            const footerElements = document.querySelectorAll('.footer-institution, [data-footer-institution]');
+            footerElements.forEach(element => {
+                element.textContent = institutionName;
+            });
+
+            // Actualizar elementos del panel de administración
+            const adminHeaderSubtitle = document.getElementById('adminHeaderSubtitle');
+            if (adminHeaderSubtitle) {
+                adminHeaderSubtitle.textContent = institutionName;
+            }
+
+            // Actualizar campo de configuración de PDFs si existe
+            const pdfInstitutionName = document.getElementById('pdfInstitutionName');
+            if (pdfInstitutionName) {
+                pdfInstitutionName.value = institutionName;
+            }
+
+            // Actualizar configuración de PDFs si existe
+            const pdfInstitutionField = document.getElementById('institutionName');
+            if (pdfInstitutionField) {
+                pdfInstitutionField.value = institutionName;
+            }
+        };
+
+        // Definir método saveInstitutionName
+        this.saveInstitutionName = async () => {
+            try {
+                this.showLoading('Guardando nombre de institución...');
+
+                const institutionName = document.getElementById('institutionName').value.trim();
+
+                if (!institutionName) {
+                    window.showNotification('El nombre de la institución no puede estar vacío', 'error');
+                    return;
+                }
+
+                const response = await fetch('/api/config/institution', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ institution_name: institutionName })
+                });
+
+                if (response.ok) {
+                    // Actualizar configuración local
+                    this.config.institution_name = institutionName;
+
+                    // Actualizar vistas previas en tiempo real
+                    this.updateInstitutionPreviews(institutionName);
+
+                    window.showNotification('Nombre de institución guardado correctamente', 'success');
+
+                    // Actualizar elementos del sitio en tiempo real
+                    this.updateLiveInstitutionName(institutionName);
+                } else {
+                    throw new Error('Error al guardar el nombre de la institución');
+                }
+            } catch (error) {
+                console.error('Error al guardar nombre de institución:', error);
+                window.showNotification('Error al guardar el nombre de la institución', 'error');
+            } finally {
+                this.hideLoading();
+            }
+        };
+
+        // Hacer disponible globalmente
+        window.adminPanel = this;
+
         this.init();
     }
 
@@ -63,6 +166,43 @@ class AdminPanel {
             };
         }
     }
+
+    // Método para hacer llamadas autenticadas
+    async authenticatedFetch(url, options = {}) {
+        const token = localStorage.getItem('token') || localStorage.getItem('admin_token');
+
+        if (!token) {
+            console.error('No hay token de autenticación disponible');
+            return {
+                success: false,
+                error: 'No autenticado',
+                message: 'Token de autenticación no encontrado'
+            };
+        }
+
+        const defaultOptions = {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        };
+
+        const finalOptions = { ...defaultOptions, ...options };
+
+        try {
+            const response = await fetch(url, finalOptions);
+            return await this.safeJsonResponse(response);
+        } catch (error) {
+            console.error('Error en llamada autenticada:', error);
+            return {
+                success: false,
+                error: 'Error de red',
+                message: error.message
+            };
+        }
+    }
+
     setupEventListeners() {
         // Navegación de pestañas
         document.querySelectorAll('.admin-nav-item').forEach(item => {
@@ -208,6 +348,33 @@ class AdminPanel {
         switch (tabId) {
             case 'configuracion-general':
                 await this.loadConfiguration();
+                // Cargar configuración de institución
+                try {
+                    const response = await fetch('/api/config/institution', {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const institutionName = data.institution_name || 'Firmas Digitales FD';
+
+                        // Cargar en el input
+                        const input = document.getElementById('institutionName');
+                        if (input) {
+                            input.value = institutionName;
+                        }
+
+                        // Actualizar vistas previas
+                        this.updateInstitutionPreviews(institutionName);
+
+                        // Actualizar elementos en vivo
+                        this.updateLiveInstitutionName(institutionName);
+                    }
+                } catch (error) {
+                    console.warn('Error cargando configuración de institución:', error);
+                }
                 break;
             case 'gestion-usuarios':
                 await this.loadUsers();
@@ -1311,13 +1478,10 @@ class AdminPanel {
             } else {
                 // Manejar diferentes tipos de error
                 if (response.status === 404) {
-                    console.log('📊 Base de datos no encontrada o ruta no existe');
                     this.displayDatabaseNotFound();
                 } else if (response.status === 401) {
-                    console.log('🔐 Error de autenticación');
                     window.showNotification('Sesión expirada. Por favor, inicia sesión nuevamente.', 'error');
                 } else if (response.status === 500) {
-                    console.log('🔧 Error interno del servidor');
                     window.showNotification('Error interno del servidor', 'error');
                 } else {
                     console.error('❌ Error desconocido:', response.status, response.statusText);
@@ -2149,8 +2313,6 @@ class AdminPanel {
                 return;
             }
 
-            console.log('🔐 Token encontrado, haciendo petición a table-details...');
-
             // Hacer petición para obtener detalles de la tabla
             const response = await fetch(`${this.apiBase}/database/table-details`, {
                 method: 'POST',
@@ -2160,8 +2322,6 @@ class AdminPanel {
                 },
                 body: JSON.stringify({ tableName })
             });
-
-            console.log('📡 Respuesta de table-details:', response.status, response.statusText);
 
             if (response.ok) {
                 const result = await response.json();
@@ -2396,10 +2556,6 @@ class AdminPanel {
                 ]
             });
 
-            console.log('🔍 Estado de autenticación:');
-            console.log('- Token normal:', token ? '✅ Presente' : '❌ No encontrado');
-            console.log('- Token admin:', adminToken ? '✅ Presente' : '❌ No encontrado');
-
             if (!token) {
                 diagnosticResults.push({
                     type: 'error',
@@ -2440,7 +2596,6 @@ class AdminPanel {
                     ]
                 });
 
-                console.log('✅ Token válido para usuario:', userData.usuario, '- Rol:', userData.rol);
                 this.showDiagnosticResults(diagnosticResults);
                 return true;
             } else {
@@ -2720,6 +2875,25 @@ class AdminNotificationManager {
         iconSpan.textContent = icons[type] || icons.info;
         return iconSpan.outerHTML;
     }
+
+    /* ========================================
+       FUNCIONES PARA CONFIGURACIÓN DE INSTITUCIÓN
+       ======================================== */
+
+    async resetInstitutionName() {
+        try {
+            const defaultName = 'Firmas Digitales FD';
+            document.getElementById('institutionName').value = defaultName;
+
+            // Actualizar vistas previas
+            this.updateInstitutionPreviews(defaultName);
+
+            window.showNotification('Nombre de institución restablecido', 'info');
+        } catch (error) {
+            console.error('Error restableciendo nombre:', error);
+            window.showNotification('Error al restablecer el nombre', 'error');
+        }
+    }
 }
 
 // Agregar estilos CSS para las animaciones
@@ -2800,6 +2974,116 @@ if (!document.getElementById('admin-notification-styles')) {
     style.id = 'admin-notification-styles';
     style.textContent = notificationStyles;
     document.head.appendChild(style);
+}
+
+/* ========================================
+   FUNCIONES PARA MANEJO DE FAVICON
+   ======================================== */
+
+// Función para seleccionar archivo de favicon
+function selectFaviconFile() {
+    const fileInput = document.getElementById('faviconUpload');
+    if (fileInput) {
+        fileInput.click();
+    }
+}
+
+// Función para manejar cambio de archivo de favicon
+function handleFaviconChange(event) {
+    const file = event.target.files[0];
+    if (file) {
+        // Validar tipo de archivo
+        const allowedTypes = ['image/x-icon', 'image/png', 'image/jpeg', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            showNotification('Tipo de archivo no válido. Use ICO, PNG, JPG o GIF.', 'error');
+            return;
+        }
+
+        // Validar tamaño (máximo 1MB)
+        if (file.size > 1024 * 1024) {
+            showNotification('El archivo es demasiado grande. Máximo 1MB.', 'error');
+            return;
+        }
+
+        // Mostrar vista previa
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const faviconImg = document.getElementById('currentFavicon');
+            if (faviconImg) {
+                faviconImg.src = e.target.result;
+                showNotification('Favicon seleccionado. Guarde la configuración para aplicar los cambios.', 'info');
+            }
+        };
+        reader.readAsDataURL(file);
+
+        // Subir archivo automáticamente
+        uploadFavicon(file);
+    }
+}
+
+// Función para subir favicon al servidor
+async function uploadFavicon(file) {
+    const formData = new FormData();
+    formData.append('favicon', file);
+
+    try {
+        const response = await fetch('/api/admin/upload-favicon', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            showNotification('Favicon actualizado correctamente.', 'success');
+
+            // Actualizar favicon en tiempo real
+            updateFaviconInPage(result.faviconUrl);
+        } else {
+            throw new Error('Error al subir favicon');
+        }
+    } catch (error) {
+        console.error('Error uploading favicon:', error);
+        showNotification('Error al subir el favicon. Intente nuevamente.', 'error');
+    }
+}
+
+// Función para actualizar favicon en la página
+function updateFaviconInPage(faviconUrl) {
+    // Actualizar favicon en el head
+    let faviconLink = document.querySelector('link[rel="icon"]');
+    if (!faviconLink) {
+        faviconLink = document.createElement('link');
+        faviconLink.rel = 'icon';
+        document.head.appendChild(faviconLink);
+    }
+    faviconLink.href = faviconUrl;
+
+    // Actualizar shortcut icon también
+    let shortcutIcon = document.querySelector('link[rel="shortcut icon"]');
+    if (!shortcutIcon) {
+        shortcutIcon = document.createElement('link');
+        shortcutIcon.rel = 'shortcut icon';
+        document.head.appendChild(shortcutIcon);
+    }
+    shortcutIcon.href = faviconUrl;
+}
+
+// Función para guardar configuración global (incluyendo favicon)
+async function saveGlobalConfiguration() {
+    // Llamar directamente a saveInstitutionName
+    if (window.adminPanel) {
+        try {
+            await window.adminPanel.saveInstitutionName();
+        } catch (error) {
+            console.error('Error en saveInstitutionName:', error);
+        }
+    }
+
+    // Aquí se pueden agregar más funciones de guardado en el futuro
+    showNotification('Configuración guardada correctamente.', 'success');
 }
 
 /* ========================================

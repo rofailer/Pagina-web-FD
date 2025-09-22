@@ -40,8 +40,9 @@
 .admin-input:focus,
 .admin-textarea:focus,
 .admin-select:focus {
-  border-color: var(--primary-color) !important;
-  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1) !important;
+  border-color: var(--admin-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  outline: none;
 }
 
 /* Iconos y elementos de acento */
@@ -248,7 +249,7 @@
   right: 8px;
   width: 20px;
   height: 20px;
-  background: var(--primary-color);
+  background: var(--admin-primary);
   color: white;
   border-radius: 50%;
   display: flex;
@@ -373,6 +374,99 @@
   background-color: var(--bg-tertiary);
   border-color: var(--border-color);
   color: var(--text-primary);
+}
+
+/* Estilos para inputs de color más compactos */
+.admin-input[type="color"] {
+  width: 60px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+}
+
+.admin-input[type="color"]:hover {
+  border-color: var(--admin-primary);
+}
+
+/* Estilos para inputs file personalizados */
+.file-input-container {
+  position: relative;
+  width: 100%;
+}
+
+.file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.file-input-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  cursor: pointer;
+  transition: var(--admin-transition);
+  font-size: 0.9rem;
+}
+
+.file-input-label:hover {
+  border-color: var(--admin-border-dark);
+  background: var(--admin-bg-hover);
+}
+
+.file-input-icon {
+  color: var(--admin-text-secondary);
+  flex-shrink: 0;
+}
+
+.file-input-text {
+  flex: 1;
+  color: var(--admin-text-muted);
+}
+
+.file-input-button {
+  padding: 0.25rem 0.75rem;
+  background: var(--admin-primary);
+  color: white;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: var(--admin-transition);
+}
+
+.file-input-label:hover .file-input-button {
+  background: var(--admin-primary-dark);
+}
+
+[data-theme="dark"] .file-input-label {
+  border-color: var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .file-input-label:hover {
+  border-color: var(--border-color-hover);
+  background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .file-input-icon {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .file-input-text {
+  color: var(--text-muted);
 }
 
 .apply-custom-btn {

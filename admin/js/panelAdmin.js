@@ -1144,3 +1144,100 @@ function hideUserIndicator() {
     userIndicator.style.display = 'none';
   }
 }
+
+// Sistema de manejo de foco para campos de formulario
+(function () {
+  // Variable para controlar si ya se inicializó
+  let isInitialized = false;
+
+  // Función para manejar el foco de los campos de formulario
+  function setupFormFieldFocus() {
+    // Evitar inicialización múltiple
+    if (isInitialized) {
+      return;
+    }
+    isInitialized = true;
+
+    // Limpiar event listeners previos para evitar duplicados
+    document.removeEventListener('focusin', handleFocusIn);
+    document.removeEventListener('focusout', handleFocusOut);
+
+    // Función para manejar focusin
+    function handleFocusIn(e) {
+      const target = e.target;
+      if (target.matches('.admin-input, .admin-select, .admin-textarea')) {
+        const formGroup = target.closest('.admin-form-group');
+        if (formGroup) {
+          formGroup.classList.add('focused');
+        }
+      }
+    }
+
+    // Función para manejar focusout
+    function handleFocusOut(e) {
+      const target = e.target;
+      if (target.matches('.admin-input, .admin-select, .admin-textarea')) {
+        const formGroup = target.closest('.admin-form-group');
+        if (formGroup && !target.value.trim()) {
+          formGroup.classList.remove('focused');
+        }
+      }
+    }
+
+    // Agregar event listeners
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+
+    // Inicializar estado de campos que ya tienen valor
+    initializeFieldStates();
+  }
+
+  // Función para inicializar el estado de los campos
+  function initializeFieldStates() {
+    const formGroups = document.querySelectorAll('.admin-form-group');
+    formGroups.forEach(group => {
+      const input = group.querySelector('.admin-input, .admin-select, .admin-textarea');
+      if (input && input.value.trim()) {
+        group.classList.add('focused');
+      }
+    });
+  }
+
+  // Inicializar cuando el DOM esté listo
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupFormFieldFocus);
+  } else {
+    setupFormFieldFocus();
+  }
+
+  // También inicializar cuando se cargue contenido dinámico (modales, etc.)
+  document.addEventListener('DOMContentLoaded', function () {
+    // Observer para detectar cuando se agregue contenido dinámico
+    const observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          // Verificar si se agregó algún formulario
+          mutation.addedNodes.forEach(function (node) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const formFields = node.querySelectorAll('.admin-input, .admin-select, .admin-textarea');
+              if (formFields.length > 0) {
+                // Inicializar estado de los nuevos campos
+                formFields.forEach(field => {
+                  const formGroup = field.closest('.admin-form-group');
+                  if (formGroup && field.value.trim()) {
+                    formGroup.classList.add('focused');
+                  }
+                });
+              }
+            }
+          });
+        }
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  });
+})();

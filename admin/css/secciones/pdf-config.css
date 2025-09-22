@@ -1,0 +1,342 @@
+/* ===========================================
+   CONFIGURACIÓN PDF - Panel Administrativo
+   ===========================================
+
+   Estilos específicos de configuración PDF
+   Los componentes compartidos están en admin-shared.css
+   =========================================== */
+
+/* ===========================================
+   PLANTILLAS PDF
+   =========================================== */
+
+/* Grid de plantillas PDF */
+.pdf-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--admin-spacing-lg);
+  margin-bottom: var(--admin-spacing-xl);
+}
+
+/* Tarjeta de plantilla PDF */
+.pdf-template-card {
+  background: white;
+  border: 2px solid var(--admin-border);
+  border-radius: var(--admin-radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: var(--admin-transition);
+  position: relative;
+}
+
+.pdf-template-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--admin-shadow-lg);
+  border-color: var(--admin-primary);
+}
+
+.pdf-template-card.active {
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Vista previa de plantilla */
+.pdf-template-preview {
+  height: 160px;
+  background: var(--admin-surface);
+  border-bottom: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.pdf-template-preview svg {
+  width: 64px;
+  height: 64px;
+  color: var(--admin-text-muted);
+}
+
+/* Información de plantilla */
+.pdf-template-info {
+  padding: var(--admin-spacing-lg);
+}
+
+.pdf-template-info h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--admin-text);
+  margin-bottom: var(--admin-spacing-xs);
+}
+
+.pdf-template-info p {
+  font-size: 0.75rem;
+  color: var(--admin-text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ===========================================
+   CHECKBOXES EN CONFIGURACIÓN PDF
+   =========================================== */
+
+/* Estilos específicos para checkboxes en configuración PDF */
+.admin-form-group .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--admin-spacing-sm);
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--admin-text);
+  user-select: none;
+  margin-bottom: 0;
+}
+
+/* Remover la rayita lateral de los labels de checkboxes */
+.admin-form-group .checkbox-label::before {
+  display: none;
+}
+
+.admin-form-group .checkbox-label input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--admin-border);
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  transition: var(--admin-transition);
+  background: var(--admin-bg);
+  flex-shrink: 0;
+}
+
+.admin-form-group .checkbox-label input[type="checkbox"]:checked {
+  background: var(--admin-primary);
+  border-color: var(--admin-primary);
+}
+
+.admin-form-group .checkbox-label input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.admin-form-group .checkbox-label input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--admin-primary-rgb, 37, 99, 235), 0.1);
+}
+
+/* ===========================================
+   FORMULARIOS DE CONFIGURACIÓN PDF
+   =========================================== */
+
+/* Select de plantilla PDF */
+#pdfSelectedTemplate {
+  border: 2px solid var(--admin-border) !important;
+}
+
+#pdfSelectedTemplate:focus {
+  border-color: var(--admin-primary) !important;
+}
+
+/* Campos de configuración PDF */
+.pdf-config-field {
+  margin-bottom: var(--admin-spacing-md);
+}
+
+.pdf-config-field label {
+  display: block;
+  font-weight: 500;
+  color: var(--admin-text);
+  margin-bottom: var(--admin-spacing-xs);
+}
+
+.pdf-config-field input,
+.pdf-config-field select,
+.pdf-config-field textarea {
+  width: 100%;
+  padding: var(--admin-spacing-md);
+  border: 2px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  font-size: 0.9rem;
+  transition: var(--admin-transition);
+}
+
+.pdf-config-field input:focus,
+.pdf-config-field select:focus,
+.pdf-config-field textarea:focus {
+  border-color: var(--admin-primary);
+  outline: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ===========================================
+   VISTA PREVIA PDF
+   =========================================== */
+
+.pdf-preview-container {
+  background: white;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-lg);
+  padding: var(--admin-spacing-lg);
+  margin-top: var(--admin-spacing-lg);
+}
+
+.pdf-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--admin-spacing-lg);
+  padding-bottom: var(--admin-spacing-md);
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.pdf-preview-header h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--admin-text);
+  margin: 0;
+}
+
+.pdf-preview-content {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-light);
+  border-radius: var(--admin-radius);
+  padding: var(--admin-spacing-lg);
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--admin-text-muted);
+}
+
+/* ===========================================
+   ACCIONES PDF
+   =========================================== */
+
+.pdf-actions {
+  display: flex;
+  gap: var(--admin-spacing-md);
+  margin-top: var(--admin-spacing-lg);
+  padding-top: var(--admin-spacing-lg);
+  border-top: 1px solid var(--admin-border);
+}
+
+.pdf-actions .admin-btn {
+  flex: 1;
+}
+
+.pdf-actions .admin-btn.secondary {
+  background: var(--admin-surface);
+  border-color: var(--admin-border);
+  color: var(--admin-text);
+}
+
+.pdf-actions .admin-btn.secondary:hover {
+  background: var(--admin-surface-dark);
+  border-color: var(--admin-border-dark);
+}
+
+/* ===========================================
+   ESTILOS RESPONSIVE PARA PDF
+   =========================================== */
+
+/* Tablets */
+@media (max-width: 1024px) {
+  .pdf-template-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--admin-spacing-md);
+  }
+
+  .pdf-preview-container {
+    padding: var(--admin-spacing-md);
+  }
+
+  .pdf-preview-content {
+    min-height: 250px;
+    padding: var(--admin-spacing-md);
+  }
+}
+
+/* Móviles */
+@media (max-width: 768px) {
+  .pdf-template-grid {
+    grid-template-columns: 1fr;
+    gap: var(--admin-spacing-sm);
+  }
+
+  .pdf-template-card {
+    margin-bottom: var(--admin-spacing-md);
+  }
+
+  .pdf-template-preview {
+    height: 120px;
+  }
+
+  .pdf-template-info {
+    padding: var(--admin-spacing-md);
+  }
+
+  .pdf-preview-container {
+    padding: var(--admin-spacing-sm);
+    margin-top: var(--admin-spacing-md);
+  }
+
+  .pdf-preview-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--admin-spacing-sm);
+  }
+
+  .pdf-preview-content {
+    min-height: 200px;
+    padding: var(--admin-spacing-sm);
+  }
+
+  .pdf-actions {
+    flex-direction: column;
+    gap: var(--admin-spacing-sm);
+  }
+
+  .pdf-actions .admin-btn {
+    width: 100%;
+  }
+
+  .pdf-config-field input,
+  .pdf-config-field select,
+  .pdf-config-field textarea {
+    padding: var(--admin-spacing-sm);
+    font-size: 16px; /* Previene zoom en iOS */
+  }
+}
+
+/* Móviles pequeños */
+@media (max-width: 480px) {
+  .pdf-template-preview {
+    height: 100px;
+  }
+
+  .pdf-template-info h4 {
+    font-size: 0.8rem;
+  }
+
+  .pdf-template-info p {
+    font-size: 0.7rem;
+  }
+
+  .admin-form-group .checkbox-label {
+    font-size: 0.85rem;
+  }
+
+  .admin-form-group .checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
+}

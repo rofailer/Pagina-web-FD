@@ -78,16 +78,39 @@ CREATE TABLE user_keys (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====================================
--- 4. CREAR TABLA GLOBAL_TEMPLATE_CONFIG
+-- 4. CREAR TABLA GLOBAL_PDF_CONFIG (NUEVA - REEMPLAZA GLOBAL_TEMPLATE_CONFIG)
 -- ====================================
 
-CREATE TABLE global_template_config (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  template_name VARCHAR(50) NOT NULL DEFAULT 'clasico',
-  logo_path TEXT DEFAULT NULL,
-  institution_name VARCHAR(255) DEFAULT 'Universidad Ejemplo',
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+-- Primero eliminar la tabla antigua si existe
+DROP TABLE IF EXISTS global_template_config;
+
+CREATE TABLE global_pdf_config (
+  id INT PRIMARY KEY DEFAULT 1,
+  selected_template VARCHAR(50) NOT NULL DEFAULT 'clasico',
+  logo_path TEXT DEFAULT NULL COMMENT 'OBSOLETO: Ya no se usa. El logo ahora se guarda en visual_config como datos binarios',
+
+  -- Configuración de colores (JSON para flexibilidad)
+  color_config JSON DEFAULT ('{"primary": "#2563eb", "secondary": "#64748b", "accent": "#f59e0b"}'),
+
+  -- Configuración de fuentes
+  font_config JSON DEFAULT ('{"title": "Helvetica-Bold", "body": "Helvetica", "metadata": "Helvetica-Oblique"}'),
+
+  -- Configuración de márgenes y layout
+  layout_config JSON DEFAULT ('{"marginTop": 50, "marginBottom": 50, "marginLeft": 50, "marginRight": 50, "lineHeight": 1.5}'),
+
+  -- Configuración específica de bordes y elementos decorativos
+  border_config JSON DEFAULT ('{"style": "classic", "width": 2, "color": "#1f2937", "cornerRadius": 0}'),
+
+  -- Configuración de elementos visuales
+  visual_config JSON DEFAULT ('{"showLogo": true, "showInstitution": true, "showDate": true, "showSignature": true, "showAuthors": true, "showAvalador": true}'),
+
+  -- Metadatos de auditoría
+  updated_by VARCHAR(100) DEFAULT 'system',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  -- Restricción para mantener solo una configuración global
+  CONSTRAINT single_pdf_config CHECK (id = 1)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====================================
@@ -128,10 +151,11 @@ CREATE TABLE visual_config (
   id INT PRIMARY KEY DEFAULT 1,
   background VARCHAR(20) NOT NULL DEFAULT 'fondo1',
   favicon VARCHAR(255) DEFAULT '../../favicon.ico',
-  site_title VARCHAR(255) DEFAULT 'Firmas Digitales FD',
-  header_title VARCHAR(255) DEFAULT 'Firmas Digitales FD',
-  footer_text TEXT,
-  admin_header_title VARCHAR(255) DEFAULT 'Panel Administrativo',
+  institution_name VARCHAR(255) DEFAULT 'Firmas Digitales FD',
+  -- Campos para almacenar logo como datos binarios
+  logo_data LONGBLOB NULL COMMENT 'Datos binarios del logo',
+  logo_mimetype VARCHAR(100) NULL COMMENT 'Tipo MIME del logo (image/png, image/jpeg, etc.)',
+  logo_filename VARCHAR(255) NULL COMMENT 'Nombre original del archivo del logo',
   updated_by VARCHAR(100) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -177,16 +201,28 @@ CREATE INDEX idx_user_activity_created_at ON user_activity_log(created_at);
 -- 8. INSERTAR CONFIGURACIÓN GLOBAL POR DEFECTO
 -- ====================================
 
-INSERT INTO global_template_config (template_name, institution_name) VALUES
-('clasico', 'Universidad Ejemplo');
+-- Insertar configuración PDF por defecto (reemplaza global_template_config)
+INSERT INTO global_pdf_config (
+  id, selected_template, logo_path,
+  color_config, font_config, layout_config, border_config, visual_config
+) VALUES (
+  1,
+  'clasico',
+  '../../recursos/logotipo-de-github.png',
+  '{"primary": "#2563eb", "secondary": "#64748b", "accent": "#f59e0b", "text": "#1f2937", "background": "#ffffff"}',
+  '{"title": "Helvetica-Bold", "body": "Helvetica", "metadata": "Helvetica-Oblique", "signature": "Times-Bold"}',
+  '{"marginTop": 60, "marginBottom": 60, "marginLeft": 50, "marginRight": 50, "lineHeight": 1.6, "titleSize": 24, "bodySize": 12}',
+  '{"style": "classic", "width": 2, "color": "#1f2937", "cornerRadius": 0, "showDecorative": true}',
+  '{"showLogo": true, "showInstitution": true, "showDate": true, "showSignature": true, "showAuthors": true, "showAvalador": true}'
+);
 
 -- Insertar configuración de tema por defecto
 INSERT INTO theme_config (id, selected_theme, custom_color, timestamp) VALUES
 (1, 'orange', NULL, UNIX_TIMESTAMP() * 1000);
 
 -- Insertar configuración visual por defecto
-INSERT INTO visual_config (id, background, favicon, site_title, header_title, footer_text, admin_header_title) VALUES
-(1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', 'Firmas Digitales FD', '© 2024 Firmas Digitales FD. Todos los derechos reservados.', 'Panel Administrativo');
+INSERT INTO visual_config (id, background, favicon, institution_name, logo_data, logo_mimetype, logo_filename) VALUES
+(1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', NULL, NULL, NULL);
 
 -- ====================================
 -- 9. INSERTAR USUARIOS ADMIN Y OWNER
@@ -233,9 +269,9 @@ INSERT INTO users (
 
 -- Insertar usuario OWNER
 INSERT INTO users (
-    nombre, 
-    usuario, 
-    password, 
+    nombre,
+    usuario,
+    password,
     rol,
     nombre_completo,
     email,
@@ -270,6 +306,180 @@ INSERT INTO users (
     NOW()
 );
 
+-- Insertar usuario PRUEBA
+INSERT INTO users (
+    nombre,
+    usuario,
+    password,
+    rol,
+    nombre_completo,
+    email,
+    organizacion,
+    biografia,
+    cargo,
+    departamento,
+    grado_academico,
+    zona_horaria,
+    idioma,
+    estado_cuenta,
+    notificaciones_email,
+    autenticacion_2fa,
+    ultimo_acceso
+) VALUES (
+    'Usuario Prueba',
+    'prueba',
+    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
+    'profesor',
+    'Usuario de Pruebas del Sistema',
+    'prueba@universidad.edu',
+    'Universidad Ejemplo',
+    'Usuario de pruebas para testing del sistema de firmas digitales.',
+    'Profesor de Pruebas',
+    'Departamento de Testing',
+    'Licenciado en Informática',
+    'America/Bogota',
+    'es',
+    'activo',
+    TRUE,
+    FALSE,
+    NOW()
+);
+
+-- Insertar usuarios de prueba adicionales
+INSERT INTO users (
+    nombre,
+    usuario,
+    password,
+    rol,
+    nombre_completo,
+    email,
+    organizacion,
+    biografia,
+    cargo,
+    departamento,
+    grado_academico,
+    zona_horaria,
+    idioma,
+    estado_cuenta,
+    notificaciones_email,
+    autenticacion_2fa,
+    ultimo_acceso
+) VALUES
+(
+    'María González',
+    'maria.gonzalez',
+    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
+    'profesor',
+    'María González Rodríguez',
+    'maria.gonzalez@universidad.edu',
+    'Universidad Ejemplo',
+    'Profesora de Matemáticas con más de 15 años de experiencia en educación superior.',
+    'Profesora Titular',
+    'Matemáticas',
+    'Doctora en Matemáticas',
+    'America/Bogota',
+    'es',
+    'activo',
+    TRUE,
+    FALSE,
+    NOW()
+),
+(
+    'Carlos Rodríguez',
+    'carlos.rodriguez',
+    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
+    'profesor',
+    'Carlos Rodríguez Sánchez',
+    'carlos.rodriguez@universidad.edu',
+    'Universidad Ejemplo',
+    'Profesor de Física especializado en mecánica cuántica y física teórica.',
+    'Profesor Asociado',
+    'Física',
+    'Doctor en Física',
+    'America/Bogota',
+    'es',
+    'activo',
+    TRUE,
+    FALSE,
+    NOW()
+),
+(
+    'Ana López',
+    'ana.lopez',
+    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
+    'profesor',
+    'Ana López Martínez',
+    'ana.lopez@universidad.edu',
+    'Universidad Ejemplo',
+    'Profesora de Literatura Hispanoamericana y teoría crítica literaria.',
+    'Profesora Titular',
+    'Literatura',
+    'Doctora en Literatura',
+    'America/Bogota',
+    'es',
+    'activo',
+    TRUE,
+    FALSE,
+    NOW()
+),
+(
+    'José Martínez',
+    'jose.martinez',
+    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
+    'profesor',
+    'José Martínez García',
+    'jose.martinez@universidad.edu',
+    'Universidad Ejemplo',
+    'Profesor de Ingeniería de Sistemas con experiencia en desarrollo de software.',
+    'Profesor Asociado',
+    'Ingeniería de Sistemas',
+    'Magíster en Ingeniería',
+    'America/Bogota',
+    'es',
+    'activo',
+    TRUE,
+    FALSE,
+    NOW()
+),
+(
+    'Laura Sánchez',
+    'laura.sanchez',
+    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
+    'profesor',
+    'Laura Sánchez Pérez',
+    'laura.sanchez@universidad.edu',
+    'Universidad Ejemplo',
+    'Profesora de Biología especializada en genética molecular.',
+    'Profesora Asistente',
+    'Biología',
+    'Doctora en Biología',
+    'America/Bogota',
+    'es',
+    'activo',
+    TRUE,
+    FALSE,
+    NOW()
+),
+(
+    'Pedro Ramírez',
+    'pedro.ramirez',
+    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
+    'profesor',
+    'Pedro Ramírez Torres',
+    'pedro.ramirez@universidad.edu',
+    'Universidad Ejemplo',
+    'Profesor de Historia Contemporánea y estudios políticos.',
+    'Profesor Titular',
+    'Historia',
+    'Doctor en Historia',
+    'America/Bogota',
+    'es',
+    'activo',
+    TRUE,
+    FALSE,
+    NOW()
+);
+
 -- ====================================
 -- 10. INSERTAR PREFERENCIAS POR DEFECTO PARA LOS USUARIOS
 -- ====================================
@@ -290,6 +500,52 @@ INSERT INTO user_preferences (user_id, clave, valor) VALUES
 ((SELECT id FROM users WHERE usuario = 'owner'), 'dashboard_layout', 'summary'),
 ((SELECT id FROM users WHERE usuario = 'owner'), 'auto_logout_minutes', '30');
 
+-- Preferencias para PRUEBA
+INSERT INTO user_preferences (user_id, clave, valor) VALUES
+((SELECT id FROM users WHERE usuario = 'prueba'), 'theme', 'light'),
+((SELECT id FROM users WHERE usuario = 'prueba'), 'notifications_frequency', 'weekly'),
+((SELECT id FROM users WHERE usuario = 'prueba'), 'default_signature_template', 'moderno'),
+((SELECT id FROM users WHERE usuario = 'prueba'), 'dashboard_layout', 'standard'),
+((SELECT id FROM users WHERE usuario = 'prueba'), 'auto_logout_minutes', '45');
+
+-- Preferencias para usuarios de prueba
+INSERT INTO user_preferences (user_id, clave, valor) VALUES
+((SELECT id FROM users WHERE usuario = 'maria.gonzalez'), 'theme', 'light'),
+((SELECT id FROM users WHERE usuario = 'maria.gonzalez'), 'notifications_frequency', 'daily'),
+((SELECT id FROM users WHERE usuario = 'maria.gonzalez'), 'default_signature_template', 'clasico'),
+((SELECT id FROM users WHERE usuario = 'maria.gonzalez'), 'dashboard_layout', 'detailed'),
+((SELECT id FROM users WHERE usuario = 'maria.gonzalez'), 'auto_logout_minutes', '60'),
+
+((SELECT id FROM users WHERE usuario = 'carlos.rodriguez'), 'theme', 'dark'),
+((SELECT id FROM users WHERE usuario = 'carlos.rodriguez'), 'notifications_frequency', 'immediate'),
+((SELECT id FROM users WHERE usuario = 'carlos.rodriguez'), 'default_signature_template', 'moderno'),
+((SELECT id FROM users WHERE usuario = 'carlos.rodriguez'), 'dashboard_layout', 'standard'),
+((SELECT id FROM users WHERE usuario = 'carlos.rodriguez'), 'auto_logout_minutes', '30'),
+
+((SELECT id FROM users WHERE usuario = 'ana.lopez'), 'theme', 'light'),
+((SELECT id FROM users WHERE usuario = 'ana.lopez'), 'notifications_frequency', 'weekly'),
+((SELECT id FROM users WHERE usuario = 'ana.lopez'), 'default_signature_template', 'elegante'),
+((SELECT id FROM users WHERE usuario = 'ana.lopez'), 'dashboard_layout', 'summary'),
+((SELECT id FROM users WHERE usuario = 'ana.lopez'), 'auto_logout_minutes', '45'),
+
+((SELECT id FROM users WHERE usuario = 'jose.martinez'), 'theme', 'light'),
+((SELECT id FROM users WHERE usuario = 'jose.martinez'), 'notifications_frequency', 'daily'),
+((SELECT id FROM users WHERE usuario = 'jose.martinez'), 'default_signature_template', 'minimalista'),
+((SELECT id FROM users WHERE usuario = 'jose.martinez'), 'dashboard_layout', 'detailed'),
+((SELECT id FROM users WHERE usuario = 'jose.martinez'), 'auto_logout_minutes', '60'),
+
+((SELECT id FROM users WHERE usuario = 'laura.sanchez'), 'theme', 'dark'),
+((SELECT id FROM users WHERE usuario = 'laura.sanchez'), 'notifications_frequency', 'immediate'),
+((SELECT id FROM users WHERE usuario = 'laura.sanchez'), 'default_signature_template', 'clasico'),
+((SELECT id FROM users WHERE usuario = 'laura.sanchez'), 'dashboard_layout', 'standard'),
+((SELECT id FROM users WHERE usuario = 'laura.sanchez'), 'auto_logout_minutes', '30'),
+
+((SELECT id FROM users WHERE usuario = 'pedro.ramirez'), 'theme', 'light'),
+((SELECT id FROM users WHERE usuario = 'pedro.ramirez'), 'notifications_frequency', 'weekly'),
+((SELECT id FROM users WHERE usuario = 'pedro.ramirez'), 'default_signature_template', 'moderno'),
+((SELECT id FROM users WHERE usuario = 'pedro.ramirez'), 'dashboard_layout', 'summary'),
+((SELECT id FROM users WHERE usuario = 'pedro.ramirez'), 'auto_logout_minutes', '45');
+
 -- ====================================
 -- 11. INSERTAR REGISTRO INICIAL DE ACTIVIDAD
 -- ====================================
@@ -301,6 +557,19 @@ INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address) VALUES
 -- Registro de creación para OWNER
 INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address) VALUES
 ((SELECT id FROM users WHERE usuario = 'owner'), 'account_created', 'Cuenta de propietario creada durante la instalación del sistema', '127.0.0.1');
+
+-- Registro de creación para PRUEBA
+INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address) VALUES
+((SELECT id FROM users WHERE usuario = 'prueba'), 'account_created', 'Cuenta de usuario de pruebas creada durante la instalación del sistema', '127.0.0.1');
+
+-- Registro de creación para usuarios de prueba
+INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address) VALUES
+((SELECT id FROM users WHERE usuario = 'maria.gonzalez'), 'account_created', 'Cuenta de profesora de Matemáticas creada durante la instalación del sistema', '127.0.0.1'),
+((SELECT id FROM users WHERE usuario = 'carlos.rodriguez'), 'account_created', 'Cuenta de profesor de Física creada durante la instalación del sistema', '127.0.0.1'),
+((SELECT id FROM users WHERE usuario = 'ana.lopez'), 'account_created', 'Cuenta de profesora de Literatura creada durante la instalación del sistema', '127.0.0.1'),
+((SELECT id FROM users WHERE usuario = 'jose.martinez'), 'account_created', 'Cuenta de profesor de Ingeniería de Sistemas creada durante la instalación del sistema', '127.0.0.1'),
+((SELECT id FROM users WHERE usuario = 'laura.sanchez'), 'account_created', 'Cuenta de profesora de Biología creada durante la instalación del sistema', '127.0.0.1'),
+((SELECT id FROM users WHERE usuario = 'pedro.ramirez'), 'account_created', 'Cuenta de profesor de Historia creada durante la instalación del sistema', '127.0.0.1');
 
 -- ====================================
 -- 12. VISTAS ÚTILES PARA CONSULTAS FRECUENTES (SIMPLIFICADO)
@@ -355,19 +624,21 @@ COMMIT;
 SELECT 'INSTALACIÓN COMPLETADA EXITOSAMENTE' as status;
 
 SELECT 'TABLAS CREADAS:' as info;
-SELECT TABLE_NAME as tabla_creada 
-FROM INFORMATION_SCHEMA.TABLES 
-WHERE TABLE_SCHEMA = DATABASE() 
-AND TABLE_NAME IN ('users', 'user_keys', 'global_template_config', 'theme_config', 'user_preferences', 'user_activity_log');
+SELECT TABLE_NAME as tabla_creada
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = DATABASE()
+AND TABLE_NAME IN ('users', 'user_keys', 'global_pdf_config', 'theme_config', 'user_preferences', 'user_activity_log', 'visual_config');
 
 SELECT 'USUARIOS CREADOS:' as info;
-SELECT usuario, nombre_completo, email, rol, estado_cuenta 
-FROM users 
-WHERE usuario IN ('admin', 'owner');
+SELECT usuario, nombre_completo, email, rol, estado_cuenta
+FROM users
+WHERE usuario IN ('admin', 'owner', 'prueba', 'maria.gonzalez', 'carlos.rodriguez', 'ana.lopez', 'jose.martinez', 'laura.sanchez', 'pedro.ramirez');
 
 SELECT 'CONFIGURACIÓN GLOBAL:' as info;
-SELECT template_name, institution_name 
-FROM global_template_config;
+SELECT selected_template as plantilla_seleccionada, logo_path as ruta_logo,
+       JSON_EXTRACT(color_config, '$.primary') as color_primario,
+       JSON_EXTRACT(visual_config, '$.showLogo') as mostrar_logo
+FROM global_pdf_config;
 
 -- ====================================
 -- INFORMACIÓN IMPORTANTE
@@ -378,14 +649,22 @@ FROM global_template_config;
 ✅ TABLAS CREADAS:
 - users (expandida con 17 campos adicionales)
 - user_keys (llaves de cifrado)
-- global_template_config (configuración global)
+- global_pdf_config (configuración global avanzada de PDFs)
 - theme_config (configuración global de temas)
 - user_preferences (preferencias personalizadas)
 - user_activity_log (auditoría y actividad)
+- visual_config (configuración visual global)
 
 ✅ USUARIOS CREADOS:
 - admin / 123 (Administrador del Sistema)
 - owner / 123 (Propietario del Sistema)
+- prueba / 123 (Usuario de Pruebas)
+- maria.gonzalez / 123 (Profesora de Matemáticas)
+- carlos.rodriguez / 123 (Profesor de Física)
+- ana.lopez / 123 (Profesora de Literatura)
+- jose.martinez / 123 (Profesor de Ingeniería de Sistemas)
+- laura.sanchez / 123 (Profesora de Biología)
+- pedro.ramirez / 123 (Profesor de Historia)
 
 ✅ CARACTERÍSTICAS:
 - Sistema completo de perfiles expandidos
@@ -398,6 +677,8 @@ FROM global_template_config;
 🔐 CREDENCIALES DE ACCESO:
 Usuario: admin | Contraseña: 123
 Usuario: owner | Contraseña: 123
+Usuario: prueba | Contraseña: 123
+Usuarios de prueba: maria.gonzalez, carlos.rodriguez, ana.lopez, jose.martinez, laura.sanchez, pedro.ramirez | Contraseña: 123
 
 ⚠️ IMPORTANTE:
 - Las contraseñas están hasheadas con bcrypt

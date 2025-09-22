@@ -1,0 +1,72 @@
+/* ===========================================
+   BACKGROUNDS - Sistema de Fondos Globales
+   ===========================================
+
+   NOTA: Los estilos de backgrounds han sido movidos a admin.css
+   para una mejor integración con el sistema de temas y colores.
+
+   Este archivo mantiene solo los estilos legacy para compatibilidad.
+*/
+
+/* ---------------------------
+   BACKGROUNDS LEGACY (MANTENER PARA COMPATIBILIDAD)
+   --------------------------- */
+
+/* Fondos dinámicos - Sistema unificado con atributos data-bg */
+[data-bg="fondo1"] {
+  background: linear-gradient(
+        rgba(180, 180, 180, 0.12) 0%,
+        rgba(200, 200, 200, 0.06) 100%
+      )
+      fixed,
+    url("../../../recursos/Fondo.jpg") center center / cover no-repeat;
+  background-attachment: fixed;
+  transition: background 0.3s ease;
+}
+
+[data-bg="fondo2"] {
+  background: linear-gradient(
+        rgba(180, 180, 180, 0.12) 0%,
+        rgba(200, 200, 200, 0.06) 100%
+      )
+      fixed,
+    url("../../../recursos/Fondo2.jpg") center center / cover no-repeat;
+  background-attachment: fixed;
+  transition: background 0.3s ease;
+}
+
+/* Fondos con clases legacy (para compatibilidad) */
+body.bg-fondo1 {
+  background: linear-gradient(
+        rgba(180, 180, 180, 0.12) 0%,
+        rgba(200, 200, 200, 0.06) 100%
+      )
+      fixed,
+    url("../../../recursos/Fondo.jpg") center center / cover no-repeat;
+  background-attachment: fixed;
+}
+
+body.bg-fondo2 {
+  background: linear-gradient(
+        rgba(180, 180, 180, 0.12) 0%,
+        rgba(200, 200, 200, 0.06) 100%
+      )
+      fixed,
+    url("../../../recursos/Fondo2.jpg") center center / cover no-repeat;
+  background-attachment: fixed;
+}
+
+/* ---------------------------
+   RESPONSIVE LEGACY
+   --------------------------- */
+
+@media (max-width: 768px) {
+  body.bg-fondo1,
+  body.bg-fondo2,
+  body.bg-custom,
+  [data-bg="fondo1"],
+  [data-bg="fondo2"] {
+    background-attachment: scroll; /* Mejor rendimiento en móviles */
+    background-size: cover;
+  }
+}

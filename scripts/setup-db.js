@@ -98,6 +98,294 @@ class DatabaseSetupManager {
         }
     }
 
+    async getTablesFromSQL() {
+        try {
+            if (!fs.existsSync(this.sqlFile)) {
+                this.log(`❌ Archivo SQL no encontrado: ${this.sqlFile}`, 'red');
+                return [];
+            }
+
+            const sqlContent = fs.readFileSync(this.sqlFile, 'utf8');
+            const statements = this.parseSQLStatements(sqlContent);
+
+            const tables = [];
+            const tableRegex = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:`([^`]+)`|(\w+))/i;
+
+            statements.forEach(stmt => {
+                const match = stmt.match(tableRegex);
+                if (match) {
+                    const tableName = match[1] || match[2];
+                    if (tableName && !tables.includes(tableName)) {
+                        tables.push(tableName);
+                    }
+                }
+            });
+
+            return tables;
+        } catch (error) {
+            this.log(`⚠️ Error extrayendo tablas del SQL: ${error.message}`, 'yellow');
+            return [];
+        }
+    }
+
+    async dropAllTables() {
+        try {
+            this.log('🗑️ Eliminando todas las tablas del schema...', 'yellow');
+
+            // Obtener todas las tablas existentes
+            const existingTables = await this.getExistingTables();
+
+            if (existingTables.length === 0) {
+                this.log('⚠️ No hay tablas para eliminar', 'yellow');
+                return true;
+            }
+
+            this.log(`📋 Encontradas ${existingTables.length} tablas para eliminar`, 'cyan');
+
+            // Desactivar restricciones de clave foránea
+            await this.connection.execute('SET FOREIGN_KEY_CHECKS = 0');
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            // Eliminar tablas en orden inverso de dependencias
+            const dropOrder = [
+                'user_activity_log',
+                'user_keys',
+                'user_preferences',
+                'vista_actividad_reciente',
+                'vista_usuarios_activos',
+                'users',
+                'global_pdf_config',
+                'theme_config',
+                'visual_config'
+            ];
+
+            // Primero intentar eliminar en orden específico
+            for (const tableName of dropOrder) {
+                if (existingTables.includes(tableName)) {
+                    try {
+                        await this.connection.execute(`DROP TABLE IF EXISTS \`${tableName}\``);
+                        this.log(`  ✅ Eliminada tabla: ${tableName}`, 'green');
+                        successCount++;
+                    } catch (error) {
+                        this.log(`  ❌ Error eliminando ${tableName}: ${error.message}`, 'red');
+                        errorCount++;
+                    }
+                }
+            }
+
+            // Eliminar cualquier tabla restante que no esté en la lista ordenada
+            for (const tableName of existingTables) {
+                if (!dropOrder.includes(tableName)) {
+                    try {
+                        await this.connection.execute(`DROP TABLE IF EXISTS \`${tableName}\``);
+                        this.log(`  ✅ Eliminada tabla: ${tableName}`, 'green');
+                        successCount++;
+                    } catch (error) {
+                        this.log(`  ❌ Error eliminando ${tableName}: ${error.message}`, 'red');
+                        errorCount++;
+                    }
+                }
+            }
+
+            // Reactivar restricciones de clave foránea
+            await this.connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+
+            this.log(`\n📊 Eliminación completada: ${successCount} exitosas, ${errorCount} errores`, 'cyan');
+
+            if (errorCount === 0) {
+                this.log('✅ Todas las tablas eliminadas correctamente', 'green');
+            } else {
+                this.log('⚠️ Algunas tablas no pudieron ser eliminadas', 'yellow');
+            }
+
+            return errorCount === 0;
+
+        } catch (error) {
+            this.log(`❌ Error eliminando tablas: ${error.message}`, 'red');
+            return false;
+        }
+    }
+
+    // Actualizar estructura de tablas existentes agregando campos faltantes
+    async updateTableStructures(statements, tablesToUpdate) {
+        // Estrategia simplificada: intentar ejecutar ALTER TABLE para campos conocidos que podrían faltar
+        const knownMissingFields = {
+            'visual_config': [
+                { name: 'logo_data', definition: '`logo_data` LONGBLOB NULL COMMENT \'Datos binarios del logo\'' },
+                { name: 'logo_mimetype', definition: '`logo_mimetype` VARCHAR(100) NULL COMMENT \'Tipo MIME del logo\'' },
+                { name: 'logo_filename', definition: '`logo_filename` VARCHAR(255) NULL COMMENT \'Nombre del archivo del logo\'' }
+            ]
+        };
+
+        for (const tableName of tablesToUpdate) {
+            if (knownMissingFields[tableName]) {
+                this.log(`  🔧 ${tableName}: verificando campos faltantes`, 'yellow');
+
+                for (const field of knownMissingFields[tableName]) {
+                    try {
+                        // Verificar si el campo ya existe
+                        const [columns] = await this.connection.execute(
+                            `SHOW COLUMNS FROM \`${tableName}\` LIKE '${field.name}'`
+                        );
+
+                        if (columns.length === 0) {
+                            // El campo no existe, agregarlo
+                            const alterSql = `ALTER TABLE \`${tableName}\` ADD COLUMN ${field.definition}`;
+                            await this.connection.execute(alterSql);
+                            this.log(`    ✅ Agregado campo: ${field.name}`, 'green');
+                        } else {
+                            this.log(`    ⚠️ Campo ya existe: ${field.name}`, 'yellow');
+                        }
+                    } catch (error) {
+                        this.log(`    ❌ Error procesando campo ${field.name}: ${error.message}`, 'red');
+                    }
+                }
+            }
+        }
+
+        this.log('✅ Verificación de campos completada', 'green');
+    }
+
+    async syncDatabase() {
+        try {
+            this.log('🔄 Iniciando sincronización inteligente de base de datos...', 'bright');
+
+            // Verificar conexión
+            if (!await this.connect()) {
+                return false;
+            }
+
+            // Verificar si la base de datos existe
+            const dbExists = await this.databaseExists();
+
+            if (!dbExists) {
+                this.log(`📦 Base de datos '${this.config.database}' no existe. Creándola...`, 'yellow');
+                if (!await this.createDatabase()) {
+                    return false;
+                }
+            } else {
+                this.log(`✅ Base de datos '${this.config.database}' ya existe`, 'green');
+                // Reconectar con la base de datos existente
+                await this.connection.end();
+                this.connection = await mysql.createConnection(this.config);
+            }
+
+            // Obtener tablas existentes y tablas del SQL
+            const existingTables = await this.getExistingTables();
+            const sqlTables = await this.getTablesFromSQL();
+
+            this.log(`📊 Análisis de sincronización:`, 'cyan');
+            this.log(`  • Tablas en base de datos: ${existingTables.length}`, 'white');
+            this.log(`  • Tablas en archivo SQL: ${sqlTables.length}`, 'white');
+
+            // Encontrar tablas para eliminar (existen en BD pero no en SQL)
+            const tablesToDrop = existingTables.filter(table => !sqlTables.includes(table));
+
+            // Encontrar tablas para crear (existen en SQL pero no en BD)
+            const tablesToCreate = sqlTables.filter(table => !existingTables.includes(table));
+
+            // Encontrar tablas que existen en ambos (posibles actualizaciones de estructura)
+            const tablesToUpdate = existingTables.filter(table => sqlTables.includes(table));
+
+            this.log(`\n📋 Plan de sincronización:`, 'blue');
+            this.log(`  🗑️  Tablas a eliminar: ${tablesToDrop.length}`, 'red');
+            this.log(`  ➕ Tablas a crear: ${tablesToCreate.length}`, 'green');
+            this.log(`  🔧 Tablas a actualizar: ${tablesToUpdate.length}`, 'yellow');
+            this.log(`  ✅ Tablas sin cambios: ${tablesToUpdate.length} (mantenidas)`, 'cyan');
+
+            if (tablesToDrop.length > 0) {
+                this.log(`\n🗑️ Eliminando tablas obsoletas...`, 'yellow');
+                for (const tableName of tablesToDrop) {
+                    try {
+                        await this.connection.execute(`DROP TABLE IF EXISTS \`${tableName}\``);
+                        this.log(`  ✅ Eliminada: ${tableName}`, 'green');
+                    } catch (error) {
+                        this.log(`  ❌ Error eliminando ${tableName}: ${error.message}`, 'red');
+                    }
+                }
+            }
+
+            // Leer archivo SQL y parsear statements
+            if (!fs.existsSync(this.sqlFile)) {
+                this.log(`❌ Archivo SQL no encontrado: ${this.sqlFile}`, 'red');
+                return false;
+            }
+
+            this.log(`\n📖 Leyendo archivo SQL...`, 'cyan');
+            const sqlContent = fs.readFileSync(this.sqlFile, 'utf8');
+            this.log(`📄 Archivo SQL cargado (${sqlContent.length} caracteres)`, 'green');
+
+            // Parsear statements SQL
+            const statements = this.parseSQLStatements(sqlContent);
+            this.log(`🔍 Encontrados ${statements.length} statements SQL`, 'cyan');
+
+            // Actualizar estructura de tablas existentes antes de ejecutar statements
+            if (tablesToUpdate.length > 0) {
+                this.log(`\n🔧 Actualizando estructura de tablas existentes...`, 'yellow');
+                await this.updateTableStructures(statements, tablesToUpdate);
+            }
+
+            // Ejecutar statements
+            let successCount = 0;
+            let errorCount = 0;
+
+            this.log(`\n📋 Ejecutando statements...`, 'blue');
+
+            for (let i = 0; i < statements.length; i++) {
+                const statement = statements[i];
+                try {
+                    await this.connection.query(statement);
+                    successCount++;
+
+                    if (i % 5 === 0 || i === statements.length - 1) {
+                        this.log(`  ✅ ${successCount}/${statements.length} statements ejecutados`, 'green');
+                    }
+                } catch (error) {
+                    // Manejar errores específicos
+                    if (error.code === 'ER_TABLE_EXISTS_ERROR' ||
+                        error.code === 'ER_DUP_KEYNAME' ||
+                        error.code === 'ER_DUP_ENTRY' ||
+                        error.message.includes('already exists') ||
+                        error.message.includes('Duplicate entry')) {
+                        this.log(`  ⚠️ Statement ${i + 1} ya existe, continuando...`, 'yellow');
+                    } else {
+                        this.log(`  ❌ Error en statement ${i + 1}: ${error.message}`, 'red');
+                        errorCount++;
+                    }
+                }
+            }
+
+            // Verificación final
+            await this.finalVerification();
+
+            this.log(`\n🎉 Sincronización completada!`, 'bright');
+            this.log(`📊 Resumen:`, 'cyan');
+            this.log(`  • Eliminadas: ${tablesToDrop.length} tablas`, 'red');
+            this.log(`  • Creadas: ${tablesToCreate.length} tablas`, 'green');
+            this.log(`  • Actualizadas: ${tablesToUpdate.length} tablas`, 'yellow');
+            this.log(`  • Statements: ${successCount} exitosos, ${errorCount} errores`, 'white');
+
+            if (errorCount === 0) {
+                this.log('✅ Base de datos sincronizada correctamente', 'green');
+            } else {
+                this.log('⚠️ Base de datos sincronizada con algunos errores menores', 'yellow');
+            }
+
+            return true;
+
+        } catch (error) {
+            this.log(`❌ Error durante la sincronización: ${error.message}`, 'red');
+            return false;
+        } finally {
+            if (this.connection) {
+                await this.connection.end();
+                this.log('🔌 Conexión cerrada', 'cyan');
+            }
+        }
+    }
+
     async getAllTablesAndViews() {
         try {
             const [rows] = await this.connection.execute(
@@ -115,7 +403,7 @@ class DatabaseSetupManager {
             // Orden de tablas por dependencias (padres primero)
             const orderedTables = [
                 'users',                    // Tabla padre
-                'global_template_config',   // Independiente
+                'global_pdf_config',        // Independiente
                 'theme_config',            // Independiente
                 'visual_config',           // Independiente
                 'user_activity_log',       // Depende de users
@@ -322,100 +610,19 @@ class DatabaseSetupManager {
         try {
             this.log('🚀 Iniciando configuración automática de base de datos...', 'bright');
 
-            // Verificar conexión
-            if (!await this.connect()) {
-                return false;
-            }
-
-            // Verificar si la base de datos existe
-            const dbExists = await this.databaseExists();
-
-            if (!dbExists) {
-                this.log(`📦 Base de datos '${this.config.database}' no existe. Creándola...`, 'yellow');
-                if (!await this.createDatabase()) {
-                    return false;
-                }
-            } else {
-                this.log(`✅ Base de datos '${this.config.database}' ya existe`, 'green');
-                // Reconectar con la base de datos existente
-                await this.connection.end();
-                this.connection = await mysql.createConnection(this.config);
-            }
-
-            // Leer archivo SQL
-            if (!fs.existsSync(this.sqlFile)) {
-                this.log(`❌ Archivo SQL no encontrado: ${this.sqlFile}`, 'red');
-                return false;
-            }
-
-            this.log('📖 Leyendo archivo SQL...', 'cyan');
-            const sqlContent = fs.readFileSync(this.sqlFile, 'utf8');
-            this.log(`📄 Archivo SQL cargado (${sqlContent.length} caracteres)`, 'green');
-
-            // Parsear statements SQL
-            const statements = this.parseSQLStatements(sqlContent);
-            this.log(`🔍 Encontrados ${statements.length} statements SQL`, 'cyan');
-
-            // Ejecutar statements en orden (sin categorizar)
-            let successCount = 0;
-            let errorCount = 0;
-
-            this.log(`\n📋 Ejecutando ${statements.length} statements en orden...`, 'blue');
-
-            for (let i = 0; i < statements.length; i++) {
-                const statement = statements[i];
-                try {
-                    // Usar conexión directa para statements complejos
-                    await this.connection.query(statement);
-                    successCount++;
-
-                    if (i % 5 === 0 || i === statements.length - 1) {
-                        this.log(`  ✅ ${successCount}/${statements.length} statements ejecutados`, 'green');
-                    }
-                } catch (error) {
-                    // Ignorar errores de elementos que ya existen
-                    if (error.code === 'ER_TABLE_EXISTS_ERROR' ||
-                        error.code === 'ER_DUP_KEYNAME' ||
-                        error.code === 'ER_DUP_ENTRY' ||
-                        error.message.includes('already exists') ||
-                        error.message.includes('Duplicate entry')) {
-                        this.log(`  ⚠️ Statement ${i + 1} ya existe, continuando...`, 'yellow');
-                    } else {
-                        this.log(`  ❌ Error en statement ${i + 1}: ${error.message}`, 'red');
-                        errorCount++;
-                    }
-                }
-            }
-
-            // Verificación final
-            await this.finalVerification();
-
-            this.log('\n🎉 Configuración de base de datos completada!', 'bright');
-            this.log(`📊 Resumen: ${successCount} exitosos, ${errorCount} errores`, 'cyan');
-
-            if (errorCount === 0) {
-                this.log('✅ Base de datos configurada correctamente', 'green');
-            } else {
-                this.log('⚠️ Base de datos configurada con algunos errores menores', 'yellow');
-            }
-
-            return true;
+            // Usar la nueva función de sincronización inteligente
+            return await this.syncDatabase();
 
         } catch (error) {
             this.log(`❌ Error durante la configuración: ${error.message}`, 'red');
             return false;
-        } finally {
-            if (this.connection) {
-                await this.connection.end();
-                this.log('🔌 Conexión cerrada', 'cyan');
-            }
         }
     }
 
     async checkExistingData() {
         try {
             // Verificar si hay datos en las tablas principales
-            const tablesToCheck = ['users', 'global_template_config', 'theme_config', 'visual_config'];
+            const tablesToCheck = ['users', 'global_pdf_config', 'theme_config', 'visual_config'];
 
             for (const table of tablesToCheck) {
                 try {
@@ -445,7 +652,7 @@ class DatabaseSetupManager {
             this.log(`📋 Total de tablas: ${finalTables.length}`, 'cyan');
 
             // Verificar datos en tablas principales
-            const tablesToVerify = ['users', 'global_template_config', 'theme_config', 'visual_config'];
+            const tablesToVerify = ['users', 'global_pdf_config', 'theme_config', 'visual_config'];
 
             for (const table of tablesToVerify) {
                 if (finalTables.includes(table)) {
@@ -586,7 +793,7 @@ class DatabaseSetupManager {
                     'vista_actividad_reciente',
                     'vista_usuarios_activos',
                     'users',
-                    'global_template_config',
+                    'global_pdf_config',
                     'theme_config',
                     'visual_config'
                 ];
@@ -643,8 +850,19 @@ class DatabaseSetupManager {
 
             // Insertar configuraciones por defecto
             await this.connection.execute(`
-                INSERT INTO global_template_config (id, template_name, logo_path, institution_name, created_at, updated_at) VALUES
-                (1, 'clasico', NULL, 'Universidad Ejemplo', NOW(), NOW())
+                INSERT INTO global_pdf_config (
+                    id, selected_template, logo_path,
+                    color_config, font_config, layout_config, border_config, visual_config,
+                    updated_by, created_at, updated_at
+                ) VALUES (
+                    1, 'clasico', '../../recursos/logotipo-de-github.png',
+                    '{"primary":"#2563eb","secondary":"#64748b","accent":"#f59e0b","text":"#1f2937","background":"#ffffff"}',
+                    '{"title":"Helvetica-Bold","body":"Helvetica","metadata":"Helvetica-Oblique","signature":"Times-Bold"}',
+                    '{"marginTop":60,"marginBottom":60,"marginLeft":50,"marginRight":50,"lineHeight":1.6,"titleSize":24,"bodySize":12}',
+                    '{"style":"classic","width":2,"color":"#1f2937","cornerRadius":0,"showDecorative":true}',
+                    '{"showLogo":true,"showInstitution":true,"showDate":true,"showSignature":true,"showAuthors":true,"showAvalador":true}',
+                    'system', NOW(), NOW()
+                )
             `);
 
             await this.connection.execute(`
@@ -816,8 +1034,8 @@ class DatabaseSetupManager {
                                 shouldContinue = true;
                                 errorMessage = 'vista ya existe, continuando';
                             } else if (error.message.includes('references invalid table') ||
-                                     error.message.includes('Unknown column') ||
-                                     error.message.includes('does not exist')) {
+                                error.message.includes('Unknown column') ||
+                                error.message.includes('does not exist')) {
                                 // Estos errores pueden deberse a dependencias, intentar continuar
                                 shouldContinue = true;
                                 errorMessage = 'dependencia faltante, intentando continuar';
@@ -1077,6 +1295,17 @@ function showHelp() {
     console.log('                     - Usa el último backup si no se especifica archivo');
     console.log('                     - Crea backup de seguridad antes de restaurar');
     console.log('');
+    console.log('   --drop-all, drop-all 🗑️ Eliminar todas las tablas');
+    console.log('                     - Elimina TODAS las tablas del schema');
+    console.log('                     - Acción irreversible, usar con precaución');
+    console.log('                     - Se recomienda backup previo');
+    console.log('');
+    console.log('   --sync, sync       🔄 Sincronización inteligente');
+    console.log('                     - Sincroniza BD con archivo SQL');
+    console.log('                     - Elimina tablas obsoletas');
+    console.log('                     - Crea tablas faltantes');
+    console.log('                     - Mantiene datos existentes');
+    console.log('');
     console.log('   --help, help, -h  ❓ Mostrar esta ayuda');
     console.log('');
     console.log('🔧 CONFIGURACIÓN REQUERIDA:');
@@ -1091,14 +1320,18 @@ function showHelp() {
     console.log('   .env                   - Archivo de configuración');
     console.log('');
     console.log('⚠️  NOTAS IMPORTANTES:');
-    console.log('   - Siempre hacer backup antes de usar --reset');
+    console.log('   - Siempre hacer backup antes de usar --reset o --drop-all');
+    console.log('   - --drop-all elimina TODAS las tablas (irreversible)');
+    console.log('   - --sync es la opción recomendada para actualizaciones');
     console.log('   - Verificar credenciales en .env antes de ejecutar');
     console.log('   - Los backups se guardan con timestamp automático');
     console.log('   - El comando --install es equivalente a configuración estándar');
     console.log('');
     console.log('📞 EJEMPLOS DE USO:');
     console.log('   npm run db:setup                      # Configuración básica');
+    console.log('   npm run db:sync                       # Sincronización inteligente');
     console.log('   npm run db:backup                     # Crear backup');
+    console.log('   npm run db:drop-all                   # Eliminar todas las tablas');
     console.log('   npm run db:reset                      # Reset completo');
     console.log('   npm run db:restore                    # Restaurar último backup');
     console.log('   npm run db:status                     # Ver estado');
@@ -1158,6 +1391,18 @@ async function main() {
             await handleRestore(setupManager, args[1]); // args[1] puede ser el archivo específico
             break;
 
+        case '--drop-all':
+        case 'drop-all':
+            console.log('🗑️  MODO: ELIMINAR TODAS LAS TABLAS');
+            await handleDropAll(setupManager);
+            break;
+
+        case '--sync':
+        case 'sync':
+            console.log('🔄 MODO: SINCRONIZACIÓN INTELIGENTE');
+            await handleSync(setupManager);
+            break;
+
         default:
             console.log('🚀 MODO: CONFIGURACIÓN ESTÁNDAR');
             await handleSetup(setupManager);
@@ -1174,9 +1419,11 @@ async function handleSetup(setupManager) {
         console.log('🎉 ¡CONFIGURACIÓN COMPLETADA EXITOSAMENTE!');
         console.log('📚 Tu base de datos está lista para usar.');
         console.log('\n💡 Comandos disponibles:');
+        console.log('  npm run db:sync    - Sincronización inteligente');
         console.log('  npm run db:backup  - Crear backup');
         console.log('  npm run db:status  - Ver estado');
         console.log('  npm run db:reset   - Reset completo');
+        console.log('  npm run db:drop-all - Eliminar todas las tablas');
         process.exit(0);
     } else {
         console.log('❌ CONFIGURACIÓN FALLIDA');
@@ -1323,11 +1570,83 @@ async function handleRestore(setupManager, backupFile = null) {
         console.log('🔄 La base de datos ha sido restaurada desde el backup');
         console.log('\n💡 Comandos disponibles:');
         console.log('  npm run db:status  - Ver estado actual');
+        console.log('  npm run db:sync    - Sincronización inteligente');
         console.log('  npm run db:backup  - Crear nuevo backup');
         process.exit(0);
     } else {
         console.log('❌ ERROR DURANTE LA RESTAURACIÓN');
         console.log('🔧 Verifica que el archivo de backup existe y es válido');
+        process.exit(1);
+    }
+}
+
+// Manejador para eliminar todas las tablas
+async function handleDropAll(setupManager) {
+    console.log('🗑️ ELIMINACIÓN COMPLETA DE TABLAS');
+    console.log('Esto eliminará TODAS las tablas del schema');
+    console.log('⚠️  ESTA ACCIÓN ES IRREVERSIBLE');
+    console.log('💾 Se recomienda crear un backup antes');
+    console.log('');
+
+    // Verificar conexión
+    if (!await setupManager.connect()) {
+        console.log('❌ No se pudo conectar a la base de datos');
+        process.exit(1);
+    }
+
+    // Verificar si la base de datos existe
+    const dbExists = await setupManager.databaseExists();
+    if (!dbExists) {
+        console.log(`❌ La base de datos '${setupManager.config.database}' no existe`);
+        console.log('💡 No hay tablas para eliminar');
+        process.exit(0);
+    }
+
+    // Reconectar con la base de datos
+    await setupManager.connection.end();
+    setupManager.connection = await mysql.createConnection(setupManager.config);
+
+    const success = await setupManager.dropAllTables();
+
+    console.log('='.repeat(60));
+    if (success) {
+        console.log('✅ ¡ELIMINACIÓN COMPLETADA EXITOSAMENTE!');
+        console.log('🗑️ Todas las tablas han sido eliminadas');
+        console.log('\n💡 Para recrear la estructura:');
+        console.log('  npm run db:setup  - Configuración completa');
+        console.log('  npm run db:sync   - Sincronización inteligente');
+        console.log('  npm run db:status - Ver estado actual');
+        process.exit(0);
+    } else {
+        console.log('❌ ERROR DURANTE LA ELIMINACIÓN');
+        console.log('🔧 Algunas tablas no pudieron ser eliminadas');
+        process.exit(1);
+    }
+}
+
+// Manejador para sincronización inteligente
+async function handleSync(setupManager) {
+    console.log('🔄 SINCRONIZACIÓN INTELIGENTE');
+    console.log('Esto sincronizará la base de datos con el archivo SQL');
+    console.log('• Eliminará tablas que no existen en el SQL');
+    console.log('• Creará tablas que faltan');
+    console.log('• Mantendrá tablas existentes');
+    console.log('');
+
+    const success = await setupManager.syncDatabase();
+
+    console.log('='.repeat(60));
+    if (success) {
+        console.log('✅ ¡SINCRONIZACIÓN COMPLETADA EXITOSAMENTE!');
+        console.log('🔄 La base de datos está sincronizada con el archivo SQL');
+        console.log('\n💡 Comandos disponibles:');
+        console.log('  npm run db:status  - Ver estado actual');
+        console.log('  npm run db:backup  - Crear backup');
+        console.log('  npm run db:reset   - Reset completo');
+        process.exit(0);
+    } else {
+        console.log('❌ ERROR DURANTE LA SINCRONIZACIÓN');
+        console.log('🔧 Verifica el archivo SQL y las credenciales');
         process.exit(1);
     }
 }

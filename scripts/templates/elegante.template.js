@@ -1,275 +1,304 @@
-// ========================================
-// PLANTILLA ELEGANTE
+﻿// ========================================
+// PLANTILLA ELEGANTE - DISEÑO SOFISTICADO PREMIUM
 // ========================================
 
-// Para Backend (PDF-lib) - COORDENADAS EXACTAS DEL CANVAS
-function drawElegantTemplate(page, width, height, data, helveticaFont, helveticaBold, timesFont, timesBold) {
+const {
+    cleanTextForPdf,
+    wrapText,
+    canvasToPdfY,
+    hexToRgb,
+    calculateAuthorLayout,
+    drawInstitutionHeader,
+    drawCertificationTitle,
+    drawDocumentTitle,
+    drawDocumentDescription,
+    drawAuthorsSection,
+    drawAvaladorInfo,
+    drawSignatureArea,
+    drawElectronicSignature
+} = require('./base.template');
+
+/**
+ * Dibujar elementos ornamentales elegantes
+ */
+function drawElegantOrnaments(page, width, height, config) {
     const { rgb } = require('pdf-lib');
-    const { cleanTextForPdf, wrapText } = require('./base.template');
+    const colorConfig = config.colorConfig || {};
+    const primaryColor = hexToRgb(colorConfig.primary || '#7c3aed');
+    const accentColor = hexToRgb(colorConfig.accent || '#f59e0b');
 
-    // Función para convertir coordenadas Y de Canvas a PDF (Y invertido)
-    const canvasToY = (canvasY) => height - canvasY;
+    // Ornamentos superiores
+    const topY = 80;
 
-    // Título principal centrado - EXACTAMENTE como en canvas
-    const tituloText = cleanTextForPdf(data.titulo);
-    const tituloWidth = tituloText.length * 16; // Aproximación para centrado
-    page.drawText(tituloText, {
-        x: width / 2 - (tituloWidth / 2),
-        y: canvasToY(170), // Canvas Y=170 → PDF Y=622
-        size: 28,
-        font: timesBold,
-        color: rgb(0.49, 0.18, 0.07) // #7c2d12
+    // Florón superior izquierdo
+    page.drawCircle({
+        x: 60,
+        y: canvasToPdfY(topY, height),
+        size: 6,
+        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
     });
 
-    // Decoración elegante - líneas laterales - EXACTAMENTE como en canvas
+    page.drawCircle({
+        x: 60,
+        y: canvasToPdfY(topY + 15, height),
+        size: 4,
+        color: rgb(accentColor.r, accentColor.g, accentColor.b)
+    });
+
+    // Florón superior derecho
+    page.drawCircle({
+        x: width - 60,
+        y: canvasToPdfY(topY, height),
+        size: 6,
+        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
+    });
+
+    page.drawCircle({
+        x: width - 60,
+        y: canvasToPdfY(topY + 15, height),
+        size: 4,
+        color: rgb(accentColor.r, accentColor.g, accentColor.b)
+    });
+
+    // Elementos ornamentales inferiores
+    const bottomY = height - 120;
+
+    // Volutas elegantes
     page.drawLine({
-        start: { x: width / 2 - 120, y: canvasToY(185) }, // Canvas Y=185 → PDF Y=607
-        end: { x: width / 2 - 20, y: canvasToY(185) },
-        thickness: 1,
-        color: rgb(0.85, 0.47, 0.03) // #d97706
+        start: { x: 80, y: canvasToPdfY(bottomY, height) },
+        end: { x: 100, y: canvasToPdfY(bottomY - 10, height) },
+        thickness: 2,
+        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
     });
+
     page.drawLine({
-        start: { x: width / 2 + 20, y: canvasToY(185) },
-        end: { x: width / 2 + 120, y: canvasToY(185) },
-        thickness: 1,
-        color: rgb(0.85, 0.47, 0.03) // #d97706
+        start: { x: 100, y: canvasToPdfY(bottomY - 10, height) },
+        end: { x: 120, y: canvasToPdfY(bottomY, height) },
+        thickness: 2,
+        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
     });
 
-    // Rombo central decorativo - EXACTAMENTE como en canvas
-    page.drawRectangle({
-        x: width / 2 - 4,
-        y: canvasToY(194) - 7, // Canvas Y=194 (rombo centrado) → PDF Y=598
-        width: 8,
-        height: 14,
-        color: rgb(0.85, 0.47, 0.03) // #d97706
+    page.drawLine({
+        start: { x: width - 80, y: canvasToPdfY(bottomY, height) },
+        end: { x: width - 100, y: canvasToPdfY(bottomY - 10, height) },
+        thickness: 2,
+        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
     });
 
-    // Subtítulo centrado - EXACTAMENTE como en canvas
-    const subtitulo = 'Certificacion de Excelencia';
-    const subtituloWidth = subtitulo.length * 9;
-    page.drawText(subtitulo, {
-        x: width / 2 - (subtituloWidth / 2),
-        y: canvasToY(220), // Canvas Y=220 → PDF Y=572
-        size: 16,
-        font: timesFont,
-        color: rgb(0.57, 0.25, 0.05) // #92400e
-    });
-
-    // Institución centrada - EXACTAMENTE como en canvas
-    const institucionText = cleanTextForPdf(data.institucion);
-    const institucionWidth = institucionText.length * 8;
-    page.drawText(institucionText, {
-        x: width / 2 - (institucionWidth / 2),
-        y: canvasToY(250), // Canvas Y=250 → PDF Y=542
-        size: 14,
-        font: timesBold,
-        color: rgb(0.49, 0.18, 0.07) // #7c2d12
-    });
-
-    // Contenido principal alineado a la izquierda - EXACTAMENTE como en canvas
-    const startY = 300; // Canvas Y=300
-    page.drawText('Este documento ha sido revisado y avalado bajo', {
-        x: 80,
-        y: canvasToY(startY), // Canvas Y=300 → PDF Y=492
-        size: 14,
-        font: timesFont,
-        color: rgb(0.57, 0.25, 0.05) // #92400e
-    });
-    page.drawText('los mas altos estandares de calidad institucional.', {
-        x: 80,
-        y: canvasToY(startY + 25), // Canvas Y=325 → PDF Y=467
-        size: 14,
-        font: timesFont,
-        color: rgb(0.57, 0.25, 0.05) // #92400e
-    });
-
-    // Autores lado izquierdo - EXACTAMENTE como en canvas
-    page.drawText('Autores:', {
-        x: 80,
-        y: canvasToY(startY + 70), // Canvas Y=370 → PDF Y=422
-        size: 14,
-        font: timesBold,
-        color: rgb(0.57, 0.25, 0.05) // #92400e
-    });
-
-    data.autores.forEach((autor, index) => {
-        page.drawText(`• ${cleanTextForPdf(autor)}`, {
-            x: 100,
-            y: canvasToY(startY + 100 + (index * 25)), // Canvas Y=400+n*25 → PDF Y=392-n*25
-            size: 14,
-            font: timesFont,
-            color: rgb(0.57, 0.25, 0.05) // #92400e
-        });
-    });
-
-    // Avalado por lado derecho - EXACTAMENTE como en canvas
-    const avaladoTitle = 'Avalado por:';
-    const avaladoTitleWidth = avaladoTitle.length * 8;
-    page.drawText(avaladoTitle, {
-        x: width - 80 - avaladoTitleWidth,
-        y: canvasToY(startY + 70), // Canvas Y=370 → PDF Y=422
-        size: 14,
-        font: timesBold,
-        color: rgb(0.57, 0.25, 0.05) // #92400e
-    });
-
-    const avaladoText = cleanTextForPdf(data.avaladoPor);
-    const avaladoWidth = avaladoText.length * 8;
-    page.drawText(avaladoText, {
-        x: width - 80 - avaladoWidth,
-        y: canvasToY(startY + 100), // Canvas Y=400 → PDF Y=392
-        size: 14,
-        font: timesFont,
-        color: rgb(0.57, 0.25, 0.05) // #92400e
-    });
-
-    // Fecha centrada (abajo) - Esta coordenada se mantiene como estaba
-    const fechaText = `Fecha: ${cleanTextForPdf(data.fecha)}`;
-    const fechaWidth = fechaText.length * 7;
-    page.drawText(fechaText, {
-        x: width / 2 - (fechaWidth / 2),
-        y: 120, // Esta coordenada ya está en PDF (no viene del canvas)
-        size: 12,
-        font: timesFont,
-        color: rgb(0.57, 0.25, 0.05) // #92400e
+    page.drawLine({
+        start: { x: width - 100, y: canvasToPdfY(bottomY - 10, height) },
+        end: { x: width - 120, y: canvasToPdfY(bottomY, height) },
+        thickness: 2,
+        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
     });
 }
 
-// Borde para plantilla elegante
-function drawElegantBorder(page, width, height) {
+/**
+ * Dibujar borde elegante con elementos decorativos
+ */
+function drawElegantBorder(page, width, height, borderConfig) {
     const { rgb } = require('pdf-lib');
 
-    // Borde elegante con decoraciones
+    const borderColor = hexToRgb(borderConfig?.color || '#7c3aed');
+    const borderWidth = borderConfig?.width || 2;
+
+    // Borde exterior elegante
     page.drawRectangle({
         x: 35,
         y: 35,
         width: width - 70,
         height: height - 70,
-        borderColor: rgb(0.4, 0.2, 0.6),
-        borderWidth: 1.5
+        borderWidth: borderWidth,
+        borderColor: rgb(borderColor.r, borderColor.g, borderColor.b)
     });
 
-    // Decoraciones en las esquinas
-    const decorSize = 15;
-    const decorColor = rgb(0.4, 0.2, 0.6);
-    page.drawRectangle({ x: 35, y: height - 50, width: decorSize, height: decorSize, color: decorColor });
-    page.drawRectangle({ x: width - 50, y: height - 50, width: decorSize, height: decorSize, color: decorColor });
-    page.drawRectangle({ x: 35, y: 35, width: decorSize, height: decorSize, color: decorColor });
-    page.drawRectangle({ x: width - 50, y: 35, width: decorSize, height: decorSize, color: decorColor });
-}
-
-// Para Frontend (Canvas)
-function drawElegantTemplateCanvas(ctx, config, width, height, data) {
-    // Título principal
-    ctx.fillStyle = config.colors.primary;
-    ctx.font = 'bold 28px serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(data.titulo, width / 2, 170);
-
-    // Decoración elegante
-    ctx.strokeStyle = config.colors.accent;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(width / 2 - 120, 185);
-    ctx.lineTo(width / 2 - 20, 185);
-    ctx.moveTo(width / 2 + 20, 185);
-    ctx.lineTo(width / 2 + 120, 185);
-    ctx.stroke();
-
-    // Rombo central
-    ctx.fillStyle = config.colors.accent;
-    ctx.beginPath();
-    ctx.moveTo(width / 2, 180);
-    ctx.lineTo(width / 2 + 8, 187);
-    ctx.lineTo(width / 2, 194);
-    ctx.lineTo(width / 2 - 8, 187);
-    ctx.closePath();
-    ctx.fill();
-
-    // Subtítulo
-    ctx.fillStyle = config.colors.text;
-    ctx.font = '16px serif';
-    ctx.fillText('Certificación de Excelencia', width / 2, 220);
-
-    // Institución
-    ctx.font = 'bold 14px serif';
-    ctx.fillStyle = config.colors.primary;
-    ctx.fillText(data.institucion, width / 2, 250);
-
-    // Contenido principal
-    ctx.textAlign = 'left';
-    ctx.fillStyle = config.colors.text;
-    ctx.font = '14px serif';
-    const startY = 300;
-    ctx.fillText('Este documento ha sido revisado y avalado bajo', 80, startY);
-    ctx.fillText('los más altos estándares de calidad institucional.', 80, startY + 25);
-
-    // Autores
-    ctx.font = 'bold 14px serif';
-    ctx.fillText('Autores:', 80, startY + 70);
-    ctx.font = '14px serif';
-    data.autores.forEach((autor, index) => {
-        ctx.fillText(`• ${autor}`, 100, startY + 100 + (index * 25));
+    // Borde interior sutil
+    page.drawRectangle({
+        x: 45,
+        y: 45,
+        width: width - 90,
+        height: height - 90,
+        borderWidth: 1,
+        borderColor: rgb(borderColor.r, borderColor.g, borderColor.b, 0.3)
     });
 
-    // Avalado por (lado derecho)
-    ctx.textAlign = 'right';
-    ctx.font = 'bold 14px serif';
-    ctx.fillText('Avalado por:', width - 80, startY + 70);
-    ctx.font = '14px serif';
-    ctx.fillText(data.avaladoPor, width - 80, startY + 100);
+    // Elementos decorativos en las esquinas
+    if (borderConfig?.showDecorative !== false) {
+        const cornerColor = hexToRgb(borderConfig?.color || '#7c3aed');
 
-    // Firma estándar a la derecha
-    if (window.BaseTemplate && window.BaseTemplate.drawStandardSignature) {
-        window.BaseTemplate.drawStandardSignature(ctx, config, width - 80, startY + 130, 'right');
+        // Esquina superior izquierda - voluta
+        page.drawLine({
+            start: { x: 35, y: 55 },
+            end: { x: 55, y: 35 },
+            thickness: 1,
+            color: rgb(cornerColor.r, cornerColor.g, cornerColor.b)
+        });
+
+        // Esquina superior derecha - voluta
+        page.drawLine({
+            start: { x: width - 35, y: 55 },
+            end: { x: width - 55, y: 35 },
+            thickness: 1,
+            color: rgb(cornerColor.r, cornerColor.g, cornerColor.b)
+        });
+
+        // Esquina inferior izquierda - voluta
+        page.drawLine({
+            start: { x: 35, y: height - 55 },
+            end: { x: 55, y: height - 35 },
+            thickness: 1,
+            color: rgb(cornerColor.r, cornerColor.g, cornerColor.b)
+        });
+
+        // Esquina inferior derecha - voluta
+        page.drawLine({
+            start: { x: width - 35, y: height - 55 },
+            end: { x: width - 55, y: height - 35 },
+            thickness: 1,
+            color: rgb(cornerColor.r, cornerColor.g, cornerColor.b)
+        });
     }
 }
 
-// Borde para canvas
-function drawElegantBorderCanvas(ctx, config, width, height) {
-    ctx.strokeStyle = config.colors.primary;
-    ctx.lineWidth = 1.5;
+/**
+ * Template elegante principal
+ */
+async function drawElegantTemplate(page, width, height, data, helveticaFont, helveticaBold, timesFont, timesBold, config, pdfDoc) {
+    // Extraer configuración
+    const templateConfig = data.config || {};
+    const colorConfig = templateConfig.colorConfig || {};
+    const fontConfig = templateConfig.fontConfig || {};
+    const layoutConfig = templateConfig.layoutConfig || {};
+    const visualConfig = templateConfig.visualConfig || {};
+
+    // Preparar fuentes
+    const fontObjects = {
+        title: fontConfig.title === 'Times-Bold' ? timesBold : helveticaBold,
+        body: fontConfig.body === 'Times-Roman' ? timesFont : helveticaFont,
+        signature: fontConfig.signature === 'Times-Bold' ? timesBold : helveticaBold,
+        helvetica: helveticaFont,
+        helveticaBold: helveticaBold,
+        times: timesFont,
+        timesBold: timesBold
+    };
+
+    let currentY = 110;
+
+    // 1. Elementos ornamentales elegantes
+    drawElegantOrnaments(page, width, height, config);
+
+    // 2. Header con institución y logo
+    currentY = drawInstitutionHeader(page, width, height, data, config, fontObjects);
+
+    // 3. Título de certificación
+    currentY = drawCertificationTitle(page, width, height, currentY, config, fontObjects);
+
+    // 4. Título del documento avalado
+    currentY = drawDocumentTitle(page, width, height, data, currentY, config, fontObjects);
+
+    // 5. Texto explicativo del documento
+    currentY = drawDocumentDescription(page, width, height, data, currentY, config, fontObjects);
+
+    // 6. Sección de autores
+    currentY = drawAuthorsSection(page, width, height, data, currentY, config, fontObjects);
+
+    // 7. Información del avalador
+    currentY = drawAvaladorInfo(page, width, height, data, currentY, config, fontObjects);
+
+    // 8. Área de firma
+    currentY = await drawSignatureArea(page, width, height, data, currentY, config, fontObjects, pdfDoc);
+
+    // 9. Firma electrónica se maneja desde el TemplateManager
+}
+
+/**
+ * Función para canvas (frontend) - versión simplificada
+ */
+function drawElegantTemplateCanvas(ctx, config, width, height, data) {
+    if (!ctx || !config) return;
+
+    const colorConfig = config.colorConfig || {};
+    const layoutConfig = config.layoutConfig || {};
+    const visualConfig = config.visualConfig || {};
+
+    // Fondo elegante
+    ctx.fillStyle = colorConfig.background || '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    // Bordes elegantes
+    ctx.strokeStyle = colorConfig.primary || '#7c3aed';
+    ctx.lineWidth = 2;
     ctx.strokeRect(35, 35, width - 70, height - 70);
 
-    // Decoraciones en las esquinas
-    const decorSize = 15;
-    ctx.fillStyle = config.colors.primary;
-    ctx.fillRect(35, height - 50, decorSize, decorSize);
-    ctx.fillRect(width - 50, height - 50, decorSize, decorSize);
-    ctx.fillRect(35, 35, decorSize, decorSize);
-    ctx.fillRect(width - 50, 35, decorSize, decorSize);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(45, 45, width - 90, height - 90);
+
+    // Elementos ornamentales
+    ctx.fillStyle = colorConfig.primary || '#7c3aed';
+    ctx.beginPath();
+    ctx.arc(60, 80, 6, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.fillStyle = colorConfig.accent || '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(60, 95, 4, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.fillStyle = colorConfig.primary || '#7c3aed';
+    ctx.beginPath();
+    ctx.arc(width - 60, 80, 6, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.fillStyle = colorConfig.accent || '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(width - 60, 95, 4, 0, 2 * Math.PI);
+    ctx.fill();
+
+    let currentY = 110;
+
+    // Header simplificado para canvas
+    ctx.fillStyle = colorConfig.primary || '#7c3aed';
+    ctx.font = 'bold 18px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('CERTIFICACIÓN PREMIUM', width / 2, currentY);
+
+    // Título del documento
+    ctx.fillStyle = colorConfig.accent || '#f59e0b';
+    ctx.font = 'bold 20px serif';
+    const titleLines = wrapText(cleanTextForPdf(data.titulo || ''), 35);
+    titleLines.forEach((line, index) => {
+        ctx.fillText(line, width / 2, currentY + 60 + (index * 22));
+    });
+
+    // Área de firma elegante
+    const signatureY = height - 120;
+    ctx.strokeStyle = colorConfig.primary || '#7c3aed';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(width / 2 - 120, signatureY, 240, 70);
+
+    // Elementos decorativos en la firma
+    ctx.fillStyle = colorConfig.accent || '#f59e0b';
+    ctx.fillRect(width / 2 - 120, signatureY - 8, 50, 4);
+    ctx.fillRect(width / 2 + 70, signatureY - 8, 50, 4);
+
+    ctx.fillStyle = colorConfig.accent || '#f59e0b';
+    ctx.font = '12px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('FIRMA PREMIUM', width / 2, signatureY + 30);
 }
 
-// Configuración de la plantilla
-const ElegantTemplateConfig = {
-    colors: {
-        primary: '#7c2d12',
-        accent: '#d97706',
-        text: '#92400e'
-    },
-    layout: {
-        borderStyle: 'ornate'
-    },
-    logoPosition: {
-        x: 85,
-        y: 5
-    }
-};
-
-// Exportar para Node.js (backend)
+// Exportar funciones
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         drawElegantTemplate,
         drawElegantBorder,
-        ElegantTemplateConfig
+        drawElegantTemplateCanvas
     };
 }
 
-// Exportar para el navegador (frontend)
 if (typeof window !== 'undefined') {
     window.ElegantTemplate = {
-        drawTemplateCanvas: drawElegantTemplateCanvas,
-        drawBorderCanvas: drawElegantBorderCanvas,
-        config: ElegantTemplateConfig
+        drawTemplate: drawElegantTemplateCanvas,
+        drawBorder: drawElegantBorder
     };
 }

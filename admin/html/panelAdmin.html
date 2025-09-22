@@ -6,14 +6,15 @@
     <title>Panel Administrativo</title>
 
     <link rel="stylesheet" href="/admin/css/admin.css" />
-    <link rel="stylesheet" href="/admin/css/admin-components.css" />
+    <link rel="stylesheet" href="/admin/css/admin-shared.css" />
+    <link rel="stylesheet" href="/admin/css/secciones/pdf-config.css" />
     <link rel="stylesheet" href="/admin/css/secciones/admin-user-management.css" />
     <link rel="stylesheet" href="/admin/css/admin-responsive.css" />
+    <link rel="stylesheet" href="/admin/css/secciones/general-config.css" />
     <link rel="stylesheet" href="/admin/css/panelAdmin.css" />
-    <link rel="stylesheet" href="/admin/css/preview-icon.css" />
     <link rel="stylesheet" href="/admin/css/secciones/database.css" />
+    <link rel="stylesheet" href="/admin/css/secciones/backgrounds.css" />
     <link rel="stylesheet" href="/css/themeSelector.css" />
-    <link rel="stylesheet" href="/css/visualConfig.css" />
     <link rel="stylesheet" href="/css/restoreConfirmModal.css" />
 
     <!-- Favicon -->
@@ -75,40 +76,8 @@
       // Script para mejorar formularios administrativos
       (function() {
         document.addEventListener('DOMContentLoaded', function() {
-          // Manejar efectos de foco en grupos de formulario
-          const formGroups = document.querySelectorAll('.admin-form-group');
-
-          formGroups.forEach(group => {
-            const input = group.querySelector('.admin-input, .admin-select, .admin-textarea');
-
-            if (input) {
-              input.addEventListener('focus', function() {
-                group.classList.add('focused');
-              });
-
-              input.addEventListener('blur', function() {
-                if (!this.value.trim()) {
-                  group.classList.remove('focused');
-                }
-              });
-
-              // Mantener estado focused si hay valor
-              if (input.value.trim()) {
-                group.classList.add('focused');
-              }
-            }
-          });
-
-          // Mejorar experiencia de select
-          const selects = document.querySelectorAll('.admin-select');
-          selects.forEach(select => {
-            select.addEventListener('change', function() {
-              const group = this.closest('.admin-form-group');
-              if (group && this.value) {
-                group.classList.add('focused');
-              }
-            });
-          });
+          // Inicializar efectos de foco en grupos de formulario
+          // Esto se maneja ahora desde panelAdmin.js para evitar duplicación
 
           // Función para toggle de contraseña
           window.togglePasswordVisibility = function(inputId) {
@@ -303,23 +272,6 @@
 
           <div class="admin-nav-section">
             <h3>Personalización</h3>
-            <button class="admin-nav-item" data-tab="personalizacion-visual">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="M12 6a6 6 0 0 0 0 12c3.31 0 6-2.69 6-6"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-              <span>Personalización Visual</span>
-            </button>
 
             <button class="admin-nav-item" data-tab="temas-colores">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -553,172 +505,96 @@
         <div class="admin-content">
           <!-- TAB 1: CONFIGURACIÓN GENERAL -->
           <div class="admin-tab-content active" id="tab-configuracion-general">
-            <h2>Configuración General del Sitio</h2>
+            <h2>Configuración General</h2>
             <p class="tab-description">
-              Personaliza los elementos principales de tu sitio web
+              Configura la identidad principal de tu institución
             </p>
 
             <div class="admin-section">
               <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--admin-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 6c3-1 6 1 8 0s6-1 8 0v12c-3 1-6-1-8 0s-6 1-8 0V6z"/>
+                </svg>
+                Identidad de la Institución
+              </h3>
+
+              <!-- Contenedor principal con flexbox -->
+              <div class="admin-section-content">
+                <!-- Campo 1: Identidad de la Institución -->
+                <div class="admin-field institution-field">
+                  <div class="field-header">
+                    <h4>Nombre de la Institución</h4>
+                  </div>
+                  <div class="field-content">
+                    <input
+                      type="text"
+                      id="institutionName"
+                      placeholder="Ej: Universidad Nacional"
+                      class="admin-input"
+                      value="Firmas Digitales FD"
+                    />
+                    <span class="admin-input-help">
+                      Este nombre se usará en el header, footer, título de la página y otros elementos del sitio
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Campo 2: Favicon -->
+                <div class="admin-field favicon-field">
+                  <div class="field-header">
+                    <h4>Favicon del Sitio</h4>
+                  </div>
+                  <div class="field-content">
+                    <div class="favicon-preview">
+                      <img id="currentFavicon" src="../../../favicon.ico" alt="Favicon actual" />
+                      <span>Favicon Actual</span>
+                    </div>
+                    <div class="favicon-controls">
+                      <label for="faviconUpload">Cambiar favicon:</label>
+                      <button class="visual-config-btn secondary select-file-btn" onclick="selectFaviconFile()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                          <polyline points="7,10 12,15 17,10"/>
+                          <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Seleccionar Archivo
+                      </button>
+                      <span class="admin-input-help">Formatos: ICO, PNG, JPG (32x32px recomendado)</span>
+                      <input
+                        type="file"
+                        id="faviconUpload"
+                        accept="image/x-icon,image/png,image/jpeg,image/gif"
+                        onchange="handleFaviconChange(event)"
+                        style="display: none;"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botón General de Guardar Configuración -->
+            <div class="global-config-actions">
+              <button class="admin-btn primary large" onclick="saveGlobalConfiguration()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path
-                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                    d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
                     stroke="currentColor"
                     stroke-width="2"
                   />
                   <polyline
-                    points="3.27,6.96 12,12.01 20.73,6.96"
+                    points="17,21 17,13 7,13 7,21"
                     stroke="currentColor"
                     stroke-width="2"
                   />
-                  <line
-                    x1="12"
-                    y1="22.08"
-                    x2="12"
-                    y2="12"
+                  <polyline
+                    points="7,3 7,8 15,8"
                     stroke="currentColor"
                     stroke-width="2"
                   />
                 </svg>
-                Identidad del Sitio
-              </h3>
-
-              <div class="admin-form-grid">
-                <div class="admin-form-group">
-                  <label for="siteTitle_general">Título de la Página</label>
-                  <input
-                    type="text"
-                    id="siteTitle_general"
-                    placeholder="Firmas Digitales FD"
-                    class="admin-input"
-                  />
-                  <span class="admin-input-help"
-                    >Se muestra en la pestaña del navegador</span
-                  >
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="headerTitle_general">Título del Header</label>
-                  <input
-                    type="text"
-                    id="headerTitle_general"
-                    placeholder="Firmas Digitales FD"
-                    class="admin-input"
-                  />
-                  <span class="admin-input-help"
-                    >Se muestra en el encabezado del sitio</span
-                  >
-                  <div class="admin-preview">
-                    <strong>Vista previa:</strong>
-                    <span id="headerTitlePreview">Firmas Digitales FD</span>
-                  </div>
-                </div>
-
-                <div class="admin-form-group full-width">
-                  <label for="footerText">Texto del Footer</label>
-                  <textarea
-                    id="footerText"
-                    rows="2"
-                    class="admin-input"
-                    placeholder="© 2025 Firmas Digitales FD. Todos los derechos reservados."
-                  ></textarea>
-                  <span class="admin-input-help"
-                    >Texto que aparece en la parte inferior del sitio</span
-                  >
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="faviconUpload">Favicon del Sitio</label>
-                  <div class="admin-file-upload">
-                    <input
-                      type="file"
-                      id="faviconUpload"
-                      accept="image/*"
-                      class="admin-file-input"
-                    />
-                    <label for="faviconUpload" class="admin-file-label">
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <path
-                          d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        />
-                        <polyline
-                          points="7,10 12,15 17,10"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        />
-                        <line
-                          x1="12"
-                          y1="15"
-                          x2="12"
-                          y2="3"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        />
-                      </svg>
-                      Seleccionar Archivo
-                    </label>
-                    <div
-                      class="favicon-preview"
-                      id="faviconPreview"
-                      style="display: none"
-                    >
-                      <img id="faviconPreviewImg" alt="Favicon preview" />
-                      <span>Vista previa del favicon</span>
-                    </div>
-                  </div>
-                  <span class="admin-input-help"
-                    >Icono que aparece en la pestaña del navegador (recomendado:
-                    32x32px)</span
-                  >
-                </div>
-              </div>
-
-              <div class="admin-actions">
-                <button class="admin-btn primary" onclick="saveGeneralConfig()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <polyline
-                      points="17,21 17,13 7,13 7,21"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <polyline
-                      points="7,3 7,8 15,8"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                  </svg>
-                  Guardar Cambios
-                </button>
-                <button class="admin-btn secondary" onclick="previewChanges()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <circle
-                      cx="11"
-                      cy="11"
-                      r="8"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <path
-                      d="M21 21l-4.35-4.35"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                  </svg>
-                  Vista Previa
-                </button>
-              </div>
+                Guardar Configuración Global
+              </button>
             </div>
           </div>
 
@@ -954,259 +830,7 @@
             </div>
           </div>
 
-          <!-- TAB 3: PERSONALIZACIÓN -->
-          <div class="admin-tab-content" id="tab-personalizacion-visual">
-            <h2>Personalización Visual</h2>
-            <p class="tab-description">
-              Personaliza la apariencia visual completa del sitio web con fondos
-              dinámicos, favicon personalizado y elementos de branding
-            </p>
-
-            <!-- Sistema de Fondos Dinámicos -->
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect
-                    x="3"
-                    y="3"
-                    width="18"
-                    height="18"
-                    rx="2"
-                    ry="2"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <circle
-                    cx="9"
-                    cy="9"
-                    r="2"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <path
-                    d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Fondos Dinámicos
-              </h3>
-
-              <div class="admin-form-grid">
-                <div class="admin-form-group full-width">
-                  <label>Fondo Global del Sitio</label>
-                  <div class="background-selector">
-                    <div class="background-option selected" data-bg="fondo1">
-                      <div class="bg-preview">
-                        <img
-                          src="../../../recursos/Fondo.jpg"
-                          alt="Fondo 1"
-                          style="
-                            width: 100%;
-                            height: 60px;
-                            object-fit: cover;
-                            border-radius: 4px;
-                          "
-                        />
-                      </div>
-                      <span>Fondo 1</span>
-                    </div>
-                    <div class="background-option" data-bg="fondo2">
-                      <div class="bg-preview">
-                        <img
-                          src="../../../recursos/Fondo2.jpg"
-                          alt="Fondo 2"
-                          style="
-                            width: 100%;
-                            height: 60px;
-                            object-fit: cover;
-                            border-radius: 4px;
-                          "
-                        />
-                      </div>
-                      <span>Fondo 2</span>
-                    </div>
-                  </div>
-                  <span class="admin-input-help"
-                    >Este fondo se aplicará a todas las páginas del sitio
-                    web</span
-                  >
-                </div>
-              </div>
-            </div>
-
-            <!-- Sistema de Favicon Dinámico -->
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Favicon Personalizado
-              </h3>
-
-              <div class="admin-form-grid">
-                <div class="admin-form-group">
-                  <label for="faviconUpload">Cambiar Favicon</label>
-                  <div class="favicon-preview">
-                    <img
-                      id="currentFavicon"
-                      src="../../favicon.ico"
-                      alt="Favicon actual"
-                      style="
-                        width: 32px;
-                        height: 32px;
-                        border-radius: 4px;
-                        border: 1px solid #ddd;
-                      "
-                    />
-                    <span>Favicon actual</span>
-                  </div>
-                  <input
-                    type="file"
-                    id="faviconUpload"
-                    accept="image/x-icon,image/png,image/jpeg"
-                    class="admin-input"
-                  />
-                  <span class="admin-input-help"
-                    >Formato recomendado: ICO, PNG (32x32px)</span
-                  >
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="siteTitle">Título del Sitio</label>
-                  <input
-                    type="text"
-                    id="siteTitle"
-                    value="Firmas Digitales FD"
-                    class="admin-input"
-                  />
-                  <span class="admin-input-help"
-                    >Se muestra en la pestaña del navegador</span
-                  >
-                </div>
-              </div>
-            </div>
-
-            <!-- Elementos Dinámicos -->
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M4 7V4h16v3M4 7v13h16V7M4 7l8 6 8-6"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Elementos Dinámicos
-              </h3>
-
-              <div class="admin-form-grid">
-                <div class="admin-form-group">
-                  <label for="headerTitle">Título del Header</label>
-                  <input
-                    type="text"
-                    id="headerTitle"
-                    value="Firmas Digitales FD"
-                    class="admin-input"
-                  />
-                  <span class="admin-input-help"
-                    >Título que aparece en el header principal</span
-                  >
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="footerText">Texto del Footer</label>
-                  <input
-                    type="text"
-                    id="footerText"
-                    value="Firmas Digitales FD"
-                    class="admin-input"
-                  />
-                  <span class="admin-input-help"
-                    >Nombre de la empresa en el footer</span
-                  >
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="adminHeaderTitle">Título del Panel Admin</label>
-                  <input
-                    type="text"
-                    id="adminHeaderTitle"
-                    value="Sistema de Firmas Digitales"
-                    class="admin-input"
-                  />
-                  <span class="admin-input-help"
-                    >Título que aparece en el header del panel admin</span
-                  >
-                </div>
-              </div>
-            </div>
-
-            <div class="admin-actions">
-              <button class="admin-btn primary" onclick="saveVisualConfig()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <polyline
-                    points="17,21 17,13 7,13 7,21"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <polyline
-                    points="7,3 7,8 15,8"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Aplicar Cambios Visuales
-              </button>
-              <button
-                class="admin-btn secondary"
-                onclick="previewVisualChanges()"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="3"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Vista Previa
-              </button>
-              <button class="admin-btn warning" onclick="resetVisualConfig()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <path d="M3 3v5h5" stroke="currentColor" stroke-width="2" />
-                  <path
-                    d="M9 16.5L12 13.5 15 16.5"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Restablecer
-              </button>
-            </div>
-          </div>
-
-          <!-- TAB 3.5: TEMAS Y COLORES -->
+          <!-- TAB 3: PERSONALIZACIÓN VISUAL -->
           <div class="admin-tab-content" id="tab-temas-colores">
             <h2>Temas y Colores</h2>
             <p class="tab-description">
@@ -1365,15 +989,121 @@
                 </div>
               </div>
             </div>
+
+            <!-- Sistema de Backgrounds -->
+            <div class="background-selector">
+              <div class="background-control-section">
+                <div class="background-control-header">
+                  <svg
+                    class="background-icon"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <rect
+                      x="3"
+                      y="3"
+                      width="18"
+                      height="18"
+                      rx="2"
+                      ry="2"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <circle
+                      cx="9"
+                      cy="9"
+                      r="2"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <path
+                      d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  <h3>Backgrounds del Sitio</h3>
+                </div>
+
+                <!-- Grid de opciones de background - Estilos aplicados en admin.css -->
+                <div class="background-grid">
+                  <div class="background-option-card" data-bg="fondo1">
+                    <div class="background-preview">
+                      <img
+                        src="../../../recursos/Fondo.jpg"
+                        alt="Background 1"
+                        class="background-image"
+                      />
+                    </div>
+                    <span class="background-name">Fondo Principal</span>
+                  </div>
+
+                  <div class="background-option-card" data-bg="fondo2">
+                    <div class="background-preview">
+                      <img
+                        src="../../../recursos/Fondo2.jpg"
+                        alt="Background 2"
+                        class="background-image"
+                      />
+                    </div>
+                    <span class="background-name">Fondo Secundario</span>
+                  </div>
+                </div>
+
+                <!-- Acciones de Background -->
+                <div class="background-actions">
+                  <button class="reset-background" id="resetBackgroundBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        fill="none"
+                      />
+                      <path
+                        d="M3 3v5h5"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                    </svg>
+                    Restaurar por Defecto
+                  </button>
+
+                  <button class="save-global-background" id="saveGlobalBackground">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                      <polyline
+                        points="17,21 17,13 7,13 7,21"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                      <polyline
+                        points="7,3 7,8 15,8"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                    </svg>
+                    Guardar Configuración Global
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- TAB 4: CONFIGURACIÓN PDF -->
           <div class="admin-tab-content" id="tab-configuracion-pdf">
             <h2>Configuración de PDFs</h2>
             <p class="tab-description">
-              Personaliza las plantillas y configuraciones de documentos PDF
+              Personaliza las plantillas y configuraciones de documentos PDF con opciones avanzadas
             </p>
 
+            <!-- SECCIÓN 1: PLANTILLA PRINCIPAL -->
             <div class="admin-section">
               <h3>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -1404,47 +1134,568 @@
                     stroke-width="2"
                   />
                 </svg>
-                Configuración Institucional
+                Plantilla Principal
+              </h3>
+
+              <div class="admin-form-grid">
+                <div class="admin-form-group">
+                  <label for="pdfSelectedTemplate">Plantilla Seleccionada</label>
+                  <select id="pdfSelectedTemplate" class="admin-select">
+                    <option value="clasico">Diseño Clásico</option>
+                    <option value="moderno">Diseño Moderno</option>
+                    <option value="minimalista">Diseño Minimalista</option>
+                    <option value="elegante">Diseño Elegante</option>
+                    <option value="custom">Personalizado</option>
+                  </select>
+                  <span class="admin-input-help">Elige la plantilla base para todos los PDFs</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 2: CONFIGURACIÓN DE COLORES -->
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Configuración de Colores
+              </h3>
+
+              <div class="admin-form-grid">
+                <div class="admin-form-group">
+                  <label for="pdfPrimaryColor">Color Primario</label>
+                  <input
+                    type="color"
+                    id="pdfPrimaryColor"
+                    class="admin-input color-input"
+                    value="#2563eb"
+                  />
+                  <span class="admin-input-help">Color principal para títulos y elementos destacados</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfSecondaryColor">Color Secundario</label>
+                  <input
+                    type="color"
+                    id="pdfSecondaryColor"
+                    class="admin-input color-input"
+                    value="#64748b"
+                  />
+                  <span class="admin-input-help">Color para subtítulos y elementos secundarios</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfAccentColor">Color de Acento</label>
+                  <input
+                    type="color"
+                    id="pdfAccentColor"
+                    class="admin-input color-input"
+                    value="#f59e0b"
+                  />
+                  <span class="admin-input-help">Color para elementos decorativos y enlaces</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfTextColor">Color de Texto</label>
+                  <input
+                    type="color"
+                    id="pdfTextColor"
+                    class="admin-input color-input"
+                    value="#1f2937"
+                  />
+                  <span class="admin-input-help">Color principal del texto del documento</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 3: CONFIGURACIÓN DE FUENTES -->
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M4 7V4h16v3M9 20h6M12 4v16"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Configuración de Fuentes
+              </h3>
+
+              <div class="admin-form-grid">
+                <div class="admin-form-group">
+                  <label for="pdfTitleFont">Fuente de Títulos</label>
+                  <select id="pdfTitleFont" class="admin-select">
+                    <option value="Helvetica-Bold">Helvetica Bold</option>
+                    <option value="Times-Bold">Times Bold</option>
+                    <option value="Courier-Bold">Courier Bold</option>
+                  </select>
+                  <span class="admin-input-help">Fuente para títulos principales del documento</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfBodyFont">Fuente del Cuerpo</label>
+                  <select id="pdfBodyFont" class="admin-select">
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Times-Roman">Times Roman</option>
+                    <option value="Courier">Courier</option>
+                  </select>
+                  <span class="admin-input-help">Fuente para el texto principal del documento</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfMetadataFont">Fuente de Metadatos</label>
+                  <select id="pdfMetadataFont" class="admin-select">
+                    <option value="Helvetica-Oblique">Helvetica Italic</option>
+                    <option value="Times-Italic">Times Italic</option>
+                    <option value="Courier-Oblique">Courier Italic</option>
+                  </select>
+                  <span class="admin-input-help">Fuente para fechas, autores y metadatos</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfSignatureFont">Fuente de Firma</label>
+                  <select id="pdfSignatureFont" class="admin-select">
+                    <option value="Times-Bold">Times Bold</option>
+                    <option value="Helvetica-Bold">Helvetica Bold</option>
+                    <option value="Courier-Bold">Courier Bold</option>
+                  </select>
+                  <span class="admin-input-help">Fuente para el texto de la firma digital</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 4: CONFIGURACIÓN DE LAYOUT -->
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    ry="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <line
+                    x1="9"
+                    y1="9"
+                    x2="15"
+                    y2="9"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <line
+                    x1="9"
+                    y1="15"
+                    x2="15"
+                    y2="15"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Configuración de Layout
+              </h3>
+
+              <div class="admin-form-grid">
+                <div class="admin-form-group">
+                  <label for="pdfMarginTop">Margen Superior (px)</label>
+                  <input
+                    type="number"
+                    id="pdfMarginTop"
+                    class="admin-input"
+                    value="60"
+                    min="20"
+                    max="100"
+                  />
+                  <span class="admin-input-help">Espacio desde la parte superior de la página</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfMarginBottom">Margen Inferior (px)</label>
+                  <input
+                    type="number"
+                    id="pdfMarginBottom"
+                    class="admin-input"
+                    value="60"
+                    min="20"
+                    max="100"
+                  />
+                  <span class="admin-input-help">Espacio desde la parte inferior de la página</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfMarginLeft">Margen Izquierdo (px)</label>
+                  <input
+                    type="number"
+                    id="pdfMarginLeft"
+                    class="admin-input"
+                    value="50"
+                    min="20"
+                    max="100"
+                  />
+                  <span class="admin-input-help">Espacio desde el lado izquierdo de la página</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfMarginRight">Margen Derecho (px)</label>
+                  <input
+                    type="number"
+                    id="pdfMarginRight"
+                    class="admin-input"
+                    value="50"
+                    min="20"
+                    max="100"
+                  />
+                  <span class="admin-input-help">Espacio desde el lado derecho de la página</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfLineHeight">Interlineado</label>
+                  <input
+                    type="number"
+                    id="pdfLineHeight"
+                    class="admin-input"
+                    value="1.6"
+                    min="1.0"
+                    max="2.5"
+                    step="0.1"
+                  />
+                  <span class="admin-input-help">Espacio entre líneas de texto</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfTitleSize">Tamaño de Título (pt)</label>
+                  <input
+                    type="number"
+                    id="pdfTitleSize"
+                    class="admin-input"
+                    value="24"
+                    min="16"
+                    max="36"
+                  />
+                  <span class="admin-input-help">Tamaño de fuente para títulos principales</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfBodySize">Tamaño de Cuerpo (pt)</label>
+                  <input
+                    type="number"
+                    id="pdfBodySize"
+                    class="admin-input"
+                    value="12"
+                    min="8"
+                    max="16"
+                  />
+                  <span class="admin-input-help">Tamaño de fuente para texto principal</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 5: CONFIGURACIÓN DE BORDES -->
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    ry="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Configuración de Bordes
+              </h3>
+
+              <div class="admin-form-grid">
+                <div class="admin-form-group">
+                  <label for="pdfBorderStyle">Estilo de Borde</label>
+                  <select id="pdfBorderStyle" class="admin-select">
+                    <option value="classic">Clásico</option>
+                    <option value="modern">Moderno</option>
+                    <option value="minimal">Minimalista</option>
+                    <option value="elegant">Elegante</option>
+                  </select>
+                  <span class="admin-input-help">Estilo visual del borde del documento</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfBorderWidth">Ancho del Borde (px)</label>
+                  <input
+                    type="number"
+                    id="pdfBorderWidth"
+                    class="admin-input"
+                    value="2"
+                    min="1"
+                    max="5"
+                  />
+                  <span class="admin-input-help">Grosor de las líneas del borde</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfBorderColor">Color del Borde</label>
+                  <input
+                    type="color"
+                    id="pdfBorderColor"
+                    class="admin-input color-input"
+                    value="#1f2937"
+                  />
+                  <span class="admin-input-help">Color de las líneas del borde</span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label for="pdfCornerRadius">Radio de Esquinas (px)</label>
+                  <input
+                    type="number"
+                    id="pdfCornerRadius"
+                    class="admin-input"
+                    value="0"
+                    min="0"
+                    max="20"
+                  />
+                  <span class="admin-input-help">Redondeo de las esquinas del borde</span>
+                </div>
+
+                <div class="admin-form-group full-width">
+                  <label class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      id="pdfShowDecorative"
+                      checked
+                    />
+                    Mostrar elementos decorativos
+                  </label>
+                  <span class="admin-input-help">Incluir elementos decorativos en el borde</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 6: CONFIGURACIÓN VISUAL -->
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Configuración Visual
               </h3>
 
               <div class="admin-form-grid">
                 <div class="admin-form-group full-width">
-                  <label for="institutionName">Nombre de la Institución</label>
-                  <input
-                    type="text"
-                    id="institutionName"
-                    class="admin-input"
-                    placeholder="Universidad Nacional de Colombia"
-                  />
-                  <span class="admin-input-help"
-                    >Este nombre aparecerá en todos los documentos PDF
-                    generados</span
-                  >
+                  <label class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      id="pdfShowLogo"
+                      checked
+                    />
+                    Mostrar logo de la institución
+                  </label>
+                  <span class="admin-input-help">Incluir el logo en los documentos PDF</span>
+                </div>
+
+                <div class="admin-form-group full-width">
+                  <label class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      id="pdfShowInstitution"
+                      checked
+                    />
+                    Mostrar nombre de la institución
+                  </label>
+                  <span class="admin-input-help">Incluir el nombre de la institución en el documento</span>
+                </div>
+
+                <div class="admin-form-group full-width">
+                  <label class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      id="pdfShowDate"
+                      checked
+                    />
+                    Mostrar fecha de creación
+                  </label>
+                  <span class="admin-input-help">Incluir la fecha en que se creó el documento</span>
+                </div>
+
+                <div class="admin-form-group full-width">
+                  <label class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      id="pdfShowSignature"
+                      checked
+                    />
+                    Mostrar firma digital
+                  </label>
+                  <span class="admin-input-help">Incluir la firma electrónica en el documento</span>
+                </div>
+
+                <div class="admin-form-group full-width">
+                  <label class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      id="pdfShowAuthors"
+                      checked
+                    />
+                    Mostrar autores del documento
+                  </label>
+                  <span class="admin-input-help">Incluir los nombres de los autores del documento</span>
+                </div>
+
+                <div class="admin-form-group full-width">
+                  <label class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      id="pdfShowAvalador"
+                      checked
+                    />
+                    Mostrar avalador del documento
+                  </label>
+                  <span class="admin-input-help">Incluir el nombre de quien avala el documento</span>
                 </div>
               </div>
+            </div>
 
-              <div class="admin-actions">
-                <button class="admin-btn primary" onclick="savePdfConfig()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
-                      stroke="currentColor"
-                      stroke-width="2"
+            <!-- SECCIÓN 7: LOGO INSTITUCIONAL -->
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    ry="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <circle
+                    cx="9"
+                    cy="9"
+                    r="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Logo Institucional
+              </h3>
+
+              <div class="admin-form-grid">
+                <div class="admin-form-group full-width">
+                  <div class="logo-preview-section">
+                    <label>Vista Previa del Logo</label>
+                    <div class="logo-preview-container">
+                      <img
+                        id="pdfLogoPreview"
+                        src="../../recursos/logotipo-de-github.png"
+                        alt="Logo Institucional"
+                        onerror="this.style.display='none'"
+                      />
+                      <div class="logo-placeholder" id="logoPlaceholder">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+                          <circle cx="9" cy="9" r="2" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                        </svg>
+                        <p>Logo no encontrado</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="admin-form-group full-width">
+                  <label for="pdfLogoPath">Seleccionar Logo</label>
+                  <div class="file-input-container">
+                    <input
+                      type="file"
+                      id="pdfLogoPath"
+                      class="file-input-hidden"
+                      accept="image/*"
                     />
-                    <polyline
-                      points="17,21 17,13 7,13 7,21"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <polyline
-                      points="7,3 7,8 15,8"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                  </svg>
-                  Guardar Configuración
-                </button>
+                    <label for="pdfLogoPath" class="file-input-label">
+                      <svg class="file-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" stroke="currentColor" stroke-width="2"/>
+                        <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="10" cy="13" r="2" stroke="currentColor" stroke-width="2"/>
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                      <span class="file-input-text">Seleccionar imagen</span>
+                      <span class="file-input-button">Examinar</span>
+                    </label>
+                  </div>
+                  <span class="admin-input-help">Selecciona un archivo de imagen (PNG, JPG, SVG) para usar como logo en los PDFs</span>
+                </div>
               </div>
+            </div>
+
+            <!-- ACCIONES -->
+            <div class="admin-actions">
+              <button class="admin-btn secondary" onclick="previewPdfConfig()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Vista Previa
+              </button>
+
+              <button class="admin-btn primary" onclick="savePdfConfig()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <polyline
+                    points="17,21 17,13 7,13 7,21"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <polyline
+                    points="7,3 7,8 15,8"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Guardar Configuración
+              </button>
+
+              <button class="admin-btn danger" onclick="resetPdfConfig()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <polyline points="23,4 23,10 17,10" stroke="currentColor" stroke-width="2"/>
+                  <polyline points="1,20 1,14 7,14" stroke="currentColor" stroke-width="2"/>
+                  <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Restablecer
+              </button>
             </div>
           </div>
 
@@ -1758,9 +2009,61 @@
     <script src="/admin/js/admin.frontend.js"></script>
     <script src="/admin/js/user-management.js"></script>
     <script src="/admin/js/advanced-config.js"></script>
+
+    <!-- Inicialización del AdminPanel -->
+    <script>
+      // Crear instancia global del AdminPanel después de que se carguen los scripts
+      document.addEventListener('DOMContentLoaded', function() {
+        window.adminPanel = new AdminPanel();
+
+        // Cargar configuración de institución al iniciar
+        if (window.adminPanel && window.adminPanel.loadInstitutionConfig) {
+          window.adminPanel.loadInstitutionConfig();
+        }
+      });
+    </script>
+
     <!-- Sistema unificado de temas -->
     <script src="/scripts/utils/themeManager.js"></script>
     <script src="/scripts/frontend/visualConfig.frontend.js"></script>
+
+    <!-- Inicialización de backgrounds para panel admin -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar backgrounds en el panel de administración
+        const visualManager = new VisualCustomizationManager();
+
+        // Marcar el background actualmente activo
+        setTimeout(() => {
+          const currentBg = localStorage.getItem('globalBackground') || 'fondo1';
+          const activeOption = document.querySelector(`[data-bg="${currentBg}"]`);
+          if (activeOption) {
+            activeOption.classList.add('selected');
+          }
+
+          // Verificación de estilos CSS aplicados para backgrounds
+          console.log('🎨 Verificación de estilos CSS para backgrounds:');
+          const backgroundCards = document.querySelectorAll('.background-option-card');
+          backgroundCards.forEach((card, index) => {
+            const computedStyle = window.getComputedStyle(card);
+            console.log(`📋 Card ${index + 1}:`, {
+              borderColor: computedStyle.borderColor,
+              boxShadow: computedStyle.boxShadow,
+              transform: computedStyle.transform,
+              backgroundColor: computedStyle.backgroundColor
+            });
+          });
+
+          if (backgroundCards.length > 0) {
+            console.log('✅ Estilos CSS aplicados correctamente para backgrounds');
+          } else {
+            console.log('ℹ️ No se encontraron cards de background (esto es normal si no hay backgrounds configurados)');
+          }
+        }, 100);
+      });
+    </script>
+
+    <!-- Scripts principales del panel administrativo -->
     <script src="/admin/js/panelAdmin.js"></script>
   </body>
 </html>

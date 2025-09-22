@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title id="pageTitle">Firmas Digitales FD</title>
+    <title id="pageTitle">Pruebas Digitales</title>
     <!-- Favicon -->
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="/css/userKeysModal.css" />
     <link rel="stylesheet" href="/css/noKeysmodal.css" />
     <link rel="stylesheet" href="/css/profileMenu.css" />
-    <link rel="stylesheet" href="/css/templateResetModal.css" />
     <link rel="stylesheet" href="/css/tutorial.css" />
 
     <link rel="stylesheet" href="/css/sections/inicioSection.css" />
@@ -36,7 +35,7 @@
     <link rel="stylesheet" href="/css/deleteKey.css" />
 
     <!-- CSS para personalización visual -->
-    <link rel="stylesheet" href="/css/visualConfig.css" />
+    <link rel="stylesheet" href="/admin/css/secciones/backgrounds.css" />
 
   </head>
 
@@ -50,7 +49,7 @@
             alt="Logo"
             class="logo-img"
           />
-          <span id="tituloWeb">Firmas Digitales FD</span>
+          <span id="tituloWeb" class="site-title header-title" data-institution-name>Pruebas Digitales</span>
         </a>
       </div>
       <!-- Navegación movida al menú hamburguesa -->
@@ -97,44 +96,6 @@
             id="cancelNavigationBtn"
             class="navigation-confirm-btn secondary"
           >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal de restablecimiento de plantilla personalizada (ahora correctamente dentro del body) -->
-    <div id="templateResetModal" class="modal" style="display: none">
-      <div class="modal-content">
-        <span class="close-modal" id="closeTemplateResetModal">&times;</span>
-        <div class="modal-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="#e74c3c"
-              stroke-width="2"
-              fill="#fff"
-            />
-            <path
-              d="M8 12h8M12 8v8"
-              stroke="#e74c3c"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-        </div>
-        <div class="modal-title">Restablecer Personalización</div>
-        <div class="modal-desc">
-          ¿Seguro que quieres restablecer los valores personalizados de la
-          plantilla? Esta acción no se puede deshacer.
-        </div>
-        <div class="modal-actions">
-          <button class="modal-btn confirm" id="confirmTemplateResetBtn">
-            Sí, restablecer
-          </button>
-          <button class="modal-btn cancel" id="cancelTemplateResetBtn">
             Cancelar
           </button>
         </div>
@@ -2552,37 +2513,6 @@
               </div>
             </div>
 
-            <div class="perfil-tab-btn" data-tab="temas-colores">
-              <div class="tab-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <polyline
-                    points="14,2 14,8 20,8"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M16 13H8M16 17H8M10 9H8"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                </svg>
-              </div>
-              <div class="tab-info">
-                <div class="tab-title">Personalización PDF</div>
-                <div class="tab-desc">Personalización de los estilos del AVAL</div>
-              </div>
-            </div>
-
             <!-- CONFIGURACIONES AVANZADAS -->
             <div class="perfil-tab-btn" data-tab="configuraciones-avanzadas">
               <div class="tab-icon">
@@ -3384,236 +3314,6 @@
               </div>
             </div>
 
-            <!-- TAB 5: PERSONALIZACIÓN PDF PROFESIONAL -->
-            <div class="perfil-tab-content" id="tab-temas-colores">
-              <div class="tab-content-header">
-                <h3>
-                  Plantillas PDF Profesionales
-                </h3>
-                <p>
-                  Diseña documentos PDF profesionales con plantillas avanzadas, autores dinámicos y preview en tiempo real
-                </p>
-              </div>
-
-              <!-- SISTEMA DE PLANTILLAS PROFESIONALES -->
-              <div class="professional-pdf-system">
-                
-                <!-- Selector de Plantillas Profesionales -->
-                <div class="template-selection-section">
-                  <div class="section-header-pro">
-                    <h4>Selecciona una plantilla profesional</h4>
-                    <p>Elige entre nuestros diseños profesionales predefinidos</p>
-                  </div>
-                  
-                  <div class="professional-templates-grid">
-                    <div class="template-card" data-template="clasico">
-                      <div class="template-preview">
-                        <div class="template-preview-content">
-                          <div class="preview-header classic">
-                            <div class="preview-title">Documento Oficial</div>
-                            <div class="preview-subtitle">Certificación Académica</div>
-                          </div>
-                          <div class="preview-body">
-                            <div class="preview-line long"></div>
-                            <div class="preview-line medium"></div>
-                            <div class="preview-line short"></div>
-                            <div class="preview-signature-area">
-                              <div class="preview-signature"></div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="template-info">
-                        <h5>Clásico</h5>
-                        <p>Diseño tradicional y formal</p>
-                      </div>
-                    </div>
-
-                    <div class="template-card" data-template="moderno">
-                      <div class="template-preview">
-                        <div class="template-preview-content">
-                          <div class="preview-header modern">
-                            <div class="preview-accent"></div>
-                            <div class="preview-title">Documento Profesional</div>
-                            <div class="preview-subtitle">Validación Digital</div>
-                          </div>
-                          <div class="preview-body">
-                            <div class="preview-line long"></div>
-                            <div class="preview-line medium"></div>
-                            <div class="preview-line short"></div>
-                            <div class="preview-signature-area modern">
-                              <div class="preview-signature"></div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="template-info">
-                        <h5>Moderno</h5>
-                        <p>Diseño contemporáneo y dinámico</p>
-                      </div>
-                    </div>
-
-                    <div class="template-card" data-template="minimalista">
-                      <div class="template-preview">
-                        <div class="template-preview-content">
-                          <div class="preview-header minimal">
-                            <div class="preview-title">CERTIFICADO</div>
-                            <div class="preview-line-accent"></div>
-                          </div>
-                          <div class="preview-body">
-                            <div class="preview-line long"></div>
-                            <div class="preview-line medium"></div>
-                            <div class="preview-signature-area minimal">
-                              <div class="preview-signature small"></div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="template-info">
-                        <h5>Minimalista</h5>
-                        <p>Limpio y elegante</p>
-                      </div>
-                    </div>
-
-                    <div class="template-card" data-template="elegante">
-                      <div class="template-preview">
-                        <div class="template-preview-content">
-                          <div class="preview-header elegant">
-                            <div class="preview-ornament"></div>
-                            <div class="preview-title">Documento de Honor</div>
-                            <div class="preview-ornament"></div>
-                          </div>
-                          <div class="preview-body">
-                            <div class="preview-line long"></div>
-                            <div class="preview-line medium"></div>
-                            <div class="preview-signature-area elegant">
-                              <div class="preview-signature"></div>
-                              <div class="preview-seal"></div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="template-info">
-                        <h5>Elegante</h5>
-                        <p>Sofisticado con detalles</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Preview Canvas Preciso -->
-                <div class="canvas-preview-section">
-                  <div class="section-header-pro">
-                    <h4>Vista previa en tiempo real</h4>
-                    <p>Visualiza exactamente cómo se verá tu documento final</p>
-                  </div>
-                  
-                  <div class="canvas-preview-container">
-                    <canvas id="pdfPreviewCanvas" width="600" height="800"></canvas>
-                    <div class="canvas-overlay">
-                      <div class="canvas-loading">
-                        <div class="canvas-spinner"></div>
-                        <span>Generando preview...</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Personalización Avanzada -->
-                <div class="advanced-customization-section">
-                  <div class="section-header-pro">
-                    <h4>Personalización avanzada</h4>
-                    <p>Agrega logo institucional y ajusta la posición de elementos</p>
-                  </div>
-                  
-                  <div class="customization-grid">
-                    <!-- Logo Upload -->
-                    <div class="custom-group">
-                      <label>Logo institucional</label>
-                      <div class="logo-upload-area">
-                        <input type="file" id="logoInput" accept="image/*" class="logo-input">
-                        <label for="logoInput" class="logo-upload-label">
-                          <div class="logo-upload-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
-                              <circle cx="10" cy="13" r="2" stroke="currentColor" stroke-width="2"/>
-                              <path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2"/>
-                            </svg>
-                          </div>
-                          <span>Subir logo</span>
-                        </label>
-                        <div class="logo-preview" id="logoPreview" style="display: none;">
-                          <!-- Contenido se llena dinámicamente -->
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Nombre de Institución -->
-                    <div class="custom-group">
-                      <label>Nombre de la institución</label>
-                      <div class="institution-input-area">
-                        <input 
-                          type="text" 
-                          id="institutionInput" 
-                          placeholder="Universidad Nacional" 
-                          class="institution-input"
-                          value="Universidad Nacional"
-                        />
-                        <div class="input-icon">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2"/>
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Control de Aplicación -->
-                <div class="application-controls">
-                  <div class="controls-header">
-                    <div class="controls-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                        <path d="M19.4 15a1.65 1.82 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="2"/>
-                      </svg>
-                    </div>
-                    <div class="controls-info">
-                      <h4>Configuración del sistema</h4>
-                      <p>Aplica los cambios a todos los documentos futuros</p>
-                    </div>
-                  </div>
-
-                  <div class="controls-actions">
-                    <button class="pro-btn primary" id="updateTemplateBtn">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" stroke-width="2"/>
-                        <path d="M7 3v5h8" stroke="currentColor" stroke-width="2"/>
-                        <path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6" stroke="currentColor" stroke-width="2"/>
-                      </svg>
-                      Aplicar plantilla
-                    </button>
-                    
-                    <button class="pro-btn secondary" id="resetTemplateBtn">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2"/>
-                        <path d="M3 3v5h5" stroke="currentColor" stroke-width="2"/>
-                      </svg>
-                      Restablecer
-                    </button>
-                  </div>
-
-                  <div class="controls-status" id="configStatus">
-                    <div class="status-indicator">
-                      <div class="status-dot"></div>
-                      <span>Configuración lista para aplicar</span>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
             <!-- TAB 6: CONFIGURACIONES AVANZADAS -->
             <div class="perfil-tab-content" id="tab-configuraciones-avanzadas">
               <div class="tab-content-header">
@@ -3838,7 +3538,7 @@
         </p>
       </div>
       <div class="footer-divider" role="separator" aria-hidden="true"></div>
-      <p>&copy; 2025 <span id="footerCompanyName">Firmas Digitales FD</span>. Todos los derechos reservados.</p>
+      <p>&copy; 2025 <span id="footerCompanyName" class="footer-institution" data-footer-institution>Pruebas Digitales</span>. Todos los derechos reservados.</p>
     </footer>
 
     <!-- Scripts de frontend -->
@@ -3858,16 +3558,6 @@
     <script src="/scripts/frontend/mobileHamburger.frontend.js"></script>
     <script src="/scripts/utils/tutorial.js"></script>
     
-    <!-- Scripts de plantillas modulares (cargar antes que el sistema PDF) -->
-    <script src="/scripts/templates/base.template.js"></script>
-    <script src="/scripts/templates/clasico.template.js"></script>
-    <script src="/scripts/templates/moderno.template.js"></script>
-    <script src="/scripts/templates/minimalista.template.js"></script>
-    <script src="/scripts/templates/elegante.template.js"></script>
-    
-    <!-- Sistema PDF Principal -->
-    <script src="/scripts/frontend/pdfPreview.frontend.js"></script>
-
     <!-- Sistema de Temas Dinámicos -->
     <script src="/scripts/utils/themeManager.js"></script>
     <script src="/scripts/frontend/visualConfig.frontend.js"></script>

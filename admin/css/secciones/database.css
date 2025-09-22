@@ -862,7 +862,7 @@
   transform: translateY(-50%);
   width: 6px;
   height: 6px;
-  background: var(--primary-color);
+  background: var(--admin-primary);
   border-radius: 50%;
   opacity: 0;
   transition: opacity 0.2s ease;

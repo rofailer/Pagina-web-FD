@@ -1,5 +1,327 @@
 /* ========================================
-   COMPONENTES ADMINISTRATIVOS ESPECÍFICOS
+   COMPONENTES COMPARTIDOS - Panel Administrativo
+   ========================================
+   Solo estilos realmente compartidos entre múltiples secciones
+   NO incluir estilos específicos de secciones
+   ======================================== */
+
+/* ========================================
+   FORMULARIOS Y CAMPOS COMUNES
+   ======================================== */
+
+/* Grupos de formulario */
+.admin-form-group {
+  position: relative;
+  margin-bottom: var(--admin-spacing-lg);
+}
+
+.admin-form-group.error .admin-input,
+.admin-form-group.error .admin-select,
+.admin-form-group.error .admin-textarea {
+  border-color: var(--admin-danger);
+  background: rgba(239, 68, 68, 0.02);
+}
+
+.admin-form-group.error label {
+  color: var(--admin-danger);
+}
+
+.admin-form-group.error label::after {
+  background: linear-gradient(90deg, var(--admin-danger), #dc2626);
+}
+
+.admin-form-group.success .admin-input,
+.admin-form-group.success .admin-select,
+.admin-form-group.success .admin-textarea {
+  border-color: var(--admin-success);
+  background: rgba(16, 185, 129, 0.02);
+}
+
+.admin-form-group.success label {
+  color: var(--admin-success);
+}
+
+.admin-form-group.success label::after {
+  background: linear-gradient(90deg, var(--admin-success), #059669);
+}
+
+/* Labels */
+.admin-form-group label {
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: var(--admin-spacing-xs);
+  margin-bottom: var(--admin-spacing-xs);
+  transition: var(--admin-transition);
+  position: relative;
+}
+
+.admin-form-group label::before {
+  content: "";
+  width: 4px;
+  height: 16px;
+  background: var(--admin-text-secondary);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.admin-form-group.focused label {
+  color: var(--admin-primary);
+}
+
+.admin-form-group.focused label::before {
+  background: var(--admin-primary);
+}
+
+/* ========================================
+   CAMPOS DE FORMULARIO BASE
+   ======================================== */
+
+/* Inputs base */
+.admin-input,
+.admin-textarea,
+.admin-select {
+  width: 100%;
+  padding: var(--admin-spacing-md);
+  border: 2px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  font-size: 0.9rem;
+  transition: var(--admin-transition);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.admin-input:focus,
+.admin-select:focus,
+.admin-textarea:focus {
+  border-color: var(--admin-primary);
+  outline: none;
+  background: var(--admin-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.admin-input:hover,
+.admin-select:hover,
+.admin-textarea:hover {
+  border-color: var(--admin-border-dark);
+}
+
+.admin-input::placeholder {
+  color: var(--admin-text-muted);
+  transition: var(--admin-transition);
+}
+
+.admin-input:focus::placeholder {
+  color: var(--admin-text-secondary);
+}
+
+/* Textarea específica */
+.admin-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Select personalizado */
+.admin-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background: var(--admin-bg);
+  cursor: pointer;
+  position: relative;
+  border: 2px solid var(--admin-border) !important;
+  padding-right: 2.5rem; /* Espacio para la flecha */
+}
+
+.admin-select:focus {
+  outline: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+/* Flecha del select usando CSS puro */
+.admin-select::after {
+  content: "";
+  position: absolute;
+  right: var(--admin-spacing-md);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid var(--admin-text-muted);
+  pointer-events: none;
+}
+
+.admin-select:focus::after {
+  border-top-color: var(--admin-primary);
+}
+
+/* ========================================
+   AYUDA Y MENSAJES
+   ======================================== */
+
+.admin-input-help {
+  font-size: 0.8rem;
+  color: var(--admin-text-secondary);
+  margin-top: var(--admin-spacing-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--admin-spacing-xs);
+}
+
+/* ========================================
+   ICONOS EN INPUTS
+   ======================================== */
+
+.admin-form-group .input-icon {
+  position: absolute;
+  right: var(--admin-spacing-md);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--admin-text-muted);
+  pointer-events: none;
+  transition: var(--admin-transition);
+  z-index: 2;
+}
+
+.admin-form-group.focused .input-icon {
+  color: var(--admin-accent);
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* ========================================
+   BOTONES COMUNES
+   ======================================== */
+
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--admin-spacing-sm);
+  padding: var(--admin-spacing-md) var(--admin-spacing-lg);
+  border: none;
+  border-radius: var(--admin-radius);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--admin-transition);
+  text-decoration: none;
+  outline: none;
+}
+
+.admin-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.admin-btn.primary {
+  background: var(--admin-accent);
+  color: white;
+}
+
+.admin-btn.primary:hover {
+  background: var(--admin-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-btn.secondary {
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  border: 1px solid var(--admin-border);
+}
+
+.admin-btn.secondary:hover {
+  background: var(--admin-surface-dark);
+  border-color: var(--admin-border-dark);
+}
+
+.admin-btn.danger {
+  background: var(--admin-danger);
+  color: white;
+}
+
+.admin-btn.danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-btn.large {
+  padding: var(--admin-spacing-lg) var(--admin-spacing-2xl);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* ========================================
+   SECCIONES Y CONTENEDORES
+   ======================================== */
+
+.admin-section-content {
+  display: flex;
+  gap: var(--admin-spacing-xl);
+  align-items: flex-start;
+  margin: var(--admin-spacing-lg) 0;
+}
+
+.admin-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--admin-spacing-md);
+  padding: var(--admin-spacing-lg);
+  background: var(--admin-surface);
+  border-radius: var(--admin-radius);
+  border: 1px solid var(--admin-border);
+}
+
+.field-header {
+  margin-bottom: var(--admin-spacing-sm);
+}
+
+.field-header h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--admin-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--admin-spacing-sm);
+}
+
+.field-header h4::before {
+  content: "";
+  width: 4px;
+  height: 16px;
+  background: var(--admin-accent);
+  border-radius: 2px;
+}
+
+.field-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--admin-spacing-sm);
+}
+
+/* ========================================
+   ACCIONES GLOBALES
+   ======================================== */
+
+.global-config-actions {
+  margin-top: var(--admin-spacing-3xl);
+  padding-top: var(--admin-spacing-xl);
+  border-top: 1px solid var(--admin-border);
+  display: flex;
+  justify-content: center;
+}
+
+/* ========================================
+   COMPONENTES ADMINISTRATIVOS COMUNES
    ======================================== */
 
 /* SELECTOR DE TEMAS ADMINISTRATIVO */
@@ -23,11 +345,11 @@
 .admin-theme-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--admin-shadow-lg);
-  border-color: var(--admin-accent);
+  border-color: var(--admin-primary);
 }
 
 .admin-theme-card.selected {
-  border-color: var(--admin-accent);
+  border-color: var(--admin-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -103,71 +425,8 @@
   margin: 0;
 }
 
-/* CONFIGURACIÓN PDF */
-.pdf-template-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--admin-spacing-lg);
-  margin-bottom: var(--admin-spacing-xl);
-}
-
-.pdf-template-card {
-  background: white;
-  border: 2px solid var(--admin-border);
-  border-radius: var(--admin-radius-lg);
-  overflow: hidden;
-  cursor: pointer;
-  transition: var(--admin-transition);
-  position: relative;
-}
-
-.pdf-template-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--admin-shadow-lg);
-  border-color: var(--admin-accent);
-}
-
-.pdf-template-card.active {
-  border-color: var(--admin-accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.pdf-template-preview {
-  height: 160px;
-  background: var(--admin-surface);
-  border-bottom: 1px solid var(--admin-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.pdf-template-preview svg {
-  width: 64px;
-  height: 64px;
-  color: var(--admin-text-muted);
-}
-
-.pdf-template-info {
-  padding: var(--admin-spacing-lg);
-}
-
-.pdf-template-info h4 {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--admin-text);
-  margin-bottom: var(--admin-spacing-xs);
-}
-
-.pdf-template-info p {
-  font-size: 0.75rem;
-  color: var(--admin-text-muted);
-  margin: 0;
-  line-height: 1.4;
-}
-
 /* ========================================
-   COMPONENTES ADMINISTRATIVOS ESPECÍFICOS
+   COMPONENTES ESPECÍFICOS DE ADMINISTRACIÓN
    ======================================== */
 
 /* CONFIGURACIÓN AVANZADA */
@@ -564,12 +823,10 @@
 .info-value {
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--admin-primary);
+  color: var(--admin-accent);
   display: block;
   line-height: 1.2;
 }
-
-/* RESPONSIVE PARA DISPOSITIVOS MÓVILES */
 
 /* RESULTADOS DE COMANDOS */
 .db-results-section {
@@ -625,8 +882,6 @@
 }
 
 /* ESTILOS PARA ESTADOS DEL BOTÓN DE RESPALDO */
-
-/* MEJORAS GENERALES PARA LA SECCIÓN DE BASE DE DATOS */
 .db-status-container {
   margin-bottom: var(--admin-spacing-xl);
   position: relative;
@@ -679,28 +934,6 @@
   }
 }
 
-/* MEJORAS PARA LA BARRA DE PROGRESO DE INSTALACIÓN */
-
-/* MEJORAS PARA LA INFORMACIÓN DEL SISTEMA */
-
-/* ESPACIADO Y JERARQUÍA VISUAL MEJORADA */
-.admin-section h3 {
-  display: flex;
-  align-items: center;
-  gap: var(--admin-spacing-sm);
-  color: var(--admin-text);
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-bottom: var(--admin-spacing-lg);
-  padding-bottom: var(--admin-spacing-sm);
-  border-bottom: 2px solid var(--admin-primary);
-}
-
-.admin-section h3 svg {
-  color: var(--admin-primary);
-  flex-shrink: 0;
-}
-
 /* DESCRIPCIÓN DE LA SECCIÓN */
 .tab-description {
   color: var(--admin-text-secondary);
@@ -711,4 +944,110 @@
   background: rgba(59, 130, 246, 0.05);
   border-left: 3px solid var(--admin-info);
   border-radius: 0 var(--admin-radius) var(--admin-radius) 0;
+}
+
+/* ===========================================
+   COMPONENTES ESPECÍFICOS
+   =========================================== */
+
+/* Campo específico de institución */
+.institution-field .field-content {
+  gap: var(--admin-spacing-xs);
+}
+
+.institution-field .admin-input {
+  width: 100%;
+}
+
+.institution-field .admin-input-help {
+  font-size: 0.8rem;
+  color: var(--admin-text-secondary);
+  margin-top: var(--admin-spacing-xs);
+}
+
+/* Campo específico de favicon */
+.favicon-field .field-content {
+  display: flex;
+  align-items: center;
+  gap: var(--admin-spacing-lg);
+}
+
+.favicon-field .favicon-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--admin-spacing-xs);
+  min-width: 80px;
+  background: var(--admin-primary);
+  border-radius: 8px;
+  padding: var(--admin-spacing-sm);
+}
+
+.favicon-field .favicon-preview img {
+  width: 80px;
+  height: 80px;
+  border-radius: 4px;
+}
+
+.favicon-field .favicon-preview span {
+  font-size: 1.2rem;
+  color: white;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.favicon-field .favicon-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--admin-spacing-xs);
+  flex: 1;
+}
+
+.favicon-field .favicon-controls label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--admin-text);
+}
+
+.favicon-field .favicon-controls .admin-input-help {
+  font-size: 0.8rem;
+  color: var(--admin-text-secondary);
+  margin-top: var(--admin-spacing-xs);
+}
+
+/* ========================================
+   TEMA OSCURO - COMPONENTES UNIFICADOS
+   ======================================== */
+
+[data-theme="dark"] .admin-form-group.error .admin-input,
+[data-theme="dark"] .admin-form-group.error .admin-select,
+[data-theme="dark"] .admin-form-group.error .admin-textarea {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+}
+
+[data-theme="dark"] .admin-form-group.success .admin-input,
+[data-theme="dark"] .admin-form-group.success .admin-select,
+[data-theme="dark"] .admin-form-group.success .admin-textarea {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: #10b981;
+}
+
+[data-theme="dark"] .admin-select {
+  background: var(--admin-card-bg);
+}
+
+[data-theme="dark"] .admin-select:focus {
+  outline: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(37, 99, 235, 0.3);
+}
+
+/* Flecha del select en tema oscuro usando CSS puro */
+[data-theme="dark"] .admin-select::after {
+  border-top-color: var(--admin-text-secondary);
+}
+
+[data-theme="dark"] .admin-select:focus::after {
+  border-top-color: var(--admin-primary);
 }

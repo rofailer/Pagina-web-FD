@@ -25,7 +25,6 @@ class ThemeManager {
      * Inicializa el sistema de temas
      */
     async init() {
-        console.log('🎨 Inicializando sistema unificado de temas...');
 
         // Cargar tema actual del servidor
         await this.loadThemeFromServer();
@@ -36,7 +35,6 @@ class ThemeManager {
         // Configurar listeners para cambios
         this.setupEventListeners();
 
-        console.log('🎨 Sistema de temas listo');
     }
 
     /**
@@ -170,7 +168,6 @@ class ThemeManager {
             // Solo intentar guardar si hay token de admin disponible
             const adminToken = localStorage.getItem('admin_token') || localStorage.getItem('token');
             if (!adminToken) {
-                console.log('🎨 No hay token de admin disponible, omitiendo guardado automático');
                 return;
             }
 
@@ -190,7 +187,6 @@ class ThemeManager {
             });
 
             if (response.ok) {
-                console.log('🎨 Tema guardado en servidor');
             } else {
                 console.warn('🎨 Error guardando tema en servidor:', response.status, response.statusText);
             }
@@ -229,7 +225,6 @@ class ThemeManager {
 
                     // Verificar si el tema del servidor es diferente al actual
                     if (this.isDifferentTheme(serverTheme)) {
-                        console.log('🎨 Detectado cambio de tema, sincronizando...');
                         this.applyServerTheme(serverTheme);
                     }
                 }
@@ -295,7 +290,6 @@ class ThemeManager {
         }
 
         this.applyTheme(themeName);
-        console.log(`🎨 Preview aplicado: ${themeName}`);
         return true;
     }
 
@@ -309,7 +303,6 @@ class ThemeManager {
         }
 
         this.applyCustomColor(hexColor);
-        console.log(`🎨 Preview color aplicado: ${hexColor}`);
         return true;
     }
 
@@ -322,7 +315,6 @@ class ThemeManager {
         } else {
             this.applyTheme(this.currentTheme);
         }
-        console.log(`🎨 Tema restaurado: ${this.currentTheme}`);
     }
 
     // =========================

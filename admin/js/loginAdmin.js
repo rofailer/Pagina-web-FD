@@ -419,7 +419,7 @@ class AdminAccess {
 }
 
 // Función para probar redirección manual desde consola
-window.testRedirect = function() {
+window.testRedirect = function () {
     console.log("🧪 Probando redirección manual...");
     const token = localStorage.getItem("token");
     if (token) {
@@ -436,7 +436,7 @@ window.testRedirect = function() {
 };
 
 // Función para verificar estado del sistema
-window.debugAdminLogin = function() {
+window.debugAdminLogin = function () {
     console.log("🔍 Debug AdminLogin:");
     console.log("  - Token en localStorage:", !!localStorage.getItem("token"));
     console.log("  - AdminAccess instance:", !!window.adminAccessInstance);

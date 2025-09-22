@@ -1,0 +1,412 @@
+const pool = require('../db/pool');
+
+class VisualConfigController {
+    // Obtener configuración visual actual
+    static async getVisualConfig(req, res) {
+        try {
+            const [rows] = await pool.execute(
+                'SELECT * FROM visual_config WHERE id = 1'
+            );
+
+            if (rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Configuración visual no encontrada'
+                });
+            }
+
+            res.json({
+                success: true,
+                config: rows[0]
+            });
+        } catch (error) {
+            console.warn('Error al obtener configuración visual:', error.message);
+
+            // Si la tabla no existe, devolver configuración por defecto
+            if (error.code === 'ER_NO_SUCH_TABLE') {
+                console.log('Tabla visual_config no existe, devolviendo configuración por defecto');
+                return res.json({
+                    success: true,
+                    config: {
+                        id: 1,
+                        background: 'fondo1',
+                        favicon: '../../favicon.ico',
+                        institution_name: 'Firmas Digitales FD',
+                        admin_header_title: 'Panel Administrativo'
+                    }
+                });
+            }
+
+            res.status(500).json({
+                success: false,
+                message: 'Error interno del servidor'
+            });
+        }
+    }
+    static async uploadLogo(req, res) {
+        try {
+            if (!req.file) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No se recibió ningún archivo'
+                });
+            }
+
+            const fs = require('fs');
+            const path = require('path');
+
+            // Generar nombre único para el archivo
+            const fileExtension = path.extname(req.file.originalname);
+            const fileName = `logo_${Date.now()}${fileExtension}`;
+            const finalPath = path.join(__dirname, '../../uploads/logos', fileName);
+
+            // Mover archivo del directorio temporal al directorio final
+            fs.renameSync(req.file.path, finalPath);
+
+            // Ruta relativa para acceder desde el navegador
+            const logoPath = `/uploads/logos/${fileName}`;
+
+            res.json({
+                success: true,
+                message: 'Logo subido correctamente',
+                logoPath: logoPath
+            });
+
+        } catch (error) {
+            console.error('Error al subir logo:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error al subir el logo'
+            });
+        }
+    }
+}
+
+module.exports = VisualConfigController;
+                return res.status(404).json({
+                    success: false,
+                    message: 'Configuración visual no encontrada'
+                });
+            }
+
+            res.json({
+                success: true,
+                config: rows[0]
+            });
+        } catch (error) {
+            console.warn('Error al obtener configuración visual:', error.message);
+
+            // Si la tabla no existe, devolver configuración por defecto
+            if (error.code === 'ER_NO_SUCH_TABLE') {
+                console.log('Tabla visual_config no existe, devolviendo configuración por defecto');
+                return res.json({
+                    success: true,
+                    config: {
+                        id: 1,
+                        background: 'fondo1',
+                        favicon: '../../favicon.ico',
+                        institution_name: 'Firmas Digitales FD',
+                        admin_header_title: 'Panel Administrativo'
+                    }
+                });
+            }
+
+            res.status(500).json({
+                success: false,
+                message: 'Error interno del servidor'
+            });
+        }
+    }
+
+    // Obtener configuración visual pública (solo campos necesarios para el frontend)
+    static async getPublicVisualConfig(req, res) {
+        try {
+            const [rows] = await pool.execute(
+                'SELECT background, favicon, institution_name FROM visual_config WHERE id = 1'
+            );
+
+            if (rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Configuración visual no encontrada'
+                });
+            }
+
+            res.json({
+                success: true,
+                config: rows[0]
+            });
+        } catch (error) {
+            console.warn('Error al obtener configuración visual pública:', error.message);
+
+            // Si la tabla no existe, devolver configuración por defecto
+            if (error.code === 'ER_NO_SUCH_TABLE') {
+                console.log('Tabla visual_config no existe, devolviendo configuración por defecto');
+                return res.json({
+                    success: true,
+                    config: {
+                        background: 'fondo1',
+                        favicon: '../../favicon.ico',
+                        institution_name: 'Firmas Digitales FD'
+                    }
+                });
+            }
+
+            res.status(500).json({
+                success: false,
+                message: 'Error interno del servidor'
+            });
+        }
+    }
+
+    // Actualizar configuración visual
+    static async updateVisualConfig(req, res) {
+        try {
+            const {
+                background,
+                favicon,
+                institution_name,
+                admin_header_title
+            } = req.body;
+
+            // Validar que el fondo sea válido
+            const validBackgrounds = ['fondo1', 'fondo2'];
+            if (background && !validBackgrounds.includes(background)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Fondo no válido. Debe ser fondo1 o fondo2'
+                });
+            }
+
+            // Obtener usuario actual (si está disponible)
+            const updatedBy = req.user ? req.user.email : 'admin';
+
+            try {
+                const [result] = await pool.execute(
+                    `UPDATE visual_config SET
+              background = COALESCE(?, background),
+              favicon = COALESCE(?, favicon),
+              institution_name = COALESCE(?, institution_name),
+              admin_header_title = COALESCE(?, admin_header_title),
+              updated_by = ?,
+              updated_at = CURRENT_TIMESTAMP
+            WHERE id = 1`,
+                    [background, favicon, institution_name, admin_header_title, updatedBy]
+                );
+
+                if (result.affectedRows === 0) {
+                    // Si no se actualizó nada, intentar insertar
+                    await pool.execute(
+                        `INSERT INTO visual_config (id, background, favicon, institution_name, admin_header_title, updated_by)
+                        VALUES (1, ?, ?, ?, ?, ?)`,
+                        [background || 'fondo1', favicon || '../../favicon.ico', institution_name || 'Firmas Digitales FD',
+                        admin_header_title || 'Panel Administrativo', updatedBy]
+                    );
+                }
+            } catch (updateError) {
+                // Si la tabla no existe, crearla primero
+                if (updateError.code === 'ER_NO_SUCH_TABLE') {
+                    console.log('Tabla visual_config no existe, creándola...');
+
+                    // Crear la tabla
+                    await pool.execute(`
+                        CREATE TABLE visual_config (
+                          id INT PRIMARY KEY DEFAULT 1,
+                          background VARCHAR(20) NOT NULL DEFAULT 'fondo1',
+                          favicon VARCHAR(255) DEFAULT '../../favicon.ico',
+                          site_title VARCHAR(255) DEFAULT 'Firmas Digitales FD',
+                          header_title VARCHAR(255) DEFAULT 'Firmas Digitales FD',
+                          footer_text TEXT DEFAULT '© 2024 Firmas Digitales FD. Todos los derechos reservados.',
+                          admin_header_title VARCHAR(255) DEFAULT 'Panel Administrativo',
+                          updated_by VARCHAR(100) NULL,
+                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                          CONSTRAINT single_visual_config CHECK (id = 1)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                    `);
+
+                    // Insertar configuración por defecto
+                    await pool.execute(
+                        `INSERT INTO visual_config (id, background, favicon, site_title, header_title, footer_text, admin_header_title, updated_by)
+                        VALUES (1, ?, ?, ?, ?, ?, ?, ?)`,
+                        [background || 'fondo1', favicon || '../../favicon.ico', site_title || 'Firmas Digitales FD',
+                        header_title || 'Firmas Digitales FD', footer_text || '© 2024 Firmas Digitales FD. Todos los derechos reservados.',
+                        admin_header_title || 'Panel Administrativo', updatedBy]
+                    );
+                } else {
+                    throw updateError;
+                }
+            }
+
+            res.json({
+                success: true,
+                message: 'Configuración visual actualizada correctamente'
+            });
+        } catch (error) {
+            console.error('Error al actualizar configuración visual:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error interno del servidor'
+            });
+        }
+    }
+
+    // Resetear configuración visual a valores por defecto
+    static async resetVisualConfig(req, res) {
+        try {
+            const updatedBy = req.user ? req.user.email : 'admin';
+
+            try {
+                const [result] = await pool.execute(
+                    `UPDATE visual_config SET
+              background = 'fondo1',
+              favicon = '../../favicon.ico',
+              site_title = 'Firmas Digitales FD',
+              header_title = 'Firmas Digitales FD',
+              footer_text = '© 2024 Firmas Digitales FD. Todos los derechos reservados.',
+              admin_header_title = 'Panel Administrativo',
+              updated_by = ?,
+              updated_at = CURRENT_TIMESTAMP
+            WHERE id = 1`,
+                    [updatedBy]
+                );
+
+                if (result.affectedRows === 0) {
+                    // Si no se actualizó nada, intentar insertar
+                    await pool.execute(
+                        `INSERT INTO visual_config (id, background, favicon, site_title, header_title, footer_text, admin_header_title, updated_by)
+                        VALUES (1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', 'Firmas Digitales FD', '© 2024 Firmas Digitales FD. Todos los derechos reservados.', 'Panel Administrativo', ?)`,
+                        [updatedBy]
+                    );
+                }
+            } catch (resetError) {
+                // Si la tabla no existe, crearla primero
+                if (resetError.code === 'ER_NO_SUCH_TABLE') {
+                    console.log('Tabla visual_config no existe, creándola para reset...');
+
+                    // Crear la tabla
+                    await pool.execute(`
+                        CREATE TABLE visual_config (
+                          id INT PRIMARY KEY DEFAULT 1,
+                          background VARCHAR(20) NOT NULL DEFAULT 'fondo1',
+                          favicon VARCHAR(255) DEFAULT '../../favicon.ico',
+                          site_title VARCHAR(255) DEFAULT 'Firmas Digitales FD',
+                          header_title VARCHAR(255) DEFAULT 'Firmas Digitales FD',
+                          footer_text TEXT DEFAULT '© 2024 Firmas Digitales FD. Todos los derechos reservados.',
+                          admin_header_title VARCHAR(255) DEFAULT 'Panel Administrativo',
+                          updated_by VARCHAR(100) NULL,
+                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                          CONSTRAINT single_visual_config CHECK (id = 1)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                    `);
+
+                    // Insertar configuración por defecto
+                    await pool.execute(
+                        `INSERT INTO visual_config (id, background, favicon, site_title, header_title, footer_text, admin_header_title, updated_by)
+                        VALUES (1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', 'Firmas Digitales FD', '© 2024 Firmas Digitales FD. Todos los derechos reservados.', 'Panel Administrativo', ?)`,
+                        [updatedBy]
+                    );
+                } else {
+                    throw resetError;
+                }
+            }
+
+            res.json({
+                success: true,
+                message: 'Configuración visual reseteada correctamente'
+            });
+        } catch (error) {
+            console.error('Error al resetear configuración visual:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error interno del servidor'
+            });
+        }
+    }
+
+    // Obtener configuración de institución
+    static async getInstitutionConfig(req, res) {
+        try {
+            const [rows] = await pool.execute(
+                'SELECT institution_name FROM visual_config WHERE id = 1'
+            );
+
+            if (rows.length === 0) {
+                return res.json({
+                    institution_name: 'Firmas Digitales FD'
+                });
+            }
+
+            const result = {
+                institution_name: rows[0].institution_name || 'Firmas Digitales FD'
+            };
+            res.json(result);
+        } catch (error) {
+            console.warn('Error al obtener configuración de institución:', error.message);
+
+            // Si hay error, devolver valor por defecto
+            res.json({
+                institution_name: 'Firmas Digitales FD'
+            });
+        }
+    }
+
+    // Actualizar configuración de institución
+    static async updateInstitutionConfig(req, res) {
+        try {
+            const { institution_name } = req.body;
+
+            if (!institution_name || typeof institution_name !== 'string' || institution_name.trim().length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'El nombre de la institución es requerido'
+                });
+            }
+
+            const trimmedName = institution_name.trim();
+
+            // Obtener usuario actual
+            const updatedBy = req.user.usuario || 'system';
+
+            try {
+                const [result] = await pool.execute(
+                    `UPDATE visual_config SET
+                      institution_name = ?,
+                      updated_by = ?
+                    WHERE id = 1`,
+                    [trimmedName, updatedBy]
+                );
+
+                if (result.affectedRows === 0) {
+                    // Si no existe el registro, intentar insertar
+                    await pool.execute(
+                        `INSERT INTO visual_config (id, institution_name, updated_by)
+                        VALUES (1, ?, ?)`,
+                        [trimmedName, updatedBy]
+                    );
+                }
+
+                res.json({
+                    success: true,
+                    message: 'Nombre de institución actualizado correctamente',
+                    institution_name: trimmedName
+                });
+            } catch (updateError) {
+                console.error('Error al actualizar configuración de institución:', updateError);
+                res.status(500).json({
+                    success: false,
+                    message: 'Error al actualizar el nombre de la institución'
+                });
+            }
+        } catch (error) {
+            console.error('Error general en updateInstitutionConfig:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error interno del servidor'
+            });
+        }
+    }
+}
+
+module.exports = VisualConfigController;

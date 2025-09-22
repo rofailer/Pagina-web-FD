@@ -902,8 +902,27 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // --- Mostrar la página solo cuando todo está listo ---
-    document.body.style.visibility = "visible";
+    // --- Esperar a que se cargue la configuración visual antes de mostrar la página ---
+    function showPageWhenReady() {
+        if (window.visualConfigLoaded) {
+            document.body.style.visibility = "visible";
+        } else {
+            // Esperar al evento de configuración visual cargada
+            window.addEventListener('visualConfigLoaded', () => {
+                document.body.style.visibility = "visible";
+            });
+
+            // Timeout de seguridad (por si algo falla)
+            setTimeout(() => {
+                if (document.body.style.visibility !== "visible") {
+                    console.warn('Timeout: mostrando página sin esperar configuración visual');
+                    document.body.style.visibility = "visible";
+                }
+            }, 3000);
+        }
+    }
+
+    showPageWhenReady();
 
     // --- Actualizar visibilidad de botones de autenticación ---
     function updateAuthButtonsVisibility() {

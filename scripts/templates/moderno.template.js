@@ -1,329 +1,254 @@
-// ========================================
-// PLANTILLA MODERNA
+﻿// ========================================
+// PLANTILLA MODERNA - DISEÑO CONTEMPORÁNEO PROFESIONAL
 // ========================================
 
-// Para Backend (PDF-lib) - DISEÑO IDÉNTICO AL FRONTEND MEJORADO
-function drawModernTemplate(page, width, height, data, helveticaFont, helveticaBold) {
+const {
+    cleanTextForPdf,
+    wrapText,
+    canvasToPdfY,
+    hexToRgb,
+    calculateAuthorLayout,
+    drawInstitutionHeader,
+    drawCertificationTitle,
+    drawDocumentTitle,
+    drawDocumentDescription,
+    drawAuthorsSection,
+    drawAvaladorInfo,
+    drawSignatureArea,
+    drawElectronicSignature
+} = require('./base.template');
+
+/**
+ * Dibujar elementos modernos - líneas geométricas y formas
+ */
+function drawModernGeometricElements(page, width, height, config) {
     const { rgb } = require('pdf-lib');
-    const { cleanTextForPdf, wrapText } = require('./base.template');
+    const colorConfig = config.colorConfig || {};
+    const primaryColor = hexToRgb(colorConfig.primary || '#2563eb');
+    const accentColor = hexToRgb(colorConfig.accent || '#06b6d4');
 
-    // Fondo sutil moderno
+    // Elementos geométricos superiores
+    const topY = 60;
+
+    // Rectángulo superior izquierdo
     page.drawRectangle({
-        x: 0,
-        y: 0,
-        width: width,
-        height: height,
-        color: rgb(0.99, 0.99, 1) // Tinte azul muy sutil
+        x: 40,
+        y: canvasToPdfY(topY, height),
+        width: 80,
+        height: 4,
+        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
     });
 
-    // Título principal centrado - exactamente como en canvas
-    const tituloText = cleanTextForPdf(data.titulo);
-    const tituloWidth = tituloText.length * 15; // Aproximación para centrado
-    page.drawText(tituloText, {
-        x: width / 2 - (tituloWidth / 2),
-        y: height - 160,
-        size: 26,
-        font: helveticaBold,
-        color: rgb(0.15, 0.39, 0.92) // #2563eb
+    // Círculo superior derecho
+    page.drawCircle({
+        x: width - 60,
+        y: canvasToPdfY(topY + 10, height),
+        size: 8,
+        color: rgb(accentColor.r, accentColor.g, accentColor.b)
     });
 
-    // Línea de acento moderna - exactamente como en canvas
-    page.drawRectangle({
-        x: width / 2 - 100,
-        y: height - 175,
-        width: 200,
-        height: 3,
-        color: rgb(0.23, 0.51, 0.96) // #3b82f6
+    // Elementos inferiores
+    const bottomY = height - 100;
+
+    // Línea diagonal inferior
+    page.drawLine({
+        start: { x: 40, y: canvasToPdfY(bottomY, height) },
+        end: { x: 120, y: canvasToPdfY(bottomY - 20, height) },
+        thickness: 2,
+        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
     });
 
-    // Subtítulo - exactamente como en canvas
-    const subtitulo = 'Validacion Digital Institucional';
-    const subtituloWidth = subtitulo.length * 9;
-    page.drawText(subtitulo, {
-        x: width / 2 - (subtituloWidth / 2),
-        y: height - 200,
-        size: 16,
-        font: helveticaFont,
-        color: rgb(0.39, 0.45, 0.55) // #64748b
+    // Triángulo inferior derecho
+    page.drawLine({
+        start: { x: width - 80, y: canvasToPdfY(bottomY, height) },
+        end: { x: width - 40, y: canvasToPdfY(bottomY, height) },
+        thickness: 2,
+        color: rgb(accentColor.r, accentColor.g, accentColor.b)
     });
 
-    // Institución con marco moderno - exactamente como en canvas
-    page.drawRectangle({
-        x: width / 2 - 120,
-        y: height - 245,
-        width: 240,
-        height: 30,
-        borderColor: rgb(0.15, 0.39, 0.92), // #2563eb
-        borderWidth: 2
+    page.drawLine({
+        start: { x: width - 40, y: canvasToPdfY(bottomY, height) },
+        end: { x: width - 60, y: canvasToPdfY(bottomY + 20, height) },
+        thickness: 2,
+        color: rgb(accentColor.r, accentColor.g, accentColor.b)
     });
 
-    const institucionText = cleanTextForPdf(data.institucion);
-    const institucionWidth = institucionText.length * 8;
-    page.drawText(institucionText, {
-        x: width / 2 - (institucionWidth / 2),
-        y: height - 235,
-        size: 14,
-        font: helveticaBold,
-        color: rgb(0.15, 0.39, 0.92) // #2563eb
-    });
-
-    // Contenido principal con tarjeta - exactamente como en canvas
-    page.drawRectangle({
-        x: 60,
-        y: height - 350,
-        width: width - 120,
-        height: 80,
-        color: rgb(1, 1, 1) // Fondo blanco
-    });
-    page.drawRectangle({
-        x: 60,
-        y: height - 350,
-        width: width - 120,
-        height: 80,
-        borderColor: rgb(0.23, 0.51, 0.96), // #3b82f6
-        borderWidth: 1
-    });
-
-    const startY = height - 295;
-    const texto1 = 'Documento procesado y certificado';
-    const texto1Width = texto1.length * 8;
-    page.drawText(texto1, {
-        x: width / 2 - (texto1Width / 2),
-        y: startY,
-        size: 14,
-        font: helveticaFont,
-        color: rgb(0.39, 0.45, 0.55) // #64748b
-    });
-
-    const texto2 = 'mediante sistema de validacion digital';
-    const texto2Width = texto2.length * 8;
-    page.drawText(texto2, {
-        x: width / 2 - (texto2Width / 2),
-        y: startY - 25,
-        size: 14,
-        font: helveticaFont,
-        color: rgb(0.39, 0.45, 0.55) // #64748b
-    });
-
-    // Autores con viñetas modernas - exactamente como en canvas
-    const autoresTitle = 'Autores del Documento';
-    const autoresTitleWidth = autoresTitle.length * 8;
-    page.drawText(autoresTitle, {
-        x: width / 2 - (autoresTitleWidth / 2),
-        y: startY - 70,
-        size: 14,
-        font: helveticaBold,
-        color: rgb(0.15, 0.39, 0.92) // #2563eb
-    });
-
-    data.autores.forEach((autor, index) => {
-        // Viñeta moderna (círculo)
-        page.drawCircle({
-            x: width / 2 - 100,
-            y: startY - 95 - (index * 25),
-            size: 3,
-            color: rgb(0.23, 0.51, 0.96) // #3b82f6
-        });
-
-        const autorText = cleanTextForPdf(autor);
-        page.drawText(autorText, {
-            x: width / 2 - 90,
-            y: startY - 100 - (index * 25),
-            size: 14,
-            font: helveticaFont,
-            color: rgb(0.39, 0.45, 0.55) // #64748b
-        });
-    });
-
-    // Panel de avalado moderno - EXACTAMENTE como en canvas
-    const panelY = height - 180; // Canvas Y = height - 180
-    page.drawRectangle({
-        x: width / 2 - 120,
-        y: panelY - 50, // Ajuste para PDF (Y invertido)
-        width: 240,
-        height: 50,
-        color: rgb(0.97, 0.98, 1) // Fondo azul muy claro
-    });
-
-    const avaladoTitle = 'Avalado por:';
-    const avaladoTitleWidth = avaladoTitle.length * 8;
-    page.drawText(avaladoTitle, {
-        x: width / 2 - (avaladoTitleWidth / 2),
-        y: height - (height - 150), // Canvas Y=height-150 → PDF Y=150
-        size: 14,
-        font: helveticaBold,
-        color: rgb(0.15, 0.39, 0.92) // #2563eb
-    });
-
-    const avaladoText = cleanTextForPdf(data.avaladoPor);
-    const avaladoWidth = avaladoText.length * 8;
-    page.drawText(avaladoText, {
-        x: width / 2 - (avaladoWidth / 2),
-        y: height - (height - 130), // Canvas Y=height-130 → PDF Y=130
-        size: 14,
-        font: helveticaFont,
-        color: rgb(0.15, 0.39, 0.92) // #2563eb
-    });
-
-    // Fecha centrada (abajo) - EXACTAMENTE como en canvas
-    const fechaText = `Fecha: ${cleanTextForPdf(data.fecha)}`;
-    const fechaWidth = fechaText.length * 7;
-    page.drawText(fechaText, {
-        x: width / 2 - (fechaWidth / 2),
-        y: height - (height - 100), // Canvas Y=height-100 → PDF Y=100
-        size: 12,
-        font: helveticaFont,
-        color: rgb(0.39, 0.45, 0.55) // #64748b
+    page.drawLine({
+        start: { x: width - 60, y: canvasToPdfY(bottomY + 20, height) },
+        end: { x: width - 80, y: canvasToPdfY(bottomY, height) },
+        thickness: 2,
+        color: rgb(accentColor.r, accentColor.g, accentColor.b)
     });
 }
 
-// Borde para plantilla moderna
-function drawModernBorder(page, width, height) {
+/**
+ * Dibujar borde moderno con elementos asimétricos
+ */
+function drawModernBorder(page, width, height, borderConfig) {
     const { rgb } = require('pdf-lib');
 
-    // Borde moderno con línea de acento
-    page.drawRectangle({
-        x: 25,
-        y: 25,
-        width: width - 50,
-        height: height - 50,
-        borderColor: rgb(0.2, 0.5, 0.8),
-        borderWidth: 2
+    const borderColor = hexToRgb(borderConfig?.color || '#2563eb');
+    const borderWidth = borderConfig?.width || 1;
+
+    // Borde superior asimétrico
+    page.drawLine({
+        start: { x: 30, y: height - 30 },
+        end: { x: width / 2 - 50, y: height - 30 },
+        thickness: borderWidth,
+        color: rgb(borderColor.r, borderColor.g, borderColor.b)
     });
-    // Línea de acento
-    page.drawRectangle({
-        x: 25,
-        y: height - 80,
-        width: width - 50,
-        height: 5,
-        color: rgb(0.2, 0.5, 0.8)
+
+    page.drawLine({
+        start: { x: width / 2 + 50, y: height - 30 },
+        end: { x: width - 30, y: height - 30 },
+        thickness: borderWidth,
+        color: rgb(borderColor.r, borderColor.g, borderColor.b)
+    });
+
+    // Borde inferior
+    page.drawLine({
+        start: { x: 30, y: 30 },
+        end: { x: width - 30, y: 30 },
+        thickness: borderWidth,
+        color: rgb(borderColor.r, borderColor.g, borderColor.b)
+    });
+
+    // Borde izquierdo
+    page.drawLine({
+        start: { x: 30, y: height - 30 },
+        end: { x: 30, y: 30 },
+        thickness: borderWidth,
+        color: rgb(borderColor.r, borderColor.g, borderColor.b)
+    });
+
+    // Borde derecho
+    page.drawLine({
+        start: { x: width - 30, y: height - 30 },
+        end: { x: width - 30, y: 30 },
+        thickness: borderWidth,
+        color: rgb(borderColor.r, borderColor.g, borderColor.b)
     });
 }
 
-// Para Frontend (Canvas) - DISEÑO MEJORADO Y DISTINTIVO
+/**
+ * Template moderno principal
+ */
+async function drawModernTemplate(page, width, height, data, helveticaFont, helveticaBold, timesFont, timesBold, config, pdfDoc) {
+    // Extraer configuración
+    const templateConfig = data.config || {};
+    const colorConfig = templateConfig.colorConfig || {};
+    const fontConfig = templateConfig.fontConfig || {};
+    const layoutConfig = templateConfig.layoutConfig || {};
+    const visualConfig = templateConfig.visualConfig || {};
+
+    // Preparar fuentes
+    const fontObjects = {
+        title: fontConfig.title === 'Times-Bold' ? timesBold : helveticaBold,
+        body: fontConfig.body === 'Times-Roman' ? timesFont : helveticaFont,
+        signature: fontConfig.signature === 'Times-Bold' ? timesBold : helveticaBold,
+        helvetica: helveticaFont,
+        helveticaBold: helveticaBold,
+        times: timesFont,
+        timesBold: timesBold
+    };
+
+    let currentY = 100;
+
+    // 1. Elementos geométricos modernos
+    drawModernGeometricElements(page, width, height, config);
+
+    // 2. Header con institución y logo
+    currentY = drawInstitutionHeader(page, width, height, data, config, fontObjects);
+
+    // 3. Título de certificación
+    currentY = drawCertificationTitle(page, width, height, currentY, config, fontObjects);
+
+    // 4. Título del documento avalado
+    currentY = drawDocumentTitle(page, width, height, data, currentY, config, fontObjects);
+
+    // 5. Texto explicativo del documento
+    currentY = drawDocumentDescription(page, width, height, data, currentY, config, fontObjects);
+
+    // 6. Sección de autores
+    currentY = drawAuthorsSection(page, width, height, data, currentY, config, fontObjects);
+
+    // 7. Información del avalador
+    currentY = drawAvaladorInfo(page, width, height, data, currentY, config, fontObjects);
+
+    // 8. Área de firma
+    currentY = await drawSignatureArea(page, width, height, data, currentY, config, fontObjects, pdfDoc);
+
+    // 9. Firma electrónica se maneja desde el TemplateManager
+}
+
+/**
+ * Función para canvas (frontend) - versión simplificada
+ */
 function drawModernTemplateCanvas(ctx, config, width, height, data) {
-    // Fondo degradado moderno
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.03)');
-    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.01)');
-    ctx.fillStyle = gradient;
+    if (!ctx || !config) return;
+
+    const colorConfig = config.colorConfig || {};
+    const layoutConfig = config.layoutConfig || {};
+    const visualConfig = config.visualConfig || {};
+
+    // Fondo moderno
+    ctx.fillStyle = colorConfig.background || '#ffffff';
     ctx.fillRect(0, 0, width, height);
 
-    // Título principal centrado con estilo moderno
-    ctx.fillStyle = config.colors.primary;
-    ctx.font = 'bold 26px sans-serif';
+    // Elementos geométricos modernos
+    ctx.fillStyle = colorConfig.primary || '#2563eb';
+    ctx.fillRect(40, 60, 80, 4);
+
+    ctx.fillStyle = colorConfig.accent || '#06b6d4';
+    ctx.beginPath();
+    ctx.arc(width - 60, 70, 8, 0, 2 * Math.PI);
+    ctx.fill();
+
+    let currentY = 100;
+
+    // Header simplificado para canvas
+    ctx.fillStyle = colorConfig.primary || '#2563eb';
+    ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(data.titulo, width / 2, 160);
+    ctx.fillText('CERTIFICACIÓN PROFESIONAL', width / 2, currentY);
 
-    // Línea de acento moderna con degradado
-    const lineGradient = ctx.createLinearGradient(width / 2 - 100, 170, width / 2 + 100, 170);
-    lineGradient.addColorStop(0, 'transparent');
-    lineGradient.addColorStop(0.1, config.colors.accent);
-    lineGradient.addColorStop(0.9, config.colors.accent);
-    lineGradient.addColorStop(1, 'transparent');
-    ctx.fillStyle = lineGradient;
-    ctx.fillRect(width / 2 - 100, 170, 200, 3);
-
-    // Subtítulo moderno
-    ctx.fillStyle = config.colors.text;
-    ctx.font = '16px sans-serif';
-    ctx.fillText('Validación Digital Institucional', width / 2, 200);
-
-    // Institución con marco moderno
-    ctx.strokeStyle = config.colors.primary;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(width / 2 - 120, 215, 240, 30);
-    ctx.font = 'bold 14px sans-serif';
-    ctx.fillStyle = config.colors.primary;
-    ctx.fillText(data.institucion, width / 2, 235);
-
-    // Contenido principal con diseño en tarjetas
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    ctx.fillRect(60, 270, width - 120, 80);
-    ctx.strokeStyle = config.colors.accent;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(60, 270, width - 120, 80);
-
-    ctx.fillStyle = config.colors.text;
-    ctx.font = '14px sans-serif';
-    const startY = 295;
-    ctx.fillText('Documento procesado y certificado', width / 2, startY);
-    ctx.fillText('mediante sistema de validación digital', width / 2, startY + 25);
-
-    // Autores en lista moderna
-    ctx.fillStyle = config.colors.primary;
-    ctx.font = 'bold 14px sans-serif';
-    ctx.fillText('Autores del Documento', width / 2, startY + 70);
-
-    ctx.fillStyle = config.colors.text;
-    ctx.font = '14px sans-serif';
-    data.autores.forEach((autor, index) => {
-        // Crear círculo de viñeta moderno
-        ctx.fillStyle = config.colors.accent;
-        ctx.beginPath();
-        ctx.arc(width / 2 - 100, startY + 95 + (index * 25), 3, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = config.colors.text;
-        ctx.fillText(autor, width / 2 - 90, startY + 100 + (index * 25));
+    // Título del documento
+    ctx.fillStyle = colorConfig.accent || '#06b6d4';
+    ctx.font = 'bold 20px sans-serif';
+    const titleLines = wrapText(cleanTextForPdf(data.titulo || ''), 35);
+    titleLines.forEach((line, index) => {
+        ctx.fillText(line, width / 2, currentY + 60 + (index * 22));
     });
 
-    // Panel de avalado moderno
-    ctx.fillStyle = 'rgba(37, 99, 235, 0.1)';
-    ctx.fillRect(width / 2 - 120, height - 180, 240, 50);
-    ctx.font = 'bold 14px sans-serif';
-    ctx.fillStyle = config.colors.primary;
-    ctx.fillText('Avalado por:', width / 2, height - 150);
-    ctx.font = '14px sans-serif';
-    ctx.fillText(data.avaladoPor, width / 2, height - 130);
-
-    // Firma estándar centrada abajo
-    if (window.BaseTemplate && window.BaseTemplate.drawStandardSignature) {
-        window.BaseTemplate.drawStandardSignature(ctx, config, width / 2, height - 100, 'center');
-    }
-}
-
-// Borde para canvas
-function drawModernBorderCanvas(ctx, config, width, height) {
-    ctx.strokeStyle = config.colors.primary;
+    // Área de firma moderna
+    const signatureY = height - 120;
+    ctx.strokeStyle = colorConfig.primary || '#2563eb';
     ctx.lineWidth = 2;
-    ctx.strokeRect(15, 15, width - 30, height - 30);
+    ctx.strokeRect(width / 2 - 120, signatureY, 240, 60);
 
-    // Línea de acento
-    ctx.fillStyle = config.colors.accent;
-    ctx.fillRect(15, height - 50, width - 30, 4);
+    // Elementos decorativos en la firma
+    ctx.fillStyle = colorConfig.accent || '#06b6d4';
+    ctx.fillRect(width / 2 - 120, signatureY - 5, 40, 3);
+    ctx.fillRect(width / 2 + 80, signatureY - 5, 40, 3);
+
+    ctx.fillStyle = colorConfig.accent || '#06b6d4';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('FIRMA DIGITAL PROFESIONAL', width / 2, signatureY + 25);
 }
 
-// Configuración de la plantilla
-const ModernTemplateConfig = {
-    colors: {
-        primary: '#2563eb',
-        accent: '#3b82f6',
-        text: '#64748b'
-    },
-    layout: {
-        borderStyle: 'accent'
-    },
-    logoPosition: {
-        x: 85,
-        y: 5
-    }
-};
-
-// Exportar para Node.js (backend)
+// Exportar funciones
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         drawModernTemplate,
         drawModernBorder,
-        ModernTemplateConfig
+        drawModernTemplateCanvas
     };
 }
 
-// Exportar para el navegador (frontend)
 if (typeof window !== 'undefined') {
     window.ModernTemplate = {
-        drawTemplateCanvas: drawModernTemplateCanvas,
-        drawBorderCanvas: drawModernBorderCanvas,
-        config: ModernTemplateConfig
+        drawTemplate: drawModernTemplateCanvas,
+        drawBorder: drawModernBorder
     };
 }

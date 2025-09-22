@@ -17,16 +17,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     let documentAuthors = [''];
     const maxAuthors = 3;
 
-    // --- Cargar configuración global ---
-    try {
-        const configResponse = await fetch('/api/global-template-config');
-        if (configResponse.ok) {
-            window.globalTemplateConfig = await configResponse.json();
-        }
-    } catch (error) {
-        console.warn('Warning: No se pudo cargar la configuración global:', error);
-    }
-
     // --- Elementos de pasos y barra de progreso ---
     const steps = [
         document.getElementById("signStep1"),
@@ -573,7 +563,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     keyId: selectedKeyId,
                     keyPassword: keyPassword, // ¡IMPORTANTE! Ahora incluimos la contraseña
                     template: window.getSelectedTemplate ? window.getSelectedTemplate() : 'clasico', // ✅ MODERNIZADO
-                    institucion: window.globalTemplateConfig?.institutionName // Usar directamente la configuración global
+                    institucion: 'Universidad Firmas Digitales' // Valor por defecto
                 };
 
                 showNotification("Documento preparado. Ahora agrega tu firma electrónica.", "info");
@@ -1394,9 +1384,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             formData.append('autores', tempDocumentData.autores);
             formData.append('institucion', tempDocumentData.institucion);
 
-            // Añadir datos de la firma electrónica
-            formData.append('signatureData', signatureData);
-            formData.append('signatureMethod', signatureMethod);
+            // Añadir datos de la firma electrónica solo si existe
+            if (signatureData && signatureData !== 'null' && signatureData !== 'undefined' && signatureData !== 'NaN') {
+                formData.append('signatureData', signatureData);
+                formData.append('signatureMethod', signatureMethod);
+            }
 
             // Realizar petición al servidor para generar PDF final con firma
             const token = localStorage.getItem("token");

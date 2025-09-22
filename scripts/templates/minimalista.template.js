@@ -1,234 +1,191 @@
-// ========================================
-// PLANTILLA MINIMALISTA
+﻿// ========================================
+// PLANTILLA MINIMALISTA - DISEÑO LIMPIO Y ESENCIAL
 // ========================================
 
-// Para Backend (PDF-lib) - COORDENADAS EXACTAS DEL CANVAS
-function drawMinimalTemplate(page, width, height, data, helveticaFont, helveticaBold) {
+const {
+    cleanTextForPdf,
+    wrapText,
+    canvasToPdfY,
+    hexToRgb,
+    calculateAuthorLayout,
+    drawInstitutionHeader,
+    drawCertificationTitle,
+    drawDocumentTitle,
+    drawDocumentDescription,
+    drawAuthorsSection,
+    drawAvaladorInfo,
+    drawSignatureArea,
+    drawElectronicSignature
+} = require('./base.template');
+
+/**
+ * Dibujar elementos minimalistas - líneas sutiles
+ */
+function drawMinimalistElements(page, width, height, config) {
     const { rgb } = require('pdf-lib');
-    const { cleanTextForPdf, wrapText } = require('./base.template');
+    const colorConfig = config.colorConfig || {};
+    const primaryColor = hexToRgb(colorConfig.primary || '#6b7280');
 
-    // Función para convertir coordenadas Y de Canvas a PDF (Y invertido)
-    const canvasToY = (canvasY) => height - canvasY;
-
-    // Título principal centrado - EXACTAMENTE como en canvas
-    const tituloText = cleanTextForPdf(data.titulo);
-    const tituloWidth = tituloText.length * 14; // Aproximación para centrado
-    page.drawText(tituloText, {
-        x: width / 2 - (tituloWidth / 2),
-        y: canvasToY(150), // Canvas Y=150 → PDF Y=642
-        size: 24,
-        font: helveticaBold,
-        color: rgb(0.42, 0.45, 0.50) // #6b7280
-    });
-
-    // Línea minimalista - EXACTAMENTE como en canvas
+    // Línea horizontal superior sutil
     page.drawLine({
-        start: { x: width / 2 - 80, y: canvasToY(165) }, // Canvas Y=165 → PDF Y=627
-        end: { x: width / 2 + 80, y: canvasToY(165) },
+        start: { x: 50, y: canvasToPdfY(70, height) },
+        end: { x: width - 50, y: canvasToPdfY(70, height) },
         thickness: 1,
-        color: rgb(0.42, 0.45, 0.50) // #6b7280
+        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
     });
 
-    // Institución centrada - EXACTAMENTE como en canvas
-    const institucionText = cleanTextForPdf(data.institucion);
-    const institucionWidth = institucionText.length * 7;
-    page.drawText(institucionText, {
-        x: width / 2 - (institucionWidth / 2),
-        y: canvasToY(190), // Canvas Y=190 → PDF Y=602
-        size: 12,
-        font: helveticaFont,
-        color: rgb(0.22, 0.25, 0.32) // #374151
-    });
-
-    // Contenido centrado - EXACTAMENTE como en canvas
-    const startY = 250; // Canvas Y=250
-    const contenido = 'Documento certificado digitalmente';
-    const contenidoWidth = contenido.length * 8;
-    page.drawText(contenido, {
-        x: width / 2 - (contenidoWidth / 2),
-        y: canvasToY(startY), // Canvas Y=250 → PDF Y=542
-        size: 14,
-        font: helveticaFont,
-        color: rgb(0.22, 0.25, 0.32) // #374151
-    });
-
-    // Autores centrados - EXACTAMENTE como en canvas
-    const autoresTitle = 'Autores:';
-    const autoresTitleWidth = autoresTitle.length * 8;
-    page.drawText(autoresTitle, {
-        x: width / 2 - (autoresTitleWidth / 2),
-        y: canvasToY(startY + 60), // Canvas Y=310 → PDF Y=482
-        size: 14,
-        font: helveticaBold,
-        color: rgb(0.22, 0.25, 0.32) // #374151
-    });
-
-    data.autores.forEach((autor, index) => {
-        const autorText = cleanTextForPdf(autor);
-        const autorWidth = autorText.length * 7.5;
-        page.drawText(autorText, {
-            x: width / 2 - (autorWidth / 2),
-            y: canvasToY(startY + 90 + (index * 22)), // Canvas Y=340+n*22 → PDF Y=452-n*22
-            size: 13,
-            font: helveticaFont,
-            color: rgb(0.22, 0.25, 0.32) // #374151
-        });
-    });
-
-    // Avalado por centrado - EXACTAMENTE como en canvas
-    const avaladoTitle = 'Avalado por:';
-    const avaladoTitleWidth = avaladoTitle.length * 8;
-    page.drawText(avaladoTitle, {
-        x: width / 2 - (avaladoTitleWidth / 2),
-        y: canvasToY(height - 150), // Canvas Y=height-150 → PDF Y=150
-        size: 14,
-        font: helveticaBold,
-        color: rgb(0.22, 0.25, 0.32) // #374151
-    });
-
-    const avaladoText = cleanTextForPdf(data.avaladoPor);
-    const avaladoWidth = avaladoText.length * 7.5;
-    page.drawText(avaladoText, {
-        x: width / 2 - (avaladoWidth / 2),
-        y: canvasToY(height - 125), // Canvas Y=height-125 → PDF Y=125
-        size: 13,
-        font: helveticaFont,
-        color: rgb(0.22, 0.25, 0.32) // #374151
-    });
-
-    // Fecha centrada (abajo) - EXACTAMENTE como en canvas
-    const fechaText = `Fecha: ${cleanTextForPdf(data.fecha)}`;
-    const fechaWidth = fechaText.length * 7;
-    page.drawText(fechaText, {
-        x: width / 2 - (fechaWidth / 2),
-        y: canvasToY(height - 100), // Canvas Y=height-100 → PDF Y=100
-        size: 12,
-        font: helveticaFont,
-        color: rgb(0.22, 0.25, 0.32) // #374151
+    // Línea horizontal inferior sutil
+    page.drawLine({
+        start: { x: 50, y: canvasToPdfY(height - 80, height) },
+        end: { x: width - 50, y: canvasToPdfY(height - 80, height) },
+        thickness: 1,
+        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
     });
 }
 
-// Borde para plantilla minimalista
-function drawMinimalBorder(page, width, height) {
+/**
+ * Dibujar borde minimalista - solo líneas esenciales
+ */
+function drawMinimalistBorder(page, width, height, borderConfig) {
     const { rgb } = require('pdf-lib');
 
-    // Solo líneas en las esquinas
-    const cornerLength = 40;
-    const cornerColor = rgb(0.3, 0.3, 0.3);
+    const borderColor = hexToRgb(borderConfig?.color || '#e5e7eb');
+    const borderWidth = borderConfig?.width || 1;
 
-    // Esquinas superiores
-    page.drawLine({ start: { x: 30, y: height - 30 }, end: { x: 30 + cornerLength, y: height - 30 }, thickness: 2, color: cornerColor });
-    page.drawLine({ start: { x: 30, y: height - 30 }, end: { x: 30, y: height - 30 - cornerLength }, thickness: 2, color: cornerColor });
-    page.drawLine({ start: { x: width - 30, y: height - 30 }, end: { x: width - 30 - cornerLength, y: height - 30 }, thickness: 2, color: cornerColor });
-    page.drawLine({ start: { x: width - 30, y: height - 30 }, end: { x: width - 30, y: height - 30 - cornerLength }, thickness: 2, color: cornerColor });
-
-    // Esquinas inferiores
-    page.drawLine({ start: { x: 30, y: 30 }, end: { x: 30 + cornerLength, y: 30 }, thickness: 2, color: cornerColor });
-    page.drawLine({ start: { x: 30, y: 30 }, end: { x: 30, y: 30 + cornerLength }, thickness: 2, color: cornerColor });
-    page.drawLine({ start: { x: width - 30, y: 30 }, end: { x: width - 30 - cornerLength, y: 30 }, thickness: 2, color: cornerColor });
-    page.drawLine({ start: { x: width - 30, y: 30 }, end: { x: width - 30, y: 30 + cornerLength }, thickness: 2, color: cornerColor });
+    // Solo bordes exteriores sutiles
+    page.drawRectangle({
+        x: 40,
+        y: 40,
+        width: width - 80,
+        height: height - 80,
+        borderWidth: borderWidth,
+        borderColor: rgb(borderColor.r, borderColor.g, borderColor.b)
+    });
 }
 
-// Para Frontend (Canvas)
-function drawMinimalTemplateCanvas(ctx, config, width, height, data) {
-    // Título principal
-    ctx.fillStyle = config.colors.primary;
-    ctx.font = '24px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(data.titulo, width / 2, 150);
+/**
+ * Template minimalista principal
+ */
+async function drawMinimalistTemplate(page, width, height, data, helveticaFont, helveticaBold, timesFont, timesBold, config, pdfDoc) {
+    // Extraer configuración
+    const templateConfig = data.config || {};
+    const colorConfig = templateConfig.colorConfig || {};
+    const fontConfig = templateConfig.fontConfig || {};
+    const layoutConfig = templateConfig.layoutConfig || {};
+    const visualConfig = templateConfig.visualConfig || {};
 
-    // Línea minimalista
-    ctx.strokeStyle = config.colors.primary;
+    // Preparar fuentes
+    const fontObjects = {
+        title: fontConfig.title === 'Times-Bold' ? timesBold : helveticaBold,
+        body: fontConfig.body === 'Times-Roman' ? timesFont : helveticaFont,
+        signature: fontConfig.signature === 'Times-Bold' ? timesBold : helveticaBold,
+        helvetica: helveticaFont,
+        helveticaBold: helveticaBold,
+        times: timesFont,
+        timesBold: timesBold
+    };
+
+    let currentY = 90;
+
+    // 1. Elementos minimalistas sutiles
+    drawMinimalistElements(page, width, height, config);
+
+    // 2. Header con institución y logo
+    currentY = drawInstitutionHeader(page, width, height, data, config, fontObjects);
+
+    // 3. Título de certificación
+    currentY = drawCertificationTitle(page, width, height, currentY, config, fontObjects);
+
+    // 4. Título del documento avalado
+    currentY = drawDocumentTitle(page, width, height, data, currentY, config, fontObjects);
+
+    // 5. Texto explicativo del documento
+    currentY = drawDocumentDescription(page, width, height, data, currentY, config, fontObjects);
+
+    // 6. Sección de autores
+    currentY = drawAuthorsSection(page, width, height, data, currentY, config, fontObjects);
+
+    // 7. Información del avalador
+    currentY = drawAvaladorInfo(page, width, height, data, currentY, config, fontObjects);
+
+    // 8. Área de firma
+    currentY = await drawSignatureArea(page, width, height, data, currentY, config, fontObjects, pdfDoc);
+
+    // 9. Firma electrónica se maneja desde el TemplateManager
+}
+
+/**
+ * Función para canvas (frontend) - versión simplificada
+ */
+function drawMinimalistTemplateCanvas(ctx, config, width, height, data) {
+    if (!ctx || !config) return;
+
+    const colorConfig = config.colorConfig || {};
+    const layoutConfig = config.layoutConfig || {};
+    const visualConfig = config.visualConfig || {};
+
+    // Fondo limpio
+    ctx.fillStyle = colorConfig.background || '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    // Elementos minimalistas
+    ctx.strokeStyle = colorConfig.primary || '#6b7280';
     ctx.lineWidth = 1;
+    ctx.strokeRect(40, 40, width - 80, height - 80);
+
+    // Líneas sutiles
     ctx.beginPath();
-    ctx.moveTo(width / 2 - 80, 165);
-    ctx.lineTo(width / 2 + 80, 165);
+    ctx.moveTo(50, 70);
+    ctx.lineTo(width - 50, 70);
     ctx.stroke();
 
-    // Institución
-    ctx.fillStyle = config.colors.text;
-    ctx.font = '12px sans-serif';
-    ctx.fillText(data.institucion, width / 2, 190);
+    ctx.beginPath();
+    ctx.moveTo(50, height - 80);
+    ctx.lineTo(width - 50, height - 80);
+    ctx.stroke();
 
-    // Contenido
-    ctx.font = '14px sans-serif';
-    const startY = 250;
-    ctx.fillText('Documento certificado digitalmente', width / 2, startY);
+    let currentY = 90;
 
-    // Autores
-    ctx.font = '14px sans-serif';
-    ctx.fillText('Autores:', width / 2, startY + 60);
-    data.autores.forEach((autor, index) => {
-        ctx.font = '13px sans-serif';
-        ctx.fillText(autor, width / 2, startY + 90 + (index * 22));
+    // Header simplificado para canvas
+    ctx.fillStyle = colorConfig.primary || '#6b7280';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('CERTIFICACIÓN', width / 2, currentY);
+
+    // Título del documento
+    ctx.fillStyle = colorConfig.accent || '#374151';
+    ctx.font = 'bold 18px sans-serif';
+    const titleLines = wrapText(cleanTextForPdf(data.titulo || ''), 40);
+    titleLines.forEach((line, index) => {
+        ctx.fillText(line, width / 2, currentY + 50 + (index * 20));
     });
 
-    // Avalado por
-    ctx.font = '14px sans-serif';
-    ctx.fillText('Avalado por:', width / 2, height - 150);
-    ctx.font = '13px sans-serif';
-    ctx.fillText(data.avaladoPor, width / 2, height - 125);
+    // Área de firma minimalista
+    const signatureY = height - 120;
+    ctx.strokeStyle = colorConfig.primary || '#6b7280';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.strokeRect(width / 2 - 100, signatureY, 200, 60);
+    ctx.setLineDash([]);
 
-    // Firma estándar centrada
-    if (window.BaseTemplate && window.BaseTemplate.drawStandardSignature) {
-        window.BaseTemplate.drawStandardSignature(ctx, config, width / 2, height - 100, 'center');
-    }
+    ctx.fillStyle = colorConfig.accent || '#374151';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('FIRMA', width / 2, signatureY + 25);
 }
 
-// Borde para canvas
-function drawMinimalBorderCanvas(ctx, config, width, height) {
-    const cornerLength = 40;
-    const cornerColor = config.colors.primary;
-    ctx.strokeStyle = cornerColor;
-    ctx.lineWidth = 2;
-
-    // Esquinas minimalistas
-    ctx.beginPath();
-    ctx.moveTo(30, 30 + cornerLength);
-    ctx.lineTo(30, 30);
-    ctx.lineTo(30 + cornerLength, 30);
-    ctx.moveTo(width - 30 - cornerLength, 30);
-    ctx.lineTo(width - 30, 30);
-    ctx.lineTo(width - 30, 30 + cornerLength);
-    ctx.moveTo(30, height - 30 - cornerLength);
-    ctx.lineTo(30, height - 30);
-    ctx.lineTo(30 + cornerLength, height - 30);
-    ctx.moveTo(width - 30 - cornerLength, height - 30);
-    ctx.lineTo(width - 30, height - 30);
-    ctx.lineTo(width - 30, height - 30 - cornerLength);
-    ctx.stroke();
-}
-
-// Configuración de la plantilla
-const MinimalTemplateConfig = {
-    colors: {
-        primary: '#6b7280',
-        accent: '#9ca3af',
-        text: '#374151'
-    },
-    layout: {
-        borderStyle: 'minimal'
-    },
-    logoPosition: {
-        x: 15,
-        y: 5
-    }
-};
-
-// Exportar para Node.js (backend)
+// Exportar funciones
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        drawMinimalTemplate,
-        drawMinimalBorder,
-        MinimalTemplateConfig
+        drawMinimalistTemplate,
+        drawMinimalistBorder,
+        drawMinimalistTemplateCanvas
     };
 }
 
-// Exportar para el navegador (frontend)
 if (typeof window !== 'undefined') {
-    window.MinimalTemplate = {
-        drawTemplateCanvas: drawMinimalTemplateCanvas,
-        drawBorderCanvas: drawMinimalBorderCanvas,
-        config: MinimalTemplateConfig
+    window.MinimalistTemplate = {
+        drawTemplate: drawMinimalistTemplateCanvas,
+        drawBorder: drawMinimalistBorder
     };
 }

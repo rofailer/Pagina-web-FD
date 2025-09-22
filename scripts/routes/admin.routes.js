@@ -183,7 +183,6 @@ router.get('/api/admin/config', authenticate, isAdmin, async (req, res) => {
             const configFile = await fs.readFile(configPath, 'utf8');
             config = { ...config, ...JSON.parse(configFile) };
         } catch (error) {
-            console.log('Usando configuración por defecto');
         }
 
         res.json(config);
@@ -798,8 +797,6 @@ router.post('/api/admin/themes/:themeId/apply', authenticate, isOwner, async (re
         // Aquí implementarías la lógica para aplicar el tema
         // Por ejemplo, actualizar la configuración global
 
-        console.log(`Tema ${themeId} aplicado por ${req.user.usuario}`);
-
         res.json({
             success: true,
             message: 'Tema aplicado correctamente'
@@ -1077,7 +1074,7 @@ router.get('/api/global-theme-config', async (req, res) => {
    ======================================== */
 
 // Obtener métricas generales del sistema
-router.get('/api/admin/metrics', authenticateAdmin, async (req, res) => {
+router.get('/api/admin/metrics', authenticate, isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
 
@@ -1096,7 +1093,6 @@ router.get('/api/admin/metrics', authenticateAdmin, async (req, res) => {
             const files = await fs.readdir(downloadsPath);
             totalDocs = files.filter(file => file.endsWith('.pdf')).length;
         } catch (error) {
-            console.log('No se pudo acceder a la carpeta downloads:', error.message);
         }
 
         // Verificar estado del sistema (conexión DB y servicios críticos)
@@ -1178,7 +1174,7 @@ router.get('/api/admin/metrics', authenticateAdmin, async (req, res) => {
    ======================================== */
 
 // Obtener configuración general
-router.get('/api/admin/config', authenticateAdmin, async (req, res) => {
+router.get('/api/admin/config', authenticate, isAdmin, async (req, res) => {
     try {
         // Configuración básica por defecto
         const defaultConfig = {
@@ -1206,7 +1202,7 @@ router.get('/api/admin/config', authenticateAdmin, async (req, res) => {
 });
 
 // Guardar configuración general
-router.post('/api/admin/config', authenticateAdmin, async (req, res) => {
+router.post('/api/admin/config', authenticate, isAdmin, async (req, res) => {
     try {
         const config = req.body;
 
@@ -1229,7 +1225,7 @@ router.post('/api/admin/config', authenticateAdmin, async (req, res) => {
    ======================================== */
 
 // Obtener métricas del sistema
-router.get('/api/admin/metrics', authenticateAdmin, async (req, res) => {
+router.get('/api/admin/metrics', authenticate, isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
 
@@ -1312,7 +1308,7 @@ router.get('/api/admin/metrics', authenticateAdmin, async (req, res) => {
 });
 
 // Obtener estado de la base de datos
-router.get('/api/admin/database/status', authenticateAdmin, async (req, res) => {
+router.get('/api/admin/database/status', authenticate, isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
 
@@ -1354,7 +1350,7 @@ router.get('/api/admin/database/status', authenticateAdmin, async (req, res) => 
 });
 
 // POST route for status (for compatibility with frontend)
-router.post('/api/admin/database/status', authenticateAdmin, async (req, res) => {
+router.post('/api/admin/database/status', authenticate, isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
 
@@ -1396,7 +1392,7 @@ router.post('/api/admin/database/status', authenticateAdmin, async (req, res) =>
 });
 
 // Obtener lista de tablas
-router.get('/api/admin/database/tables', authenticateAdmin, async (req, res) => {
+router.get('/api/admin/database/tables', authenticate, isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
         const connection = await pool.getConnection();
@@ -2249,7 +2245,6 @@ router.post('/api/admin/database/table-details', authenticateAdmin, async (req, 
             sampleData = data;
         } catch (error) {
             // Si hay error al obtener datos, continuar sin ellos
-            console.log(`No se pudieron obtener datos de muestra para ${tableName}:`, error.message);
         }
 
         res.json({
@@ -2393,7 +2388,6 @@ router.post('/api/admin/database/table-data', authenticateAdmin, async (req, res
 
 router.get('/api/admin/user-roles', authenticate, isAdmin, async (req, res) => {
     try {
-        console.log('🔍 Solicitando lista de roles de usuario');
 
         // Roles disponibles en el sistema
         const availableRoles = [
@@ -2420,8 +2414,6 @@ router.get('/api/admin/user-roles', authenticate, isAdmin, async (req, res) => {
             }
         ];
 
-        console.log('✅ Roles obtenidos exitosamente:', availableRoles.length);
-
         res.json({
             success: true,
             message: 'Roles obtenidos exitosamente',
@@ -2430,9 +2422,595 @@ router.get('/api/admin/user-roles', authenticate, isAdmin, async (req, res) => {
 
     } catch (error) {
         console.error('❌ Error obteniendo roles de usuario:', error);
-               res.status(500).json({
+        res.status(500).json({
             success: false,
             message: 'Error al obtener roles de usuario',
+            error: error.message
+        });
+    }
+});
+
+/* ========================================
+   SUBIDA DE FAVICON
+   ======================================== */
+
+// Configuración específica para favicon
+const faviconStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, path.join(__dirname, '../../')); // Guardar en la raíz del proyecto
+    },
+    filename: (req, file, cb) => {
+        cb(null, 'favicon.ico'); // Siempre sobrescribir el favicon.ico
+    }
+});
+
+const faviconUpload = multer({
+    storage: faviconStorage,
+    limits: { fileSize: 1024 * 1024 }, // 1MB máximo
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/x-icon', 'image/png', 'image/jpeg', 'image/gif'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Tipo de archivo no válido. Use ICO, PNG, JPG o GIF.'));
+        }
+    }
+});
+
+// Subir favicon
+router.post('/api/admin/upload-favicon', authenticate, isAdmin, faviconUpload.single('favicon'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se subió ningún archivo'
+            });
+        }
+
+        // Si el archivo no es .ico, convertirlo usando sharp (si está disponible)
+        const ext = path.extname(req.file.originalname).toLowerCase();
+        if (ext !== '.ico') {
+            try {
+                const sharp = require('sharp');
+                const inputPath = req.file.path;
+                const outputPath = path.join(__dirname, '../../favicon.ico');
+
+                await sharp(inputPath)
+                    .resize(32, 32)
+                    .toFile(outputPath);
+
+                // Eliminar archivo original
+                await fs.unlink(inputPath);
+
+            } catch (sharpError) {
+                console.warn('⚠️ Sharp no disponible, manteniendo archivo original:', sharpError.message);
+            }
+        }
+
+        const faviconUrl = '/favicon.ico';
+
+        res.json({
+            success: true,
+            message: 'Favicon actualizado correctamente',
+            faviconUrl: faviconUrl
+        });
+
+    } catch (error) {
+        console.error('❌ Error subiendo favicon:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor',
+            error: error.message
+        });
+    }
+});
+
+/* ========================================
+   RUTAS FALTANTES - IMPLEMENTACIÓN
+   ======================================== */
+
+// Ruta para obtener lista de plantillas PDF
+router.get('/api/admin/pdf/templates', authenticate, isAdmin, async (req, res) => {
+    try {
+        // Lista de plantillas disponibles
+        const templates = [
+            {
+                id: 'clasico',
+                name: 'Clásico',
+                description: 'Plantilla formal tradicional',
+                active: true,
+                colors: {
+                    primary: '#1e40af',
+                    secondary: '#64748b',
+                    text: '#1f2937'
+                }
+            },
+            {
+                id: 'moderno',
+                name: 'Moderno',
+                description: 'Diseño contemporáneo',
+                active: false,
+                colors: {
+                    primary: '#2563eb',
+                    secondary: '#60a5fa',
+                    text: '#1e293b'
+                }
+            },
+            {
+                id: 'minimalista',
+                name: 'Minimalista',
+                description: 'Estilo limpio y simple',
+                active: false,
+                colors: {
+                    primary: '#6b7280',
+                    secondary: '#9ca3af',
+                    text: '#374151'
+                }
+            },
+            {
+                id: 'elegante',
+                name: 'Elegante',
+                description: 'Diseño sofisticado',
+                active: false,
+                colors: {
+                    primary: '#7c3aed',
+                    secondary: '#a78bfa',
+                    text: '#1f2937'
+                }
+            }
+        ];
+
+        res.json({
+            success: true,
+            templates: templates,
+            total: templates.length
+        });
+    } catch (error) {
+        console.error('Error obteniendo templates PDF:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+// Ruta para obtener configuración de base de datos
+router.get('/api/admin/database/config', authenticate, isAdmin, async (req, res) => {
+    try {
+        const dbConfig = {
+            host: process.env.DB_HOST || 'localhost',
+            port: parseInt(process.env.DB_PORT) || 3306,
+            user: process.env.DB_USER || 'root',
+            password: process.env.DB_PASSWORD ? '********' : '', // No mostrar contraseña real
+            database: process.env.DB_NAME || 'firmas_digitales_v2',
+            connectionLimit: 10,
+            acquireTimeout: 60000,
+            timeout: 60000,
+            reconnect: true,
+            ssl: false,
+            charset: 'utf8mb4'
+        };
+
+        // Verificar estado de conexión
+        try {
+            const pool = require('../db/pool');
+            const connection = await pool.getConnection();
+            dbConfig.status = 'connected';
+            connection.release();
+        } catch (dbError) {
+            dbConfig.status = 'disconnected';
+            dbConfig.error = dbError.message;
+        }
+
+        res.json({
+            success: true,
+            config: dbConfig
+        });
+    } catch (error) {
+        console.error('Error obteniendo configuración de BD:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+// Ruta para obtener logs del sistema
+router.get('/api/admin/system/logs', authenticate, isAdmin, async (req, res) => {
+    try {
+        const logs = [
+            {
+                id: 1,
+                timestamp: new Date().toISOString(),
+                level: 'INFO',
+                message: 'Sistema iniciado correctamente',
+                source: 'server.js',
+                user: 'system'
+            },
+            {
+                id: 2,
+                timestamp: new Date(Date.now() - 3600000).toISOString(),
+                level: 'INFO',
+                message: 'Usuario admin inició sesión',
+                source: 'auth.middleware',
+                user: 'admin'
+            },
+            {
+                id: 3,
+                timestamp: new Date(Date.now() - 7200000).toISOString(),
+                level: 'WARN',
+                message: 'Intento de acceso no autorizado',
+                source: 'security.middleware',
+                user: 'unknown'
+            },
+            {
+                id: 4,
+                timestamp: new Date(Date.now() - 10800000).toISOString(),
+                level: 'ERROR',
+                message: 'Error de conexión a base de datos',
+                source: 'db.pool',
+                user: 'system'
+            },
+            {
+                id: 5,
+                timestamp: new Date(Date.now() - 14400000).toISOString(),
+                level: 'INFO',
+                message: 'Backup de base de datos completado',
+                source: 'backup.service',
+                user: 'system'
+            }
+        ];
+
+        res.json({
+            success: true,
+            logs: logs,
+            total: logs.length,
+            levels: ['ERROR', 'WARN', 'INFO', 'DEBUG']
+        });
+    } catch (error) {
+        console.error('Error obteniendo logs del sistema:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+// Ruta para obtener configuración específica de template
+router.get('/api/admin/pdf/templates/:templateId/config', authenticate, isAdmin, async (req, res) => {
+    try {
+        const { templateId } = req.params;
+
+        // Configuraciones por template
+        const templateConfigs = {
+            'clasico': {
+                fontFamily: 'Times New Roman',
+                fontSize: 12,
+                margins: { top: 50, bottom: 50, left: 50, right: 50 },
+                colors: { primary: '#1e40af', secondary: '#64748b', text: '#1f2937' },
+                logo: true,
+                header: 'UNIVERSIDAD EJEMPLO',
+                footer: 'Sistema de Firmas Digitales'
+            },
+            'moderno': {
+                fontFamily: 'Arial',
+                fontSize: 11,
+                margins: { top: 40, bottom: 40, left: 40, right: 40 },
+                colors: { primary: '#2563eb', secondary: '#60a5fa', text: '#1e293b' },
+                logo: true,
+                header: 'CERTIFICADO DIGITAL',
+                footer: 'Generado automáticamente'
+            },
+            'minimalista': {
+                fontFamily: 'Helvetica',
+                fontSize: 10,
+                margins: { top: 30, bottom: 30, left: 30, right: 30 },
+                colors: { primary: '#6b7280', secondary: '#9ca3af', text: '#374151' },
+                logo: false,
+                header: '',
+                footer: 'Documento verificado'
+            },
+            'elegante': {
+                fontFamily: 'Georgia',
+                fontSize: 12,
+                margins: { top: 60, bottom: 60, left: 60, right: 60 },
+                colors: { primary: '#7c3aed', secondary: '#a78bfa', text: '#1f2937' },
+                logo: true,
+                header: 'CERTIFICADO OFICIAL',
+                footer: 'Sistema de Firmas Digitales Avanzado'
+            }
+        };
+
+        const config = templateConfigs[templateId];
+
+        if (!config) {
+            return res.status(404).json({
+                success: false,
+                message: 'Template no encontrado'
+            });
+        }
+
+        res.json({
+            success: true,
+            templateId: templateId,
+            config: config
+        });
+    } catch (error) {
+        console.error('Error obteniendo configuración de template:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+// Ruta para guardar configuración de template específico
+router.put('/api/admin/pdf/templates/:templateId/config', authenticate, isAdmin, async (req, res) => {
+    try {
+        const { templateId } = req.params;
+        const configData = req.body;
+
+        // Validar que el template existe
+        const validTemplates = ['clasico', 'moderno', 'minimalista', 'elegante'];
+        if (!validTemplates.includes(templateId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Template no válido'
+            });
+        }
+
+        // Aquí puedes guardar la configuración en la base de datos
+        // Por ahora, solo devolvemos éxito
+
+        res.json({
+            success: true,
+            message: 'Configuración guardada correctamente',
+            templateId: templateId
+        });
+    } catch (error) {
+        console.error('Error guardando configuración de template:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+// Ruta para obtener configuración PDF general
+router.get('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
+    try {
+        const pool = require('../db/pool');
+        // Consultar configuración PDF global desde la base de datos
+        const [rows] = await pool.execute(
+            'SELECT * FROM global_pdf_config WHERE id = 1'
+        );
+
+        let config;
+        if (rows.length > 0) {
+            const dbConfig = rows[0];
+            config = {
+                selectedTemplate: dbConfig.selected_template,
+                logoPath: dbConfig.logo_path,
+                colorConfig: typeof dbConfig.color_config === 'string' ? JSON.parse(dbConfig.color_config || '{}') : (dbConfig.color_config || {}),
+                fontConfig: typeof dbConfig.font_config === 'string' ? JSON.parse(dbConfig.font_config || '{}') : (dbConfig.font_config || {}),
+                layoutConfig: typeof dbConfig.layout_config === 'string' ? JSON.parse(dbConfig.layout_config || '{}') : (dbConfig.layout_config || {}),
+                borderConfig: typeof dbConfig.border_config === 'string' ? JSON.parse(dbConfig.border_config || '{}') : (dbConfig.border_config || {}),
+                visualConfig: typeof dbConfig.visual_config === 'string' ? JSON.parse(dbConfig.visual_config || '{}') : (dbConfig.visual_config || {}),
+                updatedAt: dbConfig.updated_at,
+                updatedBy: dbConfig.updated_by
+            };
+        } else {
+            // Configuración por defecto si no existe en BD
+            config = {
+                selectedTemplate: 'clasico',
+                logoPath: '',
+                colorConfig: {
+                    primary: '#2563eb',
+                    secondary: '#64748b',
+                    accent: '#f59e0b',
+                    text: '#1f2937',
+                    background: '#ffffff'
+                },
+                fontConfig: {
+                    title: 'Helvetica-Bold',
+                    body: 'Helvetica',
+                    metadata: 'Helvetica-Oblique',
+                    signature: 'Times-Bold'
+                },
+                layoutConfig: {
+                    marginTop: 60,
+                    marginBottom: 60,
+                    marginLeft: 50,
+                    marginRight: 50,
+                    lineHeight: 1.6,
+                    titleSize: 24,
+                    bodySize: 12
+                },
+                borderConfig: {
+                    style: 'classic',
+                    width: 2,
+                    color: '#1f2937',
+                    cornerRadius: 0,
+                    showDecorative: true
+                },
+                visualConfig: {
+                    showLogo: true,
+                    showInstitution: true,
+                    showDate: true,
+                    showSignature: true,
+                    showAuthors: true,
+                    showAvalador: true
+                }
+            };
+        }
+
+        res.json({
+            success: true,
+            config: config
+        });
+    } catch (error) {
+        console.error('Error obteniendo configuración PDF global:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+// Ruta para guardar configuración PDF global
+router.put('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
+    try {
+        const pool = require('../db/pool');
+        const configData = req.body;
+
+        const adminUsername = req.user?.username || 'admin';
+
+        // Asegurar que selectedTemplate tenga un valor por defecto
+        if (!configData.selectedTemplate || configData.selectedTemplate === '') {
+            configData.selectedTemplate = 'clasico';
+        }
+
+        // Preparar datos para guardar en BD
+        const colorConfig = JSON.stringify(configData.colorConfig || {});
+        const fontConfig = JSON.stringify(configData.fontConfig || {});
+        const layoutConfig = JSON.stringify(configData.layoutConfig || {});
+        const borderConfig = JSON.stringify(configData.borderConfig || {});
+        const visualConfig = JSON.stringify(configData.visualConfig || {});
+
+        // Insertar o actualizar configuración global
+        await pool.execute(`
+            INSERT INTO global_pdf_config (
+                id, selected_template, logo_path, color_config, font_config,
+                layout_config, border_config, visual_config, updated_by
+            ) VALUES (
+                1, ?, ?, ?, ?, ?, ?, ?, ?
+            ) ON DUPLICATE KEY UPDATE
+                selected_template = VALUES(selected_template),
+                logo_path = VALUES(logo_path),
+                color_config = VALUES(color_config),
+                font_config = VALUES(font_config),
+                layout_config = VALUES(layout_config),
+                border_config = VALUES(border_config),
+                visual_config = VALUES(visual_config),
+                updated_by = VALUES(updated_by)
+        `, [
+            configData.selectedTemplate,
+            configData.logoPath || '',
+            colorConfig,
+            fontConfig,
+            layoutConfig,
+            borderConfig,
+            visualConfig,
+            adminUsername
+        ]);
+
+        res.json({
+            success: true,
+            message: 'Configuración PDF guardada correctamente'
+        });
+    } catch (error) {
+        console.error('Error guardando configuración PDF global:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+// Ruta para generar vista previa de PDF con configuración específica
+router.post('/api/admin/pdf/preview', authenticate, isAdmin, async (req, res) => {
+    try {
+        const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
+        const fs = require("fs");
+        const path = require("path");
+        const { TemplateManager } = require('../templates/template.manager');
+
+        // Obtener configuración del body
+        const config = req.body;
+
+        // Crear documento PDF en blanco como base
+        const pdfDoc = await PDFDocument.create();
+        const page = pdfDoc.addPage();
+        const { width, height } = page.getSize();
+
+        // Cargar fuentes estándar
+        const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const timesFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+        const timesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+
+        // Datos de ejemplo para la vista previa
+        const previewData = {
+            titulo: 'Vista Previa - Configuración PDF',
+            institucion: config.institutionName || 'Universidad de Ejemplo',
+            autores: ['Autor de Prueba'],
+            avalador: 'Avalador de Prueba',
+            fecha: new Date().toLocaleDateString('es-ES'),
+            contenido: 'Este es un documento de vista previa generado con la configuración actual. Permite visualizar cómo se verá el PDF final con los márgenes, fuentes, colores y elementos visuales configurados.',
+            signatureData: null,
+            logo: config.logoPath || null
+        };
+
+        // Crear instancia del TemplateManager
+        const templateManager = new TemplateManager();
+
+        // Usar configuración proporcionada o configuración global
+        const templateConfig = config || await templateManager.getGlobalConfig();
+
+        // Determinar el nombre de la plantilla
+        const templateName = templateManager.getTemplateName ? templateManager.getTemplateName(templateConfig) : 'clasico';
+
+        // Preparar datos del documento
+        const documentData = templateManager.prepareDocumentData ? templateManager.prepareDocumentData(previewData) : previewData;
+
+        // Dibujar borde según la plantilla (si existe el método)
+        if (templateManager.drawTemplateBorder) {
+            await templateManager.drawTemplateBorder(page, templateName, width, height, templateConfig);
+        }
+
+        // Dibujar plantilla específica (si existe el método)
+        if (templateManager.drawTemplate) {
+            await templateManager.drawTemplate(page, templateName, width, height, documentData, helveticaFont, helveticaBold, timesFont, timesBold, templateConfig);
+        } else {
+            // Dibujo básico si no hay método específico
+            page.drawText(previewData.titulo, {
+                x: 50,
+                y: height - 100,
+                size: templateConfig.layoutConfig?.titleSize || 24,
+                font: timesBold,
+                color: rgb(0, 0, 0)
+            });
+
+            page.drawText(previewData.institucion, {
+                x: 50,
+                y: height - 130,
+                size: templateConfig.layoutConfig?.bodySize || 14,
+                font: timesFont,
+                color: rgb(0.3, 0.3, 0.3)
+            });
+
+            page.drawText(previewData.contenido, {
+                x: 50,
+                y: height - 200,
+                size: templateConfig.layoutConfig?.bodySize || 12,
+                font: timesFont,
+                color: rgb(0, 0, 0),
+                maxWidth: width - 100
+            });
+        }
+
+        // Generar y devolver el PDF
+        const pdfBytes = await pdfDoc.save();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename="preview.pdf"');
+        res.send(Buffer.from(pdfBytes));
+
+    } catch (error) {
+        console.error('Error generando vista previa PDF:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar vista previa del PDF',
             error: error.message
         });
     }

@@ -5,13 +5,130 @@
 const { cleanTextForPdf, wrapText, drawLogo, drawElectronicSignature } = require('./base.template');
 const { drawClassicTemplate, drawClassicBorder } = require('./clasico.template');
 const { drawModernTemplate, drawModernBorder } = require('./moderno.template');
-const { drawMinimalTemplate, drawMinimalBorder } = require('./minimalista.template');
+const { drawMinimalistTemplate, drawMinimalistBorder } = require('./minimalista.template');
 const { drawElegantTemplate, drawElegantBorder } = require('./elegante.template');
+const { rgb } = require('pdf-lib');
+const db = require('../db/pool');
 
 class TemplateManager {
     constructor() {
-        // ❌ ELIMINADO - Ya no usamos mapeo template1/template2
-        // Las plantillas se llaman directamente por nombre
+        this.globalConfig = null;
+        this.lastConfigUpdate = null;
+    }
+
+    /**
+     * Obtener configuración global desde la base de datos
+     */
+    async getGlobalConfig() {
+        try {
+            // Cache de 5 minutos para evitar consultas excesivas
+            if (this.globalConfig && this.lastConfigUpdate &&
+                (Date.now() - this.lastConfigUpdate) < 300000) {
+                return this.globalConfig;
+            }
+
+            const query = `
+                SELECT
+                    selected_template,
+                    logo_path,
+                    color_config,
+                    font_config,
+                    layout_config,
+                    border_config,
+                    visual_config
+                FROM global_pdf_config
+                WHERE id = 1
+            `;
+
+            const [rows] = await db.execute(query);
+
+            if (rows.length === 0) {
+                // Configuración por defecto si no existe
+                this.globalConfig = this.getDefaultConfig();
+            } else {
+                const config = rows[0];
+
+                // Función helper para parsear campos JSON - manejar tanto strings como objetos ya parseados
+                const parseJsonField = (field) => {
+                    if (typeof field === 'string') {
+                        try {
+                            return JSON.parse(field || '{}');
+                        } catch (e) {
+                            console.warn('Error parseando campo JSON como string:', e);
+                            return {};
+                        }
+                    } else if (typeof field === 'object' && field !== null) {
+                        // Ya está parseado como objeto
+                        return field;
+                    } else {
+                        return {};
+                    }
+                };
+
+                this.globalConfig = {
+                    selectedTemplate: config.selected_template,
+                    logoPath: config.logo_path,
+                    colorConfig: parseJsonField(config.color_config),
+                    fontConfig: parseJsonField(config.font_config),
+                    layoutConfig: parseJsonField(config.layout_config),
+                    borderConfig: parseJsonField(config.border_config),
+                    visualConfig: parseJsonField(config.visual_config)
+                };
+            }
+
+            this.lastConfigUpdate = Date.now();
+            return this.globalConfig;
+        } catch (error) {
+            console.error('Error obteniendo configuración global:', error);
+            return this.getDefaultConfig();
+        }
+    }
+
+    /**
+     * Configuración por defecto
+     */
+    getDefaultConfig() {
+        return {
+            selectedTemplate: 'clasico',
+            logoPath: '../../recursos/logotipo-de-github.png',
+            colorConfig: {
+                primary: '#2563eb',
+                secondary: '#64748b',
+                accent: '#f59e0b',
+                text: '#1f2937',
+                background: '#ffffff'
+            },
+            fontConfig: {
+                title: 'Helvetica-Bold',
+                body: 'Helvetica',
+                metadata: 'Helvetica-Oblique',
+                signature: 'Times-Bold'
+            },
+            layoutConfig: {
+                marginTop: 60,
+                marginBottom: 60,
+                marginLeft: 50,
+                marginRight: 50,
+                lineHeight: 1.6,
+                titleSize: 24,
+                bodySize: 12
+            },
+            borderConfig: {
+                style: 'classic',
+                width: 2,
+                color: '#1f2937',
+                cornerRadius: 0,
+                showDecorative: true
+            },
+            visualConfig: {
+                showLogo: true,
+                showInstitution: true,
+                showDate: true,
+                showSignature: true,
+                showAuthors: true,
+                showAvalador: true
+            }
+        };
     }
 
     /**
@@ -45,47 +162,71 @@ class TemplateManager {
     }
 
     /**
-     * Dibuja el borde según la plantilla
+     * Dibuja el borde según la plantilla usando configuración global
      */
-    drawTemplateBorder(page, templateName, width, height) {
+    async drawTemplateBorder(page, templateName, width, height, customConfig = null) {
+        const config = customConfig || await this.getGlobalConfig();
+        const borderConfig = config.borderConfig || {};
+
         switch (templateName) {
             case 'clasico':
-                drawClassicBorder(page, width, height);
+                drawClassicBorder(page, width, height, borderConfig);
                 break;
             case 'moderno':
-                drawModernBorder(page, width, height);
+                drawModernBorder(page, width, height, borderConfig);
                 break;
             case 'minimalista':
-                drawMinimalBorder(page, width, height);
+                drawMinimalistBorder(page, width, height, borderConfig);
                 break;
             case 'elegante':
-                drawElegantBorder(page, width, height);
+                drawElegantBorder(page, width, height, borderConfig);
                 break;
             default:
-                drawClassicBorder(page, width, height);
+                drawClassicBorder(page, width, height, borderConfig);
                 break;
         }
     }
 
     /**
-     * Dibuja la plantilla específica
+     * Dibuja la plantilla específica usando configuración global
      */
-    drawTemplate(page, templateName, width, height, documentData, helveticaFont, helveticaBold, timesFont, timesBold) {
+    async drawTemplate(page, templateName, width, height, documentData, helveticaFont, helveticaBold, timesFont, timesBold, customConfig = null, pdfDoc = null) {
+        const config = customConfig || await this.getGlobalConfig();
+        const colorConfig = config.colorConfig || {};
+        const fontConfig = config.fontConfig || {};
+        const layoutConfig = config.layoutConfig || {};
+        const visualConfig = config.visualConfig || {};
+
+        // Aplicar configuración visual a los datos del documento
+        const enhancedDocumentData = {
+            ...documentData,
+            config: {
+                colorConfig,
+                fontConfig,
+                layoutConfig,
+                visualConfig
+            },
+            visualConfig,
+            colorConfig,
+            fontConfig,
+            layoutConfig
+        };
+
         switch (templateName) {
             case 'clasico':
-                drawClassicTemplate(page, width, height, documentData, helveticaFont, helveticaBold, timesFont, timesBold);
+                await drawClassicTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, pdfDoc);
                 break;
             case 'moderno':
-                drawModernTemplate(page, width, height, documentData, helveticaFont, helveticaBold);
+                await drawModernTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, pdfDoc);
                 break;
             case 'minimalista':
-                drawMinimalTemplate(page, width, height, documentData, helveticaFont, helveticaBold);
+                await drawMinimalistTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, pdfDoc);
                 break;
             case 'elegante':
-                drawElegantTemplate(page, width, height, documentData, helveticaFont, helveticaBold, timesFont, timesBold);
+                await drawElegantTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, pdfDoc);
                 break;
             default:
-                drawClassicTemplate(page, width, height, documentData, helveticaFont, helveticaBold, timesFont, timesBold);
+                await drawClassicTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, pdfDoc);
                 break;
         }
     }
@@ -112,9 +253,9 @@ class TemplateManager {
     }
 
     /**
-     * Renderiza un PDF completo con la plantilla especificada
+     * Renderiza un PDF completo con la plantilla especificada usando configuración global
      */
-    async renderPdfWithTemplate(inputPath, outputPath, data, templateConfig) {
+    async renderPdfWithTemplate(inputPath, outputPath, data, templateConfig = null) {
         const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
         const fs = require("fs");
 
@@ -130,31 +271,35 @@ class TemplateManager {
         const timesFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
         const timesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
+        // Obtener configuración global o usar la proporcionada
+        const config = templateConfig || await this.getGlobalConfig();
+
         // Determinar el nombre de la plantilla
-        const templateName = this.getTemplateName(templateConfig);
+        const templateName = this.getTemplateName(config);
 
         // Preparar datos del documento
         const documentData = this.prepareDocumentData(data);
 
         // Dibujar borde según la plantilla
-        this.drawTemplateBorder(page, templateName, width, height);
+        await this.drawTemplateBorder(page, templateName, width, height, config);
 
         // Dibujar plantilla específica
-        this.drawTemplate(page, templateName, width, height, documentData, helveticaFont, helveticaBold, timesFont, timesBold);
+        await this.drawTemplate(page, templateName, width, height, documentData, helveticaFont, helveticaBold, timesFont, timesBold, config, pdfDoc);
 
-        // Dibujar logo si existe
-        if (data.logo && fs.existsSync(data.logo)) {
+        // Dibujar logo si existe y está habilitado
+        const visualConfig = config.visualConfig || {};
+        if (visualConfig.showLogo !== false && data.logoData && data.logoData.buffer && Buffer.isBuffer(data.logoData.buffer) && data.logoData.buffer.length > 0) {
             try {
-                await drawLogo(page, data.logo, templateName, width, height, pdfDoc);
+                await drawLogo(page, width, height, data, pdfDoc);
             } catch (err) {
                 console.warn('WARNING: Error al cargar logo:', err.message);
             }
         }
 
-        // Agregar firma electrónica si está disponible
-        if (data.signatureData) {
+        // Agregar firma electrónica si está disponible y habilitada
+        if (visualConfig.showSignature !== false && data.signatureData && typeof data.signatureData === 'string' && data.signatureData.trim() !== '' && data.signatureData !== 'null' && data.signatureData !== 'undefined' && data.signatureData !== 'NaN') {
             try {
-                await drawElectronicSignature(page, data, width, height, pdfDoc);
+                await drawElectronicSignature(page, width, height, data, pdfDoc);
             } catch (err) {
                 console.warn('WARNING: No se pudo agregar la firma electronica:', err.message);
                 // Agregar texto indicativo si no se puede mostrar la firma

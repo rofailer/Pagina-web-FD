@@ -6,17 +6,29 @@
   background: transparent;
   border-radius: 0;
   box-shadow: none;
-  padding: 24px 40px;
+  padding: 24px;
   text-align: center;
   position: relative;
   overflow: hidden;
   width: 100%;
-  margin: 0;
+  margin: 0 auto;
   border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
 }
 
-#firmarSection::before {
-  display: none;
+#firmarSection * {
+  box-sizing: border-box;
+}
+
+/* Asegurar que todos los elementos hijos estén centrados */
+#firmarSection > * {
+  width: 100%;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 #firmarSection h2 {
@@ -39,6 +51,7 @@
 .step-header-container {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 20px;
   margin-bottom: 32px;
   padding: 24px;
@@ -50,6 +63,11 @@
   border-radius: 16px;
   border: 1px solid rgba(226, 232, 240, 0.6);
   backdrop-filter: blur(10px);
+  max-width: 700px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
 }
 
 .step-icon-container {
@@ -356,6 +374,11 @@
 .step-main-content {
   animation: slideInUp 0.5s ease-out;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 /* Sección de upload moderna */
@@ -527,6 +550,7 @@
   padding: 0 40px;
   max-width: 800px;
   width: 100%;
+  box-sizing: border-box;
 }
 
 /* Línea conectora entre pasos */
@@ -1609,13 +1633,44 @@ button.disabled:hover {
 }
 
 /* Centrado mejorado para todos los pasos */
+#signStep1,
 #signStep2,
-#signStep3 {
+#signStep3,
+#signStep4 {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Asegurar centrado en móviles */
+@media (max-width: 768px) {
+  #firmarSection {
+    padding: 16px 20px;
+  }
+
+  #signStepIndicator.step-indicator {
+    padding: 0 20px;
+    margin: 30px auto 40px auto;
+  }
+
+  .step-header-container {
+    padding: 20px 16px;
+    margin-bottom: 24px;
+  }
+
+  #signStep1,
+  #signStep2,
+  #signStep3,
+  #signStep4 {
+    max-width: 100%;
+    padding: 32px 20px;
+  }
 }
 
 #signStep2 .key-selection-container {

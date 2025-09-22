@@ -8,6 +8,15 @@
 /* Desktop: 1024px+ */
 
 /* ========================================
+   REGLAS BASE - DESKTOP FIRST
+   ======================================== */
+
+/* OCULTAR BOTÓN MÓVIL EN DESKTOP POR DEFECTO */
+.admin-sidebar-mobile-actions {
+  display: none !important;
+}
+
+/* ========================================
    TABLET RESPONSIVE (768px - 1023px)
    ======================================== */
 @media (min-width: 768px) and (max-width: 1023px) {
@@ -107,12 +116,6 @@
   .admin-user-row > div:nth-child(3),
   .admin-user-row > div:nth-child(4) {
     display: none;
-  }
-
-  /* TEMPLATES PDF EN COLUMNA */
-  .pdf-template-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--admin-spacing-md);
   }
 
   /* MÉTRICAS MÓVILES - OPTIMIZADO */
@@ -448,36 +451,6 @@
   }
 
   /* CONFIGURACIÓN PDF MÓVIL */
-  .pdf-template-grid {
-    grid-template-columns: 1fr;
-    gap: var(--admin-spacing-md);
-  }
-
-  .pdf-template-card {
-    display: flex;
-    align-items: center;
-    padding: var(--admin-spacing-md);
-  }
-
-  .pdf-template-preview {
-    width: 80px;
-    height: 80px;
-    flex-shrink: 0;
-    margin-right: var(--admin-spacing-md);
-    border-bottom: none;
-    border-right: 1px solid var(--admin-border);
-  }
-
-  .pdf-template-preview svg {
-    width: 32px;
-    height: 32px;
-  }
-
-  .pdf-template-info {
-    padding: 0;
-    flex: 1;
-  }
-
   /* INFORMACIÓN DEL SISTEMA MÓVIL */
   .system-info-grid {
     grid-template-columns: 1fr;

@@ -72,31 +72,14 @@ class ProfessionalPDFSystem {
 
     async loadGlobalConfig() {
         try {
-            // Cargando configuración global
-            const response = await fetch('/api/global-template-config');
+            // Configuración por defecto (ya no se carga desde API)
+            this.selectedTemplate = 'clasico';
+            this.customInstitution = 'Universidad Firmas Digitales';
 
-            if (response.ok) {
-                const config = await response.json();
-                // Configuración recibida
-
-                this.selectedTemplate = config.selectedTemplate || 'clasico';
-                this.customInstitution = config.institutionName || 'Universidad Firmas Digitales';
-
-                // Actualizar campo de institución en UI
-                const institutionInput = document.getElementById('institutionInput');
-                if (institutionInput) {
-                    institutionInput.value = this.customInstitution;
-                }
-
-                // Cargar logo si existe
-                if (config.logo) {
-                    await this.loadLogoFromUrl(config.logo);
-                }
-
-                // Configuración aplicada
-            }
+            // No intentar actualizar UI ya que los elementos no existen
+            console.log('Configuración por defecto aplicada (PDF preview removido del frontend)');
         } catch (error) {
-            console.error('❌ Error cargando configuración:', error);
+            console.error('❌ Error en configuración por defecto:', error);
         }
     }
 
@@ -117,48 +100,8 @@ class ProfessionalPDFSystem {
     }
 
     bindEvents() {
-        // Vinculando eventos del sistema
-
-        // Selección de plantillas
-        const templateCards = document.querySelectorAll('.template-card');
-        templateCards.forEach(card => {
-            card.addEventListener('click', (e) => {
-                e.preventDefault();
-                const templateType = card.dataset.template;
-                if (templateType) {
-                    this.selectTemplate(templateType);
-                }
-            });
-        });
-
-        // Upload de logo
-        const logoInput = document.getElementById('logoInput');
-        if (logoInput) {
-            logoInput.addEventListener('change', (e) => this.handleLogoUpload(e));
-        }
-
-        // Input de institución
-        const institutionInput = document.getElementById('institutionInput');
-        if (institutionInput) {
-            institutionInput.addEventListener('input', (e) => {
-                this.customInstitution = e.target.value || 'Universidad Firmas Digitales';
-                this.updatePreview();
-            });
-        }
-
-        // Botones de control
-        const updateBtn = document.getElementById('updateTemplateBtn');
-        const resetBtn = document.getElementById('resetTemplateBtn');
-
-        if (updateBtn) {
-            updateBtn.addEventListener('click', () => this.applyTemplate());
-        }
-
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => this.resetTemplate());
-        }
-
-        // Eventos vinculados correctamente
+        // Eventos removidos - elementos del DOM ya no existen en el frontend
+        console.log('Event binding skipped (PDF preview removido del frontend)');
     }
 
     selectTemplate(templateType) {
@@ -169,15 +112,8 @@ class ProfessionalPDFSystem {
     }
 
     updateUI() {
-        // Actualizar cards de plantillas
-        document.querySelectorAll('.template-card').forEach(card => {
-            card.classList.remove('selected');
-        });
-
-        const selectedCard = document.querySelector(`[data-template="${this.selectedTemplate}"]`);
-        if (selectedCard) {
-            selectedCard.classList.add('selected');
-        }
+        // UI update skipped - elementos del DOM ya no existen en el frontend
+        console.log('UI update skipped (PDF preview removido del frontend)');
     }
 
     handleLogoUpload(event) {
@@ -208,40 +144,9 @@ class ProfessionalPDFSystem {
     }
 
     async updatePreview() {
-        // Generando preview para plantilla
-
-        const canvas = document.getElementById('pdfPreviewCanvas');
-        if (!canvas) {
-            console.error('❌ Canvas de preview no encontrado');
-            return;
-        }
-
-        // Configurar canvas con dimensiones de documento A4
-        canvas.width = 600;
-        canvas.height = 800;
-
-        const ctx = canvas.getContext('2d');
-
-        // Configurar renderizado de alta calidad
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.textRenderingOptimization = 'optimizeQuality';
-
-        try {
-            // Limpiar canvas
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Preparar datos del documento para preview
-            const previewData = this.preparePreviewData();
-
-            // Renderizar usando las plantillas existentes
-            await this.renderTemplateOnCanvas(ctx, canvas.width, canvas.height, previewData);
-
-        } catch (error) {
-            console.error('❌ Error generando preview:', error);
-            this.showPreviewError(ctx, canvas.width, canvas.height);
-        }
+        // Preview removido del frontend - solo logging
+        console.log('Preview update skipped (PDF preview removido del frontend)');
+        return;
     }
 
     preparePreviewData() {
@@ -358,72 +263,22 @@ class ProfessionalPDFSystem {
     }
 
     async saveGlobalConfig() {
-        try {
-
-            const response = await fetch('/api/save-global-template-config', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    template: this.selectedTemplate,
-                    logo: null, // El logo se maneja por separado
-                    institutionName: this.customInstitution
-                })
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                this.showNotification('Configuración guardada globalmente', 'success');
-            } else {
-                const error = await response.json();
-                throw new Error(error.error || 'Error guardando configuración');
-            }
-        } catch (error) {
-            console.error('❌ Error guardando configuración:', error);
-            this.showNotification('Error: ' + error.message, 'error');
-        }
+        // Configuración ya no se guarda globalmente (movido a admin panel)
+        console.log('Configuración guardada localmente (global save removido)');
     }
 
     applyTemplate() {
-
-        const institutionInput = document.getElementById('institutionInput');
-        if (institutionInput) {
-            this.customInstitution = institutionInput.value.trim() || 'Universidad Firmas Digitales';
-        }
-
+        // Elemento institutionInput ya no existe en el frontend
+        this.customInstitution = 'Universidad Firmas Digitales';
         this.saveGlobalConfig();
     }
 
     resetTemplate() {
-
         this.selectedTemplate = 'clasico';
         this.globalLogo = null;
         this.customInstitution = 'Universidad Firmas Digitales';
-
-        // Actualizar UI
-        document.querySelectorAll('.template-card').forEach(card => {
-            card.classList.remove('selected');
-        });
-
-        const classicCard = document.querySelector('[data-template="clasico"]');
-        if (classicCard) {
-            classicCard.classList.add('selected');
-        }
-
-        const logoInput = document.getElementById('logoInput');
-        if (logoInput) {
-            logoInput.value = '';
-        }
-
-        const institutionInput = document.getElementById('institutionInput');
-        if (institutionInput) {
-            institutionInput.value = this.customInstitution;
-        }
-
-        this.updatePreview();
-        this.showNotification('Configuración restaurada', 'info');
+        // UI update skipped - elementos del DOM ya no existen
+        console.log('Template reset to default (UI update skipped)');
     }
 
     showNotification(message, type = 'info') {
