@@ -145,7 +145,6 @@ class TemplateManager {
             return config.selectedTemplate;
         }
 
-        // ❌ ELIMINADO - Ya no soportamos template1/template2
 
         // Detectar por características del config (fallback)
         if (config && config.border) {
@@ -214,19 +213,19 @@ class TemplateManager {
 
         switch (templateName) {
             case 'clasico':
-                await drawClassicTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, pdfDoc);
+                await drawClassicTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, config, pdfDoc);
                 break;
             case 'moderno':
-                await drawModernTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, pdfDoc);
+                await drawModernTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, config, pdfDoc);
                 break;
             case 'minimalista':
-                await drawMinimalistTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, pdfDoc);
+                await drawMinimalistTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, config, pdfDoc);
                 break;
             case 'elegante':
-                await drawElegantTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, pdfDoc);
+                await drawElegantTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, config, pdfDoc);
                 break;
             default:
-                await drawClassicTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, pdfDoc);
+                await drawClassicTemplate(page, width, height, enhancedDocumentData, helveticaFont, helveticaBold, timesFont, timesBold, config, pdfDoc);
                 break;
         }
     }
@@ -236,19 +235,24 @@ class TemplateManager {
      */
     prepareDocumentData(data) {
         return {
-            titulo: cleanTextForPdf(data.titulo) || 'DOCUMENTO OFICIAL AVALADO',
-            institucion: cleanTextForPdf(data.institucion) || 'Universidad Firmas Digitales', // ✅ Sistema correcto
+            titulo: cleanTextForPdf(data.titulo),
+            institucion: cleanTextForPdf(data.institucion), // ✅ Usa el valor configurado que viene del servidor
             autores: Array.isArray(data.autores) ?
                 data.autores.map(a => cleanTextForPdf(a)) :
-                [cleanTextForPdf(data.autores) || 'Autor Desconocido'],
-            avaladoPor: cleanTextForPdf(data.avalador) || 'Comite Academico',
+                [cleanTextForPdf(data.autores)],
+            avaladoPor: cleanTextForPdf(data.avaladoPor), // ✅ Corregido: era data.avalador
+            correoFirmante: data.correoFirmante, // ✅ Agregado campo faltante
+            ubicacion: cleanTextForPdf(data.ubicacion),
+            modalidad: cleanTextForPdf(data.modalidad),
+            comiteDestinatario: cleanTextForPdf(data.comiteDestinatario),
             fecha: data.fecha || new Date().toLocaleDateString('es-ES', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
             }),
             contenido: cleanTextForPdf(data.contenido) || 'Este documento ha sido procesado y avalado digitalmente.',
-            signatureData: data.signatureData // No limpiar los datos de firma
+            signatureData: data.signatureData, // No limpiar los datos de firma
+            config: data.config // ✅ Asegurar que la config se pase
         };
     }
 
@@ -296,22 +300,8 @@ class TemplateManager {
             }
         }
 
-        // Agregar firma electrónica si está disponible y habilitada
-        if (visualConfig.showSignature !== false && data.signatureData && typeof data.signatureData === 'string' && data.signatureData.trim() !== '' && data.signatureData !== 'null' && data.signatureData !== 'undefined' && data.signatureData !== 'NaN') {
-            try {
-                await drawElectronicSignature(page, width, height, data, pdfDoc);
-            } catch (err) {
-                console.warn('WARNING: No se pudo agregar la firma electronica:', err.message);
-                // Agregar texto indicativo si no se puede mostrar la firma
-                page.drawText('Documento firmado electronicamente', {
-                    x: width - 250,
-                    y: 200,
-                    size: 10,
-                    color: rgb(0.5, 0.5, 0.5),
-                    font: helveticaFont
-                });
-            }
-        }
+        // Los templates específicos manejan su propia lógica de firma electrónica
+        // El manager solo coordina la configuración
 
         const pdfBytes = await pdfDoc.save();
         fs.writeFileSync(outputPath, pdfBytes);

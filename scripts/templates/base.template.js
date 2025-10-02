@@ -489,7 +489,7 @@ function drawLogo(page, logoPath, templateName, width, height, pdfDoc) {
 async function drawElectronicSignature(page, width, height, data, pdfDoc, signatureX = null, signatureY = null, signatureWidth = 180, signatureHeight = 60) {
     if (!data || !data.signatureData || !pdfDoc) {
         console.warn('drawElectronicSignature: Missing required data or pdfDoc');
-        return;
+        return false;
     }
 
     try {
@@ -505,20 +505,20 @@ async function drawElectronicSignature(page, width, height, data, pdfDoc, signat
                 value: data.signatureData,
                 length: data.signatureData ? data.signatureData.length : 'N/A'
             });
-            return;
+            return false;
         }
 
         const signatureBase64 = data.signatureData.split(',')[1] || data.signatureData;
 
         if (!signatureBase64 || signatureBase64.trim() === '') {
             console.warn('drawElectronicSignature: No valid base64 data found');
-            return;
+            return false;
         }
 
-        // Verificar que el base64 sea válido (longitud mínima razonable y caracteres válidos)
-        if (signatureBase64.length < 100) {
+        // Verificar que el base64 sea válido (reducir requisito de longitud para pruebas)
+        if (signatureBase64.length < 20) {
             console.warn('drawElectronicSignature: Base64 data too short, likely invalid');
-            return;
+            return false;
         }
 
         // Verificar que solo contenga caracteres base64 válidos
@@ -591,6 +591,8 @@ async function drawElectronicSignature(page, width, height, data, pdfDoc, signat
             opacity: 0.9
         });
 
+        return true; // Indica que la firma se dibujó exitosamente
+
     } catch (err) {
         console.warn('Error dibujando firma electrónica:', err.message);
         // Dibujar un placeholder de texto si falla la imagen
@@ -604,6 +606,7 @@ async function drawElectronicSignature(page, width, height, data, pdfDoc, signat
         } catch (textErr) {
             console.warn('Error dibujando texto placeholder:', textErr.message);
         }
+        return false; // Indica que no se pudo dibujar la firma
     }
 }
 

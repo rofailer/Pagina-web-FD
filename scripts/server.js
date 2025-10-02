@@ -589,7 +589,7 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
 
       // Obtener información del firmante para los metadatos
       const [userInfo] = await pool.query(
-        "SELECT id, nombre, usuario FROM users WHERE id = ?",
+        "SELECT id, nombre, usuario, email FROM users WHERE id = ?",
         [userId]
       );
 
@@ -644,9 +644,12 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
       // Datos a renderizar usando configuración global
       const data = {
         titulo: req.body.titulo || 'DOCUMENTO OFICIAL AVALADO',
-        autores: req.body.autores || userInfo[0].nombre,
-        institucion: req.body.institucion || institutionName,
-        avalador: `Avalado por: ${userInfo[0].nombre}`,
+        autores: Array.isArray(req.body.autores) ? req.body.autores : [req.body.autores || userInfo[0].nombre],
+        institucion: institutionName, // ✅ SIEMPRE usar el valor de la base de datos
+        avaladoPor: userInfo[0].nombre,
+        correoFirmante: userInfo[0].email || null,
+        ubicacion: req.body.ubicacion || 'CARTAGENA DE INDIAS D, T Y C',
+        modalidad: req.body.modalidad || 'Programa de Ingeniería Multimedia',
         fecha: new Date().toLocaleDateString('es-CO', {
           year: 'numeric',
           month: 'long',
@@ -658,6 +661,8 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
           signatureData: req.body.signatureData,
           signatureMethod: req.body.signatureMethod
         } : {}),
+        // Agregar configuración para la plantilla
+        config: templateConfig,
         // Agregar contenido básico del documento
         contenido: 'Este documento ha sido procesado y avalado digitalmente a través del sistema de firmas Digitales. La autenticidad e integridad del contenido está garantizada mediante tecnología criptográfica.'
       };
