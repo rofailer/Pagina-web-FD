@@ -88,12 +88,27 @@ class DatabaseSetupManager {
     async getExistingTables() {
         try {
             const [rows] = await this.connection.execute(
-                'SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?',
+                `SELECT TABLE_NAME, TABLE_TYPE FROM INFORMATION_SCHEMA.TABLES 
+                 WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE'`,
                 [this.config.database]
             );
             return rows.map(row => row.TABLE_NAME);
         } catch (error) {
             this.log(`⚠️ Error obteniendo tablas existentes: ${error.message}`, 'yellow');
+            return [];
+        }
+    }
+
+    async getExistingViews() {
+        try {
+            const [rows] = await this.connection.execute(
+                `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
+                 WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'VIEW'`,
+                [this.config.database]
+            );
+            return rows.map(row => row.TABLE_NAME);
+        } catch (error) {
+            this.log(`⚠️ Error obteniendo vistas existentes: ${error.message}`, 'yellow');
             return [];
         }
     }
@@ -153,8 +168,6 @@ class DatabaseSetupManager {
                 'user_activity_log',
                 'user_keys',
                 'user_preferences',
-                'vista_actividad_reciente',
-                'vista_usuarios_activos',
                 'users',
                 'global_pdf_config',
                 'theme_config',
@@ -208,44 +221,133 @@ class DatabaseSetupManager {
         }
     }
 
-    // Actualizar estructura de tablas existentes agregando campos faltantes
+    // Actualizar estructura de tablas existentes comparando con archivo SQL
     async updateTableStructures(statements, tablesToUpdate) {
-        // Estrategia simplificada: intentar ejecutar ALTER TABLE para campos conocidos que podrían faltar
-        const knownMissingFields = {
-            'visual_config': [
-                { name: 'logo_data', definition: '`logo_data` LONGBLOB NULL COMMENT \'Datos binarios del logo\'' },
-                { name: 'logo_mimetype', definition: '`logo_mimetype` VARCHAR(100) NULL COMMENT \'Tipo MIME del logo\'' },
-                { name: 'logo_filename', definition: '`logo_filename` VARCHAR(255) NULL COMMENT \'Nombre del archivo del logo\'' }
-            ]
-        };
+        this.log('   � Comparando estructura actual con archivo SQL...', 'cyan');
+
+        // Extraer definiciones de CREATE TABLE del archivo SQL
+        const tableDefinitions = this.extractTableDefinitionsFromSQL(statements);
+
+        let totalUpdated = 0;
+        let totalSkipped = 0;
 
         for (const tableName of tablesToUpdate) {
-            if (knownMissingFields[tableName]) {
-                this.log(`  🔧 ${tableName}: verificando campos faltantes`, 'yellow');
+            if (!tableDefinitions[tableName]) {
+                this.log(`   ⚠️  ${tableName}: No se encontró definición en SQL, omitiendo`, 'yellow');
+                continue;
+            }
 
-                for (const field of knownMissingFields[tableName]) {
-                    try {
-                        // Verificar si el campo ya existe
-                        const [columns] = await this.connection.execute(
-                            `SHOW COLUMNS FROM \`${tableName}\` LIKE '${field.name}'`
-                        );
+            this.log(`   🔧 ${tableName}: Analizando campos...`, 'blue');
 
-                        if (columns.length === 0) {
-                            // El campo no existe, agregarlo
-                            const alterSql = `ALTER TABLE \`${tableName}\` ADD COLUMN ${field.definition}`;
+            try {
+                // Obtener columnas actuales de la tabla
+                const [currentColumns] = await this.connection.execute(
+                    `SHOW COLUMNS FROM \`${tableName}\``
+                );
+                const currentColumnNames = new Set(currentColumns.map(col => col.Field));
+
+                // Obtener columnas definidas en el SQL
+                const sqlColumns = tableDefinitions[tableName];
+
+                let addedFields = 0;
+                let skippedFields = 0;
+
+                for (const sqlColumn of sqlColumns) {
+                    if (!currentColumnNames.has(sqlColumn.name)) {
+                        // El campo no existe, agregarlo
+                        try {
+                            const alterSql = `ALTER TABLE \`${tableName}\` ADD COLUMN ${sqlColumn.definition}`;
                             await this.connection.execute(alterSql);
-                            this.log(`    ✅ Agregado campo: ${field.name}`, 'green');
-                        } else {
-                            this.log(`    ⚠️ Campo ya existe: ${field.name}`, 'yellow');
+                            this.log(`      ✅ Campo agregado: ${sqlColumn.name}`, 'green');
+                            addedFields++;
+                            totalUpdated++;
+                        } catch (alterError) {
+                            this.log(`      ❌ Error agregando ${sqlColumn.name}: ${alterError.message}`, 'red');
                         }
-                    } catch (error) {
-                        this.log(`    ❌ Error procesando campo ${field.name}: ${error.message}`, 'red');
+                    } else {
+                        skippedFields++;
+                        totalSkipped++;
                     }
+                }
+
+                if (addedFields > 0) {
+                    this.log(`   📊 ${tableName}: ${addedFields} campos agregados`, 'green');
+                } else {
+                    this.log(`   ✅ ${tableName}: Estructura completa (${skippedFields} campos existentes)`, 'cyan');
+                }
+
+            } catch (error) {
+                this.log(`   ❌ Error procesando tabla ${tableName}: ${error.message}`, 'red');
+            }
+        }
+
+        this.log(`\n   📈 RESUMEN: ${totalUpdated} campos agregados, ${totalSkipped} ya existían`, 'bright');
+        this.log('   ✅ Verificación de estructura completada', 'green');
+    }
+
+    // Extraer definiciones de columnas de las sentencias CREATE TABLE
+    extractTableDefinitionsFromSQL(statements) {
+        const tableDefinitions = {};
+
+        for (const statement of statements) {
+            const createTableMatch = statement.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:`([^`]+)`|(\w+))\s*\(([\s\S]*?)\)\s*(?:ENGINE|$)/i);
+
+            if (createTableMatch) {
+                const tableName = createTableMatch[1] || createTableMatch[2];
+                const tableBody = createTableMatch[3];
+
+                if (tableName && tableBody) {
+                    tableDefinitions[tableName] = this.parseTableColumns(tableBody);
                 }
             }
         }
 
-        this.log('✅ Verificación de campos completada', 'green');
+        return tableDefinitions;
+    }
+
+    // Parsear columnas de la definición de tabla
+    parseTableColumns(tableBody) {
+        const columns = [];
+        const lines = tableBody.split('\n');
+
+        for (let line of lines) {
+            line = line.trim();
+
+            // Omitir comentarios, constraints, índices, etc.
+            if (line.startsWith('--') ||
+                line.startsWith('/*') ||
+                line.startsWith('PRIMARY KEY') ||
+                line.startsWith('FOREIGN KEY') ||
+                line.startsWith('UNIQUE KEY') ||
+                line.startsWith('KEY ') ||
+                line.startsWith('INDEX ') ||
+                line.startsWith('CONSTRAINT ') ||
+                line === '' ||
+                line === ',' ||
+                line === ')') {
+                continue;
+            }
+
+            // Buscar definiciones de columnas
+            const columnMatch = line.match(/^`?([^`\s]+)`?\s+(.+?)(?:,\s*)?$/);
+            if (columnMatch) {
+                const columnName = columnMatch[1];
+                let columnDefinition = columnMatch[2];
+
+                // Limpiar la definición (remover coma final si existe)
+                columnDefinition = columnDefinition.replace(/,$/, '').trim();
+
+                // Construir definición completa con backticks
+                const fullDefinition = `\`${columnName}\` ${columnDefinition}`;
+
+                columns.push({
+                    name: columnName,
+                    definition: fullDefinition
+                });
+            }
+        }
+
+        return columns;
     }
 
     async syncDatabase() {
@@ -274,14 +376,17 @@ class DatabaseSetupManager {
 
             // Obtener tablas existentes y tablas del SQL
             const existingTables = await this.getExistingTables();
+            const existingViews = await this.getExistingViews();
             const sqlTables = await this.getTablesFromSQL();
 
-            this.log(`📊 Análisis de sincronización:`, 'cyan');
-            this.log(`  • Tablas en base de datos: ${existingTables.length}`, 'white');
-            this.log(`  • Tablas en archivo SQL: ${sqlTables.length}`, 'white');
+            this.log(`\n📊 ANÁLISIS DE LA BASE DE DATOS:`, 'bright');
+            this.log(`   📋 Tablas actuales: ${existingTables.length}`, 'cyan');
+            this.log(`   👁️  Vistas actuales: ${existingViews.length}`, 'cyan');
+            this.log(`   📄 Tablas en SQL: ${sqlTables.length}`, 'cyan');
 
             // Encontrar tablas para eliminar (existen en BD pero no en SQL)
             const tablesToDrop = existingTables.filter(table => !sqlTables.includes(table));
+            const viewsToDrop = existingViews; // Las vistas siempre se recrean
 
             // Encontrar tablas para crear (existen en SQL pero no en BD)
             const tablesToCreate = sqlTables.filter(table => !existingTables.includes(table));
@@ -289,20 +394,46 @@ class DatabaseSetupManager {
             // Encontrar tablas que existen en ambos (posibles actualizaciones de estructura)
             const tablesToUpdate = existingTables.filter(table => sqlTables.includes(table));
 
-            this.log(`\n📋 Plan de sincronización:`, 'blue');
-            this.log(`  🗑️  Tablas a eliminar: ${tablesToDrop.length}`, 'red');
-            this.log(`  ➕ Tablas a crear: ${tablesToCreate.length}`, 'green');
-            this.log(`  🔧 Tablas a actualizar: ${tablesToUpdate.length}`, 'yellow');
-            this.log(`  ✅ Tablas sin cambios: ${tablesToUpdate.length} (mantenidas)`, 'cyan');
+            this.log(`\n🎯 PLAN DE SINCRONIZACIÓN:`, 'bright');
+
+            if (tablesToCreate.length > 0) {
+                this.log(`   ➕ Crear ${tablesToCreate.length} tabla(s): ${tablesToCreate.join(', ')}`, 'green');
+            }
+
+            if (tablesToUpdate.length > 0) {
+                this.log(`   🔧 Actualizar ${tablesToUpdate.length} tabla(s): ${tablesToUpdate.join(', ')}`, 'yellow');
+            }
 
             if (tablesToDrop.length > 0) {
-                this.log(`\n🗑️ Eliminando tablas obsoletas...`, 'yellow');
+                this.log(`   🗑️  Eliminar ${tablesToDrop.length} tabla(s) obsoleta(s): ${tablesToDrop.join(', ')}`, 'red');
+            }
+
+            if (viewsToDrop.length > 0) {
+                this.log(`   🔄 Recrear ${viewsToDrop.length} vista(s): ${viewsToDrop.join(', ')}`, 'magenta');
+            }
+
+            // Eliminar tablas obsoletas
+            if (tablesToDrop.length > 0) {
+                this.log(`\n🗑️  ELIMINANDO TABLAS OBSOLETAS...`, 'red');
                 for (const tableName of tablesToDrop) {
                     try {
                         await this.connection.execute(`DROP TABLE IF EXISTS \`${tableName}\``);
-                        this.log(`  ✅ Eliminada: ${tableName}`, 'green');
+                        this.log(`   ✅ ${tableName} eliminada`, 'green');
                     } catch (error) {
-                        this.log(`  ❌ Error eliminando ${tableName}: ${error.message}`, 'red');
+                        this.log(`   ❌ Error eliminando ${tableName}: ${error.message}`, 'red');
+                    }
+                }
+            }
+
+            // Eliminar vistas (se recrearán automáticamente)
+            if (viewsToDrop.length > 0) {
+                this.log(`\n🔄 ELIMINANDO VISTAS (SE RECREARÁN AUTOMÁTICAMENTE)...`, 'magenta');
+                for (const viewName of viewsToDrop) {
+                    try {
+                        await this.connection.execute(`DROP VIEW IF EXISTS \`${viewName}\``);
+                        this.log(`   ✅ Vista ${viewName} eliminada (se recreará)`, 'green');
+                    } catch (error) {
+                        this.log(`   ❌ Error eliminando vista ${viewName}: ${error.message}`, 'red');
                     }
                 }
             }
@@ -323,15 +454,16 @@ class DatabaseSetupManager {
 
             // Actualizar estructura de tablas existentes antes de ejecutar statements
             if (tablesToUpdate.length > 0) {
-                this.log(`\n🔧 Actualizando estructura de tablas existentes...`, 'yellow');
+                this.log(`\n🔧 VERIFICANDO Y ACTUALIZANDO ESTRUCTURA DE TABLAS...`, 'bright');
                 await this.updateTableStructures(statements, tablesToUpdate);
             }
 
             // Ejecutar statements
             let successCount = 0;
             let errorCount = 0;
+            let skippedCount = 0;
 
-            this.log(`\n📋 Ejecutando statements...`, 'blue');
+            this.log(`\n📋 EJECUTANDO ARCHIVO SQL (${statements.length} statements)...`, 'bright');
 
             for (let i = 0; i < statements.length; i++) {
                 const statement = statements[i];
@@ -339,8 +471,9 @@ class DatabaseSetupManager {
                     await this.connection.query(statement);
                     successCount++;
 
-                    if (i % 5 === 0 || i === statements.length - 1) {
-                        this.log(`  ✅ ${successCount}/${statements.length} statements ejecutados`, 'green');
+                    if (i % 10 === 0 || i === statements.length - 1) {
+                        const progress = ((i + 1) / statements.length * 100).toFixed(0);
+                        this.log(`   📈 Progreso: ${progress}% (${successCount} exitosos, ${skippedCount} omitidos)`, 'cyan');
                     }
                 } catch (error) {
                     // Manejar errores específicos
@@ -349,23 +482,37 @@ class DatabaseSetupManager {
                         error.code === 'ER_DUP_ENTRY' ||
                         error.message.includes('already exists') ||
                         error.message.includes('Duplicate entry')) {
-                        this.log(`  ⚠️ Statement ${i + 1} ya existe, continuando...`, 'yellow');
+                        skippedCount++;
+                        if (skippedCount <= 3) { // Solo mostrar los primeros 3 para no saturar
+                            this.log(`   ⚠️  Statement ${i + 1}: Ya existe (omitido)`, 'yellow');
+                        } else if (skippedCount === 4) {
+                            this.log(`   ⚠️  ... más statements omitidos (ya existen)`, 'yellow');
+                        }
                     } else {
-                        this.log(`  ❌ Error en statement ${i + 1}: ${error.message}`, 'red');
+                        this.log(`   ❌ Error en statement ${i + 1}: ${error.message}`, 'red');
                         errorCount++;
                     }
                 }
             }
 
+            this.log(`\n   📊 RESUMEN DE EJECUCIÓN:`, 'bright');
+            this.log(`      ✅ Exitosos: ${successCount}`, 'green');
+            this.log(`      ⚠️  Omitidos: ${skippedCount}`, 'yellow');
+            this.log(`      ❌ Errores: ${errorCount}`, errorCount > 0 ? 'red' : 'green');
+
             // Verificación final
             await this.finalVerification();
 
-            this.log(`\n🎉 Sincronización completada!`, 'bright');
-            this.log(`📊 Resumen:`, 'cyan');
-            this.log(`  • Eliminadas: ${tablesToDrop.length} tablas`, 'red');
-            this.log(`  • Creadas: ${tablesToCreate.length} tablas`, 'green');
-            this.log(`  • Actualizadas: ${tablesToUpdate.length} tablas`, 'yellow');
-            this.log(`  • Statements: ${successCount} exitosos, ${errorCount} errores`, 'white');
+            // Verificar y completar configuraciones incompletas
+            await this.verifyAndCompleteConfigurations();
+
+            this.log(`\n🎉 SINCRONIZACIÓN COMPLETADA EXITOSAMENTE!`, 'bright');
+            this.log(`📊 RESUMEN FINAL:`, 'cyan');
+            this.log(`   🗑️  Tablas eliminadas: ${tablesToDrop.length}`, 'red');
+            this.log(`   🔄 Vistas recreadas: ${viewsToDrop.length}`, 'magenta');
+            this.log(`   ➕ Tablas creadas: ${tablesToCreate.length}`, 'green');
+            this.log(`   🔧 Tablas actualizadas: ${tablesToUpdate.length}`, 'yellow');
+            this.log(`   📋 Statements: ${successCount} exitosos, ${skippedCount} omitidos, ${errorCount} errores`, 'cyan');
 
             if (errorCount === 0) {
                 this.log('✅ Base de datos sincronizada correctamente', 'green');
@@ -437,99 +584,57 @@ class DatabaseSetupManager {
     }
 
     parseSQLStatements(sqlContent) {
-        const statements = [];
-        let currentStatement = '';
-        let inMultiLineComment = false;
-        let inSingleLineComment = false;
-        let inString = false;
-        let stringChar = '';
-        let inDelimiterBlock = false;
-        let delimiter = ';';
-
-        // Dividir por líneas para procesar mejor
+        // Dividir en líneas y procesar
         const lines = sqlContent.split('\n');
+        const cleanLines = [];
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-
-            // Saltar líneas vacías
-            if (!line) continue;
-
-            // Manejar cambios de delimitador
-            if (line.toUpperCase().startsWith('DELIMITER ')) {
-                delimiter = line.split(' ')[1];
-                continue;
-            }
-
-            // Si estamos en un bloque de delimitador especial
-            if (delimiter !== ';') {
-                if (line.includes(delimiter)) {
-                    currentStatement += line + '\n';
-                    statements.push(currentStatement.trim());
-                    currentStatement = '';
-                    delimiter = ';'; // Reset al delimitador por defecto
-                    continue;
-                }
-                currentStatement += line + '\n';
-                continue;
-            }
-
-            // Manejar comentarios multilinea
-            if (!inString && !inSingleLineComment && line.includes('/*')) {
-                inMultiLineComment = true;
-                currentStatement += line + '\n';
-                if (line.includes('*/')) {
-                    inMultiLineComment = false;
-                }
-                continue;
-            }
-
-            if (inMultiLineComment) {
-                currentStatement += line + '\n';
-                if (line.includes('*/')) {
-                    inMultiLineComment = false;
-                }
-                continue;
-            }
-
-            // Manejar comentarios de una línea
-            if (!inString && line.startsWith('--')) {
-                continue; // Ignorar comentarios de línea completa
-            }
-
-            // Manejar strings
-            let processedLine = '';
-            for (let j = 0; j < line.length; j++) {
-                const char = line[j];
-                const nextChar = line[j + 1] || '';
-
-                if (!inString && (char === '"' || char === "'")) {
-                    inString = true;
-                    stringChar = char;
-                } else if (inString && char === stringChar && line[j - 1] !== '\\') {
-                    inString = false;
-                    stringChar = '';
-                }
-
-                processedLine += char;
-            }
-
-            currentStatement += processedLine + '\n';
-
-            // Detectar fin de statement (solo si no estamos en string)
-            if (!inString && line.endsWith(';')) {
-                const trimmed = currentStatement.trim();
-                if (trimmed && !trimmed.startsWith('--') && trimmed !== ';') {
-                    statements.push(trimmed);
-                }
-                currentStatement = '';
+        for (let line of lines) {
+            const trimmed = line.trim();
+            // Filtrar líneas vacías, comentarios y líneas corruptas
+            if (trimmed &&
+                !trimmed.startsWith('--') &&
+                !trimmed.startsWith('#') &&
+                !trimmed.startsWith('/*') &&
+                !trimmed.startsWith('*/') &&
+                !trimmed.startsWith('DRO--') &&
+                trimmed !== 'DRO') {
+                cleanLines.push(line);
             }
         }
 
-        // Agregar último statement si existe
-        const trimmed = currentStatement.trim();
-        if (trimmed && !trimmed.startsWith('--')) {
-            statements.push(trimmed);
+        // Reunir en texto limpio
+        const cleanSQL = cleanLines.join('\n');
+
+        // Dividir por punto y coma
+        const rawStatements = cleanSQL.split(';');
+        const statements = [];
+
+        for (let stmt of rawStatements) {
+            const cleaned = stmt.trim();
+
+            // Filtrar statements vacíos y validar que contengan palabras clave SQL
+            if (cleaned && cleaned.length > 3) {
+                const upperStmt = cleaned.toUpperCase();
+
+                // Verificar que contiene palabras clave SQL válidas
+                if (upperStmt.includes('CREATE') ||
+                    upperStmt.includes('INSERT') ||
+                    upperStmt.includes('UPDATE') ||
+                    upperStmt.includes('DELETE') ||
+                    upperStmt.includes('ALTER') ||
+                    upperStmt.includes('DROP') ||
+                    upperStmt.includes('SET') ||
+                    upperStmt.includes('START') ||
+                    upperStmt.includes('COMMIT') ||
+                    upperStmt.includes('SELECT')) {
+
+                    // Filtrar statements que son solo comentarios multilínea
+                    const withoutComments = cleaned.replace(/\/\*[\s\S]*?\*\//g, '').trim();
+                    if (withoutComments.length > 3) {
+                        statements.push(cleaned);
+                    }
+                }
+            }
         }
 
         return statements;
@@ -672,6 +777,132 @@ class DatabaseSetupManager {
         }
     }
 
+    async verifyAndCompleteConfigurations() {
+        try {
+            this.log('\n⚙️  VERIFICANDO CONFIGURACIONES DEL SISTEMA...', 'bright');
+
+            // Verificar global_pdf_config
+            await this.verifyGlobalPdfConfig();
+
+        } catch (error) {
+            this.log(`⚠️ Error verificando configuraciones: ${error.message}`, 'yellow');
+        }
+    }
+
+    async verifyGlobalPdfConfig() {
+        try {
+            this.log('   📋 Configuración PDF global...', 'blue');
+
+            const [rows] = await this.connection.execute(
+                'SELECT * FROM global_pdf_config WHERE id = 1'
+            );
+
+            if (rows.length === 0) {
+                this.log('   ⚠️  No hay configuración PDF, creando...', 'yellow');
+                await this.insertDefaultPdfConfig();
+                return;
+            }
+
+            const config = rows[0];
+            let needsUpdate = false;
+            const updates = {};
+
+            // Verificar cada campo JSON y completar si está vacío
+            const jsonFields = {
+                'color_config': {
+                    'primary': '#2563eb',
+                    'secondary': '#64748b',
+                    'accent': '#f59e0b',
+                    'text': '#1f2937',
+                    'background': '#ffffff'
+                },
+                'font_config': {
+                    'title': 'Helvetica-Bold',
+                    'body': 'Helvetica',
+                    'metadata': 'Helvetica-Oblique',
+                    'signature': 'Times-Bold'
+                },
+                'layout_config': {
+                    'marginTop': 60,
+                    'marginBottom': 60,
+                    'marginLeft': 50,
+                    'marginRight': 50,
+                    'lineHeight': 1.6,
+                    'titleSize': 24,
+                    'bodySize': 12
+                },
+                'border_config': {
+                    'style': 'classic',
+                    'width': 2,
+                    'color': '#1f2937',
+                    'cornerRadius': 0,
+                    'showDecorative': true
+                },
+                'visual_config': {
+                    'showLogo': true,
+                    'showInstitution': true,
+                    'showDate': true,
+                    'showSignature': true,
+                    'showAuthors': true,
+                    'showAvalador': true
+                }
+            };
+
+            for (const [fieldName, defaultValue] of Object.entries(jsonFields)) {
+                const fieldValue = config[fieldName];
+
+                // Verificar si el campo está vacío o es un objeto vacío
+                if (!fieldValue ||
+                    (typeof fieldValue === 'string' && fieldValue === '{}') ||
+                    (typeof fieldValue === 'object' && Object.keys(fieldValue).length === 0)) {
+
+                    this.log(`      🔧 Completando ${fieldName}...`, 'yellow');
+                    updates[fieldName] = JSON.stringify(defaultValue);
+                    needsUpdate = true;
+                } else {
+                    this.log(`      ✅ ${fieldName}: Configurado`, 'green');
+                }
+            }
+
+            if (needsUpdate) {
+                // Construir query de UPDATE
+                const setClause = Object.entries(updates)
+                    .map(([field, value]) => `${field} = '${value}'`)
+                    .join(', ');
+
+                const updateQuery = `UPDATE global_pdf_config SET ${setClause} WHERE id = 1`;
+
+                await this.connection.execute(updateQuery);
+                this.log(`   ✅ Configuración PDF completada (${Object.keys(updates).length} campos actualizados)`, 'green');
+            } else {
+                this.log(`   ✅ Configuración PDF: Completa y actualizada`, 'green');
+            }
+
+        } catch (error) {
+            this.log(`   ❌ Error verificando configuración PDF: ${error.message}`, 'red');
+        }
+    }
+
+    async insertDefaultPdfConfig() {
+        const insertQuery = `
+            INSERT INTO global_pdf_config (
+                id, selected_template, 
+                color_config, font_config, layout_config, border_config, visual_config, aval_text_config
+            ) VALUES (
+                1, 'clasico',
+                '{"primary": "#2563eb", "secondary": "#64748b", "accent": "#f59e0b", "text": "#1f2937", "background": "#ffffff"}',
+                '{"title": "Helvetica-Bold", "body": "Helvetica", "metadata": "Helvetica-Oblique", "signature": "Times-Bold"}',
+                '{"marginTop": 60, "marginBottom": 60, "marginLeft": 50, "marginRight": 50, "lineHeight": 1.6, "titleSize": 24, "bodySize": 12}',
+                '{"style": "classic", "width": 2, "color": "#1f2937", "cornerRadius": 0, "showDecorative": true}',
+                '{"showLogo": true, "showInstitution": true, "showDate": true, "showSignature": true, "showAuthors": true, "showAvalador": true}',
+                '{"template": "Actuando como director del trabajo de investigación y/o tutor de la modalidad de grado: $modalidad, presentado por el estudiante/s $autores; informo a ustedes que cumplido el proceso de asesorías, alcanzados los objetivos y desarrollados debidamente los criterios de suficiencia académica propuestos, se completa el desarrollo de su propuesta de trabajo de grado titulado: $titulo; para lo cual se emite el concepto: APROBADO, por lo que se solicita la designación de jurados para su correspondiente evaluación, con el fin de formalizar su desarrollo.", "variables": ["$autores", "$titulo", "$modalidad", "$avalador", "$fecha", "$institucion", "$ubicacion"]}'
+            )
+        `;
+
+        await this.connection.execute(insertQuery);
+        this.log('  ✅ Configuración PDF por defecto creada', 'green');
+    }
+
     async createBackup() {
         try {
             this.log('💾 Creando backup de la base de datos...', 'blue');
@@ -790,8 +1021,6 @@ class DatabaseSetupManager {
                     'user_activity_log',
                     'user_keys',
                     'user_preferences',
-                    'vista_actividad_reciente',
-                    'vista_usuarios_activos',
                     'users',
                     'global_pdf_config',
                     'theme_config',
@@ -801,15 +1030,9 @@ class DatabaseSetupManager {
                 for (const tableName of clearOrder) {
                     if (tables.includes(tableName)) {
                         try {
-                            if (tableName.startsWith('vista_')) {
-                                // Para vistas, intentar recrear desde la definición original
-                                await this.connection.execute(`DROP VIEW IF EXISTS \`${tableName}\``);
-                                this.log(`  ✅ Vista eliminada: ${tableName}`, 'green');
-                            } else {
-                                // Para tablas, limpiar datos
-                                await this.connection.execute(`TRUNCATE TABLE \`${tableName}\``);
-                                this.log(`  ✅ Datos limpiados: ${tableName}`, 'green');
-                            }
+                            // Para tablas, limpiar datos
+                            await this.connection.execute(`TRUNCATE TABLE \`${tableName}\``);
+                            this.log(`  ✅ Datos limpiados: ${tableName}`, 'green');
                         } catch (error) {
                             this.log(`  ⚠️ Error limpiando ${tableName}: ${error.message}`, 'yellow');
                         }
@@ -880,44 +1103,6 @@ class DatabaseSetupManager {
                 INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address, created_at) VALUES
                 (1, 'account_created', 'Cuenta de administrador creada durante la instalación del sistema', '127.0.0.1', NOW()),
                 (2, 'account_created', 'Cuenta de propietario creada durante la instalación del sistema', '127.0.0.1', NOW())
-            `);
-
-            // Recrear vistas
-            await this.connection.execute(`
-                CREATE VIEW vista_actividad_reciente AS
-                SELECT
-                    ual.id,
-                    u.nombre_completo,
-                    u.usuario,
-                    ual.accion,
-                    ual.descripcion,
-                    ual.ip_address,
-                    ual.created_at
-                FROM user_activity_log ual
-                JOIN users u ON ual.user_id = u.id
-                WHERE ual.created_at >= (NOW() - INTERVAL 30 DAY)
-                ORDER BY ual.created_at DESC
-            `);
-
-            await this.connection.execute(`
-                CREATE VIEW vista_usuarios_activos AS
-                SELECT
-                    u.id,
-                    u.usuario,
-                    u.nombre_completo,
-                    u.email,
-                    u.organizacion,
-                    u.cargo,
-                    u.departamento,
-                    u.rol,
-                    u.estado_cuenta,
-                    u.ultimo_acceso,
-                    COUNT(uk.id) as total_llaves,
-                    COUNT(CASE WHEN uk.expiration_date > NOW() THEN 1 END) as llaves_activas
-                FROM users u
-                LEFT JOIN user_keys uk ON u.id = uk.user_id
-                WHERE u.estado_cuenta = 'activo'
-                GROUP BY u.id
             `);
 
             this.log('✅ Datos por defecto insertados correctamente', 'green');
@@ -1154,95 +1339,6 @@ class DatabaseSetupManager {
                 await this.connection.end();
             }
         }
-    }
-
-    parseSQLStatements(sqlContent) {
-        // Dividir el contenido SQL en statements individuales
-        const statements = [];
-        let currentStatement = '';
-        let inString = false;
-        let stringChar = '';
-        let inComment = false;
-        let commentType = '';
-
-        for (let i = 0; i < sqlContent.length; i++) {
-            const char = sqlContent[i];
-            const nextChar = sqlContent[i + 1] || '';
-
-            // Manejar comentarios
-            if (!inString && !inComment) {
-                if (char === '/' && nextChar === '*') {
-                    inComment = true;
-                    commentType = 'block';
-                    i++; // Saltar el siguiente *
-                    continue;
-                } else if (char === '-' && nextChar === '-') {
-                    inComment = true;
-                    commentType = 'line';
-                    i++; // Saltar el siguiente -
-                    continue;
-                } else if (char === '#') {
-                    inComment = true;
-                    commentType = 'line';
-                    continue;
-                }
-            }
-
-            // Salir de comentarios
-            if (inComment) {
-                if (commentType === 'block' && char === '*' && nextChar === '/') {
-                    inComment = false;
-                    commentType = '';
-                    i++; // Saltar el siguiente /
-                } else if (commentType === 'line' && char === '\n') {
-                    inComment = false;
-                    commentType = '';
-                }
-                continue;
-            }
-
-            // Manejar strings
-            if (!inComment) {
-                if (!inString && (char === '"' || char === "'")) {
-                    inString = true;
-                    stringChar = char;
-                } else if (inString && char === stringChar) {
-                    // Verificar si es escape
-                    let escapeCount = 0;
-                    let j = i - 1;
-                    while (j >= 0 && sqlContent[j] === '\\') {
-                        escapeCount++;
-                        j--;
-                    }
-                    if (escapeCount % 2 === 0) {
-                        inString = false;
-                        stringChar = '';
-                    }
-                }
-            }
-
-            // Agregar caracter al statement actual
-            if (!inComment) {
-                currentStatement += char;
-            }
-
-            // Verificar fin de statement
-            if (!inString && !inComment && char === ';') {
-                const trimmed = currentStatement.trim();
-                if (trimmed && !trimmed.startsWith('--') && !trimmed.startsWith('#')) {
-                    statements.push(trimmed);
-                }
-                currentStatement = '';
-            }
-        }
-
-        // Agregar último statement si no termina con ;
-        const trimmed = currentStatement.trim();
-        if (trimmed && !trimmed.startsWith('--') && !trimmed.startsWith('#')) {
-            statements.push(trimmed);
-        }
-
-        return statements;
     }
 }
 

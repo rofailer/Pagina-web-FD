@@ -288,7 +288,8 @@ class AdvancedConfiguration {
                 }
             });
             if (response.ok) {
-                const config = await response.json();
+                const result = await response.json();
+                const config = result.config; // Extraer el config del resultado
 
                 // Siempre obtener el nombre de institución de la configuración general
                 try {
@@ -370,6 +371,17 @@ class AdvancedConfiguration {
             this.setCheckboxValue('pdfShowSignature', config.visualConfig.showSignature);
             this.setCheckboxValue('pdfShowAuthors', config.visualConfig.showAuthors);
             this.setCheckboxValue('pdfShowAvalador', config.visualConfig.showAvalador);
+        }
+
+        // Configuración del texto del aval
+        if (config.avalTextConfig && config.avalTextConfig.template) {
+            this.setElementValue('pdfAvalText', config.avalTextConfig.template);
+            // Actualizar vista previa del texto del aval
+            setTimeout(() => {
+                if (window.updateAvalPreview) {
+                    window.updateAvalPreview();
+                }
+            }, 100);
         }
 
         // Logo path
@@ -514,6 +526,10 @@ class AdvancedConfiguration {
                 showSignature: document.getElementById('pdfShowSignature')?.checked !== false,
                 showAuthors: document.getElementById('pdfShowAuthors')?.checked !== false,
                 showAvalador: document.getElementById('pdfShowAvalador')?.checked !== false
+            },
+            avalTextConfig: {
+                template: document.getElementById('pdfAvalText')?.value,
+                variables: ['$autores', '$titulo', '$modalidad', '$avalador', '$fecha', '$institucion', '$ubicacion']
             }
         };
     }
@@ -693,7 +709,7 @@ class AdvancedConfiguration {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('admin_token')}`
                 },
                 body: JSON.stringify(config)
             });
@@ -908,114 +924,6 @@ class AdvancedConfiguration {
                 </div>
             </div>
         `;
-    }
-
-    getCurrentPdfConfig() {
-        return {
-            margins: {
-                top: document.getElementById('pdfMarginTop')?.value || 20,
-                bottom: document.getElementById('pdfMarginBottom')?.value || 20,
-                left: document.getElementById('pdfMarginLeft')?.value || 20,
-                right: document.getElementById('pdfMarginRight')?.value || 20
-            },
-            fontSize: document.getElementById('pdfFontSize')?.value || 12,
-            fontFamily: document.getElementById('pdfFontFamily')?.value || 'Arial',
-            signaturePosition: {
-                x: document.getElementById('signaturePositionX')?.value || 100,
-                y: document.getElementById('signaturePositionY')?.value || 100
-            },
-            signatureSize: {
-                width: document.getElementById('signatureWidth')?.value || 150,
-                height: document.getElementById('signatureHeight')?.value || 50
-            },
-            includeTimestamp: document.getElementById('includeTimestamp')?.checked || false,
-            includeMetadata: document.getElementById('includeMetadata')?.checked || false,
-            watermark: {
-                text: document.getElementById('watermarkText')?.value || '',
-                opacity: document.getElementById('watermarkOpacity')?.value || 0.3
-            }
-        };
-    }
-
-    async savePdfConfiguration() {
-        try {
-            const selectedTemplate = document.getElementById('pdfSelectedTemplate');
-            if (!selectedTemplate || !selectedTemplate.value) {
-                window.showNotification('Selecciona un template para configurar', 'warning');
-                return;
-            }
-
-            const config = await this.getCurrentPdfConfig();
-
-            // Obtener token de autenticación
-            const token = localStorage.getItem('token') || localStorage.getItem('admin_token');
-
-            const response = await fetch('/api/admin/pdf/config', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(config)
-            });
-
-            if (response.ok) {
-                window.showNotification('Configuración PDF guardada correctamente', 'success');
-            } else {
-                throw new Error('Error al guardar configuración');
-            }
-        } catch (error) {
-            console.error('Error guardando configuración PDF:', error);
-            window.showNotification('Error al guardar configuración PDF', 'error');
-        } finally {
-            this.adminPanel.hideLoading();
-        }
-    }
-
-    async generatePdfPreview() {
-        try {
-            const config = await this.getCurrentPdfConfig();
-
-            this.adminPanel.showLoading('Generando vista previa...');
-
-            // Obtener token de autenticación
-            const token = localStorage.getItem('token') || localStorage.getItem('admin_token');
-
-            const response = await fetch(`${this.adminPanel.apiBase}/pdf/preview`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(config)
-            });
-
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-
-                // Abrir PDF en nueva ventana
-                window.open(url, '_blank');
-
-                window.showNotification('Vista previa generada correctamente', 'success');
-            } else {
-                // Intentar obtener el mensaje de error del servidor
-                let errorMessage = 'Error al generar vista previa';
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || errorMessage;
-                } catch (e) {
-                    // Si no se puede parsear como JSON, usar el status
-                    errorMessage = `Error ${response.status}: ${response.statusText}`;
-                }
-                throw new Error(errorMessage);
-            }
-        } catch (error) {
-            console.error('Error generando vista previa:', error);
-            window.showNotification('Error al generar vista previa', 'error');
-        } finally {
-            this.adminPanel.hideLoading();
-        }
     }
 
     /* ========================================

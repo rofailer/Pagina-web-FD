@@ -10,6 +10,8 @@ const {
     drawElectronicSignature
 } = require('./base.template');
 
+const TemplateManager = require('./template.manager');
+
 /**
  * Dibujar template clásico completo - Formato carta académica
  */
@@ -56,7 +58,7 @@ async function drawClassicTemplate(page, width, height, data, helveticaFont, hel
     currentY = drawGreeting(page, width, height, currentY, fontObjects, primaryColor, marginLeft);
 
     // 4. CUERPO DEL TEXTO
-    currentY = drawMainContent(page, width, height, data, currentY, fontObjects, primaryColor, marginLeft, maxWidth);
+    currentY = await drawMainContent(page, width, height, data, currentY, fontObjects, primaryColor, marginLeft, maxWidth);
 
     // 5. DESPEDIDA
     currentY = drawClosing(page, width, height, currentY, fontObjects, primaryColor, marginLeft);
@@ -74,7 +76,7 @@ function drawLocationAndDate(page, width, height, data, currentY, fonts, primary
     const { rgb } = require('pdf-lib');
 
     // Ubicación (ciudad donde se hace)
-    const ubicacion = data.ubicacion || 'CARTAGENA DE INDIAS D, T Y C';
+    const ubicacion = data.ubicacion || TemplateManager.detectSystemLocation();
     const fecha = data.fecha || new Date().toLocaleDateString('es-ES', {
         year: 'numeric',
         month: 'long',
@@ -153,18 +155,28 @@ function drawGreeting(page, width, height, currentY, fonts, primaryColor, margin
 }
 
 /**
- * Dibujar contenido principal con texto justificado
+ * Dibujar contenido principal con texto justificado usando configuración dinámica
  */
-function drawMainContent(page, width, height, data, currentY, fonts, primaryColor, marginLeft, maxWidth) {
+async function drawMainContent(page, width, height, data, currentY, fonts, primaryColor, marginLeft, maxWidth) {
     const { rgb } = require('pdf-lib');
 
-    // Construir el texto principal dinámicamente
-    const autoresText = Array.isArray(data.autores) ? data.autores.join(', ') : (data.autores || 'el estudiante');
-    const tituloDocumento = cleanTextForPdf(data.titulo || 'el trabajo de investigación');
-    const avaladoPor = cleanTextForPdf(data.avaladoPor || 'el director del trabajo');
-    const modalidad = data.modalidad || 'Programa de Ingeniería Multimedia';
+    // Obtener el texto del aval dinámicamente
+    let mainText;
 
-    const mainText = `Actuando como director del trabajo de investigación y/o tutor de la modalidad de grado: ${modalidad}, presentado por el estudiante/s ${autoresText}; informo a ustedes que cumplido el proceso de asesorías, alcanzados los objetivos y desarrollados debidamente los criterios de suficiencia académica propuestos, se completa el desarrollo de su propuesta de trabajo de grado titulado: ${tituloDocumento}; para lo cual se emite el concepto: APROBADO, por lo que se solicita la designación de jurados para su correspondiente evaluación, con el fin de formalizar su desarrollo.`;
+    // Si hay contenido personalizado configurado, usar ese
+    if (data.contenidoAval) {
+        mainText = cleanTextForPdf(data.contenidoAval);
+    } else {
+        // Usar el sistema de texto dinámico del TemplateManager
+        try {
+            const { TemplateManager } = require('./template.manager');
+            const templateManager = new TemplateManager();
+            mainText = await templateManager.getAvalText(data.config, data);
+        } catch (error) {
+            console.error('Error obteniendo texto dinámico del aval:', error.message);
+            throw new Error('No se pudo obtener el texto del aval desde la configuración. Verifique la configuración del texto del aval en el panel de administración.');
+        }
+    }
 
     // Dividir el texto en líneas justificadas
     const lines = wrapTextJustified(mainText, maxWidth, fonts.body, 11);
@@ -494,7 +506,7 @@ function drawClassicTemplateCanvas(ctx, config, width, height, data) {
     ctx.fillStyle = colorConfig.primary || '#000000';
     ctx.font = '11px Arial';
     ctx.textAlign = 'left';
-    const ubicacion = data.ubicacion || 'CARTAGENA DE INDIAS D, T Y C';
+    const ubicacion = data.ubicacion || TemplateManager.detectSystemLocation();
     const fecha = data.fecha || new Date().toLocaleDateString('es-ES');
     ctx.fillText(`${ubicacion} ${fecha}`, marginLeft, currentY);
 

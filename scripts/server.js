@@ -542,7 +542,8 @@ app.get("/debug/visual-config", async (req, res) => {
 app.post("/sign-document", authenticate, upload.single("document"), async (req, res) => {
   const userId = req.userId;
   const keyPassword = req.body.keyPassword;
-  const { renderPdfWithTemplate } = require("./utils/pdfGenerator.backend");
+  const { renderPdfWithTemplate } = require("./templates/template.manager");
+  const TemplateManager = require("./templates/template.manager");
 
   try {
     // Obtener la llave privada activa del usuario
@@ -648,7 +649,7 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
         institucion: institutionName, // ✅ SIEMPRE usar el valor de la base de datos
         avaladoPor: userInfo[0].nombre,
         correoFirmante: userInfo[0].email || null,
-        ubicacion: req.body.ubicacion || 'CARTAGENA DE INDIAS D, T Y C',
+        ubicacion: req.body.ubicacion || TemplateManager.detectSystemLocation(),
         modalidad: req.body.modalidad || 'Programa de Ingeniería Multimedia',
         fecha: new Date().toLocaleDateString('es-CO', {
           year: 'numeric',

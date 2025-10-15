@@ -2788,6 +2788,17 @@ router.get('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
         let config;
         if (rows.length > 0) {
             const dbConfig = rows[0];
+
+            let parsedAvalTextConfig;
+            try {
+                parsedAvalTextConfig = typeof dbConfig.aval_text_config === 'string' ?
+                    JSON.parse(dbConfig.aval_text_config || '{}') :
+                    (dbConfig.aval_text_config || {});
+            } catch (error) {
+                console.error('Error parsing aval_text_config:', error);
+                parsedAvalTextConfig = {};
+            }
+
             config = {
                 selectedTemplate: dbConfig.selected_template,
                 logoPath: dbConfig.logo_path,
@@ -2796,6 +2807,7 @@ router.get('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
                 layoutConfig: typeof dbConfig.layout_config === 'string' ? JSON.parse(dbConfig.layout_config || '{}') : (dbConfig.layout_config || {}),
                 borderConfig: typeof dbConfig.border_config === 'string' ? JSON.parse(dbConfig.border_config || '{}') : (dbConfig.border_config || {}),
                 visualConfig: typeof dbConfig.visual_config === 'string' ? JSON.parse(dbConfig.visual_config || '{}') : (dbConfig.visual_config || {}),
+                avalTextConfig: parsedAvalTextConfig,
                 updatedAt: dbConfig.updated_at,
                 updatedBy: dbConfig.updated_by
             };
@@ -2876,14 +2888,18 @@ router.put('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
         const layoutConfig = JSON.stringify(configData.layoutConfig || {});
         const borderConfig = JSON.stringify(configData.borderConfig || {});
         const visualConfig = JSON.stringify(configData.visualConfig || {});
+        const avalTextConfig = JSON.stringify(configData.avalTextConfig || {
+            template: '',
+            variables: ['$autores', '$titulo', '$modalidad', '$avalador', '$fecha', '$institucion', '$ubicacion']
+        });
 
         // Insertar o actualizar configuración global
         await pool.execute(`
             INSERT INTO global_pdf_config (
                 id, selected_template, logo_path, color_config, font_config,
-                layout_config, border_config, visual_config, updated_by
+                layout_config, border_config, visual_config, aval_text_config, updated_by
             ) VALUES (
-                1, ?, ?, ?, ?, ?, ?, ?, ?
+                1, ?, ?, ?, ?, ?, ?, ?, ?, ?
             ) ON DUPLICATE KEY UPDATE
                 selected_template = VALUES(selected_template),
                 logo_path = VALUES(logo_path),
@@ -2892,6 +2908,7 @@ router.put('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
                 layout_config = VALUES(layout_config),
                 border_config = VALUES(border_config),
                 visual_config = VALUES(visual_config),
+                aval_text_config = VALUES(aval_text_config),
                 updated_by = VALUES(updated_by)
         `, [
             configData.selectedTemplate,
@@ -2901,6 +2918,7 @@ router.put('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
             layoutConfig,
             borderConfig,
             visualConfig,
+            avalTextConfig,
             adminUsername
         ]);
 
@@ -3012,6 +3030,61 @@ router.post('/api/admin/pdf/preview', authenticate, isAdmin, async (req, res) =>
             success: false,
             message: 'Error al generar vista previa del PDF',
             error: error.message
+        });
+    }
+});
+
+// Endpoint para obtener la ubicación del sistema
+router.get('/api/system/location', async (req, res) => {
+    try {
+        const os = require('os');
+
+        // Intentar obtener ubicación basada en configuración regional del sistema
+        let location = 'UBICACIÓN, PAÍS';
+
+        try {
+            // Obtener configuración regional
+            const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+            // Mapear algunos casos comunes
+            const locationMap = {
+                'es-CO': 'BOGOTÁ, COLOMBIA',
+                'es-MX': 'CIUDAD DE MÉXICO, MÉXICO',
+                'es-AR': 'BUENOS AIRES, ARGENTINA',
+                'es-ES': 'MADRID, ESPAÑA',
+                'en-US': 'NEW YORK, USA',
+                'en-GB': 'LONDON, UK'
+            };
+
+            // Mapear por timezone también
+            const timezoneMap = {
+                'America/Bogota': 'BOGOTÁ, COLOMBIA',
+                'America/Mexico_City': 'CIUDAD DE MÉXICO, MÉXICO',
+                'America/Argentina/Buenos_Aires': 'BUENOS AIRES, ARGENTINA',
+                'Europe/Madrid': 'MADRID, ESPAÑA',
+                'America/New_York': 'NEW YORK, USA',
+                'Europe/London': 'LONDON, UK'
+            };
+
+            location = locationMap[locale] || timezoneMap[timezone] || location;
+
+        } catch (error) {
+            console.warn('Error detectando ubicación:', error);
+        }
+
+        res.json({
+            success: true,
+            location: location,
+            hostname: os.hostname(),
+            platform: os.platform(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        });
+    } catch (error) {
+        console.error('Error obteniendo ubicación del sistema:', error);
+        res.status(500).json({
+            success: false,
+            location: 'UBICACIÓN, PAÍS'
         });
     }
 });

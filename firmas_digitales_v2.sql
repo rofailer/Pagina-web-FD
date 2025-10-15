@@ -104,6 +104,9 @@ CREATE TABLE global_pdf_config (
   -- Configuración de elementos visuales
   visual_config JSON DEFAULT ('{"showLogo": true, "showInstitution": true, "showDate": true, "showSignature": true, "showAuthors": true, "showAvalador": true}'),
 
+  -- Configuración del texto del aval con variables dinámicas
+  aval_text_config JSON DEFAULT ('{"template": "Concepto de aval: $modalidad desarrollado por $autores con título $titulo. Concepto: APROBADO. Solicito designación de jurados.", "variables": ["$autores", "$titulo", "$modalidad", "$avalador", "$fecha", "$institucion", "$ubicacion"]}') COMMENT 'Configuración del texto del aval con variables dinámicas',
+
   -- Metadatos de auditoría
   updated_by VARCHAR(100) DEFAULT 'system',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -204,7 +207,7 @@ CREATE INDEX idx_user_activity_created_at ON user_activity_log(created_at);
 -- Insertar configuración PDF por defecto (reemplaza global_template_config)
 INSERT INTO global_pdf_config (
   id, selected_template, logo_path,
-  color_config, font_config, layout_config, border_config, visual_config
+  color_config, font_config, layout_config, border_config, visual_config, aval_text_config
 ) VALUES (
   1,
   'clasico',
@@ -213,7 +216,8 @@ INSERT INTO global_pdf_config (
   '{"title": "Helvetica-Bold", "body": "Helvetica", "metadata": "Helvetica-Oblique", "signature": "Times-Bold"}',
   '{"marginTop": 60, "marginBottom": 60, "marginLeft": 50, "marginRight": 50, "lineHeight": 1.6, "titleSize": 24, "bodySize": 12}',
   '{"style": "classic", "width": 2, "color": "#1f2937", "cornerRadius": 0, "showDecorative": true}',
-  '{"showLogo": true, "showInstitution": true, "showDate": true, "showSignature": true, "showAuthors": true, "showAvalador": true}'
+  '{"showLogo": true, "showInstitution": true, "showDate": true, "showSignature": true, "showAuthors": true, "showAvalador": true}',
+  '{"template": "Concepto de aval: $modalidad desarrollado por $autores con título $titulo. Concepto: APROBADO. Solicito designación de jurados.", "variables": ["$autores", "$titulo", "$modalidad", "$avalador", "$fecha", "$institucion", "$ubicacion"]}'
 );
 
 -- Insertar configuración de tema por defecto
@@ -423,17 +427,17 @@ INSERT INTO users (
     NOW()
 ),
 (
-    'José Martínez',
-    'jose.martinez',
+    'Ricardo Vega',
+    'ricardo.vega',
     '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
     'profesor',
-    'José Martínez García',
-    'jose.martinez@universidad.edu',
-    'Universidad Ejemplo',
-    'Profesor de Ingeniería de Sistemas con experiencia en desarrollo de software.',
-    'Profesor Asociado',
+    'Dr. Ricardo Antonio Vega Mendoza',
+    'ricardo.vega@universidad.edu',
+    'Universidad Nacional Tecnológica',
+    'Doctor en Ingeniería de Sistemas con especialización en desarrollo de software y gestión documental.',
+    'Profesor Titular',
     'Ingeniería de Sistemas',
-    'Magíster en Ingeniería',
+    'Doctor en Ingeniería',
     'America/Bogota',
     'es',
     'activo',
@@ -528,11 +532,11 @@ INSERT INTO user_preferences (user_id, clave, valor) VALUES
 ((SELECT id FROM users WHERE usuario = 'ana.lopez'), 'dashboard_layout', 'summary'),
 ((SELECT id FROM users WHERE usuario = 'ana.lopez'), 'auto_logout_minutes', '45'),
 
-((SELECT id FROM users WHERE usuario = 'jose.martinez'), 'theme', 'light'),
-((SELECT id FROM users WHERE usuario = 'jose.martinez'), 'notifications_frequency', 'daily'),
-((SELECT id FROM users WHERE usuario = 'jose.martinez'), 'default_signature_template', 'minimalista'),
-((SELECT id FROM users WHERE usuario = 'jose.martinez'), 'dashboard_layout', 'detailed'),
-((SELECT id FROM users WHERE usuario = 'jose.martinez'), 'auto_logout_minutes', '60'),
+((SELECT id FROM users WHERE usuario = 'ricardo.vega'), 'theme', 'light'),
+((SELECT id FROM users WHERE usuario = 'ricardo.vega'), 'notifications_frequency', 'daily'),
+((SELECT id FROM users WHERE usuario = 'ricardo.vega'), 'default_signature_template', 'minimalista'),
+((SELECT id FROM users WHERE usuario = 'ricardo.vega'), 'dashboard_layout', 'detailed'),
+((SELECT id FROM users WHERE usuario = 'ricardo.vega'), 'auto_logout_minutes', '60'),
 
 ((SELECT id FROM users WHERE usuario = 'laura.sanchez'), 'theme', 'dark'),
 ((SELECT id FROM users WHERE usuario = 'laura.sanchez'), 'notifications_frequency', 'immediate'),
@@ -567,51 +571,12 @@ INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address) VALUES
 ((SELECT id FROM users WHERE usuario = 'maria.gonzalez'), 'account_created', 'Cuenta de profesora de Matemáticas creada durante la instalación del sistema', '127.0.0.1'),
 ((SELECT id FROM users WHERE usuario = 'carlos.rodriguez'), 'account_created', 'Cuenta de profesor de Física creada durante la instalación del sistema', '127.0.0.1'),
 ((SELECT id FROM users WHERE usuario = 'ana.lopez'), 'account_created', 'Cuenta de profesora de Literatura creada durante la instalación del sistema', '127.0.0.1'),
-((SELECT id FROM users WHERE usuario = 'jose.martinez'), 'account_created', 'Cuenta de profesor de Ingeniería de Sistemas creada durante la instalación del sistema', '127.0.0.1'),
+((SELECT id FROM users WHERE usuario = 'ricardo.vega'), 'account_created', 'Cuenta de profesor de Ingeniería de Sistemas creada durante la instalación del sistema', '127.0.0.1'),
 ((SELECT id FROM users WHERE usuario = 'laura.sanchez'), 'account_created', 'Cuenta de profesora de Biología creada durante la instalación del sistema', '127.0.0.1'),
 ((SELECT id FROM users WHERE usuario = 'pedro.ramirez'), 'account_created', 'Cuenta de profesor de Historia creada durante la instalación del sistema', '127.0.0.1');
 
 -- ====================================
--- 12. VISTAS ÚTILES PARA CONSULTAS FRECUENTES (SIMPLIFICADO)
--- ====================================
-
--- Vista para usuarios activos con información completa
-CREATE VIEW vista_usuarios_activos AS
-SELECT
-    u.id,
-    u.usuario,
-    u.nombre_completo,
-    u.email,
-    u.organizacion,
-    u.cargo,
-    u.departamento,
-    u.rol,
-    u.estado_cuenta,
-    u.ultimo_acceso,
-    COUNT(uk.id) as total_llaves,
-    COUNT(CASE WHEN uk.expiration_date > NOW() THEN 1 END) as llaves_activas
-FROM users u
-LEFT JOIN user_keys uk ON u.id = uk.user_id
-WHERE u.estado_cuenta = 'activo'
-GROUP BY u.id;
-
--- Vista para actividad reciente
-CREATE VIEW vista_actividad_reciente AS
-SELECT
-    ual.id,
-    u.nombre_completo,
-    u.usuario,
-    ual.accion,
-    ual.descripcion,
-    ual.ip_address,
-    ual.created_at
-FROM user_activity_log ual
-JOIN users u ON ual.user_id = u.id
-WHERE ual.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-ORDER BY ual.created_at DESC;
-
--- ====================================
--- 14. FINALIZAR TRANSACCIÓN
+-- 12. FINALIZAR TRANSACCIÓN
 -- ====================================
 
 COMMIT;
@@ -632,7 +597,7 @@ AND TABLE_NAME IN ('users', 'user_keys', 'global_pdf_config', 'theme_config', 'u
 SELECT 'USUARIOS CREADOS:' as info;
 SELECT usuario, nombre_completo, email, rol, estado_cuenta
 FROM users
-WHERE usuario IN ('admin', 'owner', 'prueba', 'maria.gonzalez', 'carlos.rodriguez', 'ana.lopez', 'jose.martinez', 'laura.sanchez', 'pedro.ramirez');
+WHERE usuario IN ('admin', 'owner', 'prueba', 'maria.gonzalez', 'carlos.rodriguez', 'ana.lopez', 'ricardo.vega', 'laura.sanchez', 'pedro.ramirez');
 
 SELECT 'CONFIGURACIÓN GLOBAL:' as info;
 SELECT selected_template as plantilla_seleccionada, logo_path as ruta_logo,
@@ -662,7 +627,7 @@ FROM global_pdf_config;
 - maria.gonzalez / 123 (Profesora de Matemáticas)
 - carlos.rodriguez / 123 (Profesor de Física)
 - ana.lopez / 123 (Profesora de Literatura)
-- jose.martinez / 123 (Profesor de Ingeniería de Sistemas)
+- ricardo.vega / 123 (Dr. Ricardo Antonio Vega Mendoza - Profesor de Ingeniería de Sistemas)
 - laura.sanchez / 123 (Profesora de Biología)
 - pedro.ramirez / 123 (Profesor de Historia)
 
@@ -678,7 +643,7 @@ FROM global_pdf_config;
 Usuario: admin | Contraseña: 123
 Usuario: owner | Contraseña: 123
 Usuario: prueba | Contraseña: 123
-Usuarios de prueba: maria.gonzalez, carlos.rodriguez, ana.lopez, jose.martinez, laura.sanchez, pedro.ramirez | Contraseña: 123
+Usuarios de prueba: maria.gonzalez, carlos.rodriguez, ana.lopez, ricardo.vega, laura.sanchez, pedro.ramirez | Contraseña: 123
 
 ⚠️ IMPORTANTE:
 - Las contraseñas están hasheadas con bcrypt

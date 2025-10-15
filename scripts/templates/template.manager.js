@@ -17,6 +17,39 @@ class TemplateManager {
     }
 
     /**
+     * Detecta la ubicación basada en la configuración regional del sistema
+     */
+    static detectSystemLocation() {
+        try {
+            const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+            const locationMap = {
+                'es-CO': 'BOGOTÁ, COLOMBIA',
+                'es-MX': 'CIUDAD DE MÉXICO, MÉXICO',
+                'es-AR': 'BUENOS AIRES, ARGENTINA',
+                'es-ES': 'MADRID, ESPAÑA',
+                'en-US': 'NEW YORK, USA',
+                'en-GB': 'LONDON, UK'
+            };
+
+            const timezoneMap = {
+                'America/Bogota': 'BOGOTÁ, COLOMBIA',
+                'America/Mexico_City': 'CIUDAD DE MÉXICO, MÉXICO',
+                'America/Argentina/Buenos_Aires': 'BUENOS AIRES, ARGENTINA',
+                'Europe/Madrid': 'MADRID, ESPAÑA',
+                'America/New_York': 'NEW YORK, USA',
+                'Europe/London': 'LONDON, UK'
+            };
+
+            return locationMap[locale] || timezoneMap[timezone] || 'UBICACIÓN, PAÍS';
+        } catch (error) {
+            console.warn('Error detectando ubicación:', error);
+            return 'UBICACIÓN, PAÍS';
+        }
+    }
+
+    /**
      * Obtener configuración global desde la base de datos
      */
     async getGlobalConfig() {
@@ -254,6 +287,96 @@ class TemplateManager {
             signatureData: data.signatureData, // No limpiar los datos de firma
             config: data.config // ✅ Asegurar que la config se pase
         };
+    }
+
+    /**
+     * Reemplaza variables dinámicas en el texto del aval
+     * @param {string} template - Texto template con variables como $autores, $titulo, etc.
+     * @param {Object} data - Datos del documento con valores reales
+     * @returns {string} - Texto con variables reemplazadas
+     */
+    async replaceAvalVariables(template, data) {
+        if (!template || typeof template !== 'string') {
+            return 'Este documento ha sido procesado y avalado digitalmente.';
+        }
+
+        let processedText = template;
+
+        // Obtener institución real de configuración
+        let institutionName = data.institucion || 'la institución';
+        try {
+            const pool = require('../db/pool');
+            const [institutionRows] = await pool.execute('SELECT institution_name FROM visual_config WHERE id = 1');
+            if (institutionRows.length > 0 && institutionRows[0].institution_name) {
+                institutionName = institutionRows[0].institution_name;
+            }
+        } catch (error) {
+            console.warn('Error obteniendo nombre de institución:', error);
+        }
+
+        // Obtener ubicación real del sistema
+        let locationName = data.ubicacion || TemplateManager.detectSystemLocation();
+
+        // Mapeo de variables a valores del documento
+        const variableMap = {
+            '$autores': Array.isArray(data.autores) ? data.autores.join(', ') : (data.autores || 'el estudiante'),
+            '$titulo': data.titulo || 'el trabajo de investigación',
+            '$modalidad': data.modalidad || 'Programa de Ingeniería Multimedia',
+            '$avalador': data.avaladoPor || 'el director del trabajo',
+            '$fecha': data.fecha || new Date().toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }),
+            '$institucion': institutionName,
+            '$ubicacion': locationName
+        };
+
+        // Reemplazar cada variable por su valor
+        Object.keys(variableMap).forEach(variable => {
+            const value = variableMap[variable];
+            // Usar expresión regular global para reemplazar todas las ocurrencias
+            const regex = new RegExp('\\' + variable, 'g');
+            processedText = processedText.replace(regex, value);
+        });
+
+        return cleanTextForPdf(processedText);
+    }
+
+    /**
+     * Obtiene el texto del aval desde la configuración global o usa el por defecto
+     * @param {Object} config - Configuración del PDF
+     * @param {Object} data - Datos del documento
+     * @returns {string} - Texto del aval procesado
+     */
+    async getAvalText(config, data) {
+        try {
+            // Intentar obtener el texto desde la configuración de la base de datos
+            if (config && config.avalTextConfig && config.avalTextConfig.template) {
+                return await this.replaceAvalVariables(config.avalTextConfig.template, data);
+            }
+
+            // Si no hay configuración en config, intentar obtenerla de la base de datos
+            const pool = require('../db/pool');
+            const [rows] = await pool.execute(
+                'SELECT aval_text_config FROM global_pdf_config WHERE id = 1'
+            );
+
+            if (rows.length > 0 && rows[0].aval_text_config) {
+                const avalTextConfig = typeof rows[0].aval_text_config === 'string'
+                    ? JSON.parse(rows[0].aval_text_config)
+                    : rows[0].aval_text_config;
+
+                if (avalTextConfig.template) {
+                    return await this.replaceAvalVariables(avalTextConfig.template, data);
+                }
+            }
+        } catch (error) {
+            console.warn('Error obteniendo texto del aval desde BD:', error.message);
+        }
+
+        // Fallback: lanzar error si no se puede obtener de BD
+        throw new Error('No se pudo obtener el texto del aval desde la base de datos y no hay fallback configurado');
     }
 
     /**

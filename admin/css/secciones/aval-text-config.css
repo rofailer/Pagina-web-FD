@@ -1,0 +1,152 @@
+/* ========================================
+   ESTILOS PARA TEXTO DEL AVAL CONFIGURABLE
+   ======================================== */
+
+/* Editor de texto del aval */
+.aval-text-editor {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 200px;
+}
+
+/* Grid de variables dinámicas */
+.variables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--admin-bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--admin-border);
+}
+
+/* Items de variables */
+.variable-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: var(--admin-bg);
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.variable-item:hover {
+  background: var(--admin-accent-light);
+  border-color: var(--admin-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.variable-item code {
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--admin-accent);
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.variable-item span {
+  font-size: 12px;
+  color: var(--admin-text-secondary);
+  line-height: 1.4;
+}
+
+/* Sección de vista previa */
+.text-preview-section {
+  margin-top: 20px;
+}
+
+.text-preview-section h4 {
+  margin-bottom: 12px;
+  color: var(--admin-text);
+  font-size: 16px;
+}
+
+.text-preview {
+  background: var(--admin-bg-secondary);
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  font-family: "Times New Roman", serif;
+  line-height: 1.6;
+  min-height: 100px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.text-preview p {
+  margin: 0;
+  text-align: justify;
+  color: var(--admin-text);
+}
+
+.text-preview .variable-highlight {
+  background: var(--admin-accent-light);
+  color: var(--admin-accent);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+/* Responsive design para móviles */
+@media (max-width: 768px) {
+  .variables-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .variable-item {
+    padding: 10px;
+  }
+
+  .aval-text-editor {
+    min-height: 150px;
+  }
+}
+
+/* Animación para inserción de variables */
+.variable-inserted {
+  background: var(--admin-accent-light) !important;
+  animation: highlight-fade 1s ease-out;
+}
+
+@keyframes highlight-fade {
+  0% {
+    background: var(--admin-accent) !important;
+    color: white;
+  }
+  100% {
+    background: var(--admin-accent-light) !important;
+    color: var(--admin-text);
+  }
+}
+
+/* Mejoras visuales adicionales */
+.admin-section h3 svg {
+  color: var(--admin-accent);
+  margin-right: 8px;
+}
+
+.text-preview-section button {
+  margin-top: 8px;
+}
+
+/* Estados de validación para el textarea */
+.aval-text-editor.error {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+}
+
+.aval-text-editor.success {
+  border-color: #28a745;
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25);
+}

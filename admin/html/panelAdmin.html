@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="/admin/css/panelAdmin.css" />
     <link rel="stylesheet" href="/admin/css/secciones/database.css" />
     <link rel="stylesheet" href="/admin/css/secciones/backgrounds.css" />
+    <link rel="stylesheet" href="/admin/css/secciones/aval-text-config.css" />
     <link rel="stylesheet" href="/css/themeSelector.css" />
     <link rel="stylesheet" href="/css/restoreConfirmModal.css" />
 
@@ -108,6 +109,116 @@
               // Sin animación
             }
           };
+
+          // ========================================
+          // FUNCIONES PARA TEXTO DEL AVAL CONFIGURABLE
+          // ========================================
+
+          // Función para insertar variables en el textarea
+          window.insertVariable = function(variable) {
+            const textarea = document.getElementById('pdfAvalText');
+            if (!textarea) return;
+
+            const cursorPos = textarea.selectionStart;
+            const textBefore = textarea.value.substring(0, cursorPos);
+            const textAfter = textarea.value.substring(textarea.selectionEnd);
+            
+            // Si es un salto de línea, insertar un salto de línea real
+            let insertText;
+            if (variable === '\\n') {
+              insertText = '\n';
+            } else {
+              insertText = variable;
+            }
+            
+            // Insertar variable en posición del cursor
+            textarea.value = textBefore + insertText + textAfter;
+            
+            // Restaurar foco y posición del cursor
+            textarea.focus();
+            textarea.selectionStart = textarea.selectionEnd = cursorPos + insertText.length;
+            
+            // Efecto visual de inserción
+            textarea.classList.add('variable-inserted');
+            setTimeout(() => {
+              textarea.classList.remove('variable-inserted');
+            }, 1000);
+
+            // Actualizar vista previa automáticamente
+            updateAvalPreview();
+          };
+
+          // Función para actualizar vista previa del texto
+          window.updateAvalPreview = async function() {
+            const textarea = document.getElementById('pdfAvalText');
+            const preview = document.getElementById('avalTextPreview');
+            
+            if (!textarea || !preview) return;
+
+            let text = textarea.value.trim();
+            
+            if (!text) {
+              preview.innerHTML = '<p><em>Escribe texto en el editor para ver la vista previa.</em></p>';
+              return;
+            }
+
+            // Obtener datos reales de configuración
+            let institutionName = 'Universidad Nacional Tecnológica'; // Fallback temporal
+            let locationName = 'UBICACIÓN, PAÍS'; // Fallback temporal
+            
+            try {
+              // Obtener nombre de institución real
+              const institutionResponse = await fetch('/api/config/institution', {
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+              });
+              if (institutionResponse.ok) {
+                const institutionData = await institutionResponse.json();
+                institutionName = institutionData.institution_name || institutionName;
+              }
+              
+              // Obtener ubicación real de la máquina
+              const locationResponse = await fetch('/api/system/location');
+              if (locationResponse.ok) {
+                const locationData = await locationResponse.json();
+                locationName = locationData.location || locationName;
+              }
+            } catch (error) {
+              console.warn('Error obteniendo datos reales:', error);
+            }
+
+            // Datos de ejemplo para la vista previa con valores reales donde sea posible
+            const exampleData = {
+              '$autores': 'Ana Sofía Ramírez Torres, Carlos Miguel Herrera López',
+              '$titulo': 'SISTEMA INTELIGENTE DE GESTIÓN DOCUMENTAL PARA INSTITUCIONES ACADÉMICAS',
+              '$modalidad': 'Ingeniería de Sistemas',
+              '$avalador': 'DR. RICARDO ANTONIO VEGA MENDOZA',
+              '$fecha': new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }),
+              '$institucion': institutionName,
+              '$ubicacion': locationName
+            };
+
+            // Reemplazar variables por valores de ejemplo
+            let previewText = text;
+            Object.keys(exampleData).forEach(variable => {
+              const value = exampleData[variable];
+              const highlightedValue = `<span class="variable-highlight">${value}</span>`;
+              previewText = previewText.replace(new RegExp('\\' + variable, 'g'), highlightedValue);
+            });
+
+            preview.innerHTML = `<p>${previewText}</p>`;
+          };
+
+          // Inicializar vista previa automática
+          const avalTextarea = document.getElementById('pdfAvalText');
+          if (avalTextarea) {
+            // Actualizar vista previa cuando se escriba
+            avalTextarea.addEventListener('input', updateAvalPreview);
+            
+            // Actualizar vista previa inicial
+            setTimeout(updateAvalPreview, 100);
+          }
         });
       })();
     </script>
@@ -1570,6 +1681,153 @@
                 </div>
               </div>
             </div>
+
+            <!-- SECCIÓN 7: TEXTO DEL AVAL CONFIGURABLE -->
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <polyline
+                    points="14,2 14,8 20,8"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <line
+                    x1="16"
+                    y1="13"
+                    x2="8"
+                    y2="13"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <line
+                    x1="16"
+                    y1="17"
+                    x2="8"
+                    y2="17"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Texto del Aval Configurable
+              </h3>
+
+              <div class="admin-form-grid">
+                <div class="admin-form-group full-width">
+                  <label for="pdfAvalText">Contenido del Texto del Aval</label>
+                  <textarea
+                    id="pdfAvalText"
+                    class="admin-input aval-text-editor"
+                    rows="8"
+                    placeholder="Escribe aquí el texto del aval que aparecerá en los PDFs..."
+                  ></textarea>
+                  <span class="admin-input-help">
+                    Texto principal que aparecerá en el PDF del aval. Utiliza las variables dinámicas disponibles.
+                  </span>
+                </div>
+
+                <div class="admin-form-group full-width">
+                  <h4>Variables Dinámicas Disponibles</h4>
+                  <div class="variables-grid">
+                    <div class="variable-item" onclick="insertVariable('$autores')">
+                      <code>$autores</code>
+                      <span>Nombres de los autores del trabajo</span>
+                    </div>
+                    <div class="variable-item" onclick="insertVariable('$titulo')">
+                      <code>$titulo</code>
+                      <span>Título del trabajo de grado</span>
+                    </div>
+                    <div class="variable-item" onclick="insertVariable('$modalidad')">
+                      <code>$modalidad</code>
+                      <span>Modalidad de grado (ej: Programa de Ingeniería)</span>
+                    </div>
+                    <div class="variable-item" onclick="insertVariable('$avalador')">
+                      <code>$avalador</code>
+                      <span>Nombre de quien avala el documento</span>
+                    </div>
+                    <div class="variable-item" onclick="insertVariable('$fecha')">
+                      <code>$fecha</code>
+                      <span>Fecha actual del documento</span>
+                    </div>
+                    <div class="variable-item" onclick="insertVariable('$institucion')">
+                      <code>$institucion</code>
+                      <span>Nombre de la institución</span>
+                    </div>
+                    <div class="variable-item" onclick="insertVariable('$ubicacion')">
+                      <code>$ubicacion</code>
+                      <span>Ubicación donde se emite el documento</span>
+                    </div>
+                    <div class="variable-item salto-linea" onclick="insertVariable('\\n')">
+                      <code>\\n</code>
+                      <span>Salto de línea (nueva línea en el texto)</span>
+                    </div>
+                  </div>
+                  <span class="admin-input-help">
+                    Haz clic en cualquier variable para insertarla en el texto del aval.
+                  </span>
+                </div>
+
+                <div class="admin-form-group full-width">
+                  <div class="text-preview-section">
+                    <h4>Vista Previa del Texto</h4>
+                    <div class="text-preview" id="avalTextPreview">
+                      <p>La vista previa aparecerá aquí con las variables reemplazadas por valores de ejemplo.</p>
+                    </div>
+                    <button type="button" class="admin-btn secondary" onclick="updateAvalPreview()">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        />
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="3"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        />
+                      </svg>
+                      Actualizar Vista Previa
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 8: LOGO INSTITUCIONAL -->
+            <div class="admin-section">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    ry="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <circle
+                    cx="8.5"
+                    cy="8.5"
+                    r="1.5"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M21 15l-5-5L5 21"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                Logo Institucional
+              </h3>
 
             <!-- SECCIÓN 7: LOGO INSTITUCIONAL -->
             <div class="admin-section">

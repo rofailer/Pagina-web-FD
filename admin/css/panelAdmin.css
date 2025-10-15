@@ -667,3 +667,27 @@
     flex-direction: column;
   }
 }
+
+/* Estilos para la vista previa del texto del aval */
+.variable-highlight {
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+#avalPreview {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  min-height: 80px;
+  line-height: 1.5;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+#avalPreview em {
+  color: #6b7280;
+  font-style: italic;
+}
