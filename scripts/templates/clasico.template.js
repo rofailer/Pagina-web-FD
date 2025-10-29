@@ -18,288 +18,159 @@ const TemplateManager = require('./template.manager');
 async function drawClassicTemplate(page, width, height, data, helveticaFont, helveticaBold, timesFont, timesBold, config, pdfDoc) {
     const { rgb } = require('pdf-lib');
 
-    // Extraer configuración
+    // Extraer configuración global simplificada
     const templateConfig = data.config || {};
-    const colorConfig = templateConfig.colorConfig || {};
-    const fontConfig = templateConfig.fontConfig || {};
-    const layoutConfig = templateConfig.layoutConfig || {};
-    const visualConfig = templateConfig.visualConfig || {};
-
-    // Preparar fuentes
-    const fontObjects = {
-        title: fontConfig.title === 'Times-Bold' ? timesBold : helveticaBold,
-        body: fontConfig.body === 'Times-Roman' ? timesFont : helveticaFont,
-        signature: fontConfig.signature === 'Times-Bold' ? timesBold : helveticaBold,
-        helvetica: helveticaFont,
-        helveticaBold: helveticaBold,
-        times: timesFont,
-        timesBold: timesBold
-    };
-
-    // Colores
-    const primaryColor = hexToRgb(colorConfig.primary || '#000000');
-    const accentColor = hexToRgb(colorConfig.accent || '#000000');
-
-    // Márgenes
-    const marginLeft = layoutConfig.marginLeft || 60;
-    const marginRight = layoutConfig.marginRight || 60;
-    const marginTop = layoutConfig.marginTop || 80;
+    // Usar solo color y fuente general
+    const color = (templateConfig.colorConfig && templateConfig.colorConfig.text) || '#000000';
+    const fontFamily = (templateConfig.fontConfig && templateConfig.fontConfig.body) || 'Times-Roman';
+    // Preparar fuente
+    let fontObj = helveticaFont;
+    if (fontFamily === 'Times-Roman' || fontFamily === 'Times New Roman') fontObj = timesFont;
+    // Márgenes fijos
+    const marginLeft = 60;
+    const marginRight = 60;
+    const marginTop = 80;
     const maxWidth = width - marginLeft - marginRight;
-
     let currentY = marginTop;
 
     // 1. UBICACIÓN Y FECHA (arriba a la izquierda)
-    currentY = drawLocationAndDate(page, width, height, data, currentY, fontObjects, primaryColor, marginLeft);
-
+    currentY = drawLocationAndDateSimple(page, width, height, data, currentY, fontObj, color, marginLeft);
     // 2. DESTINATARIOS
-    currentY = drawRecipients(page, width, height, data, currentY, fontObjects, primaryColor, marginLeft);
-
-    // 3. SALUDO
-    currentY = drawGreeting(page, width, height, currentY, fontObjects, primaryColor, marginLeft);
-
-    // 4. CUERPO DEL TEXTO
-    currentY = await drawMainContent(page, width, height, data, currentY, fontObjects, primaryColor, marginLeft, maxWidth);
-
-    // 5. DESPEDIDA
-    currentY = drawClosing(page, width, height, currentY, fontObjects, primaryColor, marginLeft);
-
-    // 6. ÁREA DE FIRMA
-    await drawSignatureArea(page, width, height, data, currentY, fontObjects, primaryColor, accentColor, marginLeft, pdfDoc);
-
+    currentY = drawRecipientsSimple(page, width, height, data, currentY, fontObj, color, marginLeft);
+    // 3. TEXTO DEL AVAL COMPLETO (incluye saludo, cuerpo y despedida si el usuario lo desea)
+    currentY = await drawFullAvalText(page, width, height, data, currentY, fontObj, color, marginLeft, maxWidth);
+    // 4. ÁREA DE FIRMA
+    await drawSignatureAreaSimple(page, width, height, data, currentY, fontObj, color, marginLeft, pdfDoc);
     return currentY;
 }
 
-/**
- * Dibujar ubicación y fecha
- */
-function drawLocationAndDate(page, width, height, data, currentY, fonts, primaryColor, marginLeft) {
+// Dibuja el texto completo del aval (incluyendo saltos de línea y cualquier saludo/despedida que el usuario haya puesto)
+async function drawFullAvalText(page, width, height, data, currentY, fontObj, color, marginLeft, maxWidth) {
     const { rgb } = require('pdf-lib');
-
-    // Ubicación (ciudad donde se hace)
-    const ubicacion = data.ubicacion || TemplateManager.detectSystemLocation();
-    const fecha = data.fecha || new Date().toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-
-    const locationText = `${ubicacion} ${fecha}`;
-
-    page.drawText(locationText, {
-        x: marginLeft,
-        y: canvasToPdfY(currentY, height),
-        size: 11,
-        font: fonts.body,
-        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
-    });
-
-    return currentY + 40; // Espacio después de la fecha
-}
-
-/**
- * Dibujar destinatarios
- */
-function drawRecipients(page, width, height, data, currentY, fonts, primaryColor, marginLeft) {
-    const { rgb } = require('pdf-lib');
-
-    // SEÑORES:
-    page.drawText('Señores:', {
-        x: marginLeft,
-        y: canvasToPdfY(currentY, height),
-        size: 11,
-        font: fonts.body,
-        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
-    });
-
-    currentY += 20;
-
-    // COMITÉ DE INVESTIGACIÓN DE FACULTAD
-    page.drawText('COMITÉ DE INVESTIGACIÓN DE FACULTAD', {
-        x: marginLeft,
-        y: canvasToPdfY(currentY, height),
-        size: 11,
-        font: fonts.helveticaBold,
-        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
-    });
-
-    currentY += 15;
-
-    // Nombre de la institución
-    const institucion = cleanTextForPdf(data.institucion);
-    page.drawText(institucion, {
-        x: marginLeft,
-        y: canvasToPdfY(currentY, height),
-        size: 11,
-        font: fonts.helveticaBold,
-        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
-    });
-
-    return currentY + 40; // Espacio después de los destinatarios
-}
-
-/**
- * Dibujar saludo
- */
-function drawGreeting(page, width, height, currentY, fonts, primaryColor, marginLeft) {
-    const { rgb } = require('pdf-lib');
-
-    page.drawText('Respetados señores:', {
-        x: marginLeft,
-        y: canvasToPdfY(currentY, height),
-        size: 11,
-        font: fonts.body,
-        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
-    });
-
-    return currentY + 30; // Espacio después del saludo
-}
-
-/**
- * Dibujar contenido principal con texto justificado usando configuración dinámica
- */
-async function drawMainContent(page, width, height, data, currentY, fonts, primaryColor, marginLeft, maxWidth) {
-    const { rgb } = require('pdf-lib');
-
-    // Obtener el texto del aval dinámicamente
     let mainText;
-
-    // Si hay contenido personalizado configurado, usar ese
     if (data.contenidoAval) {
         mainText = cleanTextForPdf(data.contenidoAval);
     } else {
-        // Usar el sistema de texto dinámico del TemplateManager
         try {
             const { TemplateManager } = require('./template.manager');
             const templateManager = new TemplateManager();
             mainText = await templateManager.getAvalText(data.config, data);
         } catch (error) {
-            console.error('Error obteniendo texto dinámico del aval:', error.message);
-            throw new Error('No se pudo obtener el texto del aval desde la configuración. Verifique la configuración del texto del aval en el panel de administración.');
+            mainText = 'Este documento ha sido procesado y avalado digitalmente.';
         }
     }
-
-    // Dividir el texto en líneas justificadas
-    const lines = wrapTextJustified(mainText, maxWidth, fonts.body, 11);
-
-    // Dibujar cada línea justificada
-    lines.forEach((lineData, index) => {
-        if (lineData.isJustified && lineData.words.length > 1) {
-            // Dibujar línea justificada palabra por palabra
-            let currentX = marginLeft;
-            const spaceWidth = lineData.spaceWidth;
-
-            lineData.words.forEach((word, wordIndex) => {
-                page.drawText(word, {
-                    x: currentX,
-                    y: canvasToPdfY(currentY + (index * 18), height),
-                    size: 11,
-                    font: fonts.body,
-                    color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
-                });
-
-                // Calcular posición de la siguiente palabra
-                const wordWidth = fonts.body.widthOfTextAtSize(word, 11);
-                currentX += wordWidth + spaceWidth;
-            });
-        } else {
-            // Línea normal (última línea o línea corta)
-            page.drawText(lineData.text, {
-                x: marginLeft,
-                y: canvasToPdfY(currentY + (index * 18), height),
-                size: 11,
-                font: fonts.body,
-                color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
-            });
-        }
+    // Normalizar saltos de línea a \n (acepta \r\n, \r o \n)
+    mainText = mainText.replace(/\r\n|\r|\n/g, '\n');
+    const lines = wrapTextToLines(mainText, 90);
+    const rgbColor = hexToRgb(color);
+    lines.forEach((line, index) => {
+        page.drawText(line, {
+            x: marginLeft,
+            y: canvasToPdfY(currentY + (index * 18), height),
+            size: 11,
+            font: fontObj,
+            color: rgb(rgbColor.r, rgbColor.g, rgbColor.b)
+        });
     });
-
-    return currentY + (lines.length * 18) + 30; // Espacio después del contenido principal
+    return currentY + (lines.length * 18) + 30;
 }
 
-/**
- * Dibujar despedida
- */
-function drawClosing(page, width, height, currentY, fonts, primaryColor, marginLeft) {
+// Versión simplificada: solo color y fuente general
+function drawLocationAndDateSimple(page, width, height, data, currentY, fontObj, color, marginLeft) {
     const { rgb } = require('pdf-lib');
-
-    page.drawText('Cordial saludo.', {
+    let ubicacion = data.ubicacion || (typeof TemplateManager !== 'undefined' && TemplateManager.detectSystemLocation ? TemplateManager.detectSystemLocation() : 'UBICACIÓN, PAÍS');
+    ubicacion = ubicacion.replace(/,\s*([a-záéíóúñ])/g, (m, p1) => ', ' + p1.toUpperCase());
+    const fecha = data.fecha || new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+    const locationText = `${ubicacion} ${fecha}`;
+    const rgbColor = hexToRgb(color);
+    page.drawText(locationText, {
         x: marginLeft,
         y: canvasToPdfY(currentY, height),
         size: 11,
-        font: fonts.body,
-        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
+        font: fontObj,
+        color: rgb(rgbColor.r, rgbColor.g, rgbColor.b)
     });
-
-    return currentY + 50; // Espacio para la firma
+    return currentY + 40;
 }
 
-/**
- * Dibujar área de firma con logo en esquina derecha
- */
-async function drawSignatureArea(page, width, height, data, currentY, fonts, primaryColor, accentColor, marginLeft, pdfDoc) {
+function drawRecipientsSimple(page, width, height, data, currentY, fontObj, color, marginLeft) {
     const { rgb } = require('pdf-lib');
+    const rgbColor = hexToRgb(color);
+    page.drawText('Señores:', {
+        x: marginLeft,
+        y: canvasToPdfY(currentY, height),
+        size: 11,
+        font: fontObj,
+        color: rgb(rgbColor.r, rgbColor.g, rgbColor.b)
+    });
+    currentY += 20;
+    page.drawText('COMITÉ DE INVESTIGACIÓN DE FACULTAD', {
+        x: marginLeft,
+        y: canvasToPdfY(currentY, height),
+        size: 11,
+        font: fontObj,
+        color: rgb(rgbColor.r, rgbColor.g, rgbColor.b)
+    });
+    currentY += 15;
+    const institucion = cleanTextForPdf(data.institucion);
+    page.drawText(institucion, {
+        x: marginLeft,
+        y: canvasToPdfY(currentY, height),
+        size: 11,
+        font: fontObj,
+        color: rgb(rgbColor.r, rgbColor.g, rgbColor.b)
+    });
+    return currentY + 40;
+}
 
-    const signatureAreaY = currentY + 60; // Espacio para la firma
 
-    // Área para la firma electrónica (si existe) - VA EN LA POSICIÓN DEL ANTIGUO COMITÉ ACADÉMICO
+async function drawSignatureAreaSimple(page, width, height, data, currentY, fontObj, color, marginLeft, pdfDoc) {
+    const { rgb } = require('pdf-lib');
+    const signatureAreaY = currentY + 60;
+    const rgbColor = hexToRgb(color);
+    // Firma electrónica (si existe)
     if (data.signatureData && typeof data.signatureData === 'string' && data.signatureData.trim() !== '' &&
         data.signatureData !== 'null' && data.signatureData !== 'undefined' && data.signatureData !== 'NaN') {
-
         try {
             const firmaWidth = 200;
             const firmaHeight = 60;
-            const firmaX = marginLeft; // Misma posición X que el nombre del avalador
-            const firmaY = canvasToPdfY(signatureAreaY + 90, height); // MÁS ARRIBA que el nombre
-
-            // Dibujar borde alrededor de la firma
-            const borderPadding = 5; // Espacio entre el borde y la firma
+            const firmaX = marginLeft;
+            const firmaY = canvasToPdfY(signatureAreaY + 90, height);
             page.drawRectangle({
-                x: firmaX - borderPadding,
-                y: firmaY - borderPadding,
-                width: firmaWidth + (borderPadding * 2),
-                height: firmaHeight + (borderPadding * 2),
-                borderColor: rgb(primaryColor.r, primaryColor.g, primaryColor.b),
+                x: firmaX - 5,
+                y: firmaY - 5,
+                width: firmaWidth + 10,
+                height: firmaHeight + 10,
+                borderColor: rgb(rgbColor.r, rgbColor.g, rgbColor.b),
                 borderWidth: 1,
                 opacity: 0.8
             });
-
             const { drawElectronicSignature } = require('./base.template.js');
-            const firmaResult = await drawElectronicSignature(page, width, height, data, pdfDoc, firmaX, firmaY, firmaWidth, firmaHeight);
-            if (firmaResult) {
-                console.log('✅ Firma electrónica dibujada correctamente');
-            } else {
-                console.warn('⚠️ No se pudo dibujar la firma electrónica');
-            }
-        } catch (err) {
-            console.warn('❌ Error dibujando firma electrónica:', err.message);
-        }
+            await drawElectronicSignature(page, width, height, data, pdfDoc, firmaX, firmaY, firmaWidth, firmaHeight);
+        } catch (err) { }
     }
-
-    // Nombre del firmante (quien avaló) - VA DEBAJO DE LA FIRMA
+    // Nombre del firmante
     const nombreFirmante = cleanTextForPdf(data.avaladoPor || 'NOMBRE DEL FIRMANTE');
     page.drawText(nombreFirmante, {
-        x: marginLeft, // Misma posición X que la firma
-        y: canvasToPdfY(signatureAreaY + 110, height), // Debajo de la firma
+        x: marginLeft,
+        y: canvasToPdfY(signatureAreaY + 110, height),
         size: 11,
-        font: fonts.helveticaBold,
-        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
+        font: fontObj,
+        color: rgb(rgbColor.r, rgbColor.g, rgbColor.b)
     });
-
-    // Correo del firmante (si existe) - VA DEBAJO DEL NOMBRE
+    // Correo del firmante
     if (data.correoFirmante) {
         const correoText = cleanTextForPdf(data.correoFirmante);
         page.drawText(correoText, {
-            x: marginLeft, // Misma posición X que la firma y el nombre
-            y: canvasToPdfY(signatureAreaY + 125, height), // Debajo del nombre
+            x: marginLeft,
+            y: canvasToPdfY(signatureAreaY + 125, height),
             size: 10,
-            font: fonts.body,
-            color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
+            font: fontObj,
+            color: rgb(rgbColor.r, rgbColor.g, rgbColor.b)
         });
     }
-
-    // Dibujar logo en esquina derecha inferior
+    // Logo
     await drawLogoBottomRight(page, width, height, data);
-
     return signatureAreaY + 120;
 }
 
@@ -371,40 +242,45 @@ function wrapTextJustified(text, maxWidth, font, fontSize) {
  * Función auxiliar para dividir texto en líneas respetando límites (versión simple)
  */
 function wrapTextToLines(text, maxCharsPerLine) {
-    const words = text.split(' ');
+    // Dividir el texto por saltos de línea explícitos (\n) y agregar línea vacía entre párrafos
+    // Cada salto de línea simple es una línea nueva, dobles saltos de línea dejan línea vacía
+    const paragraphs = text.split(/\r?\n/);
     const lines = [];
-    let currentLine = '';
-
-    for (const word of words) {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-
-        if (testLine.length <= maxCharsPerLine) {
-            currentLine = testLine;
-        } else {
-            if (currentLine) {
-                lines.push(currentLine);
-                currentLine = word;
-
-                // Si la palabra sola es muy larga, dividirla
-                while (currentLine.length > maxCharsPerLine) {
-                    lines.push(currentLine.substring(0, maxCharsPerLine - 1) + '-');
-                    currentLine = currentLine.substring(maxCharsPerLine - 1);
-                }
+    for (let i = 0; i < paragraphs.length; i++) {
+        const paragraph = paragraphs[i];
+        if (paragraph === '' && i > 0) {
+            // Línea vacía (párrafo vacío)
+            lines.push('');
+            continue;
+        }
+        const words = paragraph.split(' ');
+        let currentLine = '';
+        for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            if (testLine.length <= maxCharsPerLine) {
+                currentLine = testLine;
             } else {
-                // Palabra muy larga, dividir por caracteres
-                while (word.length > maxCharsPerLine) {
-                    lines.push(word.substring(0, maxCharsPerLine - 1) + '-');
-                    word = word.substring(maxCharsPerLine - 1);
+                if (currentLine) {
+                    lines.push(currentLine);
+                    currentLine = word;
+                    while (currentLine.length > maxCharsPerLine) {
+                        lines.push(currentLine.substring(0, maxCharsPerLine - 1) + '-');
+                        currentLine = currentLine.substring(maxCharsPerLine - 1);
+                    }
+                } else {
+                    let longWord = word;
+                    while (longWord.length > maxCharsPerLine) {
+                        lines.push(longWord.substring(0, maxCharsPerLine - 1) + '-');
+                        longWord = longWord.substring(maxCharsPerLine - 1);
+                    }
+                    currentLine = longWord;
                 }
-                currentLine = word;
             }
         }
+        if (currentLine) {
+            lines.push(currentLine);
+        }
     }
-
-    if (currentLine) {
-        lines.push(currentLine);
-    }
-
     return lines;
 }
 
@@ -412,51 +288,46 @@ function wrapTextToLines(text, maxCharsPerLine) {
  * Dibujar logo en la esquina derecha inferior
  */
 async function drawLogoBottomRight(page, width, height, data) {
-    if (!data.logoData && !data.logo) {
-        return; // No hay logo para dibujar
+    // Si hay logoPath (ej: '/api/logo'), descargar y embeber
+    const fetch = require('node-fetch');
+    let logoBuffer = null;
+    let logoType = 'png';
+    if (data.logoPath && typeof data.logoPath === 'string') {
+        try {
+            const res = await fetch(data.logoPath.startsWith('http') ? data.logoPath : `http://localhost:3000${data.logoPath}`);
+            if (res.ok) {
+                logoBuffer = Buffer.from(await res.arrayBuffer());
+                const contentType = res.headers.get('content-type') || '';
+                if (contentType.includes('png')) logoType = 'png';
+                else if (contentType.includes('jpeg') || contentType.includes('jpg')) logoType = 'jpg';
+            }
+        } catch (e) {
+            console.warn('No se pudo descargar logo para PDF:', e.message);
+        }
     }
-
+    // Compatibilidad: si no hay logoPath, intentar con logoData.buffer (legacy)
+    if (!logoBuffer && data.logoData && data.logoData.buffer) {
+        logoBuffer = data.logoData.buffer;
+        logoType = data.logoData.extension || 'png';
+    }
+    if (!logoBuffer) return;
     try {
         let logoImage;
-
-        if (data.logoData && data.logoData.buffer) {
-            // Logo desde buffer
-            const logoExtension = data.logoData.extension || 'png';
-            if (logoExtension.toLowerCase() === 'png') {
-                logoImage = await page.doc.embedPng(data.logoData.buffer);
-            } else {
-                logoImage = await page.doc.embedJpg(data.logoData.buffer);
-            }
-        } else if (data.logo && typeof data.logo === 'string') {
-            // Logo desde archivo
-            const fs = require('fs');
-            if (fs.existsSync(data.logo)) {
-                const imageBytes = fs.readFileSync(data.logo);
-                if (data.logo.toLowerCase().endsWith('.png')) {
-                    logoImage = await page.doc.embedPng(imageBytes);
-                } else {
-                    logoImage = await page.doc.embedJpg(imageBytes);
-                }
-            }
-        }
-
-        if (logoImage) {
-            // Logo en esquina inferior derecha
-            const logoWidth = 80;
-            const logoHeight = 40;
-            const logoX = width - logoWidth - 10; // Margen derecho
-            const logoY = canvasToPdfY(height - 100, height); // Parte inferior
-
-            page.drawImage(logoImage, {
-                x: logoX,
-                y: logoY,
-                width: logoWidth,
-                height: logoHeight,
-                opacity: 0.8
-            });
-
-            console.log('✅ Logo dibujado en esquina derecha inferior');
-        }
+        if (logoType === 'png') logoImage = await page.doc.embedPng(logoBuffer);
+        else logoImage = await page.doc.embedJpg(logoBuffer);
+        // Logo en esquina inferior derecha
+        const logoWidth = 80;
+        const logoHeight = 40;
+        const logoX = width - logoWidth - 10;
+        const logoY = canvasToPdfY(height - 100, height);
+        page.drawImage(logoImage, {
+            x: logoX,
+            y: logoY,
+            width: logoWidth,
+            height: logoHeight,
+            opacity: 0.8
+        });
+        console.log('✅ Logo dibujado en esquina derecha inferior');
     } catch (err) {
         console.warn('❌ Error cargando logo:', err.message);
     }
@@ -503,12 +374,13 @@ function drawClassicTemplateCanvas(ctx, config, width, height, data) {
     let currentY = 80;
 
     // Ubicación y fecha
-    ctx.fillStyle = colorConfig.primary || '#000000';
-    ctx.font = '11px Arial';
+    ctx.fillStyle = '#000000';
+    ctx.font = '11px Times New Roman';
     ctx.textAlign = 'left';
-    const ubicacion = data.ubicacion || TemplateManager.detectSystemLocation();
+    let ubicacion2 = data.ubicacion || TemplateManager.detectSystemLocation();
+    ubicacion2 = ubicacion2.replace(/,\s*([a-záéíóúñ])/g, (m, p1) => ', ' + p1.toUpperCase());
     const fecha = data.fecha || new Date().toLocaleDateString('es-ES');
-    ctx.fillText(`${ubicacion} ${fecha}`, marginLeft, currentY);
+    ctx.fillText(`${ubicacion2} ${fecha}`, marginLeft, currentY);
 
     currentY += 40;
 
@@ -523,36 +395,15 @@ function drawClassicTemplateCanvas(ctx, config, width, height, data) {
 
     currentY += 40;
 
-    // Saludo
+    // TEXTO DEL AVAL COMPLETO (editable por el usuario, con saltos de línea)
     ctx.font = '11px Arial';
-    ctx.fillText('Respetados señores:', marginLeft, currentY);
-
-    currentY += 30;
-
-    // Contenido principal (simplificado para vista previa)
-    const autoresText = Array.isArray(data.autores) ? data.autores.join(', ') : (data.autores || 'el estudiante');
-    const tituloDocumento = data.titulo || 'el trabajo de investigación';
-
-    const lines = [
-        'Actuando como director del trabajo de investigación y/o tutor de la modalidad',
-        `de grado, presentado por el estudiante/s ${autoresText}; informo a ustedes`,
-        'que cumplido el proceso de asesorías, alcanzados los objetivos y desarrollados',
-        'debidamente los criterios de suficiencia académica propuestos, se completa',
-        `el desarrollo de su propuesta de trabajo de grado titulado: ${tituloDocumento};`,
-        'para lo cual se emite el concepto: APROBADO, por lo que se solicita la',
-        'designación de jurados para su correspondiente evaluación.'
-    ];
-
-    lines.forEach((line, index) => {
+    const avalText = (config.avalTextConfig && typeof config.avalTextConfig.template === 'string') ? config.avalTextConfig.template : '';
+    const avalLines = avalText.split('\n');
+    avalLines.forEach((line, index) => {
         ctx.fillText(line, marginLeft, currentY + (index * 18));
     });
-
-    currentY += lines.length * 18 + 30;
-
-    // Despedida
-    ctx.fillText('Cordial saludo.', marginLeft, currentY);
-
-    currentY += 80;
+    currentY += avalLines.length * 18 + 30;
+    currentY += 50;
 
     // Área de firma - Nombre y correo del firmante (quien avaló)
     ctx.font = 'bold 11px Arial';
@@ -566,20 +417,16 @@ function drawClassicTemplateCanvas(ctx, config, width, height, data) {
     }
 }
 
-// Exportar funciones
+// Exportar solo las funciones simplificadas y necesarias
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         drawClassicTemplate,
         drawClassicTemplateCanvas,
         drawClassicBorder,
-        drawLocationAndDate,
-        drawRecipients,
-        drawGreeting,
-        drawMainContent,
-        drawClosing,
-        drawSignatureArea,
+        drawLocationAndDateSimple,
+        drawRecipientsSimple,
+        drawSignatureAreaSimple,
         wrapTextToLines,
-        wrapTextJustified,
         drawLogoBottomRight
     };
 }

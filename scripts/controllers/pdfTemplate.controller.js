@@ -85,6 +85,7 @@ async function initializeDefaultPdfConfig() {
  */
 async function getPdfTemplateConfig(req, res) {
     try {
+
         const query = `
             SELECT
                 selected_template,
@@ -93,6 +94,7 @@ async function getPdfTemplateConfig(req, res) {
                 layout_config,
                 border_config,
                 visual_config,
+                aval_text_config,
                 updated_by,
                 updated_at
             FROM global_pdf_config
@@ -126,6 +128,19 @@ async function getPdfTemplateConfig(req, res) {
             }
         };
 
+        // Extraer el template del JSON aval_text_config
+        let avalTextConfig = { template: '' };
+        try {
+            const avalJson = parseJsonField(config.aval_text_config);
+            if (avalJson && typeof avalJson === 'object') {
+                avalTextConfig = {
+                    template: avalJson.template || ''
+                };
+            }
+        } catch (e) {
+            avalTextConfig = { template: '' };
+        }
+
         const parsedConfig = {
             selectedTemplate: config.selected_template,
             logoPath: null, // Se obtendrá del visual_config
@@ -134,6 +149,7 @@ async function getPdfTemplateConfig(req, res) {
             layoutConfig: parseJsonField(config.layout_config),
             borderConfig: parseJsonField(config.border_config),
             visualConfig: parseJsonField(config.visual_config),
+            avalTextConfig,
             updatedBy: config.updated_by,
             updatedAt: config.updated_at
         };
@@ -163,13 +179,15 @@ async function getPdfTemplateConfig(req, res) {
  */
 async function setPdfTemplateConfig(req, res) {
     try {
+
         const {
             selectedTemplate,
             colorConfig,
             fontConfig,
             layoutConfig,
             borderConfig,
-            visualConfig
+            visualConfig,
+            avalTextConfig
         } = req.body;
 
         // Validar plantilla
@@ -180,14 +198,29 @@ async function setPdfTemplateConfig(req, res) {
         // Obtener usuario actual (de JWT o sesión)
         const updatedBy = req.user?.id || req.body.updatedBy || 'system';
 
+
+
+        // Construir el JSON para aval_text_config
+        let avalTextConfigJson = {};
+        if (avalTextConfig && typeof avalTextConfig === 'object') {
+            avalTextConfigJson = {
+                template: avalTextConfig.template || '',
+                variables: [
+                    "$autores", "$titulo", "$modalidad", "$avalador", "$fecha", "$institucion", "$ubicacion"
+                ]
+            };
+        }
+
         const query = `
             INSERT INTO global_pdf_config (
                 id, selected_template,
                 color_config, font_config, layout_config, border_config, visual_config,
+                aval_text_config,
                 updated_by
             ) VALUES (
                 1, ?,
                 ?, ?, ?, ?, ?,
+                ?,
                 ?
             ) ON DUPLICATE KEY UPDATE
                 selected_template = VALUES(selected_template),
@@ -196,6 +229,7 @@ async function setPdfTemplateConfig(req, res) {
                 layout_config = VALUES(layout_config),
                 border_config = VALUES(border_config),
                 visual_config = VALUES(visual_config),
+                aval_text_config = VALUES(aval_text_config),
                 updated_by = VALUES(updated_by)
         `;
 
@@ -206,6 +240,7 @@ async function setPdfTemplateConfig(req, res) {
             JSON.stringify(layoutConfig || {}),
             JSON.stringify(borderConfig || {}),
             JSON.stringify(visualConfig || {}),
+            JSON.stringify(avalTextConfigJson),
             updatedBy
         ];
 

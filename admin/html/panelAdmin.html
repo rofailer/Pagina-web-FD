@@ -128,7 +128,7 @@
             if (variable === '\\n') {
               insertText = '\n';
             } else {
-              insertText = variable;
+              insertText = '$' + variable;
             }
             
             // Insertar variable en posición del cursor
@@ -155,9 +155,9 @@
             
             if (!textarea || !preview) return;
 
-            let text = textarea.value.trim();
+            let text = textarea.value;
             
-            if (!text) {
+            if (!text || text.trim() === '') {
               preview.innerHTML = '<p><em>Escribe texto en el editor para ver la vista previa.</em></p>';
               return;
             }
@@ -177,7 +177,6 @@
                 const institutionData = await institutionResponse.json();
                 institutionName = institutionData.institution_name || institutionName;
               }
-              
               // Obtener ubicación real de la máquina
               const locationResponse = await fetch('/api/system/location');
               if (locationResponse.ok) {
@@ -204,8 +203,11 @@
             Object.keys(exampleData).forEach(variable => {
               const value = exampleData[variable];
               const highlightedValue = `<span class="variable-highlight">${value}</span>`;
-              previewText = previewText.replace(new RegExp('\\' + variable, 'g'), highlightedValue);
+              previewText = previewText.replace(new RegExp(variable.replace('$', '\\$'), 'g'), highlightedValue);
             });
+
+            // Reemplazar saltos de línea (\n o \r\n) por <br>
+            previewText = previewText.replace(/\n/g, '<br>');
 
             preview.innerHTML = `<p>${previewText}</p>`;
           };
@@ -1263,572 +1265,100 @@
               </div>
             </div>
 
-            <!-- SECCIÓN 2: CONFIGURACIÓN DE COLORES -->
+            <!-- SECCIÓN 2: FUENTE Y COLOR GENERAL -->
             <div class="admin-section">
               <h3>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
+                  <path d="M4 7V4h16v3M9 20h6M12 4v16" stroke="currentColor" stroke-width="2"/>
                 </svg>
-                Configuración de Colores
+                Fuente y Color General
               </h3>
-
               <div class="admin-form-grid">
                 <div class="admin-form-group">
-                  <label for="pdfPrimaryColor">Color Primario</label>
-                  <input
-                    type="color"
-                    id="pdfPrimaryColor"
-                    class="admin-input color-input"
-                    value="#2563eb"
-                  />
-                  <span class="admin-input-help">Color principal para títulos y elementos destacados</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfSecondaryColor">Color Secundario</label>
-                  <input
-                    type="color"
-                    id="pdfSecondaryColor"
-                    class="admin-input color-input"
-                    value="#64748b"
-                  />
-                  <span class="admin-input-help">Color para subtítulos y elementos secundarios</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfAccentColor">Color de Acento</label>
-                  <input
-                    type="color"
-                    id="pdfAccentColor"
-                    class="admin-input color-input"
-                    value="#f59e0b"
-                  />
-                  <span class="admin-input-help">Color para elementos decorativos y enlaces</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfTextColor">Color de Texto</label>
-                  <input
-                    type="color"
-                    id="pdfTextColor"
-                    class="admin-input color-input"
-                    value="#1f2937"
-                  />
-                  <span class="admin-input-help">Color principal del texto del documento</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- SECCIÓN 3: CONFIGURACIÓN DE FUENTES -->
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M4 7V4h16v3M9 20h6M12 4v16"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Configuración de Fuentes
-              </h3>
-
-              <div class="admin-form-grid">
-                <div class="admin-form-group">
-                  <label for="pdfTitleFont">Fuente de Títulos</label>
-                  <select id="pdfTitleFont" class="admin-select">
-                    <option value="Helvetica-Bold">Helvetica Bold</option>
-                    <option value="Times-Bold">Times Bold</option>
-                    <option value="Courier-Bold">Courier Bold</option>
-                  </select>
-                  <span class="admin-input-help">Fuente para títulos principales del documento</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfBodyFont">Fuente del Cuerpo</label>
-                  <select id="pdfBodyFont" class="admin-select">
+                  <label for="pdfGeneralFont">Fuente General</label>
+                  <select id="pdfGeneralFont" class="admin-select">
                     <option value="Helvetica">Helvetica</option>
                     <option value="Times-Roman">Times Roman</option>
                     <option value="Courier">Courier</option>
                   </select>
-                  <span class="admin-input-help">Fuente para el texto principal del documento</span>
+                  <span class="admin-input-help">Fuente única para todo el documento PDF</span>
                 </div>
-
                 <div class="admin-form-group">
-                  <label for="pdfMetadataFont">Fuente de Metadatos</label>
-                  <select id="pdfMetadataFont" class="admin-select">
-                    <option value="Helvetica-Oblique">Helvetica Italic</option>
-                    <option value="Times-Italic">Times Italic</option>
-                    <option value="Courier-Oblique">Courier Italic</option>
-                  </select>
-                  <span class="admin-input-help">Fuente para fechas, autores y metadatos</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfSignatureFont">Fuente de Firma</label>
-                  <select id="pdfSignatureFont" class="admin-select">
-                    <option value="Times-Bold">Times Bold</option>
-                    <option value="Helvetica-Bold">Helvetica Bold</option>
-                    <option value="Courier-Bold">Courier Bold</option>
-                  </select>
-                  <span class="admin-input-help">Fuente para el texto de la firma digital</span>
+                  <label for="pdfGeneralColor">Color de Fuente</label>
+                  <input type="color" id="pdfGeneralColor" class="admin-input color-input" value="#1f2937" />
+                  <span class="admin-input-help">Color general de la fuente del PDF</span>
                 </div>
               </div>
             </div>
 
-            <!-- SECCIÓN 4: CONFIGURACIÓN DE LAYOUT -->
+            <!-- SECCIÓN 3: TEXTO DEL AVAL -->
             <div class="admin-section">
               <h3>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect
-                    x="3"
-                    y="3"
-                    width="18"
-                    height="18"
-                    rx="2"
-                    ry="2"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <line
-                    x1="9"
-                    y1="9"
-                    x2="15"
-                    y2="9"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <line
-                    x1="9"
-                    y1="15"
-                    x2="15"
-                    y2="15"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
+                  <path d="M4 7V4h16v3M9 20h6M12 4v16" stroke="currentColor" stroke-width="2"/>
                 </svg>
-                Configuración de Layout
+                Texto del Aval
               </h3>
-
-              <div class="admin-form-grid">
-                <div class="admin-form-group">
-                  <label for="pdfMarginTop">Margen Superior (px)</label>
-                  <input
-                    type="number"
-                    id="pdfMarginTop"
-                    class="admin-input"
-                    value="60"
-                    min="20"
-                    max="100"
-                  />
-                  <span class="admin-input-help">Espacio desde la parte superior de la página</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfMarginBottom">Margen Inferior (px)</label>
-                  <input
-                    type="number"
-                    id="pdfMarginBottom"
-                    class="admin-input"
-                    value="60"
-                    min="20"
-                    max="100"
-                  />
-                  <span class="admin-input-help">Espacio desde la parte inferior de la página</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfMarginLeft">Margen Izquierdo (px)</label>
-                  <input
-                    type="number"
-                    id="pdfMarginLeft"
-                    class="admin-input"
-                    value="50"
-                    min="20"
-                    max="100"
-                  />
-                  <span class="admin-input-help">Espacio desde el lado izquierdo de la página</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfMarginRight">Margen Derecho (px)</label>
-                  <input
-                    type="number"
-                    id="pdfMarginRight"
-                    class="admin-input"
-                    value="50"
-                    min="20"
-                    max="100"
-                  />
-                  <span class="admin-input-help">Espacio desde el lado derecho de la página</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfLineHeight">Interlineado</label>
-                  <input
-                    type="number"
-                    id="pdfLineHeight"
-                    class="admin-input"
-                    value="1.6"
-                    min="1.0"
-                    max="2.5"
-                    step="0.1"
-                  />
-                  <span class="admin-input-help">Espacio entre líneas de texto</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfTitleSize">Tamaño de Título (pt)</label>
-                  <input
-                    type="number"
-                    id="pdfTitleSize"
-                    class="admin-input"
-                    value="24"
-                    min="16"
-                    max="36"
-                  />
-                  <span class="admin-input-help">Tamaño de fuente para títulos principales</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfBodySize">Tamaño de Cuerpo (pt)</label>
-                  <input
-                    type="number"
-                    id="pdfBodySize"
-                    class="admin-input"
-                    value="12"
-                    min="8"
-                    max="16"
-                  />
-                  <span class="admin-input-help">Tamaño de fuente para texto principal</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- SECCIÓN 5: CONFIGURACIÓN DE BORDES -->
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect
-                    x="3"
-                    y="3"
-                    width="18"
-                    height="18"
-                    rx="2"
-                    ry="2"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Configuración de Bordes
-              </h3>
-
-              <div class="admin-form-grid">
-                <div class="admin-form-group">
-                  <label for="pdfBorderStyle">Estilo de Borde</label>
-                  <select id="pdfBorderStyle" class="admin-select">
-                    <option value="classic">Clásico</option>
-                    <option value="modern">Moderno</option>
-                    <option value="minimal">Minimalista</option>
-                    <option value="elegant">Elegante</option>
-                  </select>
-                  <span class="admin-input-help">Estilo visual del borde del documento</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfBorderWidth">Ancho del Borde (px)</label>
-                  <input
-                    type="number"
-                    id="pdfBorderWidth"
-                    class="admin-input"
-                    value="2"
-                    min="1"
-                    max="5"
-                  />
-                  <span class="admin-input-help">Grosor de las líneas del borde</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfBorderColor">Color del Borde</label>
-                  <input
-                    type="color"
-                    id="pdfBorderColor"
-                    class="admin-input color-input"
-                    value="#1f2937"
-                  />
-                  <span class="admin-input-help">Color de las líneas del borde</span>
-                </div>
-
-                <div class="admin-form-group">
-                  <label for="pdfCornerRadius">Radio de Esquinas (px)</label>
-                  <input
-                    type="number"
-                    id="pdfCornerRadius"
-                    class="admin-input"
-                    value="0"
-                    min="0"
-                    max="20"
-                  />
-                  <span class="admin-input-help">Redondeo de las esquinas del borde</span>
-                </div>
-
-                <div class="admin-form-group full-width">
-                  <label class="checkbox-label">
-                    <input
-                      type="checkbox"
-                      id="pdfShowDecorative"
-                      checked
-                    />
-                    Mostrar elementos decorativos
-                  </label>
-                  <span class="admin-input-help">Incluir elementos decorativos en el borde</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- SECCIÓN 6: CONFIGURACIÓN VISUAL -->
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <path
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Configuración Visual
-              </h3>
-
               <div class="admin-form-grid">
                 <div class="admin-form-group full-width">
-                  <label class="checkbox-label">
-                    <input
-                      type="checkbox"
-                      id="pdfShowLogo"
-                      checked
-                    />
-                    Mostrar logo de la institución
-                  </label>
-                  <span class="admin-input-help">Incluir el logo en los documentos PDF</span>
-                </div>
-
-                <div class="admin-form-group full-width">
-                  <label class="checkbox-label">
-                    <input
-                      type="checkbox"
-                      id="pdfShowInstitution"
-                      checked
-                    />
-                    Mostrar nombre de la institución
-                  </label>
-                  <span class="admin-input-help">Incluir el nombre de la institución en el documento</span>
-                </div>
-
-                <div class="admin-form-group full-width">
-                  <label class="checkbox-label">
-                    <input
-                      type="checkbox"
-                      id="pdfShowDate"
-                      checked
-                    />
-                    Mostrar fecha de creación
-                  </label>
-                  <span class="admin-input-help">Incluir la fecha en que se creó el documento</span>
-                </div>
-
-                <div class="admin-form-group full-width">
-                  <label class="checkbox-label">
-                    <input
-                      type="checkbox"
-                      id="pdfShowSignature"
-                      checked
-                    />
-                    Mostrar firma digital
-                  </label>
-                  <span class="admin-input-help">Incluir la firma electrónica en el documento</span>
-                </div>
-
-                <div class="admin-form-group full-width">
-                  <label class="checkbox-label">
-                    <input
-                      type="checkbox"
-                      id="pdfShowAuthors"
-                      checked
-                    />
-                    Mostrar autores del documento
-                  </label>
-                  <span class="admin-input-help">Incluir los nombres de los autores del documento</span>
-                </div>
-
-                <div class="admin-form-group full-width">
-                  <label class="checkbox-label">
-                    <input
-                      type="checkbox"
-                      id="pdfShowAvalador"
-                      checked
-                    />
-                    Mostrar avalador del documento
-                  </label>
-                  <span class="admin-input-help">Incluir el nombre de quien avala el documento</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- SECCIÓN 7: TEXTO DEL AVAL CONFIGURABLE -->
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <polyline
-                    points="14,2 14,8 20,8"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <line
-                    x1="16"
-                    y1="13"
-                    x2="8"
-                    y2="13"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <line
-                    x1="16"
-                    y1="17"
-                    x2="8"
-                    y2="17"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Texto del Aval Configurable
-              </h3>
-
-              <div class="admin-form-grid">
-                <div class="admin-form-group full-width">
-                  <label for="pdfAvalText">Contenido del Texto del Aval</label>
-                  <textarea
-                    id="pdfAvalText"
-                    class="admin-input aval-text-editor"
-                    rows="8"
-                    placeholder="Escribe aquí el texto del aval que aparecerá en los PDFs..."
-                  ></textarea>
+                  <label for="pdfAvalText">Texto del Aval</label>
+                  <textarea id="pdfAvalText" class="admin-input" rows="6" placeholder="Escribe aquí el texto del aval..."></textarea>
                   <span class="admin-input-help">
                     Texto principal que aparecerá en el PDF del aval. Utiliza las variables dinámicas disponibles.
                   </span>
                 </div>
-
                 <div class="admin-form-group full-width">
                   <h4>Variables Dinámicas Disponibles</h4>
                   <div class="variables-grid">
-                    <div class="variable-item" onclick="insertVariable('$autores')">
-                      <code>$autores</code>
+                    <div class="variable-item" onclick="insertVariable('autores')">
+                      <code>autores</code>
                       <span>Nombres de los autores del trabajo</span>
                     </div>
-                    <div class="variable-item" onclick="insertVariable('$titulo')">
-                      <code>$titulo</code>
+                    <div class="variable-item" onclick="insertVariable('titulo')">
+                      <code>titulo</code>
                       <span>Título del trabajo de grado</span>
                     </div>
-                    <div class="variable-item" onclick="insertVariable('$modalidad')">
-                      <code>$modalidad</code>
+                    <div class="variable-item" onclick="insertVariable('modalidad')">
+                      <code>modalidad</code>
                       <span>Modalidad de grado (ej: Programa de Ingeniería)</span>
                     </div>
-                    <div class="variable-item" onclick="insertVariable('$avalador')">
-                      <code>$avalador</code>
+                    <div class="variable-item" onclick="insertVariable('avalador')">
+                      <code>avalador</code>
                       <span>Nombre de quien avala el documento</span>
                     </div>
-                    <div class="variable-item" onclick="insertVariable('$fecha')">
-                      <code>$fecha</code>
+                    <div class="variable-item" onclick="insertVariable('fecha')">
+                      <code>fecha</code>
                       <span>Fecha actual del documento</span>
                     </div>
-                    <div class="variable-item" onclick="insertVariable('$institucion')">
-                      <code>$institucion</code>
+                    <div class="variable-item" onclick="insertVariable('institucion')">
+                      <code>institucion</code>
                       <span>Nombre de la institución</span>
                     </div>
-                    <div class="variable-item" onclick="insertVariable('$ubicacion')">
-                      <code>$ubicacion</code>
+                    <div class="variable-item" onclick="insertVariable('ubicacion')">
+                      <code>ubicacion</code>
                       <span>Ubicación donde se emite el documento</span>
                     </div>
                     <div class="variable-item salto-linea" onclick="insertVariable('\\n')">
-                      <code>\\n</code>
-                      <span>Salto de línea (nueva línea en el texto)</span>
+                      <code>Salto de línea</code>
+                      <span>Inserta un salto de línea real en el texto. Se mostrará tanto en la vista previa como en el PDF generado.</span>
                     </div>
                   </div>
                   <span class="admin-input-help">
                     Haz clic en cualquier variable para insertarla en el texto del aval.
                   </span>
                 </div>
-
                 <div class="admin-form-group full-width">
                   <div class="text-preview-section">
                     <h4>Vista Previa del Texto</h4>
                     <div class="text-preview" id="avalTextPreview">
                       <p>La vista previa aparecerá aquí con las variables reemplazadas por valores de ejemplo.</p>
                     </div>
-                    <button type="button" class="admin-btn secondary" onclick="updateAvalPreview()">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path
-                          d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        />
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="3"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        />
-                      </svg>
-                      Actualizar Vista Previa
-                    </button>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- SECCIÓN 8: LOGO INSTITUCIONAL -->
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect
-                    x="3"
-                    y="3"
-                    width="18"
-                    height="18"
-                    rx="2"
-                    ry="2"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <circle
-                    cx="8.5"
-                    cy="8.5"
-                    r="1.5"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <path
-                    d="M21 15l-5-5L5 21"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Logo Institucional
-              </h3>
-
+            
             <!-- SECCIÓN 7: LOGO INSTITUCIONAL -->
             <div class="admin-section">
               <h3>
@@ -1864,13 +1394,8 @@
                   <div class="logo-preview-section">
                     <label>Vista Previa del Logo</label>
                     <div class="logo-preview-container">
-                      <img
-                        id="pdfLogoPreview"
-                        src="../../recursos/logotipo-de-github.png"
-                        alt="Logo Institucional"
-                        onerror="this.style.display='none'"
-                      />
-                      <div class="logo-placeholder" id="logoPlaceholder">
+                      <img id="pdfLogoPreview" src="" alt="Logo actual" style="display:none; max-width:120px; max-height:120px;" />
+                      <div class="logo-placeholder" id="pdfLogoPlaceholder" style="display:flex; align-items:center; justify-content:center; flex-direction:column;">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
                           <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="1" opacity="0.3"/>
                           <circle cx="9" cy="9" r="2" stroke="currentColor" stroke-width="1" opacity="0.5"/>
@@ -1909,49 +1434,10 @@
 
             <!-- ACCIONES -->
             <div class="admin-actions">
-              <button class="admin-btn secondary" onclick="previewPdfConfig()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <path
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Vista Previa
-              </button>
-
-              <button class="admin-btn primary" onclick="savePdfConfig()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <polyline
-                    points="17,21 17,13 7,13 7,21"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <polyline
-                    points="7,3 7,8 15,8"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
+              <button class="admin-btn primary" id="savePdfConfigBtn" onclick="savePdfConfig()">
                 Guardar Configuración
               </button>
-
               <button class="admin-btn danger" onclick="resetPdfConfig()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <polyline points="23,4 23,10 17,10" stroke="currentColor" stroke-width="2"/>
-                  <polyline points="1,20 1,14 7,14" stroke="currentColor" stroke-width="2"/>
-                  <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2"/>
-                </svg>
                 Restablecer
               </button>
             </div>

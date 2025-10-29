@@ -1,6 +1,8 @@
+
 require('dotenv').config({
   path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env'
 });
+
 const express = require("express");
 const app = express();
 const path = require("path");
@@ -10,10 +12,24 @@ const multer = require("multer");
 const { PDFDocument, rgb } = require("pdf-lib");
 const pool = require('./db/pool');
 const authenticate = require('./middlewares/authenticate');
-const { isAdmin } = require('./middlewares/isAdmin');
-const { isOwner } = require('./middlewares/isOwner');
+const isAdmin = require('./middlewares/isAdmin');
+const isOwner = require('./middlewares/isOwner');
 const { encrypt, decrypt, decryptWithPassword, decryptAES, decryptWithType } = require('./utils/crypto');
 const PORT = process.env.PORT || 3000;
+const authRoutes = require('./routes/auth.routes');
+const keysRoutes = require('./routes/keys.routes');
+const pdfTemplateRoutes = require('./routes/pdfTemplate.routes');
+const profileRoutes = require('./routes/profile.routes');
+const adminRoutes = require('./routes/admin.routes');
+const visualConfigRoutes = require('./routes/visualConfig.routes');
+
+app.use(authRoutes);
+app.use(keysRoutes);
+app.use('/api/pdf-template', pdfTemplateRoutes);
+app.use(adminRoutes);  // ✅ Sin prefijo - las rutas incluyen /api/admin/ completos
+app.use(profileRoutes);
+app.use('/api', visualConfigRoutes);
+
 
 // Validar variables de entorno críticas
 if (!process.env.JWT_SECRET) {
@@ -314,14 +330,6 @@ app.get('/forbidden', (req, res) => res.redirect(301, '/acceso-denegado'));
 
 
 // =================== Routers backend ===================
-
-const authRoutes = require('./routes/auth.routes');
-const keysRoutes = require('./routes/keys.routes');
-const pdfTemplateRoutes = require('./routes/pdfTemplate.routes');
-const profileRoutes = require('./routes/profile.routes');
-const adminRoutes = require('./routes/admin.routes');
-const visualConfigRoutes = require('./routes/visualConfig.routes');
-
 app.use(authRoutes);
 app.use(keysRoutes);
 app.use('/api/pdf-template', pdfTemplateRoutes);
@@ -543,7 +551,7 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
   const userId = req.userId;
   const keyPassword = req.body.keyPassword;
   const { renderPdfWithTemplate } = require("./templates/template.manager");
-  const TemplateManager = require("./templates/template.manager");
+  const { TemplateManager } = require("./templates/template.manager");
 
   try {
     // Obtener la llave privada activa del usuario

@@ -14,4 +14,4 @@ function isOwner(req, res, next) {
 
     next();
 }
-module.exports = { isOwner };
+module.exports = isOwner;

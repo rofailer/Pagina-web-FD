@@ -10,8 +10,8 @@ const path = require('path');
 const fs = require('fs').promises;
 const jwt = require('jsonwebtoken');
 const authenticate = require('../middlewares/authenticate');
-const { isOwner } = require('../middlewares/isOwner');
-const { isAdmin } = require('../middlewares/isAdmin');
+const isOwner = require('../middlewares/isOwner');
+const isAdmin = require('../middlewares/isAdmin');
 
 // Importar DatabaseSetupManager del setup-db.js
 const DatabaseSetupManager = require('../setup-db');

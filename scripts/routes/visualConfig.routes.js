@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const VisualConfigController = require('../controllers/visualConfig.controller');
 const authenticate = require('../middlewares/authenticate');
-const { isAdmin } = require('../middlewares/isAdmin');
+const isAdmin = require('../middlewares/isAdmin');
 const multer = require('multer');
 const path = require('path');
 
