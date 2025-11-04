@@ -50,15 +50,15 @@ class VisualCustomizationManager {
 
                     if (config.institution_name) this.updateInstitutionName(config.institution_name);
 
-                    console.log('Configuración cargada desde base de datos');
+                    // log eliminado
                     return;
                 }
             } else if (response.status === 401 && hasToken) {
-                console.warn('Token inválido, intentando con configuración pública');
+                // log eliminado
                 return this.loadPublicConfig();
             }
         } catch (error) {
-            console.warn('Error al cargar configuración desde BD, usando localStorage:', error);
+            // log eliminado
         }
 
         this.loadFromLocalStorage();
@@ -85,12 +85,12 @@ class VisualCustomizationManager {
 
                     if (config.institution_name) this.updateInstitutionName(config.institution_name);
 
-                    console.log('Configuración pública cargada');
+                    // log eliminado
                     return;
                 }
             }
         } catch (error) {
-            console.warn('Error al cargar configuración pública:', error);
+            // log eliminado
         }
 
         this.loadFromLocalStorage();
@@ -240,7 +240,7 @@ class VisualCustomizationManager {
             document.body.style.backgroundAttachment = '';
         }
 
-        console.log('Background image configured:', imagePath);
+        // log eliminado
     }
 
     clearInlineBackgroundStyles() {
@@ -252,7 +252,7 @@ class VisualCustomizationManager {
             }
         });
 
-        console.log('Inline background styles cleared');
+        // log eliminado
     }
 
     handleFaviconUpload(file) {
@@ -374,11 +374,11 @@ class VisualCustomizationManager {
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
-                    console.log('Configuración guardada en base de datos');
+                    // log eliminado
                     return true;
                 }
             } else if (response.status === 401) {
-                console.warn('No autorizado para guardar configuración');
+                // log eliminado
                 return false;
             }
         } catch (error) {
@@ -392,7 +392,7 @@ class VisualCustomizationManager {
     saveConfigToLocalStorage(config) {
         try {
             localStorage.setItem('visualConfig', JSON.stringify(config));
-            console.log('Configuración guardada en localStorage');
+            // log eliminado
         } catch (error) {
             console.error('Error al guardar en localStorage:', error);
         }

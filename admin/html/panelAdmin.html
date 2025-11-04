@@ -687,27 +687,23 @@
             </div>
 
             <!-- Botón General de Guardar Configuración -->
-            <div class="global-config-actions">
-              <button class="admin-btn primary large" onclick="saveGlobalConfiguration()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <polyline
-                    points="17,21 17,13 7,13 7,21"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <polyline
-                    points="7,3 7,8 15,8"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Guardar Configuración Global
-              </button>
+            <div class="global-config-actions" style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+                  <button class="save-global-background" id="saveGeneralConfigBtn" onclick="saveGeneralConfig()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" stroke-width="2"></path>
+                      <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="2"></polyline>
+                      <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="2"></polyline>
+                    </svg>
+                    Guardar Configuración
+                  </button>
+
+                  <button class="reset-background" onclick="resetGeneralConfig()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" fill="none"></path>
+                      <path d="M3 3v5h5" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                    Restablecer
+                  </button>
             </div>
           </div>
 
@@ -1061,43 +1057,21 @@
                 </div>
 
                 <!-- Acciones -->
-                <div class="theme-actions">
-                  <button class="reset-theme" id="resetThemeBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        fill="none"
-                      />
-                      <path
-                        d="M3 3v5h5"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
-                    </svg>
-                    Restaurar por Defecto
-                  </button>
-
+                <div class="theme-actions" style="display: flex; gap: 1rem; justify-content: flex-end;">
                   <button class="save-global-theme" id="saveGlobalTheme">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
-                      <polyline
-                        points="17,21 17,13 7,13 7,21"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
-                      <polyline
-                        points="7,3 7,8 15,8"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" stroke-width="2"/>
+                      <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="2"/>
+                      <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="2"/>
                     </svg>
-                    Guardar Configuración Global
+                    Guardar Configuración
+                  </button>
+                  <button class="reset-theme" id="resetThemeBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" fill="none"/>
+                      <path d="M3 3v5h5" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Restablecer
                   </button>
                 </div>
               </div>
@@ -1166,43 +1140,21 @@
                 </div>
 
                 <!-- Acciones de Background -->
-                <div class="background-actions">
-                  <button class="reset-background" id="resetBackgroundBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        fill="none"
-                      />
-                      <path
-                        d="M3 3v5h5"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
-                    </svg>
-                    Restaurar por Defecto
-                  </button>
-
+                <div class="background-actions" style="display: flex; gap: 1rem; justify-content: flex-end;">
                   <button class="save-global-background" id="saveGlobalBackground">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
-                      <polyline
-                        points="17,21 17,13 7,13 7,21"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
-                      <polyline
-                        points="7,3 7,8 15,8"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      />
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" stroke-width="2"/>
+                      <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="2"/>
+                      <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="2"/>
                     </svg>
-                    Guardar Configuración Global
+                    Guardar Configuración
+                  </button>
+                  <button class="reset-background" id="resetBackgroundBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" fill="none"/>
+                      <path d="M3 3v5h5" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Restablecer
                   </button>
                 </div>
               </div>
@@ -1433,11 +1385,20 @@
             </div>
 
             <!-- ACCIONES -->
-            <div class="admin-actions">
-              <button class="admin-btn primary" id="savePdfConfigBtn" onclick="savePdfConfig()">
+            <div class="admin-actions" style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+              <button class="save-global-background" id="savePdfConfigBtn" onclick="savePdfConfig()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" stroke-width="2"></path>
+                  <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="2"></polyline>
+                  <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="2"></polyline>
+                </svg>
                 Guardar Configuración
               </button>
-              <button class="admin-btn danger" onclick="resetPdfConfig()">
+              <button class="reset-background" onclick="resetPdfConfig()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" fill="none"></path>
+                  <path d="M3 3v5h5" stroke="currentColor" stroke-width="2"></path>
+                </svg>
                 Restablecer
               </button>
             </div>

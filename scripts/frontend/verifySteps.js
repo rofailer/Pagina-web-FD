@@ -395,7 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
         } else {
-            console.warn(`⚠️ No se encontró elemento de profesor con ID: ${professorId}`);
+            // log eliminado
         }
     }
 

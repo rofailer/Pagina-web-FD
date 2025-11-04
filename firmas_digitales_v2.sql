@@ -159,6 +159,8 @@ CREATE TABLE visual_config (
   logo_data LONGBLOB NULL COMMENT 'Datos binarios del logo',
   logo_mimetype VARCHAR(100) NULL COMMENT 'Tipo MIME del logo (image/png, image/jpeg, etc.)',
   logo_filename VARCHAR(255) NULL COMMENT 'Nombre original del archivo del logo',
+  footer_text TEXT,
+  admin_header_title VARCHAR(255) DEFAULT 'Panel Administrativo',
   updated_by VARCHAR(100) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

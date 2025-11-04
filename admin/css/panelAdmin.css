@@ -447,7 +447,10 @@
 }
 
 .file-input-label:hover .file-input-button {
-  background: var(--admin-primary-dark);
+  background: rgba(
+    var(--admin-primary-rgb, 52, 71, 103),
+    0.85
+  ); /* Más oscuro y compatible con temas */
 }
 
 [data-theme="dark"] .file-input-label {
@@ -492,9 +495,10 @@
   transform: none;
 }
 
+
 .theme-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 1rem;
   justify-content: flex-end;
   margin-top: 1.5rem;
   padding-top: 1.5rem;
@@ -505,36 +509,33 @@
   border-color: var(--border-color);
 }
 
-.save-global-theme {
-  padding: 0.75rem 1.5rem;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 8px;
+.save-global-theme, .reset-theme {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
   font-weight: 600;
-  cursor: pointer;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
   transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
 }
 
+.save-global-theme {
+  background: var(--primary-color);
+  color: white;
+}
 .save-global-theme:hover {
   background: var(--secondary-color);
   transform: translateY(-1px);
 }
 
 .reset-theme {
-  padding: 0.75rem 1.5rem;
   background: #f1f5f9;
   color: #475569;
   border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
-
 .reset-theme:hover {
   background: #e2e8f0;
   border-color: #cbd5e1;
@@ -542,21 +543,17 @@
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
-
 .reset-theme svg {
   transition: transform 0.2s ease;
 }
-
 .reset-theme:hover svg {
   transform: rotate(-180deg);
 }
-
 [data-theme="dark"] .reset-theme {
   background: var(--bg-tertiary);
   color: var(--text-secondary);
   border-color: var(--border-color);
 }
-
 [data-theme="dark"] .reset-theme:hover {
   background: var(--bg-secondary);
   border-color: var(--border-color);

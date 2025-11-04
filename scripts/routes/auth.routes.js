@@ -6,8 +6,8 @@ const pool = require('../db/pool');
 const authenticate = require('../middlewares/authenticate');
 
 // Registro de usuario
-router.post("/api/register", async (req, res) => {
-    const { nombre, usuario, password } = req.body;
+router.post("/register", async (req, res) => {
+    const { nombre, usuario, password } = req.body || {};
     if (!nombre || !usuario || !password) {
         return res.status(400).json({ error: "Faltan campos obligatorios." });
     }
@@ -35,8 +35,9 @@ router.post("/api/register", async (req, res) => {
 });
 
 // Login de usuario
-router.post("/api/login", async (req, res) => {
-    const { usuario, password } = req.body;
+router.post("/login", async (req, res) => {
+    // log eliminado
+    const { usuario, password } = req.body || {};
 
     try {
         // Buscar por usuario o email

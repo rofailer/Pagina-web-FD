@@ -16,6 +16,11 @@ const isAdmin = require('./middlewares/isAdmin');
 const isOwner = require('./middlewares/isOwner');
 const { encrypt, decrypt, decryptWithPassword, decryptAES, decryptWithType } = require('./utils/crypto');
 const PORT = process.env.PORT || 3000;
+
+// Middlewares globales (asegúrate de que estén antes de las rutas)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
 const authRoutes = require('./routes/auth.routes');
 const keysRoutes = require('./routes/keys.routes');
 const pdfTemplateRoutes = require('./routes/pdfTemplate.routes');
@@ -23,7 +28,7 @@ const profileRoutes = require('./routes/profile.routes');
 const adminRoutes = require('./routes/admin.routes');
 const visualConfigRoutes = require('./routes/visualConfig.routes');
 
-app.use(authRoutes);
+app.use('/api', authRoutes);
 app.use(keysRoutes);
 app.use('/api/pdf-template', pdfTemplateRoutes);
 app.use(adminRoutes);  // ✅ Sin prefijo - las rutas incluyen /api/admin/ completos
@@ -178,7 +183,7 @@ const upload = multer({ dest: path.join(__dirname, "../uploads") });
 // Middleware para detectar estado de base de datos
 app.use(async (req, res, next) => {
   // Solo verificar para rutas que requieren BD
-  const dbRequiredRoutes = ['/api/auth/login', '/api/auth/register', '/api/keys', '/api/documents'];
+  const dbRequiredRoutes = ['/api/login', '/api/register', '/api/keys', '/api/documents'];
 
   const requiresDb = dbRequiredRoutes.some(route => req.path.startsWith(route));
 
@@ -962,6 +967,9 @@ app.get('/downloads/:file', (req, res) => {
 
 // =================== Inicio del servidor ===================
 const server = app.listen(PORT, '0.0.0.0', () => {
+  const url = `http://localhost:${PORT}`;
+  console.log('🚀 Servidor corriendo en:', url);
+  console.log('Haz click o copia el enlace para abrir la web.');
 });
 
 // =================== Manejo de errores del servidor ===================

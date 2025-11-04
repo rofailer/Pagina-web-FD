@@ -8,9 +8,7 @@ function isOwner(req, res, next) {
     }
 
     // LOG PARA DETECTAR CUANDO YA SE HAYA ENTRADO COMO OWNER
-    console.log("🎉 ¡ACCESO OWNER CONFIRMADO! Usuario autenticado como propietario del sistema");
-    console.log("   - UserID:", req.userId);
-    console.log("   - UserRole:", req.userRole);
+    // Logs eliminados para producción
 
     next();
 }

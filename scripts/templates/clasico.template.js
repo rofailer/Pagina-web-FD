@@ -327,7 +327,7 @@ async function drawLogoBottomRight(page, width, height, data) {
             height: logoHeight,
             opacity: 0.8
         });
-        console.log('✅ Logo dibujado en esquina derecha inferior');
+        // Log eliminado para producción
     } catch (err) {
         console.warn('❌ Error cargando logo:', err.message);
     }
