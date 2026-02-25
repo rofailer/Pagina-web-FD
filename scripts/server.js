@@ -14,7 +14,7 @@ const pool = require('./db/pool');
 const authenticate = require('./middlewares/authenticate');
 const isAdmin = require('./middlewares/isAdmin');
 const isOwner = require('./middlewares/isOwner');
-const { encrypt, decrypt, decryptWithPassword, decryptAES, decryptWithType } = require('./utils/crypto');
+const { encrypt, decrypt, decryptWithPassword, decryptAES, decryptWithType, generateFileHash, generateManifest, verifyManifest } = require('./utils/crypto');
 const PORT = process.env.PORT || 3000;
 
 // Middlewares globales (asegúrate de que estén antes de las rutas)
@@ -552,7 +552,7 @@ app.get("/debug/visual-config", async (req, res) => {
   }
 });
 
-app.post("/sign-document", authenticate, upload.single("document"), async (req, res) => {
+app.post("/sign-document", authenticate, upload.fields([{ name: "document", maxCount: 1 }, { name: "attachments", maxCount: 50 }]), async (req, res) => {
   const userId = req.userId;
   const keyPassword = req.body.keyPassword;
   const { renderPdfWithTemplate } = require("./templates/template.manager");
@@ -588,18 +588,35 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
     fs.writeFileSync(privateKeyPath, privateKey, "utf8");
 
     // Firmar el documento con la llave privada
-    const documentPath = req.file.path;
+    const documentPath = req.files.document[0].path;
     const signedFilePath = `${documentPath}.signed`;
     const { exec } = require("child_process");
-    const signCommand = `openssl dgst -sign "${privateKeyPath}" -keyform PEM -sha256 -out "${signedFilePath}" "${documentPath}"`;
+
+    // Normalizar rutas para OpenSSL (evitar problemas con letras de unidad en Windows)
+    const normalizedPrivateKeyPath = privateKeyPath.replace(/\\/g, '/');
+    const normalizedDocumentPath = documentPath.replace(/\\/g, '/');
+    const normalizedSignedFilePath = signedFilePath.replace(/\\/g, '/');
+
+    const signCommand = `openssl dgst -sign "${normalizedPrivateKeyPath}" -keyform PEM -sha256 -out "${normalizedSignedFilePath}" "${normalizedDocumentPath}"`;
     exec(signCommand, async (err) => {
-      fs.unlinkSync(privateKeyPath);
+      // NO eliminar privateKeyPath aquí - se necesita para firmar manifest si hay anexos
       if (err) {
         console.error("Error al firmar documento:", err);
         return res.status(500).json({ error: "Error al firmar el documento" });
       }
       const signatureBinary = fs.readFileSync(signedFilePath);
       const signatureBase64 = signatureBinary.toString("base64").trim();
+
+      // ==================== PREPARAR INFORMACIÓN DE ANEXOS ====================
+      let attachmentCount = 0;
+      let attachmentNames = [];
+      let hasAttachments = false;
+
+      if (req.files.attachments && req.files.attachments.length > 0) {
+        hasAttachments = true;
+        attachmentCount = req.files.attachments.length;
+        attachmentNames = req.files.attachments.map(f => f.originalname);
+      }
 
       // Obtener información del firmante para los metadatos
       const [userInfo] = await pool.query(
@@ -675,6 +692,10 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
           signatureData: req.body.signatureData,
           signatureMethod: req.body.signatureMethod
         } : {}),
+        // Agregar información de anexos
+        hasAttachments: hasAttachments,
+        attachmentCount: attachmentCount,
+        attachmentNames: attachmentNames,
         // Agregar configuración para la plantilla
         config: templateConfig,
         // Agregar contenido básico del documento
@@ -705,15 +726,95 @@ app.post("/sign-document", authenticate, upload.single("document"), async (req, 
       finalPdfDoc.setCreator("Firmas Digitales FD");
       finalPdfDoc.setCreationDate(new Date());
       finalPdfDoc.setModificationDate(new Date());
+
+      // ==================== PROCESAMIENTO DE ANEXOS ====================
+      let manifestSignature = null;
+      let manifestJson = null;
+      let totalAttachmentSize = 0;
+
+      if (req.files.attachments && req.files.attachments.length > 0) {
+        const attachmentFiles = req.files.attachments.map(file => ({
+          name: file.originalname,
+          buffer: fs.readFileSync(file.path),
+          mimetype: file.mimetype
+        }));
+
+        // Almacenar nombres de anexos
+        attachmentNames = attachmentFiles.map(f => f.name);
+
+        // Generar manifest determinista
+        manifestJson = generateManifest(attachmentFiles);
+
+        // Firmar el manifest con la llave privada del usuario
+        const manifestPath = path.join(tempDir, `manifest_${Date.now()}.json`);
+        const manifestSigPath = `${manifestPath}.sig`;
+        fs.writeFileSync(manifestPath, manifestJson, 'utf8');
+
+        // Normalizar rutas para OpenSSL (evitar problemas con letras de unidad en Windows)
+        const normalizedManifestPath = manifestPath.replace(/\\/g, '/');
+        const normalizedManifestSigPath = manifestSigPath.replace(/\\/g, '/');
+
+        const signManifestCommand = `openssl dgst -sign "${normalizedPrivateKeyPath}" -keyform PEM -sha256 -out "${normalizedManifestSigPath}" "${normalizedManifestPath}"`;
+        await new Promise((resolve, reject) => {
+          exec(signManifestCommand, (err) => {
+            if (err) {
+              console.error('Error al firmar manifest:', err);
+              reject(err);
+            } else {
+              const manifestSigBinary = fs.readFileSync(manifestSigPath);
+              manifestSignature = manifestSigBinary.toString('base64').trim();
+              fs.unlinkSync(manifestPath);
+              fs.unlinkSync(manifestSigPath);
+              resolve();
+            }
+          });
+        });
+
+        // Calcular estadísticas de anexos
+        attachmentCount = attachmentFiles.length;
+        totalAttachmentSize = attachmentFiles.reduce((sum, f) => sum + f.buffer.length, 0);
+
+        // Embeber manifest completo en base64 en Keywords (Producer tiene límite de caracteres)
+        const manifestBase64 = Buffer.from(manifestJson).toString('base64');
+        const currentKeywords = finalPdfDoc.getKeywords() || [];
+        const manifestDataKeyword = `MANIFEST_JSON:${manifestBase64}`;
+        const manifestSigKeyword = `ATTACHMENT_MANIFEST_SIG:${manifestSignature}`;
+        const updatedKeywords = [...currentKeywords, manifestDataKeyword, manifestSigKeyword];
+        finalPdfDoc.setKeywords(updatedKeywords);
+
+        // Limpiar archivos temporales de anexos
+        req.files.attachments.forEach(file => {
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+          }
+        });
+      }
+
+      // Guardar PDF final con metadatos de anexos incluidos
       const finalBytes = await finalPdfDoc.save();
       fs.writeFileSync(avaladoFilePath, finalBytes);
+
+      // Guardar manifest en base de datos si existen anexos
+      if (manifestJson && manifestSignature) {
+        const pdfBaseName = path.basename(avaladoFilePath);
+        await pool.query(
+          `INSERT INTO document_attachments (user_id, document_filename, manifest_json, manifest_signature, file_count, total_size) 
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [userId, pdfBaseName, manifestJson, manifestSignature, attachmentCount, totalAttachmentSize]
+        );
+      }
 
       // Limpieza de archivos temporales
       fs.unlinkSync(documentPath);
       fs.unlinkSync(signedFilePath);
       fs.unlinkSync(tempBlankPath);
+      fs.unlinkSync(privateKeyPath); // Eliminar llave privada temporal al final
 
-      res.json({ success: true, downloadUrl: `/downloads/${path.basename(avaladoFilePath)}` });
+      res.json({
+        success: true,
+        downloadUrl: `/downloads/${path.basename(avaladoFilePath)}`,
+        attachmentsProcessed: attachmentCount
+      });
     });
   } catch (err) {
     console.error("Error en el proceso de firma:", err);
@@ -920,6 +1021,206 @@ app.post("/verify-document", authenticate, upload.fields([
   } catch (error) {
     console.error("Error en el proceso de verificación:", error);
     res.status(500).json({ verified: false, message: "Error en el proceso de verificación." });
+  }
+});
+
+// =================== VERIFICACIÓN DE ANEXOS ===================
+app.post("/verify-attachments", authenticate, upload.fields([
+  { name: "signedPdf", maxCount: 1 },
+  { name: "attachments", maxCount: 50 }
+]), async (req, res) => {
+  try {
+    if (!req.files || !req.files.signedPdf || !req.files.signedPdf[0]) {
+      return res.status(400).json({ error: "El PDF firmado es requerido." });
+    }
+
+    const signedPdfFile = req.files.signedPdf[0];
+    const pdfBaseName = req.body.pdfFileName || signedPdfFile.originalname;
+
+    // Cargar el PDF y extraer el manifest y su firma desde Keywords
+    const pdfBytes = fs.readFileSync(signedPdfFile.path);
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const keywords = pdfDoc.getKeywords() || '';
+
+    // Extraer firma del manifest desde Keywords
+    const manifestSigMatch = keywords.match(/ATTACHMENT_MANIFEST_SIG:([A-Za-z0-9+/=]+)/);
+
+    // Extraer manifest JSON desde Keywords (base64)
+    const manifestDataMatch = keywords.match(/MANIFEST_JSON:([A-Za-z0-9+/=]+)/);
+
+    if (!manifestSigMatch && !manifestDataMatch) {
+      // Limpiar archivo temporal
+      fs.unlinkSync(signedPdfFile.path);
+
+      return res.json({
+        success: true,
+        hasAttachments: false,
+        message: "Este documento no incluye anexos."
+      });
+    }
+
+    const manifestSignatureFromPdf = manifestSigMatch ? manifestSigMatch[1] : null;
+
+    // Intentar obtener manifest desde el PDF primero (es más confiable)
+    let originalManifest = null;
+    let originalManifestSignature = null;
+    let expectedFileCount = null;
+    let foundInPdf = false;
+
+    if (manifestDataMatch) {
+      // Decodificar manifest desde el PDF
+      try {
+        const manifestJsonBase64 = manifestDataMatch[1];
+        const manifestJsonString = Buffer.from(manifestJsonBase64, 'base64').toString('utf-8');
+        originalManifest = JSON.parse(manifestJsonString);
+        originalManifestSignature = manifestSignatureFromPdf;
+        expectedFileCount = originalManifest.files ? Object.keys(originalManifest.files).length : 0;
+        foundInPdf = true;
+      } catch (error) {
+        console.error('Error al decodificar manifest del PDF:', error);
+        // Continuar para intentar desde BD
+      }
+    }
+
+    // Si no se encontró en el PDF, buscar en la BD
+    if (!foundInPdf) {
+      const [manifestRows] = await pool.query(
+        "SELECT manifest_json, manifest_signature, file_count FROM document_attachments WHERE document_filename = ? ORDER BY created_at DESC LIMIT 1",
+        [pdfBaseName]
+      );
+
+      if (manifestRows.length === 0) {
+        // Permitir que continúe si hay anexos subidos
+        originalManifest = { files: {} };
+        originalManifestSignature = null;
+        expectedFileCount = 0;
+      } else {
+        originalManifest = JSON.parse(manifestRows[0].manifest_json);
+        originalManifestSignature = manifestRows[0].manifest_signature;
+        expectedFileCount = manifestRows[0].file_count;
+      }
+    }
+
+    // Usar firma del PDF si estamos leyendo desde allí, sino usar firma de BD
+    const signatureToVerify = foundInPdf ? manifestSignatureFromPdf : originalManifestSignature;
+
+    // Verificar que la firma del manifest es válida - PERO permitir continuar si hay anexos subidos sin manifest
+    if (!signatureToVerify && (!req.files.attachments || req.files.attachments.length === 0)) {
+      // Sin firma Y sin anexos subidos = error
+      fs.unlinkSync(signedPdfFile.path);
+
+      return res.json({
+        success: false,
+        error: "No se encontró información de anexos en este documento."
+      });
+    }
+
+    // Si hay firma pero no coincide (verificar solo si tenemos ambas fuentes)
+    if (foundInPdf && manifestSignatureFromPdf && originalManifestSignature && manifestSignatureFromPdf !== originalManifestSignature) {
+      fs.unlinkSync(signedPdfFile.path);
+
+      return res.json({
+        success: false,
+        error: "La firma del manifest en el PDF no coincide con la firma esperada. El documento pudo haber sido modificado."
+      });
+    }
+
+    // Verificar archivos anexos si fueron subidos
+    let verificationResult = {
+      success: true,
+      hasAttachments: !!(req.files.attachments && req.files.attachments.length > 0),
+      noManifestFound: !signatureToVerify,  // Nuevo flag para indicar que no hay manifest
+      expectedFileCount: expectedFileCount,
+      uploadedFileCount: 0,
+      filesMatched: [],
+      filesModified: [],
+      filesMissing: [],
+      filesExtra: [],
+      note: !signatureToVerify ? 'Este documento no tiene un manifest de anexos registrado. Los archivos subidos se procesarán como referencia.' : undefined
+    };
+
+    if (req.files.attachments && req.files.attachments.length > 0) {
+      const uploadedFiles = req.files.attachments.map(file => ({
+        name: file.originalname,
+        buffer: fs.readFileSync(file.path)
+      }));
+
+      verificationResult.uploadedFileCount = uploadedFiles.length;
+
+      // Si no hay manifest (documento firmado sin anexos), solo reportar archivos subidos
+      if (!signatureToVerify) {
+        // Listar los archivos subidos como "filesExtra" ya que no tienen contrapartida en manifest
+        verificationResult.filesExtra = uploadedFiles.map(f => f.name);
+        verificationResult.success = true; // Aceptar como exitoso, solo que son anexos no verificables
+        verificationResult.statusCode = 'no-manifest-available';
+        verificationResult.message = `ℹ️ ${uploadedFiles.length} archivo(s) subido(s) sin manifest registrado. No pueden ser verificados contra una firma original.`;
+      } else {
+        // Usar función de verificación del módulo crypto
+        const verification = verifyManifest(uploadedFiles, originalManifest);
+
+        verificationResult.filesMatched = verification.filesMatched;
+        verificationResult.filesModified = verification.filesModified;
+        verificationResult.filesMissing = verification.filesMissing;
+        verificationResult.filesExtra = verification.filesExtra;
+        verificationResult.success = verification.isValid;
+
+        // Mensaje descriptivo
+        if (verification.isValid) {
+          verificationResult.message = `✅ Los ${uploadedFiles.length} anexo(s) son auténticos y no han sido modificados.`;
+        } else {
+          const issues = [];
+          if (verification.filesModified.length > 0) {
+            issues.push(`${verification.filesModified.length} modificado(s)`);
+          }
+          if (verification.filesMissing.length > 0) {
+            issues.push(`${verification.filesMissing.length} faltante(s)`);
+          }
+          if (verification.filesExtra.length > 0) {
+            issues.push(`${verification.filesExtra.length} extra(s)`);
+          }
+          verificationResult.message = `⚠️ Problemas detectados: ${issues.join(', ')}.`;
+        }
+      }
+
+      // Limpiar archivos temporales de anexos
+      req.files.attachments.forEach(file => {
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+      });
+    } else {
+      // No se subieron anexos, pero el documento tiene manifest
+      const manifestFileNames = Object.keys(originalManifest.files || {});
+      verificationResult.uploadedFileCount = 0;
+      verificationResult.success = true;  // Cambiar a true porque no hay error, solo no se verificaron
+      verificationResult.statusCode = 'no-attachments-provided';  // Estado específico
+      verificationResult.message = `El documento incluye ${expectedFileCount} anexo(s), pero no se subió ninguno para verificar. Los anexos están registrados en el PDF.`;
+      verificationResult.manifestFileList = manifestFileNames;
+      verificationResult.note = 'Para verificar que los anexos no han sido modificados, puedes recargarlos y verificarlos.';
+    }
+
+    // Limpiar PDF temporal
+    fs.unlinkSync(signedPdfFile.path);
+
+    res.json(verificationResult);
+
+  } catch (error) {
+    console.error("Error al verificar anexos:", error);
+
+    // Limpiar archivos temporales en caso de error
+    if (req.files) {
+      if (req.files.signedPdf) {
+        req.files.signedPdf.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+      }
+      if (req.files.attachments) {
+        req.files.attachments.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Error al verificar anexos: " + error.message
+    });
   }
 });
 

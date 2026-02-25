@@ -1577,6 +1577,52 @@
                 </div>
               </div>
 
+              <!-- ✨ SECCIÓN DE ANEXOS OPCIONALES -->
+              <div class="attachments-section">
+                <div class="attachments-content">
+                  <div class="attachments-header">
+                    <h4 class="upload-title">Anexos del documento <span class="optional-badge">Opcional</span></h4>
+                    <p class="upload-subtitle">
+                      Agrega archivos complementarios (fotos, código, encuestas, videos, etc.) que se verificarán junto al documento principal
+                    </p>
+                  </div>
+                  
+                  <div class="modern-file-input-container">
+                    <input
+                      type="file"
+                      id="attachmentsInput"
+                      multiple
+                      class="modern-file-input"
+                      aria-label="Seleccionar archivos anexos"
+                    />
+                    <label for="attachmentsInput" class="modern-file-label attachments-label">
+                      <div class="file-label-content">
+                        <div class="file-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </div>
+                        <div class="file-text">
+                          <span class="file-main-text">Seleccionar archivos anexos</span>
+                          <span class="file-sub-text">Puedes seleccionar múltiples archivos de cualquier tipo</span>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <!-- Lista de archivos anexos seleccionados -->
+                  <div class="attachments-list" id="attachmentsList" style="display: none;">
+                    <div class="attachments-list-header">
+                      <span class="attachments-count" id="attachmentsCount">0 archivos</span>
+                      <span class="attachments-size" id="attachmentsTotalSize">0 KB</span>
+                    </div>
+                    <div class="attachments-items" id="attachmentsItems">
+                      <!-- Los archivos se mostrarán dinámicamente aquí -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Formulario de metadatos del documento -->
               <div class="document-metadata">
                 <h4 class="upload-title">Información del documento</h4>
@@ -2186,6 +2232,52 @@
                           <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                       </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ✨ SECCIÓN DE ANEXOS OPCIONALES (VERIFICACIÓN) -->
+              <div class="attachments-section">
+                <div class="attachments-content">
+                  <div class="attachments-header">
+                    <h4 class="upload-title">Anexos del documento <span class="optional-badge">Opcional</span></h4>
+                    <p class="upload-subtitle">
+                      Si el documento original incluía anexos, súbelos aquí para verificar su integridad
+                    </p>
+                  </div>
+                  
+                  <div class="modern-file-input-container">
+                    <input
+                      type="file"
+                      id="verifyAttachmentsInput"
+                      multiple
+                      class="modern-file-input"
+                      aria-label="Seleccionar archivos anexos para verificación"
+                    />
+                    <label for="verifyAttachmentsInput" class="modern-file-label attachments-label">
+                      <div class="file-label-content">
+                        <div class="file-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </div>
+                        <div class="file-text">
+                          <span class="file-main-text">Seleccionar archivos anexos</span>
+                          <span class="file-sub-text">Solo si el documento incluía anexos originalmente</span>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <!-- Lista de archivos anexos seleccionados para verificación -->
+                  <div class="attachments-list" id="verifyAttachmentsList" style="display: none;">
+                    <div class="attachments-list-header">
+                      <span class="attachments-count" id="verifyAttachmentsCount">0 archivos</span>
+                      <span class="attachments-size" id="verifyAttachmentsTotalSize">0 KB</span>
+                    </div>
+                    <div class="attachments-items" id="verifyAttachmentsItems">
+                      <!-- Los archivos se mostrarán dinámicamente aquí -->
                     </div>
                   </div>
                 </div>

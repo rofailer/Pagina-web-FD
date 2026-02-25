@@ -15,7 +15,8 @@ const {
     drawAuthorsSection,
     drawAvaladorInfo,
     drawSignatureArea,
-    drawElectronicSignature
+    drawElectronicSignature,
+    drawAttachmentsInfo
 } = require('./base.template');
 
 /**
@@ -204,6 +205,9 @@ async function drawElegantTemplate(page, width, height, data, helveticaFont, hel
 
     // 7. Información del avalador
     currentY = drawAvaladorInfo(page, width, height, data, currentY, config, fontObjects);
+
+    // 7.5. Información de anexos (si existen)
+    currentY = drawAttachmentsInfo(page, width, height, data, currentY, config, fontObjects);
 
     // 8. Área de firma
     currentY = await drawSignatureArea(page, width, height, data, currentY, config, fontObjects, pdfDoc);

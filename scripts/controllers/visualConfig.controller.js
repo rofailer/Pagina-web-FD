@@ -92,35 +92,68 @@ class VisualConfigController {
             const {
                 background,
                 favicon,
-                site_title,
-                header_title,
                 footer_text,
-                admin_header_title
+                admin_header_title,
+                institution_name,
+                siteTitle,
+                headerTitle,
+                footerText,
+                adminHeaderTitle,
+                institutionName
             } = req.body;
 
             // Obtener usuario actual
             const updatedBy = req.user.usuario || 'system';
 
             try {
+                const resolvedValues = {
+                    background: background ?? null,
+                    favicon: favicon ?? null,
+                    footer_text: footer_text ?? footerText ?? null,
+                    admin_header_title: admin_header_title ?? adminHeaderTitle ?? null,
+                    institution_name: institution_name ?? institutionName ?? siteTitle ?? headerTitle ?? null
+                };
+
                 const [result] = await pool.execute(
                     `UPDATE visual_config SET
-                      background = ?,
-                      favicon = ?,
-                      site_title = ?,
-                      header_title = ?,
-                      footer_text = ?,
-                      admin_header_title = ?,
-                      updated_by = ?
-                    WHERE id = 1`,
-                    [background, favicon, site_title, header_title, footer_text, admin_header_title, updatedBy]
+                                            background = COALESCE(?, background),
+                                            favicon = COALESCE(?, favicon),
+                                            footer_text = COALESCE(?, footer_text),
+                                            admin_header_title = COALESCE(?, admin_header_title),
+                                            institution_name = COALESCE(?, institution_name),
+                                            updated_by = ?
+                                        WHERE id = 1`,
+                    [
+                        resolvedValues.background,
+                        resolvedValues.favicon,
+                        resolvedValues.footer_text,
+                        resolvedValues.admin_header_title,
+                        resolvedValues.institution_name,
+                        updatedBy
+                    ]
                 );
 
                 if (result.affectedRows === 0) {
                     // Si no existe el registro, intentar insertar
+                    const defaults = {
+                        background: 'fondo1',
+                        favicon: '../../favicon.ico',
+                        footer_text: '© 2024 Firmas Digitales FD. Todos los derechos reservados.',
+                        admin_header_title: 'Panel Administrativo',
+                        institution_name: 'Firmas Digitales FD'
+                    };
+
                     await pool.execute(
-                        `INSERT INTO visual_config (id, background, favicon, site_title, header_title, footer_text, admin_header_title, updated_by)
-                        VALUES (1, ?, ?, ?, ?, ?, ?, ?)`,
-                        [background, favicon, site_title, header_title, footer_text, admin_header_title, updatedBy]
+                        `INSERT INTO visual_config (id, background, favicon, footer_text, admin_header_title, institution_name, updated_by)
+                        VALUES (1, ?, ?, ?, ?, ?, ?)`,
+                        [
+                            resolvedValues.background ?? defaults.background,
+                            resolvedValues.favicon ?? defaults.favicon,
+                            resolvedValues.footer_text ?? defaults.footer_text,
+                            resolvedValues.admin_header_title ?? defaults.admin_header_title,
+                            resolvedValues.institution_name ?? defaults.institution_name,
+                            updatedBy
+                        ]
                     );
                 }
 
@@ -155,31 +188,29 @@ class VisualConfigController {
                 await pool.execute(`
                     CREATE TABLE IF NOT EXISTS visual_config (
                         id INT PRIMARY KEY DEFAULT 1,
-                        background VARCHAR(50) DEFAULT 'fondo1',
+                        background VARCHAR(20) DEFAULT 'fondo1',
                         favicon VARCHAR(255) DEFAULT '../../favicon.ico',
-                        site_title VARCHAR(255) DEFAULT 'Firmas Digitales FD',
-                        header_title VARCHAR(255) DEFAULT 'Firmas Digitales FD',
-                        footer_text TEXT DEFAULT '© 2024 Firmas Digitales FD. Todos los derechos reservados.',
-                        admin_header_title VARCHAR(255) DEFAULT 'Panel Administrativo',
+                        institution_name VARCHAR(255) DEFAULT 'Firmas Digitales FD',
                         logo_data LONGBLOB DEFAULT NULL,
                         logo_mimetype VARCHAR(100) DEFAULT NULL,
                         logo_filename VARCHAR(255) DEFAULT NULL,
+                        footer_text TEXT DEFAULT '© 2024 Firmas Digitales FD. Todos los derechos reservados.',
+                        admin_header_title VARCHAR(255) DEFAULT 'Panel Administrativo',
                         updated_by VARCHAR(100) DEFAULT 'system',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                        institution_name VARCHAR(255) DEFAULT 'Firmas Digitales FD',
                         CONSTRAINT single_visual_config CHECK (id = 1)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 `);
 
                 // Insertar configuración por defecto
                 await pool.execute(
-                    `INSERT INTO visual_config (id, background, favicon, site_title, header_title, footer_text, admin_header_title, updated_by)
-                    VALUES (1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', 'Firmas Digitales FD', '© 2024 Firmas Digitales FD. Todos los derechos reservados.', 'Panel Administrativo', ?)
+                    `INSERT INTO visual_config (id, background, favicon, institution_name, footer_text, admin_header_title, updated_by)
+                    VALUES (1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', '© 2024 Firmas Digitales FD. Todos los derechos reservados.', 'Panel Administrativo', ?)
                     ON DUPLICATE KEY UPDATE
                     background = VALUES(background),
                     favicon = VALUES(favicon),
-                    site_title = VALUES(site_title),
-                    header_title = VALUES(header_title),
+                    institution_name = VALUES(institution_name),
                     footer_text = VALUES(footer_text),
                     admin_header_title = VALUES(admin_header_title),
                     updated_by = VALUES(updated_by)`,

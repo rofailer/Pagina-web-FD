@@ -183,7 +183,34 @@ CREATE TABLE user_activity_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====================================
--- 7. CREAR ÍNDICES PARA OPTIMIZACIÓN
+-- 8. CREAR TABLA DOCUMENT_ATTACHMENTS (MANIFIESTOS DE ANEXOS)
+-- ====================================
+
+CREATE TABLE document_attachments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  document_filename VARCHAR(255) NOT NULL COMMENT 'Nombre del PDF avalado asociado',
+  
+  -- Manifest JSON con hashes SHA256 de cada anexo
+  manifest_json MEDIUMTEXT NOT NULL COMMENT 'JSON con hashes SHA256 de archivos anexos',
+  
+  -- Firma digital del manifest
+  manifest_signature TEXT NOT NULL COMMENT 'Firma digital del manifest JSON',
+  
+  -- Metadata
+  file_count INT NOT NULL DEFAULT 0 COMMENT 'Cantidad de archivos en el manifest',
+  total_size BIGINT NOT NULL DEFAULT 0 COMMENT 'Tamaño total de anexos en bytes',
+  
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_user_document (user_id, document_filename),
+  INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci 
+COMMENT='Almacena manifiestos de archivos anexos (NO archivos) para verificación de integridad';
+
+-- ====================================
+-- 9. CREAR ÍNDICES PARA OPTIMIZACIÓN
 -- ====================================
 
 -- Índices para tabla users
@@ -203,7 +230,7 @@ CREATE INDEX idx_user_activity_accion ON user_activity_log(accion);
 CREATE INDEX idx_user_activity_created_at ON user_activity_log(created_at);
 
 -- ====================================
--- 8. INSERTAR CONFIGURACIÓN GLOBAL POR DEFECTO
+-- 10. INSERTAR CONFIGURACIÓN GLOBAL POR DEFECTO
 -- ====================================
 
 -- Insertar configuración PDF por defecto (reemplaza global_template_config)
@@ -231,7 +258,7 @@ INSERT INTO visual_config (id, background, favicon, institution_name, logo_data,
 (1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', NULL, NULL, NULL);
 
 -- ====================================
--- 9. INSERTAR USUARIOS ADMIN Y OWNER
+-- 11. INSERTAR USUARIOS ADMIN Y OWNER
 -- ====================================
 
 -- Insertar usuario ADMIN
@@ -487,7 +514,7 @@ INSERT INTO users (
 );
 
 -- ====================================
--- 10. INSERTAR PREFERENCIAS POR DEFECTO PARA LOS USUARIOS
+-- 12. INSERTAR PREFERENCIAS POR DEFECTO PARA LOS USUARIOS
 -- ====================================
 
 -- Preferencias para ADMIN
@@ -553,7 +580,7 @@ INSERT INTO user_preferences (user_id, clave, valor) VALUES
 ((SELECT id FROM users WHERE usuario = 'pedro.ramirez'), 'auto_logout_minutes', '45');
 
 -- ====================================
--- 11. INSERTAR REGISTRO INICIAL DE ACTIVIDAD
+-- 13. INSERTAR REGISTRO INICIAL DE ACTIVIDAD
 -- ====================================
 
 -- Registro de creación para ADMIN
@@ -578,7 +605,7 @@ INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address) VALUES
 ((SELECT id FROM users WHERE usuario = 'pedro.ramirez'), 'account_created', 'Cuenta de profesor de Historia creada durante la instalación del sistema', '127.0.0.1');
 
 -- ====================================
--- 12. FINALIZAR TRANSACCIÓN
+-- 14. FINALIZAR TRANSACCIÓN
 -- ====================================
 
 COMMIT;

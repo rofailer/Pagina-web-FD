@@ -29,101 +29,86 @@ document.addEventListener("DOMContentLoaded", async () => {
     // --- FUNCIONES PARA FILE INPUTS MODERNOS ---
     function setupFileInput(inputId, fileInfoId) {
         const fileInput = document.getElementById(inputId);
-        if (!fileInput) return;
-
-        const fileInputContainer = fileInput.closest('.file-input-container');
-        if (!fileInputContainer) return;
-
-        const fileDisplay = fileInputContainer.querySelector('.file-input-display');
         const fileInfo = document.getElementById(fileInfoId);
+        const label = document.querySelector(`label[for="${inputId}"]`);
 
-        if (!fileDisplay || !fileInfo) return;
+        if (!fileInput || !fileInfo) return;
 
-        // Eventos de drag and drop
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            fileDisplay.addEventListener(eventName, preventDefaults, false);
-        });
+        // Eventos de drag and drop en el label
+        if (label) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                label.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
 
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
+            ['dragenter', 'dragover'].forEach(eventName => {
+                label.addEventListener(eventName, () => {
+                    label.style.borderColor = 'var(--primary-color, #007bff)';
+                    label.style.backgroundColor = 'rgba(0, 123, 255, 0.05)';
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                label.addEventListener(eventName, () => {
+                    label.style.borderColor = '';
+                    label.style.backgroundColor = '';
+                }, false);
+            });
+
+            label.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    handleFileSelection(fileInput, fileInfo);
+                }
+            });
         }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            fileDisplay.addEventListener(eventName, () => {
-                fileDisplay.classList.add('dragover');
-            }, false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            fileDisplay.addEventListener(eventName, () => {
-                fileDisplay.classList.remove('dragover');
-            }, false);
-        });
-
-        fileDisplay.addEventListener('drop', (e) => {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                handleFileSelection(fileInput, fileInfo);
-            }
-        });
 
         // Evento de selección de archivo
         fileInput.addEventListener('change', () => {
             handleFileSelection(fileInput, fileInfo);
         });
-
-        // Configurar botón de remover archivo
-        const removeBtn = fileInfo.querySelector('.file-remove');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', () => {
-                clearFileSelection(fileInput, fileInfo);
-            });
-        }
     }
 
     function handleFileSelection(fileInput, fileInfo) {
         const file = fileInput.files[0];
         if (!file) {
             clearFileSelection(fileInput, fileInfo);
-            validateSignForm(); // Validar después de limpiar
-            validateDocumentStep(); // Validar después de limpiar
             return;
         }
 
         // Validar tipo de archivo
         if (file.type !== 'application/pdf') {
-            showNotification("El archivo debe ser un PDF.", "error");
+            showNotification("❌ El archivo debe ser un PDF", "error");
             clearFileSelection(fileInput, fileInfo);
-            validateSignForm(); // Validar después de limpiar
-            validateDocumentStep(); // Validar después de limpiar
             return;
         }
 
         // Mostrar información del archivo
-        const fileName = fileInfo.querySelector('.file-name');
-        const fileSize = fileInfo.querySelector('.file-size');
+        const fileName = fileInfo.querySelector('#signFileName');
+        const fileSize = fileInfo.querySelector('#signFileSize');
 
-        fileName.textContent = file.name;
-        fileSize.textContent = formatFileSize(file.size);
+        if (fileName) fileName.textContent = file.name;
+        if (fileSize) fileSize.textContent = formatFileSize(file.size);
 
-        fileInfo.classList.add('show');
-        fileInfo.style.display = 'flex';
+        fileInfo.style.display = 'block';
+
+        showNotification(`✅ Archivo seleccionado: ${file.name}`, 'success');
 
         // Validar formulario después de seleccionar archivo
-        validateSignForm();
-        validateDocumentStep();
+        if (typeof validateSignForm === 'function') validateSignForm();
+        if (typeof validateDocumentStep === 'function') validateDocumentStep();
     }
 
     function clearFileSelection(fileInput, fileInfo) {
         fileInput.value = '';
-        fileInfo.classList.remove('show');
         fileInfo.style.display = 'none';
 
         // Validar formulario después de limpiar archivo
-        validateSignForm();
+        if (typeof validateSignForm === 'function') validateSignForm();
     }
 
     function formatFileSize(bytes) {
@@ -136,6 +121,159 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Inicializar file inputs
     setupFileInput('fileInput', 'signFileInfo');
+
+    // --- Gestión de ANEXOS (Archivos Adicionales) ---
+    let attachmentFiles = []; // Array para almacenar archivos anexos
+    const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB límite total
+
+    function setupAttachmentsInput() {
+        const attachmentsInput = document.getElementById('attachmentsInput');
+        if (!attachmentsInput) return;
+
+        attachmentsInput.addEventListener('change', handleAttachmentsSelection);
+    }
+
+    function handleAttachmentsSelection(e) {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        // Calcular tamaño total actual + nuevos archivos
+        const currentSize = attachmentFiles.reduce((sum, f) => sum + f.size, 0);
+        const newFilesSize = files.reduce((sum, f) => sum + f.size, 0);
+        const totalSize = currentSize + newFilesSize;
+
+        // Verificar límite de tamaño
+        if (totalSize > MAX_TOTAL_SIZE) {
+            showNotification(
+                `❌ El tamaño total de anexos no puede exceder ${formatFileSize(MAX_TOTAL_SIZE)}`,
+                'error'
+            );
+            e.target.value = ''; // Limpiar input
+            return;
+        }
+
+        // Agregar archivos al array (evitar duplicados por nombre)
+        let addedCount = 0;
+        let duplicateCount = 0;
+
+        files.forEach(file => {
+            const isDuplicate = attachmentFiles.some(f => f.name === file.name && f.size === file.size);
+            if (!isDuplicate) {
+                attachmentFiles.push(file);
+                addedCount++;
+            } else {
+                duplicateCount++;
+            }
+        });
+
+        // Limpiar input para permitir seleccionar más archivos
+        e.target.value = '';
+
+        // Mostrar notificación de éxito
+        if (addedCount > 0) {
+            showNotification(
+                `✅ ${addedCount} anexo${addedCount !== 1 ? 's' : ''} agregado${addedCount !== 1 ? 's' : ''}${duplicateCount > 0 ? ` (${duplicateCount} duplicado${duplicateCount !== 1 ? 's' : ''} omitido${duplicateCount !== 1 ? 's' : ''})` : ''}`,
+                'success'
+            );
+        } else if (duplicateCount > 0) {
+            showNotification(
+                `⚠️ ${duplicateCount} archivo${duplicateCount !== 1 ? 's' : ''} ya ${duplicateCount !== 1 ? 'están' : 'está'} agregado${duplicateCount !== 1 ? 's' : ''}`,
+                'warning'
+            );
+        }
+
+        displayAttachmentsList();
+    }
+
+    function displayAttachmentsList() {
+        const listContainer = document.getElementById('attachmentsList');
+        const itemsContainer = document.getElementById('attachmentsItems');
+        const countElement = document.getElementById('attachmentsCount');
+        const sizeElement = document.getElementById('attachmentsTotalSize');
+
+        if (!listContainer || !itemsContainer) return;
+
+        if (attachmentFiles.length === 0) {
+            listContainer.style.display = 'none';
+            return;
+        }
+
+        listContainer.style.display = 'block';
+
+        // Calcular tamaño total
+        const totalSize = attachmentFiles.reduce((sum, file) => sum + file.size, 0);
+
+        // Actualizar contadores
+        if (countElement) {
+            countElement.textContent = `${attachmentFiles.length} archivo${attachmentFiles.length !== 1 ? 's' : ''}`;
+        }
+        if (sizeElement) {
+            sizeElement.textContent = formatFileSize(totalSize);
+        }
+
+        // Mostrar archivos
+        itemsContainer.innerHTML = '';
+        attachmentFiles.forEach((file, index) => {
+            const item = createAttachmentItem(file, index);
+            itemsContainer.appendChild(item);
+        });
+    }
+
+    function createAttachmentItem(file, index) {
+        const div = document.createElement('div');
+        div.className = 'attachment-item';
+
+        // Obtener extensión del archivo
+        const ext = file.name.split('.').pop().slice(0, 3).toUpperCase();
+
+        div.innerHTML = `
+            <div class="attachment-icon">${ext}</div>
+            <div class="attachment-details">
+                <span class="attachment-name" title="${file.name}">${file.name}</span>
+                <span class="attachment-size">${formatFileSize(file.size)}</span>
+            </div>
+            <button type="button" class="attachment-remove-btn" data-index="${index}" title="Eliminar anexo">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        `;
+
+        // Event listener para eliminar
+        const removeBtn = div.querySelector('.attachment-remove-btn');
+        removeBtn.addEventListener('click', () => removeAttachment(index));
+
+        return div;
+    }
+
+    function removeAttachment(index) {
+        const removedFile = attachmentFiles[index];
+        attachmentFiles.splice(index, 1);
+        displayAttachmentsList();
+
+        if (removedFile) {
+            showNotification(`🗑️ Anexo eliminado: ${removedFile.name}`, 'info');
+        }
+    }
+
+    function clearAllAttachments() {
+        attachmentFiles = [];
+        displayAttachmentsList();
+    }
+
+    // Inicializar input de anexos
+    setupAttachmentsInput();
+
+    // Exponer funciones globales
+    window.clearAllAttachments = clearAllAttachments;
+    window.clearSignFile = function () {
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('signFileInfo');
+        if (fileInput && fileInfo) {
+            clearFileSelection(fileInput, fileInfo);
+            showNotification('🗑️ Archivo eliminado', 'info');
+        }
+    };
 
     // --- FUNCIONES DE GESTIÓN DE AUTORES ---
     function initializeDocumentAuthors() {
@@ -1383,6 +1521,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             formData.append('titulo', tempDocumentData.titulo);
             formData.append('autores', tempDocumentData.autores);
             formData.append('institucion', tempDocumentData.institucion);
+
+            // Añadir archivos anexos si existen
+            if (typeof attachmentFiles !== 'undefined' && attachmentFiles.length > 0) {
+                attachmentFiles.forEach((file) => {
+                    formData.append('attachments', file);
+                });
+            }
 
             // Añadir datos de la firma electrónica solo si existe
             if (signatureData && signatureData !== 'null' && signatureData !== 'undefined' && signatureData !== 'NaN') {

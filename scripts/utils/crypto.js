@@ -33,7 +33,110 @@ function decryptWithType(text, password, type) {
     return decryptAES(text, password, type);
 }
 
+/**
+ * Genera el hash SHA256 de un buffer
+ * @param {Buffer} buffer - El buffer del archivo
+ * @returns {string} Hash SHA256 en formato hexadecimal
+ */
+function generateFileHash(buffer) {
+    return crypto.createHash('sha256').update(buffer).digest('hex');
+}
+
+/**
+ * Genera un manifest JSON determinista para anexos
+ * @param {Array} files - Array de objetos {name, buffer, mimetype}
+ * @returns {string} JSON manifest ordenado alfabéticamente
+ */
+function generateManifest(files) {
+    const filesData = {};
+
+    // Procesar cada archivo
+    files.forEach(file => {
+        filesData[file.name] = {
+            sha256: generateFileHash(file.buffer),
+            size: file.buffer.length,
+            mimetype: file.mimetype || 'application/octet-stream'
+        };
+    });
+
+    // Ordenar alfabéticamente las claves para determinismo
+    const sortedFiles = Object.keys(filesData)
+        .sort()
+        .reduce((acc, key) => {
+            acc[key] = filesData[key];
+            return acc;
+        }, {});
+
+    const manifest = {
+        version: '1.0.0',
+        created_at: new Date().toISOString(),
+        files: sortedFiles
+    };
+
+    // Retornar JSON con claves ordenadas para asegurar determinismo
+    return JSON.stringify(manifest, null, 2);
+}
+
+/**
+ * Verifica la integridad de archivos contra un manifest
+ * @param {Array} files - Array de objetos {name, buffer}
+ * @param {Object} manifest - Manifest parseado
+ * @returns {Object} Resultado de la verificación
+ */
+function verifyManifest(files, manifest) {
+    const result = {
+        filesMatched: [],
+        filesModified: [],
+        filesMissing: [],
+        filesExtra: [],
+        isValid: true
+    };
+
+    const manifestFiles = manifest.files || {};
+    const uploadedFileNames = files.map(f => f.name);
+
+    // Verificar archivos en el manifest
+    for (const [fileName, fileData] of Object.entries(manifestFiles)) {
+        const uploadedFile = files.find(f => f.name === fileName);
+
+        if (!uploadedFile) {
+            result.filesMissing.push(fileName);
+            result.isValid = false;
+        } else {
+            const uploadedHash = generateFileHash(uploadedFile.buffer);
+
+            if (uploadedHash === fileData.sha256) {
+                result.filesMatched.push({
+                    name: fileName,
+                    size: fileData.size,
+                    hash: uploadedHash
+                });
+            } else {
+                result.filesModified.push({
+                    name: fileName,
+                    expectedHash: fileData.sha256,
+                    actualHash: uploadedHash
+                });
+                result.isValid = false;
+            }
+        }
+    }
+
+    // Verificar archivos extra (no en manifest)
+    uploadedFileNames.forEach(fileName => {
+        if (!manifestFiles[fileName]) {
+            result.filesExtra.push(fileName);
+            result.isValid = false;
+        }
+    });
+
+    return result;
+}
+
 module.exports = {
     encryptAES, decryptAES,
-    encryptWithType, decryptWithType
+    encryptWithType, decryptWithType,
+    generateFileHash,
+    generateManifest,
+    verifyManifest
 };

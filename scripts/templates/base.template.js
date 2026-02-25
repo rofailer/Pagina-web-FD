@@ -735,6 +735,109 @@ async function drawLogo(page, width, height, data, pdfDoc) {
     }
 }
 
+/**
+ * Dibujar información de anexos incluidos en el documento
+ * @param {Object} page - Página del PDF
+ * @param {Number} width - Ancho de la página
+ * @param {Number} height - Alto de la página
+ * @param {Object} data - Datos del documento
+ * @param {Number} currentY - Posición Y actual
+ * @param {Object} config - Configuración de la plantilla
+ * @param {Object} fontObjects - Objetos de fuentes
+ * @returns {Number} Nueva posición Y
+ */
+function drawAttachmentsInfo(page, width, height, data, currentY, config, fontObjects) {
+    const { rgb } = require('pdf-lib');
+
+    // Solo dibujar si hay anexos
+    if (!data.hasAttachments || !data.attachmentCount || data.attachmentCount === 0) {
+        return currentY;
+    }
+
+    const colorConfig = config.colorConfig || {};
+    const layoutConfig = config.layoutConfig || {};
+    const visualConfig = config.visualConfig || {};
+
+    const primaryColor = hexToRgb(colorConfig.primary || '#1f2937');
+    const accentColor = hexToRgb(colorConfig.accent || '#f59e0b');
+
+    const helvetica = fontObjects.helvetica;
+    const helveticaBold = fontObjects.helveticaBold;
+
+    currentY += 15;
+
+    // Título de la sección
+    page.drawText('📎 ANEXOS INCLUIDOS', {
+        x: layoutConfig.marginLeft || 50,
+        y: canvasToPdfY(currentY, height),
+        size: 12,
+        font: helveticaBold,
+        color: rgb(accentColor.r, accentColor.g, accentColor.b)
+    });
+
+    currentY += 20;
+
+    // Descripción
+    const attachmentText = `Este documento incluye ${data.attachmentCount} archivo${data.attachmentCount !== 1 ? 's' : ''} adjunto${data.attachmentCount !== 1 ? 's' : ''}:`;
+    page.drawText(attachmentText, {
+        x: layoutConfig.marginLeft || 50,
+        y: canvasToPdfY(currentY, height),
+        size: 10,
+        font: helvetica,
+        color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
+    });
+
+    currentY += 18;
+
+    // Lista de nombres de anexos (máximo 5, luego "... y X más")
+    const maxToShow = 5;
+    const attachmentsToShow = data.attachmentNames.slice(0, maxToShow);
+
+    attachmentsToShow.forEach((name, index) => {
+        const bulletText = `  • ${cleanTextForPdf(name)}`;
+        const wrappedLines = wrapText(bulletText, 70);
+
+        wrappedLines.forEach((line, lineIndex) => {
+            page.drawText(line, {
+                x: (layoutConfig.marginLeft || 50) + (lineIndex > 0 ? 12 : 0),
+                y: canvasToPdfY(currentY, height),
+                size: 9,
+                font: helvetica,
+                color: rgb(primaryColor.r, primaryColor.g, primaryColor.b)
+            });
+            currentY += 13;
+        });
+    });
+
+    // Si hay más, mostrar el contador
+    if (data.attachmentNames.length > maxToShow) {
+        const moreCount = data.attachmentNames.length - maxToShow;
+        page.drawText(`  ... y ${moreCount} archivo${moreCount !== 1 ? 's' : ''} más`, {
+            x: layoutConfig.marginLeft || 50,
+            y: canvasToPdfY(currentY, height),
+            size: 9,
+            font: helveticaBold,
+            color: rgb(accentColor.r, accentColor.g, accentColor.b)
+        });
+        currentY += 13;
+    }
+
+    // Nota de verificación
+    currentY += 5;
+    const verificationNote = 'La autenticidad de los anexos puede verificarse mediante el sistema.';
+    page.drawText(verificationNote, {
+        x: layoutConfig.marginLeft || 50,
+        y: canvasToPdfY(currentY, height),
+        size: 8,
+        font: helvetica,
+        color: rgb(0.5, 0.5, 0.5)
+    });
+
+    currentY += 15;
+
+    return currentY;
+}
+
 // Exportar para Node.js (backend)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -751,6 +854,7 @@ if (typeof module !== 'undefined' && module.exports) {
         drawAvaladorInfo,
         drawSignatureArea,
         drawElectronicSignature,
-        drawLogo
+        drawLogo,
+        drawAttachmentsInfo
     };
 }

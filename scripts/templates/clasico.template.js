@@ -39,6 +39,8 @@ async function drawClassicTemplate(page, width, height, data, helveticaFont, hel
     currentY = drawRecipientsSimple(page, width, height, data, currentY, fontObj, color, marginLeft);
     // 3. TEXTO DEL AVAL COMPLETO (incluye saludo, cuerpo y despedida si el usuario lo desea)
     currentY = await drawFullAvalText(page, width, height, data, currentY, fontObj, color, marginLeft, maxWidth);
+    // 3.5. INFORMACIÓN DE ANEXOS (si existen)
+    currentY = drawAttachmentsInfoSimple(page, width, height, data, currentY, fontObj, helveticaBold, color, marginLeft);
     // 4. ÁREA DE FIRMA
     await drawSignatureAreaSimple(page, width, height, data, currentY, fontObj, color, marginLeft, pdfDoc);
     return currentY;
@@ -121,6 +123,90 @@ function drawRecipientsSimple(page, width, height, data, currentY, fontObj, colo
         color: rgb(rgbColor.r, rgbColor.g, rgbColor.b)
     });
     return currentY + 40;
+}
+
+function drawAttachmentsInfoSimple(page, width, height, data, currentY, fontObj, fontBold, color, marginLeft) {
+    const { rgb } = require('pdf-lib');
+
+    // Solo dibujar si hay anexos
+    if (!data.hasAttachments || !data.attachmentCount || data.attachmentCount === 0) {
+        return currentY;
+    }
+
+    const rgbColor = hexToRgb(color);
+
+    currentY += 15;
+
+    // Título de la sección
+    page.drawText('📎 ANEXOS INCLUIDOS', {
+        x: marginLeft,
+        y: canvasToPdfY(currentY, height),
+        size: 11,
+        font: fontBold,
+        color: rgb(rgbColor.r, rgbColor.g, rgbColor.b)
+    });
+
+    currentY += 20;
+
+    // Descripción
+    const attachmentText = `Este documento incluye ${data.attachmentCount} archivo${data.attachmentCount !== 1 ? 's' : ''} adjunto${data.attachmentCount !== 1 ? 's' : ''}:`;
+    page.drawText(attachmentText, {
+        x: marginLeft,
+        y: canvasToPdfY(currentY, height),
+        size: 10,
+        font: fontObj,
+        color: rgb(rgbColor.r, rgbColor.g, rgbColor.b)
+    });
+
+    currentY += 18;
+
+    // Lista de nombres de anexos (máximo 5, luego "... y X más")
+    const maxToShow = 5;
+    const attachmentsToShow = data.attachmentNames.slice(0, maxToShow);
+
+    attachmentsToShow.forEach((name) => {
+        const bulletText = `  • ${cleanTextForPdf(name)}`;
+        const lines = wrapTextToLines(bulletText, 85);
+
+        lines.forEach((line) => {
+            page.drawText(line, {
+                x: marginLeft,
+                y: canvasToPdfY(currentY, height),
+                size: 9,
+                font: fontObj,
+                color: rgb(rgbColor.r, rgbColor.g, rgbColor.b)
+            });
+            currentY += 13;
+        });
+    });
+
+    // Si hay más, mostrar el contador
+    if (data.attachmentNames.length > maxToShow) {
+        const moreCount = data.attachmentNames.length - maxToShow;
+        page.drawText(`  ... y ${moreCount} archivo${moreCount !== 1 ? 's' : ''} más`, {
+            x: marginLeft,
+            y: canvasToPdfY(currentY, height),
+            size: 9,
+            font: fontBold,
+            color: rgb(rgbColor.r, rgbColor.g, rgbColor.b)
+        });
+        currentY += 13;
+    }
+
+    // Nota de verificación
+    currentY += 5;
+    const verificationNote = 'La autenticidad de los anexos puede verificarse mediante el sistema.';
+    page.drawText(verificationNote, {
+        x: marginLeft,
+        y: canvasToPdfY(currentY, height),
+        size: 8,
+        font: fontObj,
+        color: rgb(0.5, 0.5, 0.5)
+    });
+
+    currentY += 15;
+
+    return currentY;
 }
 
 
@@ -288,38 +374,32 @@ function wrapTextToLines(text, maxCharsPerLine) {
  * Dibujar logo en la esquina derecha inferior
  */
 async function drawLogoBottomRight(page, width, height, data) {
-    // Si hay logoPath (ej: '/api/logo'), descargar y embeber
-    const fetch = require('node-fetch');
+    // Usar logoData que viene desde el backend con el buffer del logo
     let logoBuffer = null;
     let logoType = 'png';
-    if (data.logoPath && typeof data.logoPath === 'string') {
-        try {
-            const res = await fetch(data.logoPath.startsWith('http') ? data.logoPath : `http://localhost:3000${data.logoPath}`);
-            if (res.ok) {
-                logoBuffer = Buffer.from(await res.arrayBuffer());
-                const contentType = res.headers.get('content-type') || '';
-                if (contentType.includes('png')) logoType = 'png';
-                else if (contentType.includes('jpeg') || contentType.includes('jpg')) logoType = 'jpg';
-            }
-        } catch (e) {
-            console.warn('No se pudo descargar logo para PDF:', e.message);
+
+    if (data.logoData && data.logoData.buffer) {
+        logoBuffer = data.logoData.buffer;
+        // Determinar tipo por mimetype
+        if (data.logoData.mimetype) {
+            if (data.logoData.mimetype.includes('png')) logoType = 'png';
+            else if (data.logoData.mimetype.includes('jpeg') || data.logoData.mimetype.includes('jpg')) logoType = 'jpg';
         }
     }
-    // Compatibilidad: si no hay logoPath, intentar con logoData.buffer (legacy)
-    if (!logoBuffer && data.logoData && data.logoData.buffer) {
-        logoBuffer = data.logoData.buffer;
-        logoType = data.logoData.extension || 'png';
-    }
+
     if (!logoBuffer) return;
+
     try {
         let logoImage;
         if (logoType === 'png') logoImage = await page.doc.embedPng(logoBuffer);
         else logoImage = await page.doc.embedJpg(logoBuffer);
+
         // Logo en esquina inferior derecha
         const logoWidth = 80;
         const logoHeight = 40;
         const logoX = width - logoWidth - 10;
         const logoY = canvasToPdfY(height - 100, height);
+
         page.drawImage(logoImage, {
             x: logoX,
             y: logoY,
@@ -327,7 +407,6 @@ async function drawLogoBottomRight(page, width, height, data) {
             height: logoHeight,
             opacity: 0.8
         });
-        // Log eliminado para producción
     } catch (err) {
         console.warn('❌ Error cargando logo:', err.message);
     }

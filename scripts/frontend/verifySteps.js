@@ -2,116 +2,184 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Variables de estado ---
     let currentStep = 1;
     let selectedProfesorId = null;
-    let isManualMode = false; // Cambiar a false para iniciar en modo automático
-    let allProfessors = []; // Lista completa de profesores
-    let filteredProfessors = []; // Lista filtrada
-    let autoDetectedSigner = null; // Información del firmante detectado automáticamente
+    let isManualMode = false;
+    let allProfessors = [];
+    let filteredProfessors = [];
+    let autoDetectedSigner = null;
 
-    // Referencias globales
-    window.selectedProfesorId = null;
+    // --- Gestión de ANEXOS para Verificación ---
+    let verifyAttachmentFiles = [];
+    const MAX_TOTAL_SIZE = 100 * 1024 * 1024;
 
-    // --- Botón global de continuar paso 1 ---
-    const continueBtn = document.getElementById("continueVerifyStep1Btn");
+    function setupVerifyAttachmentsInput() {
+        const attachmentsInput = document.getElementById('verifyAttachmentsInput');
+        if (!attachmentsInput) return;
+        attachmentsInput.addEventListener('change', handleVerifyAttachmentsSelection);
+    }
+
+    function handleVerifyAttachmentsSelection(e) {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        const currentSize = verifyAttachmentFiles.reduce((sum, f) => sum + f.size, 0);
+        const newFilesSize = files.reduce((sum, f) => sum + f.size, 0);
+        const totalSize = currentSize + newFilesSize;
+
+        if (totalSize > MAX_TOTAL_SIZE) {
+            showNotification(
+                `❌ El tamaño total de anexos no puede exceder ${formatFileSize(MAX_TOTAL_SIZE)}`,
+                'error'
+            );
+            e.target.value = '';
+            return;
+        }
+
+        let addedCount = 0;
+        let duplicateCount = 0;
+
+        files.forEach(file => {
+            const isDuplicate = verifyAttachmentFiles.some(f => f.name === file.name && f.size === file.size);
+            if (!isDuplicate) {
+                verifyAttachmentFiles.push(file);
+                addedCount++;
+            } else {
+                duplicateCount++;
+            }
+        });
+
+        e.target.value = '';
+
+        if (addedCount > 0) {
+            showNotification(
+                `${addedCount} anexo${addedCount !== 1 ? 's' : ''} agregado${addedCount !== 1 ? 's' : ''}${duplicateCount > 0 ? ` (${duplicateCount} duplicado${duplicateCount !== 1 ? 's' : ''} omitido${duplicateCount !== 1 ? 's' : ''})` : ''}`,
+                'success'
+            );
+        } else if (duplicateCount > 0) {
+            showNotification(
+                `${duplicateCount} archivo${duplicateCount !== 1 ? 's' : ''} ya ${duplicateCount !== 1 ? 'están' : 'está'} agregado${duplicateCount !== 1 ? 's' : ''}`,
+                'warning'
+            );
+        }
+
+        displayVerifyAttachmentsList();
+    }
+
+    function displayVerifyAttachmentsList() {
+        const listContainer = document.getElementById('verifyAttachmentsList');
+        const itemsContainer = document.getElementById('verifyAttachmentsItems');
+        const countElement = document.getElementById('verifyAttachmentsCount');
+        const sizeElement = document.getElementById('verifyAttachmentsTotalSize');
+
+        if (!listContainer || !itemsContainer) return;
+
+        if (verifyAttachmentFiles.length === 0) {
+            listContainer.style.display = 'none';
+            return;
+        }
+
+        listContainer.style.display = 'block';
+
+        const totalSize = verifyAttachmentFiles.reduce((sum, file) => sum + file.size, 0);
+
+        if (countElement) {
+            countElement.textContent = `${verifyAttachmentFiles.length} archivo${verifyAttachmentFiles.length !== 1 ? 's' : ''}`;
+        }
+        if (sizeElement) {
+            sizeElement.textContent = formatFileSize(totalSize);
+        }
+
+        itemsContainer.innerHTML = '';
+        verifyAttachmentFiles.forEach((file, index) => {
+            const item = createVerifyAttachmentItem(file, index);
+            itemsContainer.appendChild(item);
+        });
+    }
+
+    function createVerifyAttachmentItem(file, index) {
+        const div = document.createElement('div');
+        div.className = 'attachment-item';
+
+        const ext = file.name.split('.').pop().slice(0, 3).toUpperCase();
+
+        div.innerHTML = `
+            <div class="attachment-icon">${ext}</div>
+            <div class="attachment-details">
+                <span class="attachment-name" title="${file.name}">${file.name}</span>
+                <span class="attachment-size">${formatFileSize(file.size)}</span>
+            </div>
+            <button type="button" class="attachment-remove-btn" data-index="${index}" title="Eliminar anexo">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        `;
+
+        const removeBtn = div.querySelector('.attachment-remove-btn');
+        removeBtn.addEventListener('click', () => removeVerifyAttachment(index));
+
+        return div;
+    }
+
+    function removeVerifyAttachment(index) {
+        const removedFile = verifyAttachmentFiles[index];
+        verifyAttachmentFiles.splice(index, 1);
+        displayVerifyAttachmentsList();
+
+        if (removedFile) {
+            showNotification(`Anexo eliminado: ${removedFile.name}`, 'info');
+        }
+    }
+
     const verifyModeSwitch = document.getElementById("verifyModeSwitch");
+    const continueBtn = document.getElementById("continueVerifyStep1Btn");
 
     function updateContinueBtnState() {
         if (!continueBtn) return;
 
-        // El botón siempre debe estar visible
-        continueBtn.style.display = "flex";
-        continueBtn.style.visibility = "visible";
+        const autoDetectFileInput = document.getElementById("autoDetectFile");
+        const hasAutoFile = autoDetectFileInput && autoDetectFileInput.files && autoDetectFileInput.files.length > 0;
+        const canContinue = isManualMode ? !!selectedProfesorId : !!autoDetectedSigner && hasAutoFile;
 
-        if (isManualMode) {
-            if (!selectedProfesorId) {
-                continueBtn.disabled = true;
-                continueBtn.innerHTML = `Selecciona un profesor <svg class="btn-icon-right" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 12h12M14 8l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-            } else {
-                continueBtn.disabled = false;
-                continueBtn.innerHTML = `Continuar <svg class="btn-icon-right" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 12h12M14 8l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-            }
-        } else {
-            const autoDetectFile = document.getElementById("autoDetectFile");
-            const hasFile = autoDetectFile && autoDetectFile.files.length > 0;
-            if (!hasFile) {
-                continueBtn.disabled = true;
-                continueBtn.innerHTML = `Sube un documento <svg class="btn-icon-right" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 12h12M14 8l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-            } else if (!autoDetectedSigner) {
-                continueBtn.disabled = true;
-                continueBtn.innerHTML = `Detectando... <svg class="btn-icon-right" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 12h12M14 8l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-            } else {
-                continueBtn.disabled = false;
-                continueBtn.innerHTML = `Continuar <svg class="btn-icon-right" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 12h12M14 8l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-            }
-        }
+        continueBtn.disabled = !canContinue;
+        continueBtn.innerHTML = `Continuar <svg class="btn-icon-right" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 12h12M14 8l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     }
 
-    if (continueBtn) {
-        continueBtn.onclick = () => {
-            if (isManualMode) {
-                if (!selectedProfesorId) {
-                    showNotification("Selecciona un profesor o tutor.", "warning");
-                    return;
-                }
-                window.verificacionEnCurso = true;
-                showStep(2);
-            } else {
-                if (!(autoDetectedSigner && document.getElementById("autoDetectFile").files.length > 0)) {
-                    showNotification("Debes subir un PDF firmado válido.", "warning");
-                    return;
-                }
-                // Simular selección automática y avanzar
-                window.verificacionEnCurso = true;
-                showStep(2);
-            }
-        };
-    }
+    setupVerifyAttachmentsInput();
+
+    // Referencias globales
+    window.selectedProfesorId = null;
+    window.verificacionEnCurso = false;
 
     // Cambiar modo y actualizar botón
-    if (verifyModeSwitch) {
-        verifyModeSwitch.addEventListener("change", function () {
-            isManualMode = !this.checked;
-            updateContinueBtnState();
-        });
-    }
-
-    // Actualizar botón al seleccionar profesor
-    function selectProfessor(professorId, professorName) {
-        selectedProfesorId = professorId;
-        // ...existing code...
-        updateContinueBtnState();
-    }
-
-    // Actualizar botón al cambiar input de archivo automático
-    const autoDetectFileInput = document.getElementById("autoDetectFile");
-    if (autoDetectFileInput) {
-        autoDetectFileInput.addEventListener('change', updateContinueBtnState);
-    }
-
-    // Actualizar botón al cargar profesores (por si ya hay selección)
-    setTimeout(updateContinueBtnState, 300);
-    // --- Switch de modo de verificación ---
     const manualOption = document.getElementById("manualVerifyOption");
     const autoOption = document.getElementById("autoVerifyOption");
     const manualLabel = document.getElementById("manualLabel");
     const autoLabel = document.getElementById("autoLabel");
+
     if (verifyModeSwitch && manualOption && autoOption && manualLabel && autoLabel) {
         verifyModeSwitch.addEventListener("change", function () {
+            const acceptProfesorBtn = document.getElementById("acceptProfesorBtn");
+
             if (this.checked) {
-                // Cambiar a automático
+                // Cambiar a automatico
                 manualOption.style.display = "none";
                 autoOption.style.display = "";
                 manualLabel.classList.remove("switch-label-active");
                 autoLabel.classList.add("switch-label-active");
                 isManualMode = false;
 
-                // Limpiar datos del modo manual al cambiar a automático
+                // Mostrar/ocultar botones
+                if (acceptProfesorBtn) acceptProfesorBtn.style.display = "none";
+                if (continueBtn) continueBtn.style.display = "flex"; // O "block" según el CSS
+
+                // Limpiar datos del modo manual al cambiar a automatico
                 selectedProfesorId = null;
                 window.selectedProfesorId = null;
                 const selectedProfessor = document.getElementById("selectedProfessor");
                 if (selectedProfessor) {
                     selectedProfessor.style.display = "none";
                 }
-                // Limpiar selección visual de profesores
+                // Limpiar seleccion visual de profesores
                 document.querySelectorAll('.professor-item').forEach(item => {
                     item.classList.remove('selected');
                 });
@@ -123,7 +191,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 autoLabel.classList.remove("switch-label-active");
                 isManualMode = true;
 
-                // Limpiar datos del modo automático al cambiar a manual
+                // Mostrar/ocultar botones
+                if (acceptProfesorBtn) acceptProfesorBtn.style.display = "flex"; // O "block" según el CSS
+                if (continueBtn) continueBtn.style.display = "none";
+
+                // Limpiar datos del modo automatico al cambiar a manual
                 autoDetectedSigner = null;
                 window.autoDetectedFile = null;
                 const autoDetectFile = document.getElementById("autoDetectFile");
@@ -150,216 +222,20 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             updateContinueBtnState();
         });
-        // Estado inicial: automático (coincide con checkbox checked)
+        // Estado inicial: automatico (coincide con checkbox checked)
         manualOption.style.display = "none";
         autoOption.style.display = "";
         manualLabel.classList.remove("switch-label-active");
         autoLabel.classList.add("switch-label-active");
         isManualMode = false;
 
-        // Asegurar que el botón esté visible y el estado sea correcto
+        // Mostrar botón automático inicialmente y ocultar manual
+        const acceptProfesorBtn = document.getElementById("acceptProfesorBtn");
+        if (acceptProfesorBtn) acceptProfesorBtn.style.display = "none";
+        if (continueBtn) continueBtn.style.display = "flex";
+
+        // Asegurar que el boton este visible y el estado sea correcto
         updateContinueBtnState();
-    }
-
-    // --- Función para crear mensajes estandarizados ---
-    function createStandardAlert(type, title, content, details = null, suggestion = null) {
-        const alertClass = `alert-message ${type}`;
-
-        let detailsHtml = '';
-        if (details && details.length > 0) {
-            detailsHtml = `
-                <div class="alert-details">
-                    <ul>
-                        ${details.map(detail => `<li>${detail}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-        }
-
-        let suggestionHtml = '';
-        if (suggestion) {
-            suggestionHtml = `
-                <div class="alert-suggestion">
-                    <strong>💡 Sugerencia:</strong> ${suggestion}
-                </div>
-            `;
-        }
-
-        return `
-            <div class="${alertClass}">
-                <div class="alert-title">
-                    <span class="alert-icon"></span>
-                    ${title}
-                </div>
-                <div class="alert-content">${content}</div>
-                ${detailsHtml}
-                ${suggestionHtml}
-            </div>
-        `;
-    }
-
-    // --- Función para detección automática del firmante ---
-    async function detectSignerFromDocument(file) {
-        // Mostrar estado de carga en selected-professor
-        const selectedProfessorDiv = document.getElementById("selectedProfessor");
-        const selectedProfessorName = document.getElementById("selectedProfessorName");
-        const continueBtn = document.getElementById("acceptProfesorBtn");
-        const fileInput = document.getElementById("autoDetectFile");
-
-        // Deshabilitar controles durante el proceso
-        if (continueBtn) continueBtn.disabled = true;
-        if (fileInput) fileInput.disabled = true;
-
-        // Mostrar mensaje de carga en selected-professor
-        if (selectedProfessorDiv && selectedProfessorName) {
-            selectedProfessorDiv.style.display = "block";
-            selectedProfessorName.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px; color: #007bff;">
-                    <div style="width: 16px; height: 16px; border: 2px solid #007bff; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                    <span>Analizando documento y detectando firmante...</span>
-                </div>
-                <style>
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                </style>
-            `;
-        }
-
-        try {
-            const formData = new FormData();
-            formData.append('signedFile', file);
-
-            const response = await fetch('/extract-signer-info', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: formData
-            });
-
-            const result = await response.json();
-
-            // Simular tiempo adicional de procesamiento (mínimo 2.5 segundos total)
-            const minProcessingTime = 2500; // 2.5 segundos
-            const startTime = Date.now();
-            const elapsedTime = Date.now() - startTime;
-            const remainingTime = Math.max(0, minProcessingTime - elapsedTime);
-
-            if (remainingTime > 0) {
-                await new Promise(resolve => setTimeout(resolve, remainingTime));
-            } if (result.success) {
-                // Detección exitosa
-                autoDetectedSigner = result.signer;
-
-                // Guardar archivo para uso en paso 2
-                window.autoDetectedFile = file;
-
-                // Seleccionar automáticamente al profesor en la lista
-                selectProfessorAutomatically(result.signer.id);
-
-                // Mostrar resultado exitoso en selected-professor
-                if (selectedProfessorName) {
-                    selectedProfessorName.innerHTML = `
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="m9 12 2 2 4-4"/>
-                                <circle cx="12" cy="12" r="10"/>
-                            </svg>
-                            <span>${result.signer.nombre || result.signer.name || 'Profesor detectado'}</span>
-                            <small style="color: #28a745; font-weight: 500;">(Auto-detectado)</small>
-                        </div>
-                    `;
-                }
-
-                // Habilitar el botón continuar
-                const acceptBtn = document.getElementById("acceptProfesorBtn");
-                if (acceptBtn) {
-                    acceptBtn.disabled = false;
-                }
-
-                // Mostrar notificación de éxito
-                if (window.showNotification) {
-                    window.showNotification(`Firmante detectado automáticamente: ${result.signer.nombre}`, "success");
-                }
-
-                // En modo automático, avanzar automáticamente al paso 2
-                if (!isManualMode) {
-                    // Deshabilitar navegación manual durante proceso automático
-                    const navButtons = document.querySelectorAll('.step-btn, .step-indicator');
-                    navButtons.forEach(btn => btn.style.pointerEvents = 'none');
-
-                    setTimeout(() => {
-                        if (window.showNotification) {
-                            window.showNotification("Avanzando automáticamente al paso 2...", "info");
-                        }
-                        showStep(2);
-
-                        // Pre-llenar el archivo firmado en el paso 2
-                        if (window.autoDetectedFile) {
-                            const signedFileInput = document.getElementById("signedFile");
-                            if (signedFileInput) {
-                                // Crear un nuevo FileList con el archivo
-                                const dataTransfer = new DataTransfer();
-                                dataTransfer.items.add(window.autoDetectedFile);
-                                signedFileInput.files = dataTransfer.files;
-
-                                // Actualizar la UI del paso 2
-                                handleSignedFileInput(signedFileInput);
-
-                                // Automáticamente continuar al paso 3 después de 3 segundos
-                                setTimeout(() => {
-                                    if (window.showNotification) {
-                                        window.showNotification("Avanzando automáticamente al paso 3...", "info");
-                                    }
-                                    showStep(3);
-                                    if (window.showNotification) {
-                                        window.showNotification("Archivo firmado cargado automáticamente. Sube el documento original para comparar.", "info");
-                                    }
-
-                                    // Rehabilitar navegación manual
-                                    navButtons.forEach(btn => btn.style.pointerEvents = 'auto');
-                                }, 3000);
-                            }
-                        }
-                    }, 2000); // Esperar 2 segundos para que el usuario vea la notificación y resultado
-                }
-
-            } else {
-                // Error en la detección
-                autoDetectedSigner = null;
-                window.autoDetectedFile = null;
-
-                // Ocultar selected-professor en caso de error
-                if (selectedProfessorDiv) {
-                    selectedProfessorDiv.style.display = "none";
-                }
-
-                // Mostrar notificación de error
-                if (window.showNotification) {
-                    window.showNotification(result.message || 'No se pudo detectar el firmante. Selecciona manualmente al profesor.', "warning");
-                }
-            }
-
-        } catch (error) {
-            console.error("Error en detección automática:", error);
-            autoDetectedSigner = null;
-            window.autoDetectedFile = null;
-
-            // Ocultar selected-professor en caso de error de conexión
-            if (selectedProfessorDiv) {
-                selectedProfessorDiv.style.display = "none";
-            }
-
-            if (window.showNotification) {
-                window.showNotification("Error al procesar el documento", "error");
-            }
-        } finally {
-            // Rehabilitar controles al finalizar
-            if (continueBtn) continueBtn.disabled = false;
-            if (fileInput) fileInput.disabled = false;
-        }
     }
 
     // --- Función para seleccionar profesor automáticamente ---
@@ -376,6 +252,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Seleccionar el profesor detectado
             professorElement.classList.add('selected');
             selectedProfesorId = professorId;
+            window.selectedProfesorId = professorId;
 
             // Actualizar la información del profesor seleccionado
             const selectedProfessor = document.getElementById("selectedProfessor");
@@ -758,7 +635,47 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Las notificaciones ahora se manejan con el sistema global de notifications.js
+    // --- Función para crear alerta estándar ---
+    function createStandardAlert(type, title, message, details = [], additionalMsg = '') {
+        const iconMap = {
+            'success': '✓',
+            'error': '✕',
+            'warning': '⚠',
+            'info': 'ℹ'
+        };
+
+        const detailsList = details.length > 0 ? `
+            <div class="alert-details">
+                <ul>
+                    ${details.map(detail => `<li>${detail}</li>`).join('')}
+                </ul>
+            </div>
+        ` : '';
+
+        const additionalSection = additionalMsg ? `
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 0.95em;">
+                ${additionalMsg}
+            </div>
+        ` : '';
+
+        return `
+            <div class="alert-message ${type}">
+                <div style="display: flex; gap: 12px;">
+                    <div class="alert-icon" style="font-size: 1.2em; font-weight: bold; flex-shrink: 0;">
+                        ${iconMap[type] || '•'}
+                    </div>
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 1.05em;">${title}</h4>
+                        <div class="alert-content">
+                            ${message}
+                            ${detailsList}
+                            ${additionalSection}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 
     // --- Paso 1: Seleccionar profesor ---
     const acceptProfesorBtn = document.getElementById("acceptProfesorBtn");
@@ -769,6 +686,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
             window.verificacionEnCurso = true; // Asegurar que está marcado
+            showStep(2);
+        };
+    }
+
+    // --- Botón continuar para modo automático (continueVerifyStep1Btn) ---
+    const continueVerifyStep1BtnElement = document.getElementById("continueVerifyStep1Btn");
+    if (continueVerifyStep1BtnElement) {
+        continueVerifyStep1BtnElement.onclick = () => {
+            if (!autoDetectedSigner) {
+                showNotification("Detecta un firmante primero.", "warning");
+                return;
+            }
+            window.verificacionEnCurso = true;
             showStep(2);
         };
     }
@@ -787,15 +717,27 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Paso 3: Seleccionar original y verificar ---
     document.getElementById("acceptOriginalBtn").onclick = () => {
         const originalFile = document.getElementById("originalFile").files[0];
+        const signedFile = document.getElementById("signedFile").files[0];
+        const profesorId = window.selectedProfesorId || selectedProfesorId;
+
         if (!originalFile) {
             alert("Selecciona el archivo original (PDF).");
             return;
         }
 
-        window.verificacionEnCurso = true;
+        if (!signedFile) {
+            alert("Falta el archivo firmado. Vuelve al paso 2.");
+            return;
+        }
 
-        // Mostrar loader y texto "Verificando..." antes de hacer la petición
+        if (!profesorId) {
+            alert("Falta el profesor seleccionado. Vuelve al paso 1.");
+            return;
+        }
+
+        window.verificacionEnCurso = true;
         showStep(4);
+
         const resultElem = document.getElementById("verificationResult");
         const continueBtn = document.getElementById("continueVerifyBtn");
         const retryKeyBtn = document.getElementById("retryKeyBtn");
@@ -808,371 +750,366 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
         continueBtn.style.display = "none";
         retryKeyBtn.style.display = "none";
-        document.getElementById("restartVerifyProcessBtn").style.display = "none"; // Oculta siempre al entrar
+        document.getElementById("restartVerifyProcessBtn").style.display = "none";
 
-        // --- Procesar verificación ---
-        const signedFile = document.getElementById("signedFile").files[0];
-        const formData = new FormData();
+        // Preparar FormData para documento
+        const docFormData = new FormData();
+        docFormData.append("signedFile", signedFile);
+        docFormData.append("originalFile", originalFile);
+        docFormData.append("profesorId", profesorId);
 
-        formData.append("signedFile", signedFile);
-        formData.append("originalFile", originalFile);
+        // Preparar FormData para anexos
+        const attachmentsFormData = new FormData();
+        attachmentsFormData.append("signedPdf", signedFile);
+        attachmentsFormData.append("pdfFileName", signedFile.name);
 
-        // Solo agregar profesorId (siempre requerido)
-        formData.append("profesorId", selectedProfesorId);
+        verifyAttachmentFiles.forEach((file) => {
+            attachmentsFormData.append("attachments", file);
+        });
 
-        fetch("/verify-document", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-            body: formData,
-        })
-            .then(async (response) => {
-                setTimeout(async () => {
-                    continueBtn.style.display = "none";
-                    retryKeyBtn.style.display = "none";
-                    document.getElementById("restartVerifyProcessBtn").style.display = "none";
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.reason === "key_mismatch") {
-                            resultElem.innerHTML = createStandardAlert(
-                                'warning',
-                                'Profesor incorrecto',
-                                'El profesor/tutor seleccionado NO avaló este documento.',
-                                [
-                                    'La llave pública del profesor no coincide con la firma digital.',
-                                    'No se puede verificar la autenticidad del aval.',
-                                    'Es necesario seleccionar el profesor correcto.'
-                                ],
-                                'Intenta seleccionar otro profesor que pueda haber avalado este documento.'
-                            );
-                            retryKeyBtn.style.display = "inline-block";
-                            showNotification("El profesor seleccionado no avaló este documento", "warning");
-                        }
-                        else if (data.reason === "invalid_signature") {
-                            resultElem.innerHTML = createStandardAlert(
-                                'error',
-                                'Documento modificado',
-                                'El profesor/tutor sí avaló el documento, pero el archivo original NO coincide.',
-                                [
-                                    'La llave pública coincide con la firma digital.',
-                                    'El documento original ha sido modificado después del aval.',
-                                    'La integridad del documento está comprometida.'
-                                ],
-                                'Verifica que el archivo original sea exactamente el mismo que se firmó inicialmente.'
-                            );
-                            continueBtn.style.display = "inline-block";
-                            showNotification("El archivo original no coincide con el documento avalado", "error");
-                        }
-                        else if (data.valid && data.professorMatch && data.signatureMatch) {
-                            resultElem.innerHTML = createStandardAlert(
-                                'success',
-                                'Verificación exitosa',
-                                'El profesor/tutor avaló el documento y la firma digital es válida.',
-                                [
-                                    'La llave pública coincide con la firma digital.',
-                                    'El documento original no ha sido modificado.',
-                                    'La integridad y autenticidad están garantizadas.'
-                                ]
-                            );
-                            document.getElementById("restartVerifyProcessBtn").style.display = "inline-block";
-                            showNotification("Verificación exitosa: El documento es auténtico", "success");
-                        }
-                        else {
-                            resultElem.innerHTML = `<div style="color: red;">${data.message || "Error al verificar el documento."}</div>`;
-                            continueBtn.style.display = "inline-block";
-                            showNotification("Error en la verificación del documento", "error");
-                        }
-                        window.verificacionEnCurso = false; // Proceso terminado
-                    } else {
-                        // Manejo mejorado de errores específicos
-                        let errorMsg = "Error al verificar el documento.";
-                        let notificationMsg = "Error en la verificación";
-                        let notificationType = "error";
-
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error) {
-                                const errorText = errorData.error.toLowerCase();
-
-                                if (errorText.includes("no se encontró la llave pública")) {
-                                    errorMsg = createStandardAlert(
-                                        'warning',
-                                        'Profesor sin llaves',
-                                        'No se encontró la llave pública del profesor/tutor seleccionado.',
-                                        [
-                                            'El profesor no ha generado sus llaves digitales.',
-                                            'Es necesario que el profesor cree sus llaves primero.',
-                                            'Contacta al profesor para que genere sus llaves.'
-                                        ],
-                                        'Solicita al profesor que acceda a su perfil y genere sus llaves digitales.'
-                                    );
-                                    notificationMsg = "El profesor seleccionado no tiene llaves generadas";
-                                } else if (errorText.includes("mismo archivo") ||
-                                    errorText.includes("archivos idénticos") ||
-                                    errorText.includes("duplicado")) {
-                                    errorMsg = createStandardAlert(
-                                        'warning',
-                                        'Archivos idénticos detectados',
-                                        'Has subido el mismo archivo como "avalado" y "original".',
-                                        [
-                                            'El archivo avalado debe ser el documento firmado digitalmente.',
-                                            'El archivo original debe ser el documento sin firmar.',
-                                            'Ambos archivos deben ser diferentes.'
-                                        ],
-                                        'Asegúrate de seleccionar el archivo avalado (que descargaste después de firmarlo) y el archivo original (antes de firmarlo).'
-                                    );
-                                    notificationMsg = "Los archivos subidos son idénticos";
-                                    notificationType = "warning";
-                                } else if (errorText.includes("archivo no válido") ||
-                                    errorText.includes("pdf") ||
-                                    errorText.includes("formato")) {
-                                    errorMsg = createStandardAlert(
-                                        'error',
-                                        'Archivos PDF inválidos',
-                                        'Uno o ambos archivos no son PDFs válidos o están corruptos.',
-                                        [
-                                            'Los archivos deben ser PDFs válidos y completos.',
-                                            'Verifica que los archivos no estén dañados.',
-                                            'Intenta descargar los archivos nuevamente.'
-                                        ]
-                                    );
-                                    notificationMsg = "Archivos PDF inválidos";
-                                } else if (errorText.includes("avalado") ||
-                                    errorText.includes("firmado")) {
-                                    errorMsg = createStandardAlert(
-                                        'error',
-                                        'Archivo avalado inválido',
-                                        'El archivo avalado no contiene una firma digital válida.',
-                                        [
-                                            'El archivo debe contener metadatos de firma digital.',
-                                            'Asegúrate de subir el archivo que descargaste después de firmarlo.',
-                                            'El archivo debe tener la extensión .pdf y estar completo.'
-                                        ]
-                                    );
-                                    notificationMsg = "El archivo avalado no es válido";
-                                } else if (errorText.includes("original")) {
-                                    errorMsg = createStandardAlert(
-                                        'error',
-                                        'Archivo original inválido',
-                                        'El archivo original no es un PDF válido.',
-                                        [
-                                            'El archivo debe ser el documento antes de ser firmado.',
-                                            'Verifica que sea un PDF válido y completo.',
-                                            'El archivo no debe contener firmas digitales previas.'
-                                        ]
-                                    );
-                                    notificationMsg = "El archivo original no es válido";
-                                } else if (errorText.includes("profesor") ||
-                                    errorText.includes("tutor")) {
-                                    errorMsg = createStandardAlert(
-                                        'warning',
-                                        'Error con el profesor seleccionado',
-                                        'Hubo un problema relacionado con el profesor/tutor seleccionado.',
-                                        [
-                                            'El profesor puede no tener llaves generadas.',
-                                            'Verifica que el profesor esté activo en el sistema.',
-                                            'Intenta seleccionar otro profesor.'
-                                        ]
-                                    );
-                                    notificationMsg = "Error con el profesor seleccionado";
-                                    notificationType = "warning";
-                                } else {
-                                    errorMsg = createStandardAlert(
-                                        'error',
-                                        'Error en la verificación',
-                                        errorData.error || 'Error desconocido al verificar el documento.',
-                                        [
-                                            'Verifica que todos los archivos sean correctos.',
-                                            'Intenta realizar la verificación nuevamente.',
-                                            'Si el problema persiste, contacta al administrador.'
-                                        ]
-                                    );
-                                    notificationMsg = "Error en la verificación";
-                                }
-                            }
-                        } catch (e) {
-                            // Si no es JSON, usar mensaje genérico
-                            if (response.status === 400) {
-                                errorMsg = createStandardAlert(
-                                    'error',
-                                    '❌',
-                                    'Datos inválidos',
-                                    'Los archivos enviados no son válidos o están corruptos.',
-                                    [
-                                        'Verifica que ambos archivos sean PDFs válidos.',
-                                        'Los archivos no deben estar dañados o incompletos.',
-                                        'Intenta descargar y subir los archivos nuevamente.'
-                                    ]
-                                );
-                                notificationMsg = "Archivos no válidos";
-                            } else if (response.status === 404) {
-                                errorMsg = createStandardAlert(
-                                    'error',
-                                    'Servicio no disponible',
-                                    'No se encontró el servicio de verificación.',
-                                    [
-                                        'El servidor puede estar en mantenimiento.',
-                                        'Verifica tu conexión a internet.',
-                                        'Intenta nuevamente en unos momentos.'
-                                    ]
-                                );
-                                notificationMsg = "Servicio no disponible";
-                            } else {
-                                errorMsg = createStandardAlert(
-                                    'error',
-                                    'Error del servidor',
-                                    `Error del servidor (${response.status}).`,
-                                    [
-                                        'Hubo un problema en el servidor.',
-                                        'Este error es temporal.',
-                                        'Intenta realizar la verificación nuevamente.'
-                                    ]
-                                );
-                                notificationMsg = "Error del servidor";
-                            }
-                        }
-
-                        resultElem.innerHTML = errorMsg;
-                        continueBtn.style.display = "inline-block";
-                        showNotification(notificationMsg, notificationType);
-                        window.verificacionEnCurso = false;
-                    }
-                }, 1200);
+        // Hacer ambas peticiones en paralelo
+        Promise.allSettled([
+            fetch("/verify-document", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                body: docFormData
+            }),
+            fetch("/verify-attachments", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                body: attachmentsFormData
             })
-            .catch((error) => {
-                setTimeout(() => {
+        ]).then(async (results) => {
+            setTimeout(async () => {
+                try {
+                    // Procesar resultado del documento
+                    let documentResult = null;
+                    let docData = null;
+                    let docError = null;
+
+                    if (results[0].status === 'fulfilled') {
+                        const docResponse = results[0].value;
+                        if (docResponse.ok) {
+                            docData = await docResponse.json();
+                        } else {
+                            try {
+                                docError = await docResponse.json();
+                            } catch (e) {
+                                docError = { error: 'Error al verificar documento' };
+                            }
+                        }
+                    } else {
+                        docError = { error: 'No se pudo conectar con el servidor' };
+                    }
+
+                    documentResult = buildDocumentResult(docData, docError);
+
+                    // Procesar resultado de anexos
+                    let attachmentResult = null;
+                    let attachmentsData = null;
+                    let attachmentsError = null;
+
+                    if (results[1].status === 'fulfilled') {
+                        const attachResponse = results[1].value;
+                        if (attachResponse.ok) {
+                            attachmentsData = await attachResponse.json();
+                        } else {
+                            try {
+                                attachmentsError = await attachResponse.json();
+                            } catch (e) {
+                                attachmentsError = { error: 'Error al verificar anexos' };
+                            }
+                        }
+                    } else {
+                        attachmentsError = { error: 'No se pudo conectar con el servidor' };
+                    }
+
+                    attachmentResult = buildAttachmentResult(attachmentsData, attachmentsError);
+
+                    // Mostrar ambos resultados
+                    resultElem.innerHTML = createCombinedVerificationResult(documentResult, attachmentResult);
+
+                    // Mostrar botones según el resultado
+                    if (docData && docData.valid && docData.professorMatch && docData.signatureMatch) {
+                        document.getElementById("restartVerifyProcessBtn").style.display = "inline-block";
+                        showNotification("Verificacion completada correctamente", "success");
+                    } else {
+                        continueBtn.style.display = "inline-block";
+                        showNotification("Verifique los resultados de la verificacion", "warning");
+                    }
+
+                    window.verificacionEnCurso = false;
+
+                } catch (error) {
+                    console.error("Error procesando resultados:", error);
                     resultElem.innerHTML = createStandardAlert(
                         'error',
-                        'Error de conexión',
-                        'No se pudo conectar con el servidor para verificar el documento.',
-                        [
-                            'Verifica tu conexión a internet.',
-                            'El servidor puede estar temporalmente no disponible.',
-                            'Intenta realizar la verificación nuevamente en unos momentos.'
-                        ]
+                        'Error al procesar resultados',
+                        'No se pudieron procesar los resultados de la verificacion.',
+                        ['Intenta nuevamente']
                     );
                     continueBtn.style.display = "inline-block";
-                    retryKeyBtn.style.display = "none";
-                    showNotification("Error de conexión durante la verificación", "error");
+                    showNotification("Error al procesar verificacion", "error");
                     window.verificacionEnCurso = false;
-                }, 1200);
-            });
+                }
+            }, 1200);
+        });
     };
+
+    // --- Función para detectar firmante automáticamente desde documento ---
+    async function detectSignerFromDocument(file) {
+        try {
+            const formData = new FormData();
+            formData.append('signedFile', file);
+
+            const response = await fetch('/extract-signer-info', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                autoDetectedSigner = null;
+                window.autoDetectedFile = null;
+
+                if (window.showNotification) {
+                    window.showNotification(
+                        errorData.error || 'No se pudo detectar el firmante. Selecciona manualmente al profesor.',
+                        'warning'
+                    );
+                }
+                return;
+            }
+
+            const result = await response.json();
+
+            // Simular tiempo mínimo de procesamiento (2.5 segundos total)
+            const minProcessingTime = 2500;
+            const startTime = Date.now();
+            await new Promise(resolve => setTimeout(resolve, minProcessingTime));
+
+            if (result.success) {
+                // Detección exitosa
+                autoDetectedSigner = result.signer;
+                window.autoDetectedFile = file;
+
+                // Seleccionar automáticamente al profesor en la lista
+                selectProfessorAutomatically(result.signer.id);
+
+                // Marcar archivo como detectado
+                const autoDetectLabel = document.querySelector('label[for="autoDetectFile"]');
+                if (autoDetectLabel) {
+                    autoDetectLabel.classList.add('has-file', 'auto-detected');
+                    const textSpan = autoDetectLabel.querySelector('.file-input-text');
+                    if (textSpan) textSpan.textContent = '✓ ' + file.name;
+                }
+
+                // Mostrar resultado en selected-professor
+                const selectedProfessor = document.getElementById("selectedProfessor");
+                const selectedProfessorName = document.getElementById("selectedProfessorName");
+                if (selectedProfessor && selectedProfessorName) {
+                    selectedProfessor.style.display = 'block';
+                    selectedProfessorName.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m9 12 2 2 4-4"/>
+                                <circle cx="12" cy="12" r="10"/>
+                            </svg>
+                            <span>${result.signer.nombre || result.signer.name || 'Profesor detectado'}</span>
+                            <small style="color: #28a745; font-weight: 500;">(Auto-detectado)</small>
+                        </div>
+                    `;
+                }
+
+                if (window.showNotification) {
+                    window.showNotification(
+                        `Firmante detectado: ${result.signer.nombre || result.signer.name}`,
+                        'success'
+                    );
+                }
+            } else {
+                // Error en la detección
+                autoDetectedSigner = null;
+                window.autoDetectedFile = null;
+
+                // Marcar como error
+                const autoDetectLabel = document.querySelector('label[for="autoDetectFile"]');
+                if (autoDetectLabel) {
+                    autoDetectLabel.classList.add('error');
+                }
+
+                const selectedProfessor = document.getElementById("selectedProfessor");
+                if (selectedProfessor) {
+                    selectedProfessor.style.display = "none";
+                }
+
+                if (window.showNotification) {
+                    window.showNotification(
+                        result.message || 'No se pudo detectar el firmante. Selecciona manualmente al profesor.',
+                        'warning'
+                    );
+                }
+            }
+        } catch (error) {
+            console.error("Error en detección automática:", error);
+            autoDetectedSigner = null;
+            window.autoDetectedFile = null;
+
+            const selectedProfessor = document.getElementById("selectedProfessor");
+            if (selectedProfessor) {
+                selectedProfessor.style.display = "none";
+            }
+
+            if (window.showNotification) {
+                window.showNotification(
+                    "Error al procesar el documento",
+                    'error'
+                );
+            }
+        }
+    }
 
     // --- Acciones finales ---
     function limpiarFormulariosVerificar(showNotificationFlag = false) {
-        // Resetear formularios básicos
+        // Realizar reset de formularios
         const verifyAvalForm = document.getElementById("verifyAvalForm");
         const verifyOriginalForm = document.getElementById("verifyOriginalForm");
         if (verifyAvalForm) verifyAvalForm.reset();
         if (verifyOriginalForm) verifyOriginalForm.reset();
 
-        // Limpiar todos los file inputs y sus visualizaciones
-
-        // 1. Archivo firmado (signedFile) - paso 2
-        const signedFile = document.getElementById("signedFile");
-        const signedFileInfo = document.getElementById("signedFileInfo");
-        const acceptAvalBtn = document.getElementById("acceptAvalBtn");
-        if (signedFile) {
-            signedFile.value = "";
-            if (signedFileInfo) signedFileInfo.style.display = "none";
-            if (acceptAvalBtn) acceptAvalBtn.disabled = true;
-        }
-
-        // 2. Archivo original (originalFile) - paso 3
-        const originalFile = document.getElementById("originalFile");
-        const originalFileInfo = document.getElementById("originalFileInfo");
-        const acceptOriginalBtn = document.getElementById("acceptOriginalBtn");
-        if (originalFile) {
-            originalFile.value = "";
-            if (originalFileInfo) originalFileInfo.style.display = "none";
-            if (acceptOriginalBtn) acceptOriginalBtn.disabled = true;
-        }
-
-        // 3. Archivo de detección automática (autoDetectFile) - paso 1 modo automático
+        // ========== LIMPIEZA COMPLETA DE ARCHIVO DETECTADO AUTOMÁTICAMENTE (Paso 1) ==========
         const autoDetectFile = document.getElementById("autoDetectFile");
+        const autoDetectResult = document.getElementById("autoDetectResult");
+
         if (autoDetectFile) {
             autoDetectFile.value = "";
-            // Limpiar el label visual
-            const autoDetectLabel = document.querySelector('label[for="autoDetectFile"]');
-            if (autoDetectLabel) {
-                const textSpan = autoDetectLabel.querySelector('.file-input-text');
-                if (textSpan) textSpan.textContent = 'Subir documento firmado';
-                autoDetectLabel.classList.remove('has-file', 'auto-detected', 'error');
-            }
         }
-
-        // 4. Limpiar resultado de detección automática
-        const autoDetectResult = document.getElementById("autoDetectResult");
         if (autoDetectResult) {
             autoDetectResult.style.display = "none";
-            autoDetectResult.className = "auto-detect-result";
             autoDetectResult.innerHTML = "";
+            autoDetectResult.className = "auto-detect-result";
         }
 
-        // Resetear variables de estado de detección automática
+        // Limpiar label visual del autoDetectFile
+        const autoDetectLabel = document.querySelector('label[for="autoDetectFile"]');
+        if (autoDetectLabel) {
+            const textSpan = autoDetectLabel.querySelector('.file-input-text');
+            if (textSpan) textSpan.textContent = 'Subir documento firmado';
+            autoDetectLabel.classList.remove('has-file', 'auto-detected', 'error');
+        }
+
+        // ========== LIMPIEZA COMPLETA DE ARCHIVO FIRMADO (Paso 2) ==========
+        const signedFile = document.getElementById("signedFile");
+        const signedFileInfo = document.getElementById("signedFileInfo");
+        const signedFileContainer = signedFile ? signedFile.closest('.modern-file-input-container') : null;
+        const acceptAvalBtn = document.getElementById("acceptAvalBtn");
+
+        if (signedFile) {
+            signedFile.value = "";
+        }
+        if (signedFileInfo) {
+            signedFileInfo.style.display = "none";
+        }
+        if (signedFileContainer) {
+            signedFileContainer.style.display = "block";
+        }
+        if (acceptAvalBtn) {
+            acceptAvalBtn.disabled = true;
+        }
+
+        // ========== LIMPIEZA COMPLETA DE ARCHIVO ORIGINAL (Paso 3) ==========
+        const originalFile = document.getElementById("originalFile");
+        const originalFileInfo = document.getElementById("originalFileInfo");
+        const originalFileContainer = originalFile ? originalFile.closest('.modern-file-input-container') : null;
+        const acceptOriginalBtn = document.getElementById("acceptOriginalBtn");
+
+        if (originalFile) {
+            originalFile.value = "";
+        }
+        if (originalFileInfo) {
+            originalFileInfo.style.display = "none";
+        }
+        if (originalFileContainer) {
+            originalFileContainer.style.display = "block";
+        }
+        if (acceptOriginalBtn) {
+            acceptOriginalBtn.disabled = true;
+        }
+
+        // ========== LIMPIEZA COMPLETA DE ANEXOS (Paso 2/3) ==========
+        verifyAttachmentFiles = [];
+        const verifyAttachmentsList = document.getElementById('verifyAttachmentsList');
+        const verifyAttachmentsItems = document.getElementById('verifyAttachmentsItems');
+        const verifyAttachmentsInput = document.getElementById('verifyAttachmentsInput');
+
+        if (verifyAttachmentsList) {
+            verifyAttachmentsList.style.display = 'none';
+        }
+        if (verifyAttachmentsItems) {
+            verifyAttachmentsItems.innerHTML = '';
+        }
+        if (verifyAttachmentsInput) {
+            verifyAttachmentsInput.value = '';
+        }
+
+        // ========== LIMPIEZA DE ESTADO Y VARIABLES GLOBALES ==========
+        // Limpiar variables de detección automática
         autoDetectedSigner = null;
         window.autoDetectedFile = null;
 
-        // 5. Limpiar búsqueda y selección de profesor (modo manual)
-        const searchInput = document.getElementById("professorSearchInput");
-        if (searchInput) {
-            searchInput.value = "";
-        }
+        // Limpiar variables de professor seleccionado
+        selectedProfesorId = null;
+        window.selectedProfesorId = null;
 
-        const sortOrder = document.getElementById("sortOrder");
-        if (sortOrder) {
-            sortOrder.value = "asc";
-        }
-
-        // Ocultar profesor seleccionado
+        // Limpiar UI de professor seleccionado
         const selectedProfessor = document.getElementById("selectedProfessor");
         if (selectedProfessor) {
             selectedProfessor.style.display = "none";
         }
 
-        // Limpiar selección visual de profesores
-        const allItems = document.querySelectorAll('.professor-item');
-        allItems.forEach(item => item.classList.remove('selected'));
-
-        // 6. Resetear botones de pasos
-        const continueVerifyStep1Btn = document.getElementById("continueVerifyStep1Btn");
-        if (continueVerifyStep1Btn) {
-            continueVerifyStep1Btn.disabled = true;
+        // Limpiar búsqueda de professor
+        const searchInput = document.getElementById("professorSearchInput");
+        if (searchInput) {
+            searchInput.value = "";
+        }
+        const sortOrder = document.getElementById("sortOrder");
+        if (sortOrder) {
+            sortOrder.value = "asc";
         }
 
-        // 7. Limpiar resultado de verificación
-        const verificationResult = document.getElementById("verificationResult");
-        if (verificationResult) {
-            verificationResult.textContent = "";
+        // Reload la lista de profesores
+        if (window.loadProfessors) {
+            window.loadProfessors().catch(console.error);
         }
 
-        // 8. Ocultar botones de resultado
-        document.getElementById("continueVerifyBtn").style.display = "none";
-        document.getElementById("retryKeyBtn").style.display = "none";
+        // ========== LIMPIEZA DE BOTONES Y RESULTADOS ==========
+        const resultElem = document.getElementById("verificationResult");
+        if (resultElem) {
+            resultElem.innerHTML = "";
+        }
+
+        const continueBtn = document.getElementById("continueVerifyBtn");
+        const retryKeyBtn = document.getElementById("retryKeyBtn");
         const restartBtn = document.getElementById("restartVerifyProcessBtn");
+
+        if (continueBtn) continueBtn.style.display = "none";
+        if (retryKeyBtn) retryKeyBtn.style.display = "none";
         if (restartBtn) restartBtn.style.display = "none";
 
-        // 9. Resetear variables de estado globales
-        selectedProfesorId = null;
-        window.selectedProfesorId = null;
+        // ========== RESETEAR ESTADO DEL PROCESO ==========
         window.verificacionEnCurso = false;
 
-        // 10. Actualizar estado del botón continuar paso 1
-        updateContinueBtnState();
-
-        // Solo mostrar notificación si se especifica explícitamente
+        // ========== NOTIFICACIÓN Y NAVEGACIÓN ==========
         if (showNotificationFlag) {
-            if (window.showNotification) {
-                window.showNotification("Proceso reiniciado", "info");
-            }
+            showNotification("Proceso de verificación reiniciado", "info");
         }
 
-        // Recargar y mostrar todos los profesores si están disponibles
-        if (allProfessors.length > 0) {
-            filteredProfessors = [...allProfessors];
-            displayProfessors(filteredProfessors);
-        }
+        // Volver al paso 1
+        currentStep = 1;
+        showStep(1);
     }
 
     // --- Función para actualizar la visualización del file input en verificar (DESACTIVADA) ---
@@ -1199,22 +1136,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("continueVerifyBtn").style.display = "none";
     document.getElementById("retryKeyBtn").style.display = "none";
     showStep(1);
-
-    // --- Event listeners para file inputs ---
-    const signedFileInput = document.getElementById("signedFile");
-    const originalFileInput = document.getElementById("originalFile");
-
-    if (signedFileInput) {
-        signedFileInput.addEventListener('change', function () {
-            updateVerifyFileInputDisplay(this);
-        });
-    }
-
-    if (originalFileInput) {
-        originalFileInput.addEventListener('change', function () {
-            updateVerifyFileInputDisplay(this);
-        });
-    }
 
     // --- Event listeners para botones de modo ---
     const quickModeBtn = document.getElementById('quickVerifyModeBtn');
@@ -1353,132 +1274,224 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // === FUNCIONES PARA EL NUEVO DISEÑO DE PASOS 2 Y 3 ===
 
-    // Función para crear resultado de verificación moderno
-    function createModernVerificationResult(isValid, details = {}) {
-        const resultHTML = `
-            <div class="modern-verification-result ${isValid ? 'success' : 'error'}">
-                <div class="result-header">
-                    <div class="result-icon-container">
-                        <div class="result-icon-wrapper ${isValid ? 'success' : 'error'}">
-                            <svg class="result-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                ${isValid ?
-                '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>' :
-                '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="m15 9-6 6M9 9l6 6" stroke="currentColor" stroke-width="2"/>'
-            }
-                            </svg>
-                        </div>
+    function createVerificationCard(result) {
+        const detailsList = (result.details || [])
+            .map(item => `<li>${item}</li>`)
+            .join('');
+
+        const metaList = (result.meta || [])
+            .map(item => `
+                <div class="verification-meta-item">
+                    <span class="verification-meta-label">${item.label}</span>
+                    <span class="verification-meta-value">${item.value}</span>
+                </div>
+            `)
+            .join('');
+
+        return `
+            <div class="verification-card ${result.status}">
+                <div class="verification-card-header">
+                    <div class="verification-card-title-group">
+                        <h4 class="verification-card-title">${result.title}</h4>
+                        <span class="status-badge ${result.status}">${result.statusLabel}</span>
                     </div>
-                    <div class="result-header-content">
-                        <h3 class="result-title">${isValid ? 'Verificación Exitosa' : 'Verificación Fallida'}</h3>
-                        <p class="result-subtitle">${isValid ?
-                'El documento es auténtico y no ha sido alterado' :
-                'El documento no pudo ser verificado correctamente'
-            }</p>
+                    <div class="verification-card-icon ${result.status}">
+                        ${result.icon}
                     </div>
                 </div>
-                
-                <div class="result-details">
-                    <div class="detail-item">
-                        <div class="detail-label">Estado del documento:</div>
-                        <div class="detail-value ${isValid ? 'success' : 'error'}">
-                            <span class="detail-status-icon">
-                                ${isValid ? '✓' : '✗'}
-                            </span>
-                            ${isValid ? 'Íntegro y auténtico' : 'Alterado o inválido'}
-                        </div>
-                    </div>
-                    
-                    ${details.professorName ? `
-                    <div class="detail-item">
-                        <div class="detail-label">Avalador:</div>
-                        <div class="detail-value">${details.professorName}</div>
-                    </div>
-                    ` : ''}
-                    
-                    ${details.signatureDate ? `
-                    <div class="detail-item">
-                        <div class="detail-label">Fecha de firma:</div>
-                        <div class="detail-value">${details.signatureDate}</div>
-                    </div>
-                    ` : ''}
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">Algoritmo de verificación:</div>
-                        <div class="detail-value">RSA-4096 + SHA-256</div>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">Tiempo de verificación:</div>
-                        <div class="detail-value">${new Date().toLocaleString('es-ES')}</div>
-                    </div>
-                </div>
-                
-                ${isValid ? `
-                <div class="verification-success-message">
-                    <div class="success-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2"/>
-                            <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <div class="success-content">
-                        <h4>Documento verificado exitosamente</h4>
-                        <p>Este documento mantiene su integridad original y la firma digital es válida. Puedes confiar en su autenticidad.</p>
-                    </div>
-                </div>
-                ` : `
-                <div class="verification-error-message">
-                    <div class="error-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                            <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <div class="error-content">
-                        <h4>Verificación fallida</h4>
-                        <p>El documento ha sido alterado después de la firma o la firma digital no es válida. No se puede garantizar su autenticidad.</p>
-                        <div class="error-suggestions">
-                            <h5>Posibles causas:</h5>
-                            <ul>
-                                <li>El documento fue modificado después de ser firmado</li>
-                                <li>La firma no corresponde al avalador seleccionado</li>
-                                <li>El archivo original no coincide con el firmado</li>
-                                <li>Corrupción en los archivos</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                `}
+                <p class="verification-card-summary">${result.summary}</p>
+                ${metaList ? `<div class="verification-meta">${metaList}</div>` : ''}
+                ${detailsList ? `<ul class="verification-list">${detailsList}</ul>` : ''}
             </div>
         `;
-
-        return resultHTML;
     }
 
-    // Función global para mostrar resultados de verificación modernos
-    window.showModernVerificationResult = function (isValid, details = {}) {
-        const resultContainer = document.getElementById('verificationResult');
-        if (resultContainer) {
-            resultContainer.innerHTML = createModernVerificationResult(isValid, details);
+    function createCombinedVerificationResult(documentResult, attachmentResult) {
+        return `
+            <div class="verification-summary">
+                <div class="verification-summary-header">
+                    <div class="verification-summary-text">
+                        <h3>Resumen de verificacion</h3>
+                        <p>Se muestran los resultados del documento original y de los anexos.</p>
+                    </div>
+                    <div class="verification-summary-meta">
+                        <span>${new Date().toLocaleString('es-ES')}</span>
+                        <span>RSA-4096 + SHA-256</span>
+                    </div>
+                </div>
+                <div class="verification-grid">
+                    ${createVerificationCard(documentResult)}
+                    ${createVerificationCard(attachmentResult)}
+                </div>
+            </div>
+        `;
+    }
 
-            // Mostrar botones apropiados según el resultado
-            const continueBtn = document.getElementById('continueVerifyBtn');
-            const retryBtn = document.getElementById('retryKeyBtn');
-            const restartBtn = document.getElementById('restartVerifyProcessBtn');
+    function buildDocumentResult(docData, docError) {
+        const base = {
+            title: 'Documento original',
+            icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/></svg>'
+        };
 
-            if (continueBtn) {
-                continueBtn.style.display = isValid ? 'inline-flex' : 'none';
+        if (docData) {
+            if (docData.reason === "key_mismatch") {
+                return {
+                    ...base,
+                    status: 'warning',
+                    statusLabel: 'Profesor incorrecto',
+                    summary: 'La llave del profesor no coincide con la firma digital del documento.',
+                    details: [
+                        'Selecciona el profesor correcto para continuar.',
+                        'La autenticidad del aval no puede confirmarse.'
+                    ]
+                };
             }
 
-            if (retryBtn) {
-                retryBtn.style.display = !isValid ? 'inline-flex' : 'none';
+            if (docData.reason === "invalid_signature") {
+                return {
+                    ...base,
+                    status: 'error',
+                    statusLabel: 'Documento alterado',
+                    summary: 'El documento original no coincide con el documento avalado.',
+                    details: [
+                        'La llave publica coincide con la firma.',
+                        'El archivo original fue modificado despues del aval.'
+                    ]
+                };
             }
 
-            if (restartBtn) {
-                restartBtn.style.display = 'inline-flex';
+            if (docData.valid && docData.professorMatch && docData.signatureMatch) {
+                return {
+                    ...base,
+                    status: 'success',
+                    statusLabel: 'Valido',
+                    summary: 'El documento original es autentico y no ha sido modificado.',
+                    details: [
+                        'La firma digital es valida.',
+                        'La integridad del documento esta garantizada.'
+                    ]
+                };
             }
+
+            return {
+                ...base,
+                status: 'error',
+                statusLabel: 'Error',
+                summary: docData.message || 'No fue posible verificar el documento.',
+                details: ['Revisa los archivos y vuelve a intentarlo.']
+            };
         }
-    };
+
+        const errorText = docError && (docError.error || docError.message);
+        return {
+            ...base,
+            status: 'error',
+            statusLabel: 'Error',
+            summary: errorText || 'Error al verificar el documento.',
+            details: ['Verifica que los archivos sean PDFs validos.']
+        };
+    }
+
+    function buildAttachmentResult(attachmentsData, attachmentsError) {
+        const base = {
+            title: 'Anexos',
+            icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        };
+
+        if (attachmentsData) {
+            // Caso: Documento tiene anexos pero no se subió ninguno para verificar
+            if (attachmentsData.statusCode === 'no-attachments-provided') {
+                return {
+                    ...base,
+                    status: 'info',
+                    statusLabel: 'Anexos no verificados',
+                    summary: 'El documento tiene anexos registrados en sus metadatos.',
+                    meta: [
+                        { label: 'Anexos en documento', value: attachmentsData.expectedFileCount },
+                        { label: 'Verificados', value: 0 }
+                    ],
+                    details: [
+                        'Para verificar la integridad de los anexos, puedes recargarlos en el formulario de verificación.'
+                    ]
+                };
+            }
+
+            // Nuevo caso: Archivos subidos para documento que NO tiene manifest
+            if (attachmentsData.statusCode === 'no-manifest-available') {
+                const filesList = attachmentsData.filesExtra && attachmentsData.filesExtra.length > 0
+                    ? attachmentsData.filesExtra.map(name => `• ${name}`)
+                    : [];
+
+                return {
+                    ...base,
+                    status: 'info',
+                    statusLabel: 'Anexos sin verificar',
+                    summary: attachmentsData.message || 'Los archivos subidos no pueden ser verificados contra una firma original.',
+                    meta: [
+                        { label: 'Esperados en documento', value: 0 },
+                        { label: 'Subidos para verificar', value: attachmentsData.uploadedFileCount || 0 }
+                    ],
+                    details: filesList.length > 0 ? ['Archivos subidos:', ...filesList] : ['No hay archivos en el manifest del documento.']
+                };
+            }
+
+            if (attachmentsData.hasAttachments === false) {
+                return {
+                    ...base,
+                    status: 'info',
+                    statusLabel: 'Sin anexos',
+                    summary: attachmentsData.message || 'Este documento no incluye anexos.',
+                    details: []
+                };
+            }
+
+            if (attachmentsData.success && attachmentsData.statusCode !== 'no-attachments-provided') {
+                return {
+                    ...base,
+                    status: 'success',
+                    statusLabel: 'Anexos validos',
+                    summary: attachmentsData.message || 'Los anexos coinciden con el manifest.',
+                    meta: [
+                        { label: 'Esperados', value: attachmentsData.expectedFileCount },
+                        { label: 'Subidos', value: attachmentsData.uploadedFileCount }
+                    ],
+                    details: []
+                };
+            }
+
+            const issues = [];
+            if (attachmentsData.filesModified && attachmentsData.filesModified.length > 0) {
+                issues.push(`Modificados: ${attachmentsData.filesModified.length}`);
+            }
+            if (attachmentsData.filesMissing && attachmentsData.filesMissing.length > 0) {
+                issues.push(`Faltantes: ${attachmentsData.filesMissing.length}`);
+            }
+            if (attachmentsData.filesExtra && attachmentsData.filesExtra.length > 0) {
+                issues.push(`Extra: ${attachmentsData.filesExtra.length}`);
+            }
+
+            return {
+                ...base,
+                status: attachmentsData.error ? 'error' : 'warning',
+                statusLabel: attachmentsData.error ? 'Error' : 'Inconsistencias',
+                summary: attachmentsData.error || attachmentsData.message || 'Se detectaron diferencias en los anexos.',
+                meta: [
+                    { label: 'Esperados', value: attachmentsData.expectedFileCount !== undefined ? attachmentsData.expectedFileCount : '-' },
+                    { label: 'Subidos', value: attachmentsData.uploadedFileCount || 0 }
+                ],
+                details: issues
+            };
+        }
+
+        const errorText = attachmentsError && (attachmentsError.error || attachmentsError.message);
+        return {
+            ...base,
+            status: 'error',
+            statusLabel: 'Error',
+            summary: errorText || 'Error al verificar anexos.',
+            details: ['Revisa los anexos y vuelve a intentarlo.']
+        };
+    }
 
     // Función para formatear el tamaño del archivo
     function formatFileSize(bytes) {
@@ -1666,8 +1679,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 100);
 });
 
+// Función global para limpiar todos los anexos de verificación
+window.clearAllVerifyAttachments = function () {
+    if (typeof verifyAttachmentFiles !== 'undefined') {
+        verifyAttachmentFiles.length = 0;
+        const listContainer = document.getElementById('verifyAttachmentsList');
+        if (listContainer) {
+            listContainer.style.display = 'none';
+        }
+        const itemsContainer = document.getElementById('verifyAttachmentsItems');
+        if (itemsContainer) {
+            itemsContainer.innerHTML = '';
+        }
+        const inputElement = document.getElementById('verifyAttachmentsInput');
+        if (inputElement) {
+            inputElement.value = '';
+        }
+    }
+};
+
 // Función global para limpiar formularios cuando se hace logout
 window.cleanVerifyFormsOnLogout = function () {
+
+    // Limpiar anexos de verificación
+    if (window.clearAllVerifyAttachments) {
+        window.clearAllVerifyAttachments();
+    }
 
     // Limpiar variables de estado
     currentStep = 1;
