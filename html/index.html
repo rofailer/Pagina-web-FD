@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="/css/sections/inicioSection.css" />
     <link rel="stylesheet" href="/css/sections/firmarSection.css" />
     <link rel="stylesheet" href="/css/sections/verificarSection.css" />
+    <link rel="stylesheet" href="/css/sections/documentWorkflowShared.css?v=6" />
     <link rel="stylesheet" href="/css/sections/contactoSection.css" />
     <link rel="stylesheet" href="/css/sections/perfilSection.css" />
     
@@ -3531,54 +3532,189 @@
         </div>
       </section>
 
-      <section id="contactoSection">
-        <h2>Contacto</h2>
-        <p class="section-desc">
-          Si tienes preguntas o necesitas ayuda, contáctanos.
-        </p>
-        <form id="contactForm">
-          <label for="name">Nombre:</label>
-          <input type="text" id="name" name="name" required />
+      <section id="contactoSection" aria-labelledby="contactoTitle">
+        <div class="contact-layout">
+          <div class="contact-intro">
+            <div class="contact-icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M8 9h8M8 13h5"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </div>
 
-          <label for="email">Correo Electrónico:</label>
-          <input type="email" id="email" name="email" required />
+            <h2 id="contactoTitle">Contacto</h2>
+            <p class="contact-lead">
+              ¿Tienes alguna pregunta o necesitas ayuda? Cuéntanos cómo podemos
+              ayudarte.
+            </p>
 
-          <label for="message">Mensaje:</label>
-          <textarea id="message" name="message" required></textarea>
+            <div class="contact-points">
+              <div class="contact-point">
+                <span class="contact-point-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M4 4h16v16H4z"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="m4 6 8 6 8-6"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+                <span>
+                  <strong>Atención directa</strong>
+                  <small>Tu solicitud llegará a nuestro equipo.</small>
+                </span>
+              </div>
 
-          <button type="submit">
-            <svg
-              class="btn-icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <path
-                d="M22 2L11 13"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M22 2L15 22l-4-9-9-4 18-7z"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            Enviar
-          </button>
-        </form>
-        <p
-          id="contactMessage"
-          style="display: none; color: green; margin: 25px"
-        >
-          Mensaje enviado correctamente. Nos pondremos en contacto contigo
-          pronto.
-        </p>
+              <div class="contact-point">
+                <span class="contact-point-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <rect
+                      x="5"
+                      y="10"
+                      width="14"
+                      height="10"
+                      rx="2"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                    />
+                    <path
+                      d="M8 10V7a4 4 0 0 1 8 0v3"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </span>
+                <span>
+                  <strong>Información protegida</strong>
+                  <small>Usaremos tus datos solo para responderte.</small>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="contact-form-panel">
+            <div class="contact-form-heading">
+              <h3>Escríbenos</h3>
+              <p>Completa el formulario y revisaremos tu mensaje.</p>
+            </div>
+
+            <form id="contactForm">
+              <div class="contact-field">
+                <label for="name">Nombre</label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  placeholder="Tu nombre completo"
+                  autocomplete="name"
+                  required
+                />
+              </div>
+
+              <div class="contact-field">
+                <label for="email">Correo electrónico</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="nombre@correo.com"
+                  autocomplete="email"
+                  required
+                />
+              </div>
+
+              <div class="contact-field">
+                <label for="message">Mensaje</label>
+                <textarea
+                  id="message"
+                  name="message"
+                  rows="5"
+                  placeholder="Cuéntanos en qué podemos ayudarte..."
+                  required
+                ></textarea>
+              </div>
+
+              <button type="submit" class="contact-submit">
+                <svg
+                  class="btn-icon"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M22 2 11 13"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="m22 2-7 20-4-9-9-4 20-7Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Enviar mensaje
+              </button>
+            </form>
+
+            <p class="contact-privacy">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <rect
+                  x="5"
+                  y="10"
+                  width="14"
+                  height="10"
+                  rx="2"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                />
+                <path
+                  d="M8 10V7a4 4 0 0 1 8 0v3"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                />
+              </svg>
+              Tu información se usa únicamente para responder tu solicitud.
+            </p>
+
+            <p id="contactMessage" role="status" aria-live="polite">
+              Mensaje enviado correctamente. Nos pondremos en contacto contigo
+              pronto.
+            </p>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -3643,7 +3779,7 @@
     <script src="/scripts/frontend/keyPassword.frontend.js"></script>
     <script src="/scripts/frontend/deleteKey.frontend.js"></script>
     <script src="/scripts/frontend/signSteps.js"></script>
-    <script src="/scripts/frontend/verifySteps.js"></script>
+    <script src="/scripts/frontend/verifySteps.js?v=2"></script>
     <script src="/scripts/frontend/frontend.js"></script>
     <script src="/scripts/frontend/profileEncryption.frontend.js"></script>
     <script src="/scripts/frontend/profile.frontend.js"></script>

@@ -193,7 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // Mostrar/ocultar botones
                 if (acceptProfesorBtn) acceptProfesorBtn.style.display = "flex"; // O "block" según el CSS
-                if (continueBtn) continueBtn.style.display = "none";
+                if (continueBtn) continueBtn.style.display = "flex";
 
                 // Limpiar datos del modo automatico al cambiar a manual
                 autoDetectedSigner = null;
@@ -694,6 +694,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const continueVerifyStep1BtnElement = document.getElementById("continueVerifyStep1Btn");
     if (continueVerifyStep1BtnElement) {
         continueVerifyStep1BtnElement.onclick = () => {
+            if (isManualMode) {
+                if (!selectedProfesorId) {
+                    showNotification("Selecciona un profesor o tutor.", "warning");
+                    return;
+                }
+
+                window.verificacionEnCurso = true;
+                showStep(2);
+                return;
+            }
+
             if (!autoDetectedSigner) {
                 showNotification("Detecta un firmante primero.", "warning");
                 return;

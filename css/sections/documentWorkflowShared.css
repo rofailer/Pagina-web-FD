@@ -1,0 +1,1334 @@
+/* ==========================================================
+   FLUJOS DE DOCUMENTOS
+   Sistema visual compartido para Firma y Verificación
+   ========================================================== */
+
+:is(#firmarSection, #verifySection) {
+  --workflow-text: #182235;
+  --workflow-muted: #687386;
+  --workflow-border: #e3e8ef;
+  --workflow-border-strong: #d3dbe5;
+  --workflow-surface: #ffffff;
+  --workflow-soft: #f7f9fc;
+  --workflow-soft-accent: color-mix(
+    in srgb,
+    var(--primary-color) 7%,
+    #ffffff
+  );
+  --workflow-shadow: 0 22px 55px rgba(30, 41, 59, 0.1);
+  --workflow-radius: 22px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(1120px, calc(100% - 48px));
+  max-width: 1120px;
+  height: auto;
+  max-height: none;
+  margin: 0 auto;
+  padding: 38px 0 56px;
+  overflow: visible;
+  color: var(--workflow-text);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  text-align: center;
+}
+
+:is(#firmarSection, #verifySection) > * {
+  width: 100%;
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+:is(#firmarSection, #verifySection) > h2 {
+  align-self: center;
+  width: 100%;
+  margin: 0 auto 11px;
+  color: var(--primary-color);
+  font-size: clamp(2rem, 3.4vw, 2.65rem);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+  text-align: center;
+}
+
+:is(#firmarSection, #verifySection) > .section-desc {
+  max-width: 720px;
+  margin: 0 auto;
+  color: var(--workflow-muted);
+  font-size: 0.98rem;
+  line-height: 1.65;
+}
+
+/* ---------- Indicador de pasos ---------- */
+
+:is(#signStepIndicator, #verifyStepIndicator).step-indicator {
+  --workflow-line-inset: 66px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(760px, calc(100% - 24px));
+  max-width: 760px;
+  margin: 31px auto 42px;
+  padding: 0 28px;
+  gap: 0;
+  position: relative;
+}
+
+:is(#signStepIndicator, #verifyStepIndicator).step-indicator::before {
+  top: 22px;
+  left: 66px;
+  right: 66px;
+  width: auto;
+  height: 2px;
+  transform: none;
+  background: #dfe4eb;
+  border-radius: 999px;
+}
+
+:is(#signStepIndicator, #verifyStepIndicator).step-indicator::after {
+  top: 22px;
+  left: 66px;
+  height: 2px;
+  transform: none;
+  background: var(--primary-color);
+  border-radius: 999px;
+}
+
+:is(#signStepIndicator, #verifyStepIndicator).step-1::after {
+  width: 0;
+}
+
+:is(#signStepIndicator, #verifyStepIndicator).step-2::after {
+  width: calc((100% - (var(--workflow-line-inset) * 2)) / 3);
+}
+
+:is(#signStepIndicator, #verifyStepIndicator).step-3::after {
+  width: calc(((100% - (var(--workflow-line-inset) * 2)) / 3) * 2);
+}
+
+:is(#signStepIndicator, #verifyStepIndicator).step-4::after {
+  width: calc(100% - (var(--workflow-line-inset) * 2));
+}
+
+:is(#signStepIndicator, #verifyStepIndicator) .step {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  color: #7e8998;
+  background: #ffffff;
+  border: 2px solid #dfe4eb;
+  box-shadow: 0 4px 12px rgba(30, 41, 59, 0.07);
+  font-size: 1rem;
+  transform: none;
+}
+
+:is(#signStepIndicator, #verifyStepIndicator) .step::before {
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+:is(#signStepIndicator, #verifyStepIndicator) .step::after {
+  bottom: -28px;
+  min-width: 105px;
+  padding: 0;
+  color: #687386;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: 0.75rem;
+  font-weight: 550;
+  line-height: 1.25;
+  text-shadow: none;
+}
+
+:is(#signStepIndicator, #verifyStepIndicator) .step.active {
+  color: #ffffff;
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  box-shadow: 0 7px 18px
+    color-mix(in srgb, var(--primary-color) 28%, transparent);
+  transform: none;
+}
+
+:is(#signStepIndicator, #verifyStepIndicator) .step.active::after {
+  color: var(--primary-color);
+  background: transparent;
+  border: 0;
+  font-weight: 700;
+  text-shadow: none;
+}
+
+:is(#signStepIndicator, #verifyStepIndicator) .step.completed {
+  color: #ffffff;
+  background: #20a56b;
+  border-color: #20a56b;
+  box-shadow: 0 6px 16px rgba(32, 165, 107, 0.2);
+  transform: none;
+}
+
+:is(#signStepIndicator, #verifyStepIndicator) .step.completed::after {
+  color: #188657;
+  background: transparent;
+  border: 0;
+}
+
+/* ---------- Superficie principal de cada paso ---------- */
+
+:is(#firmarSection, #verifySection) .step-content {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto 34px;
+  padding: 0;
+  overflow: hidden;
+  color: var(--workflow-text);
+  background: var(--workflow-surface);
+  border: 1px solid rgba(30, 41, 59, 0.09);
+  border-radius: var(--workflow-radius);
+  box-shadow: var(--workflow-shadow);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+:is(#firmarSection, #verifySection) .step-content::before {
+  display: none;
+}
+
+:is(#firmarSection, #verifySection) .step-content:hover {
+  border-color: rgba(30, 41, 59, 0.12);
+  box-shadow: var(--workflow-shadow);
+  transform: none;
+}
+
+:is(#firmarSection, #verifySection) .step-header-container {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  justify-content: initial;
+  gap: 16px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 25px 30px;
+  text-align: left;
+  background: var(--workflow-soft-accent);
+  border: 0;
+  border-bottom: 1px solid var(--workflow-border);
+  border-radius: 0;
+  backdrop-filter: none;
+}
+
+:is(#firmarSection, #verifySection) .step-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  color: var(--primary-color);
+  background: #ffffff;
+  border: 1px solid
+    color-mix(in srgb, var(--primary-color) 25%, var(--workflow-border));
+  border-radius: 14px;
+  box-shadow: 0 8px 20px
+    color-mix(in srgb, var(--primary-color) 13%, transparent);
+}
+
+:is(#firmarSection, #verifySection) .step-icon-wrapper::before {
+  display: none;
+}
+
+:is(#firmarSection, #verifySection) .step-icon-wrapper.result-icon {
+  color: #16885a;
+  background: #effaf5;
+  border-color: #c7ead9;
+  box-shadow: none;
+}
+
+:is(#firmarSection, #verifySection) .step-icon {
+  width: 22px;
+  height: 22px;
+  color: currentColor;
+}
+
+:is(#firmarSection, #verifySection) .step-header-content {
+  min-width: 0;
+}
+
+:is(#firmarSection, #verifySection) .step-title {
+  margin: 0 0 5px;
+  color: var(--workflow-text);
+  font-size: 1.25rem;
+  font-weight: 680;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+}
+
+:is(#firmarSection, #verifySection) .step-description {
+  display: block;
+  margin: 0;
+  color: var(--workflow-muted);
+  font-size: 0.87rem;
+  line-height: 1.55;
+}
+
+:is(#firmarSection, #verifySection) .step-main-content {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 30px;
+  text-align: left;
+  animation: none;
+}
+
+:is(#firmarSection, #verifySection) form {
+  width: 100%;
+  max-width: none;
+}
+
+/* ---------- Cargas de archivo ---------- */
+
+:is(#firmarSection, #verifySection) .upload-section {
+  width: 100%;
+  margin: 0;
+  padding: 25px;
+  overflow: visible;
+  text-align: left;
+  background: var(--workflow-soft);
+  border: 1px solid var(--workflow-border);
+  border-radius: 16px;
+  box-shadow: none;
+  transform: none;
+}
+
+:is(#firmarSection, #verifySection) .upload-section::before {
+  display: none;
+}
+
+:is(#firmarSection, #verifySection) .upload-section:hover {
+  background: var(--workflow-soft);
+  border-color: var(--workflow-border-strong);
+  box-shadow: none;
+  transform: none;
+}
+
+:is(#firmarSection, #verifySection) .upload-title {
+  margin: 0 0 5px;
+  color: var(--workflow-text);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+:is(#firmarSection, #verifySection) .upload-subtitle {
+  margin: 0 0 17px;
+  color: var(--workflow-muted);
+  font-size: 0.79rem;
+  line-height: 1.55;
+}
+
+:is(#firmarSection, #verifySection) .modern-file-input-container {
+  width: 100%;
+  margin: 0;
+}
+
+:is(#firmarSection, #verifySection) .modern-file-label {
+  display: block;
+  width: 100%;
+  min-height: 96px;
+  padding: 20px 22px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #ffffff;
+  border: 1px dashed
+    color-mix(in srgb, var(--primary-color) 42%, #cbd5df);
+  border-radius: 13px;
+  box-shadow: none;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+:is(#firmarSection, #verifySection) .modern-file-label::before {
+  display: none;
+}
+
+:is(#firmarSection, #verifySection) .modern-file-label:hover {
+  background: color-mix(in srgb, var(--primary-color) 4%, #ffffff);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px
+    color-mix(in srgb, var(--primary-color) 9%, transparent);
+  transform: none;
+}
+
+:is(#firmarSection, #verifySection) .file-label-content {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 15px;
+  min-height: 54px;
+  text-align: left;
+}
+
+:is(#firmarSection, #verifySection) .file-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  margin: 0;
+  color: var(--primary-color);
+  background: var(--workflow-soft-accent);
+  border-radius: 11px;
+}
+
+:is(#firmarSection, #verifySection) .modern-file-label:hover .file-icon {
+  color: #ffffff;
+  background: var(--primary-color);
+  transform: none;
+}
+
+:is(#firmarSection, #verifySection) .file-text {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+:is(#firmarSection, #verifySection) .file-main-text {
+  color: var(--workflow-text);
+  font-size: 0.89rem;
+  font-weight: 620;
+  line-height: 1.35;
+}
+
+:is(#firmarSection, #verifySection) .file-sub-text {
+  color: var(--workflow-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+:is(#firmarSection, #verifySection) .file-info {
+  margin: 13px 0 0;
+  padding: 12px 14px;
+  background: #f1f8f5;
+  border: 1px solid #cfe7dc;
+  border-radius: 11px;
+  box-shadow: none;
+}
+
+:is(#firmarSection, #verifySection) .file-info-icon {
+  width: 36px;
+  height: 36px;
+  color: #188657;
+  background: #dff3e9;
+  border-radius: 9px;
+}
+
+:is(#firmarSection, #verifySection) .file-name {
+  color: var(--workflow-text);
+  font-size: 0.84rem;
+}
+
+:is(#firmarSection, #verifySection) .file-size {
+  color: var(--workflow-muted);
+  font-size: 0.74rem;
+}
+
+/* ---------- Firma: organización del primer paso ---------- */
+
+#firmarSection #signForm {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  align-items: start;
+  gap: 20px;
+}
+
+#firmarSection #signForm > .upload-section {
+  grid-column: 1 / -1;
+}
+
+#firmarSection #signForm > .attachments-section,
+#firmarSection #signForm > .document-metadata {
+  min-width: 0;
+}
+
+#firmarSection #signForm > .attachments-section,
+#verifySection #verifyAvalForm > .attachments-section {
+  align-self: start;
+}
+
+#firmarSection #signForm > .document-metadata {
+  align-self: stretch;
+}
+
+#firmarSection #signForm > div[style*="display: flex"]:last-child {
+  grid-column: 1 / -1;
+  margin-top: 2px !important;
+}
+
+/* ---------- Bloques secundarios ---------- */
+
+:is(#firmarSection, #verifySection) .attachments-section,
+:is(#firmarSection, #verifySection) .document-metadata {
+  width: 100%;
+  margin: 0;
+  padding: 22px;
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid var(--workflow-border);
+  border-radius: 15px;
+  box-shadow: none;
+  transition: border-color 0.2s ease;
+}
+
+:is(#firmarSection, #verifySection) .attachments-section {
+  background: #fbfcfe;
+}
+
+:is(#firmarSection, #verifySection) .attachments-section:hover {
+  background: #fbfcfe;
+  border-color: var(--workflow-border-strong);
+  box-shadow: none;
+  transform: none;
+}
+
+:is(#firmarSection, #verifySection) .attachments-header {
+  display: block;
+  margin-bottom: 15px;
+}
+
+:is(#firmarSection, #verifySection) .attachments-content {
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+:is(#firmarSection, #verifySection) .attachments-header .upload-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 5px;
+}
+
+:is(#firmarSection, #verifySection)
+  .attachments-header
+  .upload-subtitle {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+:is(#firmarSection, #verifySection) .optional-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 8px;
+  color: #667085;
+  background: #eef1f5;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: none;
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+:is(#firmarSection, #verifySection)
+  .attachments-section
+  .modern-file-label {
+  min-height: 82px;
+  padding: 15px 17px;
+  background: #ffffff;
+  border-color: #d8dee7;
+}
+
+:is(#firmarSection, #verifySection) .document-metadata > .upload-title {
+  margin-bottom: 17px;
+}
+
+:is(#firmarSection, #verifySection) .metadata-form {
+  gap: 16px;
+}
+
+:is(#firmarSection, #verifySection) .form-group {
+  gap: 7px;
+}
+
+:is(#firmarSection, #verifySection) .form-group label {
+  color: var(--workflow-text);
+  font-size: 0.79rem;
+  font-weight: 600;
+}
+
+:is(#firmarSection, #verifySection)
+  :is(.form-group input, .form-group textarea, .form-group select, .search-input, .sort-select) {
+  min-height: 46px;
+  padding: 11px 13px;
+  color: var(--workflow-text);
+  background: #ffffff;
+  border: 1px solid #d9e0e8;
+  border-radius: 10px;
+  box-shadow: none;
+  font-size: 0.85rem;
+  user-select: text;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+:is(#firmarSection, #verifySection)
+  :is(
+    .form-group input,
+    .form-group textarea,
+    .form-group select,
+    .search-input,
+    .sort-select
+  ):focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px
+    color-mix(in srgb, var(--primary-color) 11%, transparent);
+  transform: none;
+}
+
+#firmarSection .authors-management {
+  padding: 13px;
+  background: var(--workflow-soft);
+  border: 1px solid var(--workflow-border);
+  border-radius: 11px;
+}
+
+#firmarSection .author-field-header {
+  gap: 12px;
+}
+
+#firmarSection :is(.author-required, .author-optional) {
+  flex: 0 0 auto;
+}
+
+#firmarSection .author-input-container {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 36px !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+#firmarSection .remove-author-btn {
+  position: static !important;
+  inset: auto !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: #d84747 !important;
+  background: #fff5f5 !important;
+  border: 1px solid #f5cccc !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  font-size: 1.12rem !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+}
+
+#firmarSection .remove-author-btn:hover {
+  color: #bd3030 !important;
+  background: #ffe9e9 !important;
+  border-color: #efa9a9 !important;
+  transform: none !important;
+}
+
+/* ---------- Verificación: método manual/automático ---------- */
+
+#verifySection #verifyStep1 .step-main-content {
+  align-items: center;
+}
+
+#verifySection .verify-switch-container {
+  margin: 0 0 22px;
+}
+
+#verifySection .verify-switch-label {
+  gap: 10px;
+  padding: 6px;
+  color: var(--workflow-muted);
+  background: #f1f3f6;
+  border: 1px solid var(--workflow-border);
+  border-radius: 12px;
+  font-size: 0.83rem;
+}
+
+#verifySection .verify-switch-slider {
+  width: 42px;
+  height: 22px;
+}
+
+#verifySection .verify-switch-slider::before {
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+}
+
+#verifySection
+  .verify-switch-label
+  input[type="checkbox"]:checked
+  + .verify-switch-slider::before {
+  transform: translateX(20px);
+}
+
+#verifySection :is(#manualVerifyOption, #autoVerifyOption) {
+  width: 100%;
+  max-width: 660px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+#verifySection #verifyStep1 > #autoVerifyOption {
+  width: min(100%, 720px);
+  max-width: 720px;
+  padding: 0 30px;
+}
+
+#verifySection .verify-description {
+  max-width: none;
+  margin: 0 0 17px;
+  padding: 12px 15px;
+  color: var(--workflow-muted);
+  background: var(--workflow-soft);
+  border: 0;
+  border-left: 3px solid var(--primary-color);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+#verifySection .auto-detect-container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 22px;
+  background: var(--workflow-soft);
+  border: 1px solid var(--workflow-border);
+  border-radius: 15px;
+  box-shadow: none;
+}
+
+#verifySection .auto-detect-container h4 {
+  justify-content: flex-start;
+  margin: 0 0 5px;
+  color: var(--workflow-text);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+#verifySection .auto-detect-description {
+  margin: 0 0 17px;
+  color: var(--workflow-muted);
+  font-size: 0.79rem;
+  text-align: left;
+}
+
+#verifySection .auto-detect-container .file-input-container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+#verifySection .auto-detect-container .file-input-label {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  min-height: 74px;
+  padding: 13px 14px;
+  background: #ffffff;
+  border: 1px dashed
+    color-mix(in srgb, var(--primary-color) 38%, #cbd5df);
+  border-radius: 11px;
+  text-align: left;
+}
+
+#verifySection .auto-detect-container .file-input-icon {
+  width: 34px;
+  height: 34px;
+  margin: 0;
+}
+
+#verifySection .auto-detect-container .file-input-text {
+  margin: 0;
+  color: var(--workflow-text);
+  font-size: 0.79rem;
+  font-weight: 600;
+}
+
+#verifySection .auto-detect-container .file-input-button {
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 9px;
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+#verifySection .professor-search-container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+#verifySection .search-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+
+#verifySection .search-input-wrapper {
+  width: 100%;
+  max-width: none;
+}
+
+#verifySection .filter-controls {
+  gap: 7px;
+}
+
+#verifySection .sort-select {
+  min-width: 78px;
+  cursor: pointer;
+}
+
+#verifySection .clear-btn {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  color: #c33f49;
+  background: #fff5f5;
+  border: 1px solid #f0c8cc;
+  border-radius: 10px;
+  font-size: 1rem;
+  box-shadow: none;
+}
+
+#verifySection .clear-btn:hover {
+  color: #a82933;
+  background: #ffeded;
+  border-color: #e8aeb4;
+  box-shadow: none;
+  transform: none;
+}
+
+#verifySection .professors-list {
+  width: 100%;
+  max-width: none;
+  max-height: 265px;
+  margin: 0;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid var(--workflow-border);
+  border-radius: 11px;
+}
+
+#verifySection .professor-item {
+  min-height: 49px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #edf0f4;
+}
+
+#verifySection .professor-item:hover {
+  background: #f8fafc;
+}
+
+#verifySection .professor-item.selected {
+  background: var(--workflow-soft-accent);
+  border-left: 3px solid var(--primary-color);
+}
+
+#verifySection .professor-name {
+  color: var(--workflow-text);
+  font-size: 0.83rem;
+}
+
+#verifySection .professor-id {
+  color: var(--workflow-muted);
+  background: #f0f3f7;
+  font-size: 0.66rem;
+}
+
+#verifySection .selected-professor {
+  width: 100%;
+  max-width: 660px;
+  margin: 17px auto 0 !important;
+  padding: 12px 14px;
+  background: #f1f8f5;
+  border: 1px solid #cfe7dc;
+  border-radius: 11px;
+}
+
+#verifySection
+  #verifyStep1
+  > div[style*="display: flex"][style*="justify-content: center"] {
+  width: 100%;
+  margin-top: 24px !important;
+  padding: 0 30px 30px;
+}
+
+/* ---------- Pasos de carga en Verificación ---------- */
+
+#verifySection :is(#verifyAvalForm, #verifyOriginalForm) {
+  display: grid;
+  gap: 20px;
+}
+
+#verifySection #verifyAvalForm {
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  align-items: start;
+}
+
+#verifySection #verifyAvalForm > .step-actions {
+  grid-column: 1 / -1;
+}
+
+#verifySection .verification-notice {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: start;
+  gap: 13px;
+  margin: 0;
+  padding: 16px;
+  text-align: left;
+  background: #f1f8f5;
+  border: 1px solid #cfe7dc;
+  border-radius: 12px;
+}
+
+#verifySection .notice-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  color: #188657;
+  background: #dff3e9;
+  border-radius: 10px;
+}
+
+#verifySection .notice-content h5 {
+  margin: 0 0 4px;
+  color: var(--workflow-text);
+  font-size: 0.86rem;
+}
+
+#verifySection .notice-content p {
+  margin: 0;
+  color: var(--workflow-muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+/* ---------- Firma manuscrita, llaves y resultados ---------- */
+
+#firmarSection .signature-options-container {
+  width: 100%;
+  max-width: none;
+}
+
+#firmarSection .signature-method-selector {
+  gap: 12px;
+  margin: 18px 0 22px;
+}
+
+#firmarSection .method-option {
+  min-height: 80px;
+  padding: 15px;
+  background: #ffffff;
+  border: 1px solid var(--workflow-border);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+#firmarSection .method-option:hover {
+  border-color: var(--primary-color);
+  box-shadow: none;
+  transform: none;
+}
+
+#firmarSection .method-option.active {
+  background: var(--workflow-soft-accent);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--primary-color) 9%, transparent);
+}
+
+#firmarSection .method-icon {
+  width: 40px;
+  height: 40px;
+  color: var(--primary-color);
+  background: #ffffff;
+  border: 1px solid var(--workflow-border);
+  border-radius: 10px;
+}
+
+#firmarSection .method-content h5 {
+  color: var(--workflow-text);
+  font-size: 0.9rem;
+}
+
+#firmarSection .method-content p {
+  color: var(--workflow-muted);
+  font-size: 0.75rem;
+}
+
+#firmarSection .signature-canvas-container {
+  background: #fbfcfd;
+  border: 1px dashed #cfd7e1;
+  border-radius: 13px;
+}
+
+#firmarSection .btn-outline.small {
+  color: #5d6878;
+  background: #ffffff;
+  border: 1px solid var(--workflow-border-strong);
+  box-shadow: none;
+}
+
+#firmarSection .btn-outline.small:hover {
+  color: var(--primary-color);
+  background: var(--workflow-soft-accent);
+  border-color: var(--primary-color);
+  box-shadow: none;
+  transform: none;
+}
+
+#firmarSection .key-selection-container {
+  width: 100%;
+  margin: 0;
+}
+
+#firmarSection .keys-list {
+  width: 100%;
+  max-height: 320px;
+  gap: 9px;
+  padding: 2px;
+}
+
+#firmarSection .key-item {
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid var(--workflow-border);
+  border-radius: 11px;
+  box-shadow: none;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+#firmarSection .key-item:hover {
+  background: #fbfcfd;
+  border-color: var(--primary-color);
+  box-shadow: none;
+  transform: none;
+}
+
+#firmarSection .key-item.selected {
+  margin-top: 0;
+  background: var(--workflow-soft-accent) !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--primary-color) 9%, transparent) !important;
+  transform: none !important;
+}
+
+#firmarSection #signStep4.step-content {
+  width: 100% !important;
+  max-width: 960px !important;
+  margin: 0 auto 34px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: var(--workflow-surface) !important;
+  border: 1px solid rgba(30, 41, 59, 0.09) !important;
+  border-radius: var(--workflow-radius) !important;
+  box-shadow: var(--workflow-shadow) !important;
+}
+
+:is(#firmarSection, #verifySection)
+  :is(.success-content, .result-actions-container) {
+  gap: 20px;
+  padding: 0;
+}
+
+:is(#firmarSection, #verifySection) .primary-actions {
+  gap: 12px;
+}
+
+/* ---------- Acciones ---------- */
+
+:is(#firmarSection, #verifySection) .step-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 0;
+}
+
+:is(#firmarSection, #verifySection)
+  :is(.btn-primary, .modern-btn, .download-btn, .verify-btn, .restart-btn) {
+  min-height: 46px;
+  padding: 11px 19px;
+  border-radius: 10px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  box-shadow: 0 7px 18px
+    color-mix(in srgb, var(--primary-color) 18%, transparent);
+}
+
+:is(#firmarSection, #verifySection)
+  :is(.btn-primary, .modern-btn, .download-btn, .verify-btn, .restart-btn):hover:not(
+    :disabled
+  ) {
+  transform: translateY(-1px);
+}
+
+:is(#firmarSection, #verifySection)
+  :is(.btn-primary, .modern-btn, .download-btn, .verify-btn, .restart-btn):disabled {
+  color: #9ca3af;
+  background: #e8ebef;
+  box-shadow: none;
+  opacity: 1;
+}
+
+:is(#firmarSection, #verifySection) .restart-btn,
+:is(#firmarSection, #verifySection) .modern-btn.secondary {
+  color: #526071;
+  background: #ffffff;
+  border: 1px solid var(--workflow-border-strong);
+  box-shadow: none;
+}
+
+/* ---------- Tema oscuro ---------- */
+
+[data-theme="dark"] :is(#firmarSection, #verifySection) {
+  --workflow-text: var(--text-primary);
+  --workflow-muted: var(--text-secondary);
+  --workflow-border: var(--border-color);
+  --workflow-border-strong: #475569;
+  --workflow-surface: var(--bg-primary);
+  --workflow-soft: var(--bg-secondary);
+  --workflow-soft-accent: color-mix(
+    in srgb,
+    var(--primary-color) 12%,
+    var(--bg-secondary)
+  );
+  --workflow-shadow: 0 22px 55px rgba(0, 0, 0, 0.32);
+}
+
+[data-theme="dark"]
+  :is(#firmarSection, #verifySection)
+  :is(
+    .step-icon-wrapper,
+    .modern-file-label,
+    .attachments-section,
+    .document-metadata,
+    .file-input-label,
+    .professors-list,
+    .method-option,
+    .key-item
+  ) {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"]
+  :is(#firmarSection, #verifySection)
+  :is(.form-group input, .form-group textarea, .form-group select, .search-input, .sort-select) {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 900px) {
+  :is(#firmarSection, #verifySection) {
+    width: min(760px, calc(100% - 28px));
+    padding-top: 28px;
+  }
+
+  :is(#firmarSection, #verifySection) .step-content {
+    max-width: 760px;
+  }
+
+  #firmarSection #signForm,
+  #verifySection #verifyAvalForm {
+    grid-template-columns: 1fr;
+  }
+
+  #verifySection #verifyAvalForm > .step-actions {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 700px) {
+  :is(#firmarSection, #verifySection) {
+    width: calc(100% - 20px);
+    max-width: none;
+    padding: 20px 0 34px;
+  }
+
+  :is(#firmarSection, #verifySection) > h2 {
+    font-size: 1.85rem;
+  }
+
+  :is(#firmarSection, #verifySection) > .section-desc {
+    padding: 0 13px;
+    font-size: 0.85rem;
+  }
+
+  :is(#signStepIndicator, #verifyStepIndicator).step-indicator {
+    --workflow-line-inset: 45px;
+
+    width: 100%;
+    margin: 27px auto 36px;
+    padding: 0 16px;
+  }
+
+  :is(#signStepIndicator, #verifyStepIndicator).step-indicator::before,
+  :is(#signStepIndicator, #verifyStepIndicator).step-indicator::after {
+    top: 18px;
+    left: 45px;
+    right: 45px;
+  }
+
+  :is(#signStepIndicator, #verifyStepIndicator) .step {
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    border-width: 2px;
+    font-size: 0.84rem;
+  }
+
+  :is(#signStepIndicator, #verifyStepIndicator) .step::before {
+    font-size: 0.8rem;
+  }
+
+  :is(#signStepIndicator, #verifyStepIndicator) .step::after {
+    bottom: -24px;
+    min-width: 74px;
+    max-width: 78px;
+    overflow: hidden;
+    font-size: 0.62rem;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+  }
+
+  :is(#firmarSection, #verifySection) .step-content {
+    margin-bottom: 22px;
+    border-radius: 17px;
+  }
+
+  :is(#firmarSection, #verifySection) .step-header-container {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 12px;
+    padding: 20px;
+  }
+
+  :is(#firmarSection, #verifySection) .step-icon-wrapper {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+
+  :is(#firmarSection, #verifySection) .step-title {
+    font-size: 1.05rem;
+  }
+
+  :is(#firmarSection, #verifySection) .step-description {
+    font-size: 0.75rem;
+  }
+
+  :is(#firmarSection, #verifySection) .step-main-content {
+    padding: 20px;
+  }
+
+  :is(#firmarSection, #verifySection)
+    :is(.upload-section, .attachments-section, .document-metadata) {
+    padding: 18px;
+  }
+
+  :is(#firmarSection, #verifySection) .file-label-content {
+    align-items: flex-start;
+  }
+
+  #verifySection .auto-detect-container .file-input-label {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  #verifySection .auto-detect-container .file-input-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  #verifySection .search-controls {
+    grid-template-columns: 1fr;
+  }
+
+  #verifySection .filter-controls {
+    justify-content: flex-end;
+  }
+
+  #firmarSection .signature-method-selector {
+    grid-template-columns: 1fr;
+  }
+
+  :is(#firmarSection, #verifySection) .primary-actions {
+    flex-direction: column;
+  }
+
+  :is(#firmarSection, #verifySection)
+    :is(.btn-primary, .modern-btn, .download-btn, .verify-btn, .restart-btn) {
+    width: 100%;
+    max-width: none;
+  }
+
+  #verifySection #verifyStep1 > #autoVerifyOption {
+    padding: 0 20px;
+  }
+
+  #verifySection
+    #verifyStep1
+    > div[style*="display: flex"][style*="justify-content: center"] {
+    margin-top: 20px !important;
+    padding: 0 20px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(#firmarSection, #verifySection) *,
+  :is(#firmarSection, #verifySection) *::before,
+  :is(#firmarSection, #verifySection) *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
