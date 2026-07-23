@@ -34,6 +34,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!fileInput || !fileInfo) return;
 
+        fileInfo.addEventListener('click', (event) => {
+            if (event.target.closest('.file-remove-btn')) return;
+            fileInput.click();
+        });
+
+        fileInfo.addEventListener('keydown', (event) => {
+            if (event.target.closest('.file-remove-btn')) return;
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                fileInput.click();
+            }
+        });
+
         // Eventos de drag and drop en el label
         if (label) {
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -94,6 +107,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (fileName) fileName.textContent = file.name;
         if (fileSize) fileSize.textContent = formatFileSize(file.size);
 
+        const uploadSection = fileInput.closest('.upload-section');
+        if (uploadSection) uploadSection.classList.add('has-selected-file');
         fileInfo.style.display = 'block';
 
         showNotification(`✅ Archivo seleccionado: ${file.name}`, 'success');
@@ -106,6 +121,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     function clearFileSelection(fileInput, fileInfo) {
         fileInput.value = '';
         fileInfo.style.display = 'none';
+        const uploadSection = fileInput.closest('.upload-section');
+        if (uploadSection) uploadSection.classList.remove('has-selected-file');
 
         // Validar formulario después de limpiar archivo
         if (typeof validateSignForm === 'function') validateSignForm();
@@ -226,22 +243,33 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Obtener extensión del archivo
         const ext = file.name.split('.').pop().slice(0, 3).toUpperCase();
 
-        div.innerHTML = `
-            <div class="attachment-icon">${ext}</div>
-            <div class="attachment-details">
-                <span class="attachment-name" title="${file.name}">${file.name}</span>
-                <span class="attachment-size">${formatFileSize(file.size)}</span>
-            </div>
-            <button type="button" class="attachment-remove-btn" data-index="${index}" title="Eliminar anexo">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
-        `;
+        const icon = document.createElement('div');
+        icon.className = 'attachment-icon';
+        icon.textContent = ext;
 
-        // Event listener para eliminar
-        const removeBtn = div.querySelector('.attachment-remove-btn');
+        const details = document.createElement('div');
+        details.className = 'attachment-details';
+
+        const name = document.createElement('span');
+        name.className = 'attachment-name';
+        name.title = file.name;
+        name.textContent = file.name;
+
+        const size = document.createElement('span');
+        size.className = 'attachment-size';
+        size.textContent = formatFileSize(file.size);
+        details.append(name, size);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'attachment-remove-btn';
+        removeBtn.dataset.index = String(index);
+        removeBtn.title = 'Eliminar anexo';
+        removeBtn.setAttribute('aria-label', `Eliminar anexo ${file.name}`);
+        removeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         removeBtn.addEventListener('click', () => removeAttachment(index));
+
+        div.append(icon, details, removeBtn);
 
         return div;
     }
@@ -293,22 +321,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const isFirst = index === 0;
             const containerClass = isFirst ? 'author-input-container-with-add' : 'author-input-container';
+            const inputId = `documentAuthor${index + 1}`;
 
             authorGroup.innerHTML = `
                 <div class="author-field-header">
-                    <span class="author-number">Autor ${index + 1}</span>
-                    <span class="${index === 0 ? 'author-required' : 'author-optional'}">
-                        ${index === 0 ? 'Obligatorio' : 'Opcional'}
+                    <label class="author-number" for="${inputId}">Autor ${index + 1}</label>
+                    <span class="${isFirst ? 'required-badge' : 'optional-badge'} author-requirement-badge">
+                        ${isFirst ? 'Obligatorio' : 'Opcional'}
                     </span>
                 </div>
                 <div class="${containerClass}">
                     <input 
                         type="text" 
+                        id="${inputId}"
                         class="author-input" 
                         data-index="${index}"
                         placeholder="Nombre completo del autor"
                         value="${author}"
-                        required="${index === 0 ? 'true' : 'false'}"
+                        ${isFirst ? 'required aria-required="true"' : ''}
                     >
                     ${isFirst ? `
                         <button type="button" class="add-author-btn-inline" id="addDocumentAuthorBtn" onclick="addDocumentAuthor()" ${documentAuthors.length >= maxAuthors ? 'disabled' : ''}>
@@ -319,7 +349,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         </button>
                         <span class="authors-count-text">${documentAuthors.length}/${maxAuthors}</span>
                     ` : `
-                        <button type="button" class="remove-author-btn" onclick="removeDocumentAuthor(${index})">
+                        <button type="button" class="remove-author-btn" onclick="removeDocumentAuthor(${index})" aria-label="Eliminar Autor ${index + 1}">
                             ×
                         </button>
                     `}
@@ -337,7 +367,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
         });
 
-        updateDocumentAuthorsCount();
         updateAddDocumentAuthorButton();
     }
 
@@ -354,13 +383,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             documentAuthors.splice(index, 1);
             updateDocumentAuthorsDisplay();
             validateSignForm();
-        }
-    }
-
-    function updateDocumentAuthorsCount() {
-        const countElement = document.getElementById('documentAuthorsCount');
-        if (countElement) {
-            countElement.textContent = `${documentAuthors.length}/${maxAuthors} autores`;
         }
     }
 
@@ -394,15 +416,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const fileInput = document.getElementById('fileInput');
         const fileInfo = document.getElementById('signFileInfo');
 
-        if (fileInput) {
-            fileInput.value = '';
-        }
-
-        if (fileInfo) {
-            fileInfo.style.display = 'none';
-        }
-
-        validateSignForm();
+        if (fileInput && fileInfo) clearFileSelection(fileInput, fileInfo);
+        showNotification('Archivo eliminado', 'info');
     };
 
     // --- FUNCIONES DE VALIDACIÓN ---
@@ -501,10 +516,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Actualizar indicadores de progreso
         indicatorSteps.forEach((el, i) => {
             el.classList.remove("active", "completed");
+            el.removeAttribute("aria-current");
             if (i < step - 1) {
                 el.classList.add("completed");
             } else if (i === step - 1) {
                 el.classList.add("active");
+                el.setAttribute("aria-current", "step");
             }
         });
 
@@ -971,18 +988,23 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const keys = await response.json();
                 userKeys = keys || [];
                 displayKeys(userKeys);
+            } else if (response.status === 401) {
+                localStorage.removeItem("token");
+                keysListContainer.innerHTML = `
+                    <div class="no-keys-message">
+                        <p>Tu sesión ha expirado. Por favor, inicia sesión nuevamente.</p>
+                    </div>
+                `;
+            } else if (response.status === 403) {
+                // Un 403 conserva la sesión: puede tratarse del cambio de
+                // contraseña obligatorio o de una restricción de permisos.
+                keysListContainer.innerHTML = `
+                    <div class="no-keys-message">
+                        <p>Completa primero el cambio de contraseña requerido.</p>
+                    </div>
+                `;
             } else {
-                // Si hay error 401/403, limpiar token y mostrar mensaje
-                if (response.status === 401 || response.status === 403) {
-                    localStorage.removeItem("token");
-                    keysListContainer.innerHTML = `
-                        <div class="no-keys-message">
-                            <p>Tu sesión ha expirado. Por favor, inicia sesión nuevamente.</p>
-                        </div>
-                    `;
-                } else {
-                    throw new Error('Error al cargar las llaves');
-                }
+                throw new Error('Error al cargar las llaves');
             }
         } catch (error) {
             console.error('Error cargando llaves:', error);
@@ -992,7 +1014,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                 </div>
             `;
         }
-    }    // --- Función para mostrar las llaves ---
+    }
+
+    // --- Función para mostrar las llaves ---
     function displayKeys(keys) {
         const keysListContainer = document.getElementById("keysList");
 
@@ -1003,9 +1027,34 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!keys || keys.length === 0) {
             keysListContainer.innerHTML = `
-                <div class="no-keys-message">
-                    <p>No tienes llaves de firma disponibles.</p>
-                    <p><a href="#perfil" onclick="navigateToProfile()">Ir al perfil</a> para crear llaves.</p>
+                <div class="no-keys-message key-empty-state">
+                    <span class="key-empty-icon" aria-hidden="true">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="8" cy="15" r="4" stroke="currentColor" stroke-width="1.8"/>
+                            <path d="M11 12l8-8m-2 2 2 2m-5 1 2 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <h4>Aún no tienes una llave digital</h4>
+                    <p>Crea tu primera llave para continuar con la firma del documento.</p>
+                    <div class="key-empty-create">
+                        <label for="signNewKeyName">Nombre de la nueva llave</label>
+                        <div class="key-empty-create-row">
+                            <input
+                                id="signNewKeyName"
+                                type="text"
+                                maxlength="100"
+                                autocomplete="off"
+                                placeholder="Ej: Llave para tesis"
+                            >
+                            <button type="button" class="btn-primary key-empty-create-btn" onclick="createKeyFromSignStep()">
+                                Crear llave
+                            </button>
+                        </div>
+                        <p id="signNewKeyError" class="key-empty-error" role="alert" aria-live="polite"></p>
+                    </div>
+                    <button type="button" class="key-empty-profile-link" onclick="navigateToProfile()">
+                        Administrar llaves desde el perfil
+                    </button>
                 </div>
             `;
 
@@ -1052,7 +1101,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <div class="key-item ${isExpired ? 'disabled' : ''} ${isSelected ? 'selected' : ''}" data-key-id="${key.id}">
                         <div class="key-info">
                             <div class="key-name">${key.key_name || `Llave ${key.id}`} ${isSelected ? '<span class="key-active-label">ACTIVA</span>' : ''}</div>
-                            <div class="key-algorithm">Cifrado: ${key.encryption_type || 'aes-256-cbc'}</div>
+                            <div class="key-algorithm">Cifrado: ${window.cryptoConfig?.formatEncryptionType(key.encryption_type) || 'AES-256-GCM v2'}</div>
                             <div class="key-expiration ${expClass}">${expStatus}</div>
                         </div>
                     </div>
@@ -1194,6 +1243,31 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     };
 
+    window.createKeyFromSignStep = function () {
+        const nameInput = document.getElementById('signNewKeyName');
+        const errorElement = document.getElementById('signNewKeyError');
+        const keyName = nameInput ? nameInput.value.trim() : '';
+
+        if (!keyName) {
+            if (errorElement) errorElement.textContent = 'Escribe un nombre para identificar la llave.';
+            if (nameInput) {
+                nameInput.classList.add('is-invalid');
+                nameInput.focus();
+            }
+            return;
+        }
+
+        if (errorElement) errorElement.textContent = '';
+        if (nameInput) nameInput.classList.remove('is-invalid');
+
+        if (typeof window.showCreateKeyModal === 'function') {
+            window.showCreateKeyModal(keyName);
+            return;
+        }
+
+        window.navigateToProfile();
+    };
+
     // --- Event listeners ---
     document.getElementById("restartSignProcessBtn").onclick = limpiarFormulariosFirmar;
 
@@ -1224,6 +1298,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const modal = document.createElement('div');
         modal.className = 'navigation-confirm-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'signNavigationConfirmTitle');
+        modal.setAttribute('aria-describedby', 'signNavigationConfirmMessage');
         modal.innerHTML = `
             <div class="navigation-confirm-backdrop"></div>
             <div class="navigation-confirm-content">
@@ -1234,14 +1312,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                             <path d="m12 16.5.01 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                    <h3>¿Abandonar proceso de firma?</h3>
+                    <h3 id="signNavigationConfirmTitle">¿Abandonar el proceso de firma?</h3>
                 </div>
                 <div class="navigation-confirm-body">
-                    <p>Estás en proceso de firmar un documento. Si navegas a otra sección, perderás el progreso actual y tendrás que empezar de nuevo.</p>
+                    <p id="signNavigationConfirmMessage">Estás en proceso de firmar un documento. Si navegas a otra sección, perderás el progreso actual y tendrás que empezar de nuevo.</p>
                 </div>
                 <div class="navigation-confirm-actions">
-                    <button class="btn-secondary cancel-navigation">Continuar firmando</button>
-                    <button class="btn-primary confirm-navigation">Abandonar proceso</button>
+                    <button type="button" class="navigation-confirm-btn secondary cancel-navigation">Continuar firmando</button>
+                    <button type="button" class="navigation-confirm-btn primary confirm-navigation">Abandonar proceso</button>
                 </div>
             </div>
         `;
@@ -1381,31 +1459,46 @@ document.addEventListener("DOMContentLoaded", async () => {
         const drawArea = document.getElementById('drawSignatureArea');
         const uploadArea = document.getElementById('uploadSignatureArea');
 
-        methodOptions.forEach(option => {
-            option.addEventListener('click', () => {
-                // Remover clase active de todas las opciones
-                methodOptions.forEach(opt => opt.classList.remove('active'));
+        const selectMethod = (option) => {
+            methodOptions.forEach(opt => {
+                const isSelected = opt === option;
+                opt.classList.toggle('active', isSelected);
+                opt.setAttribute('aria-checked', String(isSelected));
+                opt.tabIndex = isSelected ? 0 : -1;
+            });
 
-                // Agregar clase active a la opción seleccionada
-                option.classList.add('active');
+            signatureMethod = option.dataset.method;
 
-                // Obtener método seleccionado
-                signatureMethod = option.dataset.method;
+            if (signatureMethod === 'draw') {
+                drawArea.style.display = 'block';
+                uploadArea.style.display = 'none';
+                if (!signatureCanvas) {
+                    setTimeout(initializeSignatureCanvas, 100);
+                }
+            } else {
+                drawArea.style.display = 'none';
+                uploadArea.style.display = 'block';
+            }
 
-                // Mostrar/ocultar áreas correspondientes
-                if (signatureMethod === 'draw') {
-                    drawArea.style.display = 'block';
-                    uploadArea.style.display = 'none';
-                    // Inicializar canvas si no está inicializado
-                    if (!signatureCanvas) {
-                        setTimeout(initializeSignatureCanvas, 100);
-                    }
-                } else {
-                    drawArea.style.display = 'none';
-                    uploadArea.style.display = 'block';
+            validateSignatureStep();
+        };
+
+        methodOptions.forEach((option, index) => {
+            option.addEventListener('click', () => selectMethod(option));
+            option.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    selectMethod(option);
+                    return;
                 }
 
-                validateSignatureStep();
+                if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+                event.preventDefault();
+                const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
+                const nextIndex = (index + direction + methodOptions.length) % methodOptions.length;
+                const nextOption = methodOptions[nextIndex];
+                selectMethod(nextOption);
+                nextOption.focus();
             });
         });
     }
@@ -1674,6 +1767,35 @@ document.addEventListener('DOMContentLoaded', function () {
     window.getSelectedTemplate = function () {
         return localStorage.getItem('selectedTemplate') || 'clasico'; // ✅ MODERNIZADO
     };
+
+    window.cleanSignFormsOnLogout = function () {
+        currentStep = 1;
+        downloadUrl = null;
+        selectedKeyId = null;
+        userKeys = [];
+        signatureData = null;
+        hasSignature = false;
+        documentAuthors = [''];
+        window.firmaEnCurso = false;
+
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) {
+            fileInput.value = '';
+            fileInput.closest('.upload-section')?.classList.remove('has-selected-file');
+            const selectedFileState = document.getElementById('signFileInfo');
+            if (selectedFileState) selectedFileState.style.display = 'none';
+        }
+
+        document.querySelectorAll('.author-input').forEach(input => {
+            input.value = '';
+        });
+
+        if (signatureCanvas && signatureCtx) {
+            signatureCtx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+        }
+
+        showStep(1);
+    };
 });
 
 // --- MEJORAS DE DESCARGA ---
@@ -1704,43 +1826,3 @@ function improveDownloadExperience() {
         }
     };
 }
-
-// Función global para limpiar formularios cuando se hace logout
-window.cleanSignFormsOnLogout = function () {
-
-    // Limpiar variables de estado
-    currentStep = 1;
-    downloadUrl = null;
-    selectedKeyId = null;
-    userKeys = [];
-    signatureData = null;
-    hasSignature = false;
-    documentAuthors = [''];
-    window.firmaEnCurso = false;
-
-    // Limpiar formularios
-    const fileInput = document.getElementById('fileInput');
-    if (fileInput) {
-        fileInput.value = '';
-        // Limpiar display del archivo
-        const fileDisplay = fileInput.closest('.file-input-container')?.querySelector('.file-input-display');
-        if (fileDisplay) {
-            fileDisplay.innerHTML = '<span class="placeholder">Seleccionar archivo PDF...</span>';
-        }
-    }
-
-    // Limpiar otros elementos del formulario
-    const authorInputs = document.querySelectorAll('.author-input');
-    authorInputs.forEach(input => {
-        if (input) input.value = '';
-    });
-
-    // Limpiar canvas de firma si existe
-    if (signatureCanvas && signatureCtx) {
-        signatureCtx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
-    }
-
-    // Resetear pasos
-    showStep(1);
-
-};

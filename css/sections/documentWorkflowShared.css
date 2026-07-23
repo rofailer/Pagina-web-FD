@@ -209,16 +209,12 @@
 }
 
 :is(#firmarSection, #verifySection) .step-header-container {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  align-items: center;
-  justify-content: initial;
-  gap: 16px;
+  display: block;
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 25px 30px;
-  text-align: left;
+  padding: 22px 28px;
+  text-align: center;
   background: var(--workflow-soft-accent);
   border: 0;
   border-bottom: 1px solid var(--workflow-border);
@@ -226,37 +222,12 @@
   backdrop-filter: none;
 }
 
-:is(#firmarSection, #verifySection) .step-icon-wrapper {
-  width: 48px;
-  height: 48px;
-  color: var(--primary-color);
-  background: #ffffff;
-  border: 1px solid
-    color-mix(in srgb, var(--primary-color) 25%, var(--workflow-border));
-  border-radius: 14px;
-  box-shadow: 0 8px 20px
-    color-mix(in srgb, var(--primary-color) 13%, transparent);
-}
-
-:is(#firmarSection, #verifySection) .step-icon-wrapper::before {
-  display: none;
-}
-
-:is(#firmarSection, #verifySection) .step-icon-wrapper.result-icon {
-  color: #16885a;
-  background: #effaf5;
-  border-color: #c7ead9;
-  box-shadow: none;
-}
-
-:is(#firmarSection, #verifySection) .step-icon {
-  width: 22px;
-  height: 22px;
-  color: currentColor;
-}
-
 :is(#firmarSection, #verifySection) .step-header-content {
+  width: 100%;
+  max-width: 720px;
   min-width: 0;
+  margin-inline: auto;
+  text-align: center;
 }
 
 :is(#firmarSection, #verifySection) .step-title {
@@ -270,7 +241,8 @@
 
 :is(#firmarSection, #verifySection) .step-description {
   display: block;
-  margin: 0;
+  max-width: 680px;
+  margin: 0 auto;
   color: var(--workflow-muted);
   font-size: 0.87rem;
   line-height: 1.55;
@@ -331,6 +303,45 @@
   color: var(--workflow-muted);
   font-size: 0.79rem;
   line-height: 1.55;
+}
+
+:is(#firmarSection, #verifySection) .workflow-field-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  text-align: center;
+}
+
+:is(#firmarSection, #verifySection) .workflow-field-description {
+  width: 100%;
+  text-align: center;
+}
+
+:is(#firmarSection, #verifySection) :is(.required-badge, .optional-badge) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 22px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+:is(#firmarSection, #verifySection) .required-badge {
+  color: #c93636;
+  background: #fdecec;
 }
 
 :is(#firmarSection, #verifySection) .modern-file-input-container {
@@ -431,6 +442,105 @@
   border-radius: 9px;
 }
 
+#firmarSection .upload-section.has-selected-file .modern-file-label {
+  display: none;
+}
+
+#firmarSection .upload-section .selected-file-state {
+  position: relative;
+  min-height: 96px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 20px 22px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #f1f8f5;
+  border: 1px solid #cfe7dc;
+  border-radius: 13px;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+#firmarSection .upload-section .selected-file-state:hover,
+#firmarSection .upload-section .selected-file-state:focus-visible {
+  background: #eef8f3;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 9%, transparent);
+}
+
+#firmarSection .selected-file-state .file-info-content {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto 36px;
+  align-items: center;
+  gap: 13px;
+  min-height: 54px;
+}
+
+#firmarSection .selected-file-state .file-details {
+  min-width: 0;
+  text-align: left;
+}
+
+#firmarSection .selected-file-state .file-name {
+  display: block;
+  max-width: 100%;
+  margin: 0 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#firmarSection .file-change-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary-color);
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(5px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+#firmarSection .selected-file-state:hover .file-change-hint,
+#firmarSection .selected-file-state:focus-visible .file-change-hint {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+#firmarSection .selected-file-state .file-remove-btn {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border-radius: 10px;
+}
+
+@media (max-width: 680px) {
+  #firmarSection .selected-file-state .file-info-content {
+    grid-template-columns: 36px minmax(0, 1fr) 34px;
+    gap: 10px;
+  }
+
+  #firmarSection .file-change-hint {
+    display: none;
+  }
+
+  #firmarSection .upload-section .selected-file-state {
+    min-height: 88px;
+    padding: 16px;
+  }
+}
+
 :is(#firmarSection, #verifySection) .file-name {
   color: var(--workflow-text);
   font-size: 0.84rem;
@@ -445,8 +555,8 @@
 
 #firmarSection #signForm {
   display: grid;
-  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
-  align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 20px;
 }
 
@@ -459,11 +569,11 @@
   min-width: 0;
 }
 
-#firmarSection #signForm > .attachments-section,
 #verifySection #verifyAvalForm > .attachments-section {
   align-self: start;
 }
 
+#firmarSection #signForm > .attachments-section,
 #firmarSection #signForm > .document-metadata {
   align-self: stretch;
 }
@@ -517,10 +627,12 @@
 :is(#firmarSection, #verifySection) .attachments-header .upload-title {
   display: flex;
   align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 8px;
   width: 100%;
   margin-bottom: 5px;
+  text-align: center;
 }
 
 :is(#firmarSection, #verifySection)
@@ -528,23 +640,12 @@
   .upload-subtitle {
   width: 100%;
   margin-bottom: 0;
+  text-align: center;
 }
 
 :is(#firmarSection, #verifySection) .optional-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  padding: 3px 8px;
   color: #667085;
   background: #eef1f5;
-  border: 0;
-  border-radius: 6px;
-  box-shadow: none;
-  font-size: 0.64rem;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.035em;
-  text-transform: uppercase;
 }
 
 :is(#firmarSection, #verifySection)
@@ -554,6 +655,170 @@
   padding: 15px 17px;
   background: #ffffff;
   border-color: #d8dee7;
+}
+
+/* Lista de anexos seleccionados */
+:is(#firmarSection, #verifySection) .attachments-list {
+  margin-top: 16px;
+  padding: 16px;
+  overflow: visible;
+  background: #ffffff;
+  border: 1px solid var(--workflow-border);
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+:is(#firmarSection, #verifySection) .attachments-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #e6edf5;
+}
+
+:is(#firmarSection, #verifySection) .attachments-count,
+:is(#firmarSection, #verifySection) .attachments-size {
+  color: #66758b;
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+:is(#firmarSection, #verifySection) .attachments-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 174px;
+  padding: 2px;
+  margin: 0 -2px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+:is(#firmarSection, #verifySection) .attachments-items::-webkit-scrollbar {
+  width: 7px;
+}
+
+:is(#firmarSection, #verifySection) .attachments-items::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:is(#firmarSection, #verifySection) .attachments-items::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+:is(#firmarSection, #verifySection) .attachments-items::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+:is(#firmarSection, #verifySection) .attachment-item {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+  overflow: visible;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e3e8ef;
+  border-radius: 13px;
+  box-shadow: none;
+  animation: none;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+:is(#firmarSection, #verifySection) .attachment-item:hover {
+  background: #ffffff;
+  border-color: color-mix(in srgb, var(--primary-color) 45%, #e3e8ef);
+  box-shadow: none;
+  transform: none;
+}
+
+:is(#firmarSection, #verifySection) .attachment-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+:is(#firmarSection, #verifySection) .attachment-details {
+  min-width: 0;
+}
+
+:is(#firmarSection, #verifySection) .attachment-name {
+  display: block;
+  max-width: 100%;
+  margin: 0 0 3px;
+  overflow: hidden;
+  color: var(--workflow-text);
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:is(#firmarSection, #verifySection) .attachment-size {
+  color: #78869a;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+:is(#firmarSection, #verifySection) .attachments-list .attachment-remove-btn {
+  position: static;
+  display: inline-grid;
+  place-items: center;
+  justify-self: end;
+  flex: 0 0 34px;
+  width: 34px;
+  min-width: 34px;
+  max-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  max-height: 34px;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: #d92d20 !important;
+  line-height: 1;
+  background: #fff4f4 !important;
+  border: 1px solid #ffd0d0 !important;
+  border-radius: 10px;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+:is(#firmarSection, #verifySection)
+  .attachments-list
+  .attachment-remove-btn:hover:not(:disabled) {
+  color: #b42318 !important;
+  background: #ffe7e7 !important;
+  border-color: #ffb8b8 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+:is(#firmarSection, #verifySection) .attachments-list .attachment-remove-btn svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+  pointer-events: none;
+  stroke: currentColor;
 }
 
 :is(#firmarSection, #verifySection) .document-metadata > .upload-title {
@@ -606,18 +871,49 @@
 }
 
 #firmarSection .authors-management {
+  /* Compensa el espacio que ocupa el selector de anexos para que ambos
+     paneles desplazables terminen visualmente a la misma altura. */
+  max-height: 294px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   padding: 13px;
   background: var(--workflow-soft);
   border: 1px solid var(--workflow-border);
   border-radius: 11px;
 }
 
+#firmarSection .authors-management::-webkit-scrollbar {
+  width: 7px;
+}
+
+#firmarSection .authors-management::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#firmarSection .authors-management::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+#firmarSection .authors-management::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 #firmarSection .author-field-header {
   gap: 12px;
 }
 
-#firmarSection :is(.author-required, .author-optional) {
+#firmarSection .author-requirement-badge {
   flex: 0 0 auto;
+}
+
+#firmarSection .field-label-with-badge {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 #firmarSection .author-input-container {
@@ -971,11 +1267,51 @@
   transform: none;
 }
 
+#firmarSection .method-option:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary-color) 22%, transparent);
+  outline-offset: 2px;
+}
+
 #firmarSection .method-option.active {
   background: var(--workflow-soft-accent);
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px
     color-mix(in srgb, var(--primary-color) 9%, transparent);
+}
+
+#verifySection .verify-option-title {
+  margin-bottom: 12px;
+}
+
+#verifySection .professor-item {
+  width: 100%;
+  color: inherit;
+  background: transparent;
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  font: inherit;
+  text-align: left;
+}
+
+#verifySection .professor-item:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid color-mix(in srgb, var(--primary-color) 20%, transparent);
+  outline-offset: -3px;
+}
+
+#verifySection .selected-name {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+#verifySection .auto-detected-label {
+  color: #16885a;
+  font-size: 0.7rem;
+  font-weight: 650;
 }
 
 #firmarSection .method-icon {
@@ -1020,7 +1356,8 @@
 
 #firmarSection .key-selection-container {
   width: 100%;
-  margin: 0;
+  max-width: 640px;
+  margin: 0 auto;
 }
 
 #firmarSection .keys-list {
@@ -1028,6 +1365,145 @@
   max-height: 320px;
   gap: 9px;
   padding: 2px;
+}
+
+#firmarSection .key-empty-state {
+  display: grid;
+  justify-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 28px;
+  color: var(--workflow-text);
+  text-align: center;
+  background: #fbfcfe;
+  border: 1px solid var(--workflow-border);
+  border-radius: 15px;
+}
+
+#firmarSection .key-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 13px;
+  color: var(--primary-color);
+  background: var(--workflow-soft-accent);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 22%, transparent);
+  border-radius: 14px;
+}
+
+#firmarSection .key-empty-state h4 {
+  margin: 0 0 7px;
+  color: var(--workflow-text);
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+#firmarSection .key-empty-state > p {
+  margin: 0;
+  color: var(--workflow-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+#firmarSection .key-empty-create {
+  display: grid;
+  gap: 7px;
+  width: min(100%, 490px);
+  margin-top: 20px;
+  text-align: left;
+}
+
+#firmarSection .key-empty-create label {
+  color: var(--workflow-text);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+#firmarSection .key-empty-create-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px;
+}
+
+#firmarSection .key-empty-create-row input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  color: var(--workflow-text);
+  background: #ffffff;
+  border: 1px solid #d5dde7;
+  border-radius: 10px;
+  outline: none;
+  font: inherit;
+  font-size: 0.83rem;
+}
+
+#firmarSection .key-empty-create-row input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+#firmarSection .key-empty-create-row input.is-invalid {
+  border-color: #e35d5d;
+  box-shadow: 0 0 0 3px rgba(227, 93, 93, 0.1);
+}
+
+#firmarSection .key-empty-create-btn {
+  min-height: 44px;
+  padding: 10px 18px;
+  white-space: nowrap;
+}
+
+#firmarSection .key-empty-error {
+  min-height: 0;
+  margin: 0;
+  color: #c53d3d;
+  font-size: 0.75rem;
+}
+
+#firmarSection .key-empty-error:empty {
+  display: none;
+}
+
+#firmarSection .key-empty-profile-link {
+  margin-top: 14px;
+  padding: 3px;
+  color: var(--primary-color) !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline-offset: 3px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  transform: none !important;
+}
+
+#firmarSection .key-empty-profile-link:hover {
+  color: var(--primary-color) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-decoration: underline;
+  transform: none !important;
+}
+
+@media (max-width: 560px) {
+  #firmarSection .key-empty-state {
+    padding: 22px 16px;
+  }
+
+  #firmarSection .key-empty-create-row {
+    grid-template-columns: 1fr;
+  }
+
+  #firmarSection .key-empty-create-btn {
+    width: 100%;
+  }
 }
 
 #firmarSection .key-item {
@@ -1122,6 +1598,103 @@
   box-shadow: none;
 }
 
+/* ---------- Firma: cierre del proceso ---------- */
+
+#firmarSection #signStep4 .sign-completion-body {
+  min-height: 182px;
+  align-items: center;
+  justify-content: center;
+  padding: 26px 30px 28px;
+}
+
+#firmarSection #signStep4 .sign-completion {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  width: 100%;
+  padding: 0;
+}
+
+#firmarSection #signStep4 .sign-completion-guidance {
+  max-width: 570px;
+  margin: 0;
+  color: var(--workflow-muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  text-align: center;
+}
+
+#firmarSection #signStep4 .sign-completion-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+
+#firmarSection #signStep4 #downloadSignedBtn {
+  min-width: 245px;
+  color: #ffffff !important;
+  background: var(--primary-color) !important;
+  border: 1px solid var(--primary-color) !important;
+  box-shadow: 0 8px 18px
+    color-mix(in srgb, var(--primary-color) 22%, transparent) !important;
+}
+
+#firmarSection #signStep4 #downloadSignedBtn:hover:not(:disabled) {
+  background: var(--accent-color) !important;
+  border-color: var(--accent-color) !important;
+  box-shadow: 0 10px 22px
+    color-mix(in srgb, var(--primary-color) 27%, transparent) !important;
+}
+
+#firmarSection #signStep4 #goToVerifyBtn {
+  min-width: 175px;
+  color: var(--primary-color) !important;
+  background: var(--workflow-surface) !important;
+  border: 1px solid
+    color-mix(in srgb, var(--primary-color) 34%, var(--workflow-border)) !important;
+  box-shadow: none !important;
+}
+
+#firmarSection #signStep4 #goToVerifyBtn:hover:not(:disabled) {
+  color: var(--accent-color) !important;
+  background: var(--workflow-soft-accent) !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: none !important;
+}
+
+#firmarSection #signStep4 .sign-completion-restart-row {
+  width: auto;
+}
+
+#firmarSection #signStep4 #restartSignProcessBtn {
+  min-width: 0;
+  min-height: 30px;
+  margin: -2px 0 0;
+  padding: 4px 7px;
+  color: var(--workflow-muted);
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 7px;
+  box-shadow: none !important;
+  font-size: 0.78rem;
+}
+
+#firmarSection #signStep4 #restartSignProcessBtn:hover:not(:disabled) {
+  color: var(--primary-color);
+  background: var(--workflow-soft-accent) !important;
+  box-shadow: none !important;
+}
+
+#firmarSection #signStep4 #restartSignProcessBtn .btn-content {
+  gap: 7px;
+}
+
+#firmarSection #signStep4 #restartSignProcessBtn:hover .btn-icon {
+  transform: rotate(-24deg);
+}
+
 /* ---------- Tema oscuro ---------- */
 
 [data-theme="dark"] :is(#firmarSection, #verifySection) {
@@ -1142,7 +1715,6 @@
 [data-theme="dark"]
   :is(#firmarSection, #verifySection)
   :is(
-    .step-icon-wrapper,
     .modern-file-label,
     .attachments-section,
     .document-metadata,
@@ -1247,15 +1819,7 @@
   }
 
   :is(#firmarSection, #verifySection) .step-header-container {
-    grid-template-columns: 42px minmax(0, 1fr);
-    gap: 12px;
     padding: 20px;
-  }
-
-  :is(#firmarSection, #verifySection) .step-icon-wrapper {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
   }
 
   :is(#firmarSection, #verifySection) .step-title {
@@ -1273,6 +1837,39 @@
   :is(#firmarSection, #verifySection)
     :is(.upload-section, .attachments-section, .document-metadata) {
     padding: 18px;
+  }
+
+  :is(#firmarSection, #verifySection) .attachments-list {
+    padding: 14px;
+  }
+
+  :is(#firmarSection, #verifySection) .attachments-list-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  :is(#firmarSection, #verifySection) .attachment-item {
+    grid-template-columns: 40px minmax(0, 1fr) 32px;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  :is(#firmarSection, #verifySection) .attachment-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    font-size: 0.68rem;
+  }
+
+  :is(#firmarSection, #verifySection) .attachments-list .attachment-remove-btn {
+    flex-basis: 32px;
+    width: 32px;
+    min-width: 32px;
+    max-width: 32px;
+    height: 32px;
+    min-height: 32px;
+    max-height: 32px;
   }
 
   :is(#firmarSection, #verifySection) .file-label-content {
@@ -1308,6 +1905,25 @@
     :is(.btn-primary, .modern-btn, .download-btn, .verify-btn, .restart-btn) {
     width: 100%;
     max-width: none;
+  }
+
+  #firmarSection #signStep4 .sign-completion-body {
+    min-height: 0;
+    padding: 22px 18px 24px;
+  }
+
+  #firmarSection #signStep4 .sign-completion-actions {
+    align-items: stretch;
+  }
+
+  #firmarSection #signStep4 #downloadSignedBtn,
+  #firmarSection #signStep4 #goToVerifyBtn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #firmarSection #signStep4 #restartSignProcessBtn {
+    width: auto;
   }
 
   #verifySection #verifyStep1 > #autoVerifyOption {

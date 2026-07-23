@@ -8,6 +8,27 @@ document.addEventListener("DOMContentLoaded", () => {
     let closeButton = null;
     let isMenuOpen = false; // Variable para controlar el estado del menú
 
+    const presenceLabels = {
+        en_linea: "En línea",
+        ausente: "Ausente",
+        ocupado: "Ocupado",
+        desconectado: "Desconectado",
+    };
+
+    function normalizePresenceStatus(status) {
+        return Object.hasOwn(presenceLabels, status) ? status : "desconectado";
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>'"]/g, (character) => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            "'": "&#39;",
+            '"': "&quot;",
+        })[character]);
+    }
+
     // FORZAR ESTADO INICIAL CERRADO
     if (mobileMenu) {
         mobileMenu.classList.remove("active");
@@ -33,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
             backdrop.style.left = "0";
             backdrop.style.width = "100vw";
             backdrop.style.height = "100vh";
-            backdrop.style.background = "rgba(0, 0, 0, 0.3)";
+            backdrop.style.background = "rgba(15, 23, 42, 0.24)";
             backdrop.style.opacity = "0";
             backdrop.style.visibility = "hidden";
             backdrop.style.pointerEvents = "none"; // Siempre sin pointer-events
@@ -297,15 +318,11 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderMobileMenu() {
         if (!mobileMenuList) return;
 
-        // Guardar el estado de la foto antes de regenerar el HTML
+        // Guardar la foto antes de regenerar el HTML dinámico.
         const currentAvatar = document.querySelector('.user-profile-avatar');
-        let currentAvatarHTML = null;
-        let hasPhoto = false;
-
-        if (currentAvatar) {
-            currentAvatarHTML = currentAvatar.innerHTML;
-            hasPhoto = currentAvatar.classList.contains('has-photo');
-        }
+        const currentAvatarImage = currentAvatar?.querySelector('img')?.src
+            || window.__profilePhotoObjectUrl
+            || null;
 
         mobileMenuList.innerHTML = "";
 
@@ -314,6 +331,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const isLogged = !!token;
         const userRole = user?.rol || null;
         const userName = user?.nombre || "";
+        const presenceStatus = normalizePresenceStatus(
+            user?.presenceStatus || user?.estado_presencia || (isLogged ? "en_linea" : "desconectado"),
+        );
+        const presenceLabel = presenceLabels[presenceStatus];
 
         let html = "";
 
@@ -321,24 +342,56 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isLogged && userName) {
             html += `
                 <div class="user-profile-section">
-                    <div class="user-profile-avatar">
-                        <!-- Avatar usa CSS ::before para mostrar "?" -->
-                    </div>
-                    <div class="user-profile-name">${userName}</div>
-                    <div class="user-profile-status">Sesión activa</div>
-                    <div class="auth-buttons-row">
-                        <li class="mobile-menu-item auth-button"><a href="#perfil" id="mobileGoToProfile">Perfil</a></li>
+                    <div class="user-profile-main">
+                        <div class="user-profile-avatar">
+                            <!-- Avatar usa CSS ::before para mostrar el icono por defecto -->
+                            <div class="mobile-profile-presence-control profile-presence-control" data-presence="${presenceStatus}">
+                                <button
+                                    type="button"
+                                    class="mobile-profile-presence-toggle"
+                                    aria-label="Estado: ${presenceLabel}. Cambiar estado"
+                                    aria-haspopup="menu"
+                                    aria-expanded="false"
+                                    title="Cambiar estado"
+                                >
+                                    <span class="mobile-profile-presence-dot" aria-hidden="true"></span>
+                                    <span class="mobile-profile-presence-chevron" aria-hidden="true"></span>
+                                </button>
+                                <div class="mobile-profile-presence-menu" role="menu" aria-label="Cambiar disponibilidad">
+                                    ${Object.entries(presenceLabels).map(([status, label]) => `
+                                        <button
+                                            type="button"
+                                            class="profile-presence-option mobile-profile-presence-option${status === presenceStatus ? " selected" : ""}"
+                                            data-status="${status}"
+                                            role="menuitemradio"
+                                            aria-checked="${status === presenceStatus ? "true" : "false"}"
+                                        >
+                                            <span class="mobile-presence-option-dot ${status}" aria-hidden="true"></span>
+                                            <span>${label}</span>
+                                        </button>
+                                    `).join("")}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="user-profile-details">
+                            <div class="user-profile-identity">
+                                <div class="user-profile-name">${escapeHtml(userName)}</div>
+                            </div>
+                            <div class="auth-buttons-row">
+                                <div class="mobile-menu-item auth-button"><a href="#perfil" id="mobileGoToProfile">Perfil</a></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
         } else {
             html += `
                 <div class="no-session-section">
-                    <div class="no-session-icon"></div>
-                    <div class="no-session-message">Sin sesión iniciada</div>
-                    <div class="no-session-subtitle">Inicia sesión para acceder a todas las funciones</div>
+                    <div class="no-session-icon" aria-hidden="true"></div>
+                    <h2 class="no-session-message">Tu espacio de firma</h2>
+                    <p class="no-session-subtitle">Gestiona tus documentos y llaves desde un solo lugar.</p>
                     <div class="auth-buttons-row">
-                        <li class="mobile-menu-item auth-button"><a href="#" id="mobileLoginBtn">Iniciar Sesión</a></li>
+                        <div class="mobile-menu-item auth-button"><a href="#" id="mobileLoginBtn">Iniciar sesión</a></div>
                     </div>
                 </div>
             `;
@@ -346,25 +399,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // --- Sección 2: Navegación principal ---
         html += `<div class="navigation-section">`;
-        html += `<li class="mobile-menu-item"><a href="#inicio">Inicio</a></li>`;
+        html += `<div class="mobile-menu-item"><a href="#inicio">Inicio</a></div>`;
 
         if (isLogged) {
-            html += `<li class="mobile-menu-item"><a href="#firmar">Firmar</a></li>`;
+            html += `<div class="mobile-menu-item"><a href="#firmar">Firmar</a></div>`;
         } else {
-            html += `<li class="mobile-menu-item"><a href="#" class="restricted-access" data-action="firmar">Firmar</a></li>`;
+            html += `<div class="mobile-menu-item"><a href="#" class="restricted-access" data-action="firmar">Firmar</a></div>`;
         }
 
         // Verificar siempre libre
-        html += `<li class="mobile-menu-item"><a href="#verificar">Verificar</a></li>`;
+        html += `<div class="mobile-menu-item"><a href="#verificar">Verificar</a></div>`;
 
-        html += `<li class="mobile-menu-item"><a href="#contacto">Contacto</a></li>`;
+        html += `<div class="mobile-menu-item"><a href="/tutorial">Tutorial</a></div>`;
+        html += `<div class="mobile-menu-item"><a href="#contacto">Contacto</a></div>`;
         html += `</div>`;
 
         // --- Secciones adicionales cuando hay sesión ---
         if (isLogged) {
             // --- Sección de cerrar sesión ---
             html += `<div class="logout-section">`;
-            html += `<li class="mobile-menu-item"><a href="#" id="mobileLogoutBtn">Cerrar sesión</a></li>`;
+            html += `<div class="mobile-menu-item"><a href="#" id="mobileLogoutBtn">Cerrar sesión</a></div>`;
             html += `</div>`;
         } else {
             // Sin sección de autenticación adicional al final
@@ -373,12 +427,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
         mobileMenuList.innerHTML = html;
 
-        // Restaurar la foto del avatar si existía antes y el usuario sigue logueado
-        if (isLogged && currentAvatarHTML && hasPhoto) {
-            const newAvatar = document.querySelector('.user-profile-avatar');
-            if (newAvatar) {
-                newAvatar.innerHTML = currentAvatarHTML;
-                newAvatar.classList.add('has-photo');
+        const currentHash = window.location.hash || "#inicio";
+        const currentPath = window.location.pathname.replace(/\/$/, "") || "/";
+        mobileMenuList.querySelectorAll('.navigation-section a[href]').forEach(link => {
+            const href = link.getAttribute('href');
+            const isCurrent = !link.classList.contains('restricted-access') && (
+                (href.startsWith('#') && href === currentHash) ||
+                (href.startsWith('/') && href.replace(/\/$/, '') === currentPath)
+            );
+
+            if (isCurrent) link.setAttribute('aria-current', 'page');
+        });
+
+        // Restaurar solo la imagen, sin reemplazar el control de presencia.
+        if (isLogged && currentAvatarImage) {
+            if (typeof window.updateProfilePhoto === 'function') {
+                window.updateProfilePhoto(currentAvatarImage);
+            } else {
+                const newAvatar = document.querySelector('.user-profile-avatar');
+                if (newAvatar) {
+                    const image = document.createElement('img');
+                    image.src = currentAvatarImage;
+                    image.alt = 'Avatar de usuario';
+                    newAvatar.prepend(image);
+                    newAvatar.classList.add('has-photo');
+                }
             }
         } else if (isLogged) {
             // Si no había foto guardada pero el usuario está logueado, intentar cargar desde backend
@@ -405,6 +478,27 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", function (e) {
         // Verificar que el elemento clickeado está dentro del menú móvil
         if (!e.target.closest(".header-mobile-menu")) return;
+
+        const presenceToggle = e.target.closest(".mobile-profile-presence-toggle");
+        if (presenceToggle) {
+            e.preventDefault();
+            e.stopPropagation();
+            const control = presenceToggle.closest(".mobile-profile-presence-control");
+            const menu = control?.querySelector(".mobile-profile-presence-menu");
+            const isOpen = menu?.classList.toggle("open") || false;
+            presenceToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+            return;
+        }
+
+        const presenceOption = e.target.closest(".mobile-profile-presence-option");
+        if (presenceOption) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof window.changePresenceStatus === "function") {
+                void window.changePresenceStatus(presenceOption.dataset.status);
+            }
+            return;
+        }
 
         // Login
         if (e.target && e.target.id === "mobileLoginBtn") {
@@ -439,6 +533,14 @@ document.addEventListener("DOMContentLoaded", () => {
         // Logout
         if (e.target && e.target.id === "mobileLogoutBtn") {
             e.preventDefault();
+            const sessionToken = localStorage.getItem("token");
+            if (sessionToken) {
+                fetch("/api/auth/logout", {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${sessionToken}` },
+                    keepalive: true,
+                }).catch(() => {});
+            }
             localStorage.removeItem("token");
             localStorage.removeItem("userRole");
             localStorage.removeItem("userName");
@@ -471,6 +573,16 @@ document.addEventListener("DOMContentLoaded", () => {
             closeMobileMenu();
             return;
         }
+    });
+
+    document.addEventListener("click", function (e) {
+        if (e.target.closest(".mobile-profile-presence-control")) return;
+        document.querySelectorAll(".mobile-profile-presence-menu.open").forEach((menu) => {
+            menu.classList.remove("open");
+            menu.closest(".mobile-profile-presence-control")
+                ?.querySelector(".mobile-profile-presence-toggle")
+                ?.setAttribute("aria-expanded", "false");
+        });
     });
 
     // --- Si el usuario inicia/cierra sesión, actualiza el menú ---

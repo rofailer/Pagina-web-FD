@@ -1,9 +1,20 @@
 const pool = require('../db/pool');
+const fs = require('fs');
+const { ensureVisualContactColumns } = require('../utils/visualConfigSchema');
+
+function publicVisualResponse(config) {
+    return {
+        success: true,
+        config,
+        ...config
+    };
+}
 
 class VisualConfigController {
     // Obtener configuración visual actual
     static async getVisualConfig(req, res) {
         try {
+            await ensureVisualContactColumns();
             const [rows] = await pool.execute(
                 'SELECT * FROM visual_config WHERE id = 1'
             );
@@ -32,7 +43,10 @@ class VisualConfigController {
                         background: 'fondo1',
                         favicon: '../../favicon.ico',
                         institution_name: 'Firmas Digitales FD',
+                        contact_email: '',
+                        contact_phone: '',
                         admin_header_title: 'Panel Administrativo',
+                        footer_text: '© 2026 Firmas Digitales FD. Todos los derechos reservados.',
                         logo_url: null
                     }
                 });
@@ -49,46 +63,80 @@ class VisualConfigController {
     static async getPublicVisualConfig(req, res) {
         try {
             const [rows] = await pool.execute(
-                'SELECT background, favicon, institution_name, admin_header_title, logo_data FROM visual_config WHERE id = 1'
+                `SELECT
+                    background,
+                    favicon,
+                    institution_name,
+                    admin_header_title,
+                    footer_text,
+                    logo_data
+                 FROM visual_config
+                 WHERE id = 1`
             );
 
             if (rows.length === 0) {
-                return res.json({
+                const defaultConfig = {
                     background: 'fondo1',
                     favicon: '../../favicon.ico',
                     institution_name: 'Firmas Digitales FD',
+                    contact_email: '',
+                    contact_phone: '',
                     admin_header_title: 'Panel Administrativo',
+                    footer_text: '© 2026 Firmas Digitales FD. Todos los derechos reservados.',
                     logo_url: null
-                });
+                };
+                return res.json(publicVisualResponse(defaultConfig));
             }
 
             const config = rows[0];
             const logoUrl = config.logo_data ? '/api/logo' : null;
+            let contactEmail = '';
+            let contactPhone = '';
+            try {
+                const [contactRows] = await pool.execute(
+                    `SELECT contact_email, contact_phone
+                     FROM visual_config
+                     WHERE id = 1`
+                );
+                contactEmail = contactRows[0]?.contact_email || '';
+                contactPhone = contactRows[0]?.contact_phone || '';
+            } catch (contactError) {
+                if (contactError.code !== 'ER_BAD_FIELD_ERROR') throw contactError;
+            }
 
-            res.json({
+            const publicConfig = {
                 background: config.background,
                 favicon: config.favicon,
                 institution_name: config.institution_name,
+                contact_email: contactEmail,
+                contact_phone: contactPhone,
                 admin_header_title: config.admin_header_title,
+                footer_text: config.footer_text || '© 2026 Firmas Digitales FD. Todos los derechos reservados.',
                 logo_url: logoUrl
-            });
+            };
+            res.json(publicVisualResponse(publicConfig));
         } catch (error) {
             console.warn('Error al obtener configuración visual pública:', error.message);
 
             // Devolver configuración por defecto en caso de error
-            res.json({
+            const defaultConfig = {
                 background: 'fondo1',
                 favicon: '../../favicon.ico',
                 institution_name: 'Firmas Digitales FD',
+                contact_email: '',
+                contact_phone: '',
                 admin_header_title: 'Panel Administrativo',
+                footer_text: '© 2026 Firmas Digitales FD. Todos los derechos reservados.',
                 logo_url: null
-            });
+            };
+            res.json(publicVisualResponse(defaultConfig));
         }
     }
 
     // Actualizar configuración visual
     static async updateVisualConfig(req, res) {
         try {
+            await ensureVisualContactColumns();
             const {
                 background,
                 favicon,
@@ -99,7 +147,11 @@ class VisualConfigController {
                 headerTitle,
                 footerText,
                 adminHeaderTitle,
-                institutionName
+                institutionName,
+                contact_email,
+                contact_phone,
+                contactEmail,
+                contactPhone
             } = req.body;
 
             // Obtener usuario actual
@@ -111,7 +163,9 @@ class VisualConfigController {
                     favicon: favicon ?? null,
                     footer_text: footer_text ?? footerText ?? null,
                     admin_header_title: admin_header_title ?? adminHeaderTitle ?? null,
-                    institution_name: institution_name ?? institutionName ?? siteTitle ?? headerTitle ?? null
+                    institution_name: institution_name ?? institutionName ?? siteTitle ?? headerTitle ?? null,
+                    contact_email: contact_email ?? contactEmail ?? null,
+                    contact_phone: contact_phone ?? contactPhone ?? null
                 };
 
                 const [result] = await pool.execute(
@@ -121,6 +175,8 @@ class VisualConfigController {
                                             footer_text = COALESCE(?, footer_text),
                                             admin_header_title = COALESCE(?, admin_header_title),
                                             institution_name = COALESCE(?, institution_name),
+                                            contact_email = COALESCE(?, contact_email),
+                                            contact_phone = COALESCE(?, contact_phone),
                                             updated_by = ?
                                         WHERE id = 1`,
                     [
@@ -129,6 +185,8 @@ class VisualConfigController {
                         resolvedValues.footer_text,
                         resolvedValues.admin_header_title,
                         resolvedValues.institution_name,
+                        resolvedValues.contact_email,
+                        resolvedValues.contact_phone,
                         updatedBy
                     ]
                 );
@@ -138,20 +196,34 @@ class VisualConfigController {
                     const defaults = {
                         background: 'fondo1',
                         favicon: '../../favicon.ico',
-                        footer_text: '© 2024 Firmas Digitales FD. Todos los derechos reservados.',
+                        footer_text: '© 2026 Firmas Digitales FD. Todos los derechos reservados.',
                         admin_header_title: 'Panel Administrativo',
-                        institution_name: 'Firmas Digitales FD'
+                        institution_name: 'Firmas Digitales FD',
+                        contact_email: '',
+                        contact_phone: ''
                     };
 
                     await pool.execute(
-                        `INSERT INTO visual_config (id, background, favicon, footer_text, admin_header_title, institution_name, updated_by)
-                        VALUES (1, ?, ?, ?, ?, ?, ?)`,
+                        `INSERT INTO visual_config (
+                            id,
+                            background,
+                            favicon,
+                            footer_text,
+                            admin_header_title,
+                            institution_name,
+                            contact_email,
+                            contact_phone,
+                            updated_by
+                        )
+                        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         [
                             resolvedValues.background ?? defaults.background,
                             resolvedValues.favicon ?? defaults.favicon,
                             resolvedValues.footer_text ?? defaults.footer_text,
                             resolvedValues.admin_header_title ?? defaults.admin_header_title,
                             resolvedValues.institution_name ?? defaults.institution_name,
+                            resolvedValues.contact_email ?? defaults.contact_email,
+                            resolvedValues.contact_phone ?? defaults.contact_phone,
                             updatedBy
                         ]
                     );
@@ -191,10 +263,12 @@ class VisualConfigController {
                         background VARCHAR(20) DEFAULT 'fondo1',
                         favicon VARCHAR(255) DEFAULT '../../favicon.ico',
                         institution_name VARCHAR(255) DEFAULT 'Firmas Digitales FD',
+                        contact_email VARCHAR(254) DEFAULT '',
+                        contact_phone VARCHAR(32) DEFAULT '',
                         logo_data LONGBLOB DEFAULT NULL,
                         logo_mimetype VARCHAR(100) DEFAULT NULL,
                         logo_filename VARCHAR(255) DEFAULT NULL,
-                        footer_text TEXT DEFAULT '© 2024 Firmas Digitales FD. Todos los derechos reservados.',
+                        footer_text TEXT DEFAULT '© 2026 Firmas Digitales FD. Todos los derechos reservados.',
                         admin_header_title VARCHAR(255) DEFAULT 'Panel Administrativo',
                         updated_by VARCHAR(100) DEFAULT 'system',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -205,12 +279,24 @@ class VisualConfigController {
 
                 // Insertar configuración por defecto
                 await pool.execute(
-                    `INSERT INTO visual_config (id, background, favicon, institution_name, footer_text, admin_header_title, updated_by)
-                    VALUES (1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', '© 2024 Firmas Digitales FD. Todos los derechos reservados.', 'Panel Administrativo', ?)
+                    `INSERT INTO visual_config (
+                        id,
+                        background,
+                        favicon,
+                        institution_name,
+                        contact_email,
+                        contact_phone,
+                        footer_text,
+                        admin_header_title,
+                        updated_by
+                    )
+                    VALUES (1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', '', '', '© 2026 Firmas Digitales FD. Todos los derechos reservados.', 'Panel Administrativo', ?)
                     ON DUPLICATE KEY UPDATE
                     background = VALUES(background),
                     favicon = VALUES(favicon),
                     institution_name = VALUES(institution_name),
+                    contact_email = VALUES(contact_email),
+                    contact_phone = VALUES(contact_phone),
                     footer_text = VALUES(footer_text),
                     admin_header_title = VALUES(admin_header_title),
                     updated_by = VALUES(updated_by)`,
@@ -286,17 +372,26 @@ class VisualConfigController {
                 const [result] = await pool.execute(
                     `UPDATE visual_config SET
                       institution_name = ?,
+                      footer_text = ?,
                       updated_by = ?
                     WHERE id = 1`,
-                    [trimmedName, updatedBy]
+                    [
+                        trimmedName,
+                        `© ${new Date().getFullYear()} ${trimmedName}. Todos los derechos reservados.`,
+                        updatedBy
+                    ]
                 );
 
                 if (result.affectedRows === 0) {
                     // Si no existe el registro, intentar insertar
                     await pool.execute(
-                        `INSERT INTO visual_config (id, institution_name, updated_by)
-                        VALUES (1, ?, ?)`,
-                        [trimmedName, updatedBy]
+                        `INSERT INTO visual_config (id, institution_name, footer_text, updated_by)
+                        VALUES (1, ?, ?, ?)`,
+                        [
+                            trimmedName,
+                            `© ${new Date().getFullYear()} ${trimmedName}. Todos los derechos reservados.`,
+                            updatedBy
+                        ]
                     );
                 }
 
@@ -331,11 +426,15 @@ class VisualConfigController {
                 });
             }
 
-            const fs = require('fs');
-            const path = require('path');
-
             // Leer los datos binarios del archivo
             const logoData = fs.readFileSync(req.file.path);
+            const extensionByType = {
+                'image/jpeg': 'jpg',
+                'image/png': 'png',
+                'image/webp': 'webp',
+                'image/gif': 'gif'
+            };
+            const safeFilename = `institution-logo.${extensionByType[req.file.mimetype]}`;
 
             // Guardar la imagen en la base de datos
             const updatedBy = req.user?.usuario || 'system';
@@ -346,7 +445,7 @@ class VisualConfigController {
                   logo_filename = ?,
                   updated_by = ?
                 WHERE id = 1`,
-                [logoData, req.file.mimetype, req.file.originalname, updatedBy]
+                [logoData, req.file.mimetype, safeFilename, updatedBy]
             );
 
             // Eliminar el archivo temporal

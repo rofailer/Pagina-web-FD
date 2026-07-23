@@ -5,56 +5,100 @@
 document.addEventListener('DOMContentLoaded', function () {
     initializeProfile();
     initializeTabs();
+    initializePresenceControls();
 });
+
+function passwordChangeIsPending() {
+    return localStorage.getItem('forcePasswordChange') === 'true';
+}
+
+const PROFILE_LAST_TAB_KEY = 'profileLastTab';
+const PROFILE_REMEMBER_TAB_KEY = 'profileRememberLastTab';
+const PROFILE_REDUCED_MOTION_KEY = 'profileReducedMotion';
 
 // ===========================
 // SISTEMA DE PESTAÑAS
 // ===========================
 function initializeTabs() {
-    const tabButtons = document.querySelectorAll('.perfil-tab-btn');
-    const tabContents = document.querySelectorAll('.perfil-tab-content');
+    const profileSection = document.getElementById('perfilSection');
+    if (!profileSection) return;
+
+    const tabButtons = [...profileSection.querySelectorAll('.perfil-tab-btn')];
+    const tabContents = [...profileSection.querySelectorAll('.perfil-tab-content')];
 
     tabButtons.forEach(button => {
+        button.setAttribute('role', 'tab');
+        button.setAttribute('tabindex', button.classList.contains('active') ? '0' : '-1');
+        button.setAttribute('aria-selected', button.classList.contains('active') ? 'true' : 'false');
+
         button.addEventListener('click', function () {
-            const targetTab = this.getAttribute('data-tab');
+            activateProfileTab(this.getAttribute('data-tab'));
+        });
 
-            // Remover active de todos los botones y contenidos
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-
-            // Activar el botón clickeado
-            this.classList.add('active');
-
-            // Activar el contenido correspondiente
-            const targetContent = document.getElementById(`tab-${targetTab}`);
-            if (targetContent) {
-                targetContent.classList.add('active');
+        button.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                button.click();
+                return;
             }
 
-            // Efectos adicionales según la pestaña
-            switch (targetTab) {
-                case 'gestion-llaves':
-                    // updateKeysCount(); // Comentado temporalmente - manejado por keys.frontend.js
-                    loadUserKeys();
-                    break;
-                case 'configuracion-cifrado':
-                    loadEncryptionSettings();
-                    break;
-                case 'datos-personales':
-                    loadUserData();
-                    break;
-                case 'personalizacion-pdf':
-                    loadCurrentTemplate();
-                    break;
-                case 'historial-firma':
-                    loadHistorialFirma();
-                    break;
-                case 'configuraciones-avanzadas':
-                    loadAdvancedConfig();
-                    break;
-            }
+            if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+            event.preventDefault();
+            const currentIndex = tabButtons.indexOf(button);
+            const direction = event.key === 'ArrowRight' ? 1 : -1;
+            const nextIndex = (currentIndex + direction + tabButtons.length) % tabButtons.length;
+            tabButtons[nextIndex].focus();
         });
     });
+
+    const shouldRemember = localStorage.getItem(PROFILE_REMEMBER_TAB_KEY) !== 'false';
+    const savedTab = shouldRemember ? localStorage.getItem(PROFILE_LAST_TAB_KEY) : null;
+    const initialTab = savedTab && profileSection.querySelector(`[data-tab="${savedTab}"]`)
+        ? savedTab
+        : (profileSection.querySelector('.perfil-tab-btn.active')?.getAttribute('data-tab') || 'datos-personales');
+
+    activateProfileTab(initialTab, false);
+}
+
+function activateProfileTab(targetTab, persist = true) {
+    const profileSection = document.getElementById('perfilSection');
+    if (!profileSection) return;
+
+    const tabButtons = profileSection.querySelectorAll('.perfil-tab-btn');
+    const tabContents = profileSection.querySelectorAll('.perfil-tab-content');
+    const targetButton = profileSection.querySelector(`.perfil-tab-btn[data-tab="${targetTab}"]`);
+    const targetContent = document.getElementById(`tab-${targetTab}`);
+    if (!targetButton || !targetContent) return;
+
+    tabButtons.forEach(button => {
+        const isActive = button === targetButton;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        button.setAttribute('tabindex', isActive ? '0' : '-1');
+    });
+
+    tabContents.forEach(content => {
+        const isActive = content === targetContent;
+        content.classList.toggle('active', isActive);
+        content.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+    });
+
+    if (persist && localStorage.getItem(PROFILE_REMEMBER_TAB_KEY) !== 'false') {
+        localStorage.setItem(PROFILE_LAST_TAB_KEY, targetTab);
+    }
+
+    switch (targetTab) {
+        case 'gestion-llaves':
+            if (typeof window.loadKeys === 'function') window.loadKeys();
+            else loadUserKeys();
+            break;
+        case 'datos-personales':
+            loadUserData();
+            break;
+        case 'configuraciones-avanzadas':
+            loadAdvancedConfig();
+            break;
+    }
 }
 
 // ===========================
@@ -65,7 +109,7 @@ function initializeProfile() {
     setupPdfTemplates();
     loadUserData();
     loadUserKeys();
-    // updateKeysCount(); // Comentado temporalmente - manejado por keys.frontend.js
+    loadProfileExperienceSettings();
     loadAdvancedSettings();
 }
 
@@ -146,6 +190,15 @@ function loadCurrentTemplate() {
 
 // Variables globales para datos del usuario
 let currentUserData = {};
+let currentProfilePhotoObjectUrl = null;
+let presenceHeartbeatInterval = null;
+
+const PRESENCE_LABELS = {
+    en_linea: 'En línea',
+    ausente: 'Ausente',
+    ocupado: 'Ocupado',
+    desconectado: 'Desconectado'
+};
 
 // Función para seleccionar foto de perfil
 function selectProfilePhoto() {
@@ -184,8 +237,10 @@ async function handleProfilePhoto(event) {
         const data = await response.json();
 
         if (data.success) {
-            // Actualizar la imagen en la interfaz
-            updateProfilePhoto(data.photoPath);
+            await loadPersistentProfilePhoto(
+                data.photoUrl || '/api/profile/photo/content',
+                data.photoVersion
+            );
 
             showNotification('Foto de perfil actualizada correctamente', 'success');
         } else {
@@ -203,34 +258,219 @@ function updateProfilePhoto(photoPath) {
     // 1. Actualizar en la sección de perfil (.perfil-photo)
     const photoContainer = document.querySelector('.perfil-photo');
     if (photoContainer) {
-        photoContainer.innerHTML = `<img src="${photoPath}" alt="Foto de perfil">`;
+        if (photoPath) {
+            photoContainer.innerHTML = `<img src="${photoPath}" alt="Foto de perfil">`;
+            photoContainer.classList.add('has-photo');
+        } else {
+            photoContainer.innerHTML = `
+                <div class="perfil-photo-placeholder" aria-hidden="true">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </div>`;
+            photoContainer.classList.remove('has-photo');
+        }
     }
 
     // 2. Actualizar en el menú móvil (.user-profile-avatar)
     const mobileAvatar = document.querySelector('.user-profile-avatar');
     if (mobileAvatar) {
+        mobileAvatar.querySelectorAll(':scope > img').forEach(image => image.remove());
         if (photoPath) {
-            mobileAvatar.innerHTML = `<img src="${photoPath}" alt="Avatar de usuario">`;
+            const image = document.createElement('img');
+            image.src = photoPath;
+            image.alt = 'Avatar de usuario';
+            mobileAvatar.prepend(image);
             mobileAvatar.classList.add('has-photo');
         } else {
-            // Sin foto: mostrar SVG por defecto
-            mobileAvatar.innerHTML = '';
             mobileAvatar.classList.remove('has-photo');
         }
     }
 
     // 3. Actualizar en el dropdown del perfil (desktop) si existe
     const desktopAvatar = document.querySelector('.profile-avatar-large');
-    if (desktopAvatar) {
+    if (desktopAvatar && photoPath) {
         desktopAvatar.src = photoPath;
     }
 
     // 4. Actualizar avatar pequeño del header si existe
     const headerAvatar = document.querySelector('.profile-avatar-small');
-    if (headerAvatar) {
+    if (headerAvatar && photoPath) {
         headerAvatar.src = photoPath;
     }
 }
+
+async function loadPersistentProfilePhoto(photoUrl = '/api/profile/photo/content', version = null) {
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+
+    try {
+        const separator = photoUrl.includes('?') ? '&' : '?';
+        const versionedUrl = version ? `${photoUrl}${separator}v=${encodeURIComponent(version)}` : photoUrl;
+        const response = await fetch(versionedUrl, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            cache: 'no-store'
+        });
+
+        if (response.status === 404) {
+            updateProfilePhoto(null);
+            return false;
+        }
+        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+
+        const blob = await response.blob();
+        if (!blob.type.startsWith('image/')) throw new Error('Respuesta de imagen inválida');
+
+        if (currentProfilePhotoObjectUrl) URL.revokeObjectURL(currentProfilePhotoObjectUrl);
+        if (window.__profilePhotoObjectUrl && window.__profilePhotoObjectUrl !== currentProfilePhotoObjectUrl) {
+            URL.revokeObjectURL(window.__profilePhotoObjectUrl);
+        }
+        currentProfilePhotoObjectUrl = URL.createObjectURL(blob);
+        window.__profilePhotoObjectUrl = currentProfilePhotoObjectUrl;
+        updateProfilePhoto(currentProfilePhotoObjectUrl);
+        return true;
+    } catch (error) {
+        console.error('Error al cargar la foto persistente:', error);
+        return false;
+    }
+}
+
+function normalizePresenceStatus(status) {
+    return Object.hasOwn(PRESENCE_LABELS, status) ? status : 'desconectado';
+}
+
+function updatePresenceUI(status) {
+    const normalizedStatus = normalizePresenceStatus(status);
+    const labelText = PRESENCE_LABELS[normalizedStatus];
+
+    document.querySelectorAll('.profile-presence-control').forEach(control => {
+        control.dataset.presence = normalizedStatus;
+    });
+    document.querySelectorAll('#profilePresenceButton, .mobile-profile-presence-toggle').forEach(button => {
+        button.setAttribute('aria-label', `Estado: ${labelText}. Cambiar estado`);
+    });
+    document.querySelectorAll('#profilePresenceLabel, [data-presence-label]').forEach(label => {
+        label.textContent = labelText;
+    });
+
+    document.querySelectorAll('.profile-presence-option').forEach(option => {
+        const isSelected = option.dataset.status === normalizedStatus;
+        option.classList.toggle('selected', isSelected);
+        option.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+    });
+
+    try {
+        const storedUser = JSON.parse(localStorage.getItem('user')) || {};
+        storedUser.presenceStatus = normalizedStatus;
+        storedUser.estado_presencia = normalizedStatus;
+        localStorage.setItem('user', JSON.stringify(storedUser));
+    } catch (_) {
+        // La interfaz sigue funcionando aunque el almacenamiento local esté dañado.
+    }
+}
+
+async function changePresenceStatus(status) {
+    const normalizedStatus = normalizePresenceStatus(status);
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+        const response = await fetch('/api/profile/presence', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: normalizedStatus })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.error || 'No se pudo cambiar el estado');
+
+        updatePresenceUI(data.presenceStatus || normalizedStatus);
+        closePresenceMenu();
+        showNotification(`Estado actualizado a ${PRESENCE_LABELS[normalizedStatus]}`, 'success');
+    } catch (error) {
+        showNotification(error.message || 'No se pudo cambiar el estado', 'error');
+    }
+}
+
+function closePresenceMenu() {
+    document.querySelectorAll('#profilePresenceMenu, .mobile-profile-presence-menu').forEach(menu => {
+        menu.classList.remove('open');
+    });
+    document.querySelectorAll('#profilePresenceButton, .mobile-profile-presence-toggle').forEach(button => {
+        button.setAttribute('aria-expanded', 'false');
+    });
+}
+
+function initializePresenceControls() {
+    const button = document.getElementById('profilePresenceButton');
+    const menu = document.getElementById('profilePresenceMenu');
+    if (!button || !menu || button.dataset.initialized === 'true') return;
+
+    button.dataset.initialized = 'true';
+    button.addEventListener('click', event => {
+        event.stopPropagation();
+        const isOpen = menu.classList.toggle('open');
+        button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+
+    menu.addEventListener('click', event => {
+        const option = event.target.closest('.profile-presence-option');
+        if (option) changePresenceStatus(option.dataset.status);
+    });
+
+    document.addEventListener('click', event => {
+        if (!event.target.closest('.profile-presence-control')) closePresenceMenu();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closePresenceMenu();
+    });
+
+    startPresenceHeartbeat();
+}
+
+async function sendPresenceHeartbeat() {
+    const token = localStorage.getItem('token');
+    if (!token || document.visibilityState === 'hidden') return;
+
+    try {
+        const response = await fetch('/api/profile/heartbeat', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            if (data.presenceStatus) updatePresenceUI(data.presenceStatus);
+        }
+    } catch (_) {
+        // La siguiente pulsación reintentará sin interrumpir el trabajo del usuario.
+    }
+}
+
+function startPresenceHeartbeat() {
+    if (!localStorage.getItem('token') || presenceHeartbeatInterval) return;
+    sendPresenceHeartbeat();
+    presenceHeartbeatInterval = window.setInterval(sendPresenceHeartbeat, 45_000);
+}
+
+window.changePresenceStatus = changePresenceStatus;
+window.updatePresenceUI = updatePresenceUI;
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') sendPresenceHeartbeat();
+});
+
+window.addEventListener('authStateChanged', event => {
+    if (event.detail?.authenticated) {
+        loadUserData();
+        startPresenceHeartbeat();
+    } else if (presenceHeartbeatInterval) {
+        clearInterval(presenceHeartbeatInterval);
+        presenceHeartbeatInterval = null;
+    }
+});
 
 // Exponer la función globalmente para uso en otros módulos
 window.updateProfilePhoto = updateProfilePhoto;
@@ -239,7 +479,7 @@ window.updateProfilePhoto = updateProfilePhoto;
 async function loadUserData() {
     // Verificar si hay un token válido antes de hacer la request
     const token = localStorage.getItem('token');
-    if (!token) {
+    if (!token || passwordChangeIsPending()) {
         // No hay token de autenticación, saltando carga de datos del usuario
         return;
     }
@@ -254,10 +494,11 @@ async function loadUserData() {
         });
 
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
+            if (response.status === 401) {
                 localStorage.removeItem('token');
                 return;
             }
+            if (response.status === 403) return;
             throw new Error(`Error HTTP: ${response.status}`);
         }
 
@@ -265,16 +506,23 @@ async function loadUserData() {
 
         if (data.success) {
             currentUserData = data.user;
-            const preferences = data.preferences;
             const stats = data.stats;
 
             // Llenar campos de datos personales
             fillFormFields(currentUserData);
 
-            // Actualizar foto de perfil si existe
-            if (currentUserData.foto_perfil) {
-                updateProfilePhoto(currentUserData.foto_perfil);
+            if (currentUserData.hasPhoto) {
+                loadPersistentProfilePhoto(
+                    currentUserData.photoUrl || '/api/profile/photo/content',
+                    currentUserData.photoVersion
+                );
+            } else {
+                updateProfilePhoto(null);
             }
+
+            updatePresenceUI(
+                currentUserData.presenceStatus || currentUserData.estado_presencia
+            );
 
             // Actualizar estadísticas si existen elementos en el DOM
             updateUserStats(stats);
@@ -297,7 +545,7 @@ function fillFormFields(userData) {
     // Llenando campos del formulario con datos
 
     const fieldMappings = {
-        'userName': userData.nombre_completo || userData.nombre || '',
+        'userName': userData.nombre || '',
         'userEmail': userData.email || '',
         'userOrganization': userData.organizacion || '',
         'userBio': userData.biografia || '',
@@ -305,9 +553,7 @@ function fillFormFields(userData) {
         'userAddress': userData.direccion || '',
         'userPosition': userData.cargo || '',
         'userDepartment': userData.departamento || '',
-        'userDegree': userData.grado_academico || '',
-        'userTimezone': userData.zona_horaria || 'America/Bogota',
-        'userLanguage': userData.idioma || 'es'
+        'userDegree': userData.grado_academico || ''
     };
 
     // Mapeando campos
@@ -320,19 +566,6 @@ function fillFormFields(userData) {
         } else {
             console.warn(`⚠️ Campo ${fieldId} no encontrado en el DOM`);
         }
-    }
-
-    // Llenar campos de configuración
-    const emailNotifications = document.getElementById('emailNotifications');
-    if (emailNotifications) {
-        emailNotifications.checked = userData.notificaciones_email || false;
-        // Configurando notificaciones email
-    }
-
-    const twoFactorAuth = document.getElementById('twoFactorAuth');
-    if (twoFactorAuth) {
-        twoFactorAuth.checked = userData.autenticacion_2fa || false;
-        // Configurando autenticación 2FA
     }
 
     // Formulario llenado completamente
@@ -359,7 +592,7 @@ async function saveUserData() {
     try {
         // Recopilar datos del formulario
         const personalData = {
-            nombre_completo: document.getElementById('userName')?.value || '',
+            nombre: document.getElementById('userName')?.value || '',
             email: document.getElementById('userEmail')?.value || '',
             organizacion: document.getElementById('userOrganization')?.value || '',
             biografia: document.getElementById('userBio')?.value || '',
@@ -371,7 +604,7 @@ async function saveUserData() {
         };
 
         // Validación básica
-        if (!personalData.nombre_completo.trim()) {
+        if (!personalData.nombre.trim()) {
             showNotification('El nombre completo es obligatorio', 'error');
             return;
         }
@@ -403,39 +636,6 @@ async function saveUserData() {
     } catch (error) {
         console.error('Error al guardar datos personales:', error);
         showNotification(error.message || 'Error al guardar los datos personales', 'error');
-    }
-}
-
-// Función para guardar configuraciones
-async function saveUserSettings() {
-    try {
-        const settingsData = {
-            zona_horaria: document.getElementById('userTimezone')?.value || 'America/Bogota',
-            idioma: document.getElementById('userLanguage')?.value || 'es',
-            notificaciones_email: document.getElementById('emailNotifications')?.checked || false,
-            autenticacion_2fa: document.getElementById('twoFactorAuth')?.checked || false
-        };
-
-        const response = await fetch('/api/profile/settings', {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(settingsData)
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Configuraciones guardadas correctamente', 'success');
-        } else {
-            throw new Error(data.error || 'Error al guardar configuraciones');
-        }
-
-    } catch (error) {
-        console.error('Error al guardar configuraciones:', error);
-        showNotification(error.message || 'Error al guardar las configuraciones', 'error');
     }
 }
 
@@ -492,7 +692,7 @@ async function loadUserKeys() {
 
     // Verificar si hay un token válido antes de hacer la request
     const token = localStorage.getItem('token');
-    if (!token) {
+    if (!token || passwordChangeIsPending()) {
         // No hay token de autenticación, saltando carga de llaves
         keysList.innerHTML = '<p class="no-keys-message">Inicia sesión para ver tus llaves.</p>';
         return;
@@ -519,11 +719,12 @@ async function loadUserKeys() {
                 });
             }
         } else {
-            if (response.status === 401 || response.status === 403) {
+            if (response.status === 401) {
                 localStorage.removeItem('token');
                 keysList.innerHTML = '<p class="no-keys-message">Sesión expirada. Inicia sesión nuevamente.</p>';
                 return;
             }
+            if (response.status === 403) return;
             keysList.innerHTML = '<p class="error-message">Error al cargar las llaves.</p>';
         }
     } catch (error) {
@@ -550,7 +751,7 @@ function createKeyElement(key) {
             <div class="key-details-container">
                 <div class="key-name">${key.key_name}</div>
                 <div class="key-details">
-                    <span>${key.encryption_type || 'AES-256-CBC'}</span>
+                    <span>${window.cryptoConfig?.formatEncryptionType(key.encryption_type) || 'AES-256-GCM v2'}</span>
                     <span>Creada: ${new Date(key.created_at).toLocaleDateString()}</span>
                 </div>
             </div>
@@ -568,7 +769,7 @@ function createKeyElement(key) {
     return keyDiv;
 }
 
-function showCreateKeyModal() {
+function showCreateKeyModal(providedKeyName = '') {
 
     // Verificar el campo de nombre de llave primero
     const keyNameInput = document.getElementById('keyNameInput');
@@ -578,6 +779,7 @@ function showCreateKeyModal() {
         return;
     }
 
+    if (providedKeyName) keyNameInput.value = providedKeyName.trim();
     const keyName = keyNameInput.value.trim();
     if (!keyName) {
         // Resaltar el campo y mostrar mensaje de error
@@ -599,8 +801,10 @@ function showCreateKeyModal() {
     }
 
     // Si hay nombre, continuar con el proceso
-    keyNameInput.focus();
-    keyNameInput.scrollIntoView({ behavior: 'smooth' });
+    if (!providedKeyName) {
+        keyNameInput.focus();
+        keyNameInput.scrollIntoView({ behavior: 'smooth' });
+    }
 
     // Dar un pequeño delay para asegurar que todos los scripts estén cargados
     setTimeout(() => {
@@ -608,7 +812,6 @@ function showCreateKeyModal() {
         if (typeof window.showKeyPasswordModal === 'function') {
             window.showKeyPasswordModal(async (keyPassword) => {
                 try {
-                    const encryptionType = localStorage.getItem("encryptionType") || "aes-256-cbc";
                     const keyName = keyNameInput ? keyNameInput.value.trim() : "";
 
                     const response = await fetch("/generate-keys", {
@@ -617,7 +820,11 @@ function showCreateKeyModal() {
                             "Content-Type": "application/json",
                             Authorization: `Bearer ${localStorage.getItem("token")}`,
                         },
-                        body: JSON.stringify({ keyPassword, encryptionType, keyName }),
+                        body: JSON.stringify({
+                            keyPassword,
+                            keyName,
+                            encryptionType: window.cryptoConfig?.currentType || 'aes-256-gcm-v2'
+                        }),
                     });
 
                     const data = await response.json();
@@ -653,6 +860,10 @@ function showCreateKeyModal() {
                             }
                         } catch (profileError) {
                             console.warn('Error al recargar llaves del perfil:', profileError);
+                        }
+
+                        if (typeof window.refreshSignKeys === 'function') {
+                            window.refreshSignKeys();
                         }
 
                     } else {
@@ -696,37 +907,22 @@ window.showCreateKeyModal = showCreateKeyModal;
 // CONFIGURACIÓN DE CIFRADO
 // ===========================
 function setupEncryptionOptions() {
-    const options = document.querySelectorAll('.encryption-option');
-    options.forEach(option => {
-        option.addEventListener('click', function () {
-            // Remover selección anterior
-            options.forEach(opt => opt.classList.remove('selected'));
-            // Seleccionar nueva opción
-            this.classList.add('selected');
-
-            const encryption = this.dataset.encryption;
-            const currentDisplay = document.getElementById('currentEncryption');
-            if (currentDisplay) {
-                currentDisplay.textContent = encryption.toUpperCase();
-            }
-        });
-    });
+    loadEncryptionSettings();
 }
 
 function loadEncryptionSettings() {
-    const savedType = localStorage.getItem("encryptionType") || "aes-256-cbc";
-    const currentDisplay = document.getElementById('currentEncryption');
-    const options = document.querySelectorAll('.encryption-option');
-
-    if (currentDisplay) {
-        currentDisplay.textContent = savedType.toUpperCase();
+    if (typeof window.renderEncryptionSettings === 'function') {
+        window.renderEncryptionSettings();
+        return;
     }
 
+    const options = document.querySelectorAll('.encryption-option');
+    const selectedType = window.cryptoConfig?.currentType || 'aes-256-gcm-v2';
+
     options.forEach(option => {
-        if (option.dataset.encryption === savedType) {
-            options.forEach(opt => opt.classList.remove('selected'));
-            option.classList.add('selected');
-        }
+        const isSelected = option.dataset.encryption === selectedType;
+        option.classList.toggle('selected', isSelected);
+        option.setAttribute('aria-pressed', String(isSelected));
     });
 }
 
@@ -849,222 +1045,43 @@ function handleLogo(event) {
 }
 
 // ===========================
-// CONFIGURACIÓN AVANZADA
+// PREFERENCIAS REALES DE EXPERIENCIA
 // ===========================
-function toggleSetting(toggle) {
-    toggle.classList.toggle('active');
+function loadProfileExperienceSettings() {
+    const rememberTab = localStorage.getItem(PROFILE_REMEMBER_TAB_KEY) !== 'false';
+    const reducedMotion = localStorage.getItem(PROFILE_REDUCED_MOTION_KEY) === 'true';
+    const rememberInput = document.getElementById('rememberProfileTab');
+    const motionInput = document.getElementById('reduceProfileMotion');
 
-    // Guardar configuración
-    const settings = {};
-    document.querySelectorAll('.toggle-switch').forEach((switchEl, index) => {
-        const settingItem = switchEl.closest('.setting-item');
-        const label = settingItem.querySelector('.setting-label').textContent;
-        settings[label] = switchEl.classList.contains('active');
-    });
-
-    localStorage.setItem('advancedSettings', JSON.stringify(settings));
+    if (rememberInput) rememberInput.checked = rememberTab;
+    if (motionInput) motionInput.checked = reducedMotion;
+    document.documentElement.classList.toggle('profile-reduced-motion', reducedMotion);
 }
 
-function loadAdvancedSettings_OBSOLETE() {
-    // Esta función fue movida al final del archivo con funcionalidad mejorada
-}
+function updateProfileExperience(input) {
+    if (!input) return;
 
-// ===========================
-// ACCIONES GLOBALES
-// ===========================
-function saveAllSettings() {
-    try {
-        // Guardar datos personales
-        saveUserData();
+    if (input.id === 'rememberProfileTab') {
+        localStorage.setItem(PROFILE_REMEMBER_TAB_KEY, String(input.checked));
+        if (!input.checked) localStorage.removeItem(PROFILE_LAST_TAB_KEY);
+        showNotification(
+            input.checked ? 'Se recordará la última sección del perfil' : 'El perfil volverá a abrirse desde el inicio',
+            'success'
+        );
+        return;
+    }
 
-        // Guardar configuración de cifrado
-        const selectedEncryption = document.querySelector('.encryption-option.selected');
-        if (selectedEncryption) {
-            localStorage.setItem('encryptionType', selectedEncryption.dataset.encryption);
-        }
-
-        // Guardar plantilla PDF seleccionada
-        const selectedTemplate = document.querySelector('.pdf-template.selected');
-        if (selectedTemplate) {
-            localStorage.setItem('pdfTemplate', selectedTemplate.dataset.template);
-        }
-
-        // Guardar configuraciones avanzadas (ya se guardan automáticamente)
-
-        showNotification('¡Todas las configuraciones han sido guardadas exitosamente!', 'success');
-
-    } catch (error) {
-        console.error('Error guardando configuraciones:', error);
-        showNotification('Error al guardar las configuraciones', 'error');
+    if (input.id === 'reduceProfileMotion') {
+        localStorage.setItem(PROFILE_REDUCED_MOTION_KEY, String(input.checked));
+        document.documentElement.classList.toggle('profile-reduced-motion', input.checked);
+        showNotification(
+            input.checked ? 'Movimiento reducido activado' : 'Movimiento reducido desactivado',
+            'success'
+        );
     }
 }
 
-function resetAllSettings() {
-    if (confirm('¿Estás seguro de que quieres restablecer todas las configuraciones?')) {
-        // Limpiar localStorage
-        localStorage.removeItem('userData');
-        localStorage.removeItem('encryptionType');
-        localStorage.removeItem('pdfTemplate');
-        localStorage.removeItem('advancedSettings');
-
-        // Recargar configuraciones por defecto
-        initializeProfile();
-
-        // Limpiar formularios
-        document.getElementById('userName').value = '';
-        document.getElementById('userEmail').value = '';
-        document.getElementById('userOrganization').value = '';
-        document.getElementById('userBio').value = '';
-
-        // Restablecer foto
-        document.querySelector('.perfil-photo').innerHTML = '<div class="perfil-photo-placeholder">📷</div>';
-
-        showNotification('Configuraciones restablecidas a valores por defecto', 'info');
-    }
-}
-
-// ===========================
-// UTILIDADES
-// ===========================
-
-// ===== HISTORIAL DE FIRMA FUNCTIONS =====
-function loadHistorialFirma() {
-
-    // Configurar filtros
-    setupHistorialFilters();
-
-    // Cargar documentos del historial
-    displayHistorialDocuments();
-}
-
-function setupHistorialFilters() {
-    const filterBtn = document.querySelector('.filter-btn');
-    const fechaInicio = document.getElementById('filtro-fecha-inicio');
-    const fechaFin = document.getElementById('filtro-fecha-fin');
-    const estadoSelect = document.getElementById('filtro-estado');
-
-    if (filterBtn) {
-        filterBtn.addEventListener('click', () => {
-            const filtros = {
-                fechaInicio: fechaInicio?.value || '',
-                fechaFin: fechaFin?.value || '',
-                estado: estadoSelect?.value || ''
-            };
-
-            filterHistorialDocuments(filtros);
-        });
-    }
-
-    // Configurar paginación
-    setupHistorialPagination();
-}
-
-function displayHistorialDocuments() {
-    const historialList = document.getElementById('historial-documentos');
-    if (!historialList) return;
-
-    // Los documentos de ejemplo ya están en el HTML
-    // Configurar event listeners para las acciones
-    setupHistorialActions();
-}
-
-function setupHistorialActions() {
-    const historialList = document.getElementById('historial-documentos');
-    if (!historialList) return;
-
-    // Botones de descarga
-    historialList.querySelectorAll('.descargar-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const historialItem = e.target.closest('.historial-item');
-            const nombreDoc = historialItem.querySelector('.documento-nombre').textContent;
-
-            // Aquí iría la lógica para descargar el documento
-            showNotification('Descargando documento firmado...', 'info');
-        });
-    });
-
-    // Botones de verificación
-    historialList.querySelectorAll('.verificar-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const historialItem = e.target.closest('.historial-item');
-            const nombreDoc = historialItem.querySelector('.documento-nombre').textContent;
-
-            // Aquí iría la lógica para verificar la firma
-            showNotification('Verificando firma digital...', 'info');
-
-            setTimeout(() => {
-                showNotification('Firma verificada correctamente', 'success');
-            }, 2000);
-        });
-    });
-
-    // Botones de información
-    historialList.querySelectorAll('.info-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const historialItem = e.target.closest('.historial-item');
-            const nombreDoc = historialItem.querySelector('.documento-nombre').textContent;
-
-            // Aquí se abriría un modal con los detalles completos
-            showDocumentDetails(historialItem);
-        });
-    });
-}
-
-function filterHistorialDocuments(filtros) {
-    const historialItems = document.querySelectorAll('.historial-item');
-    let itemsVisible = 0;
-
-    historialItems.forEach(item => {
-        let mostrar = true;
-
-        // Filtrar por estado si se especifica
-        if (filtros.estado) {
-            const estadoElement = item.querySelector('.estado');
-            const estadoActual = estadoElement.textContent.toLowerCase().trim();
-            if (!estadoActual.includes(filtros.estado.toLowerCase())) {
-                mostrar = false;
-            }
-        }
-
-        // Aquí se agregarían más filtros (fecha, etc.)
-
-        item.style.display = mostrar ? 'flex' : 'none';
-        if (mostrar) itemsVisible++;
-    });
-
-    // Mostrar mensaje si no hay resultados
-    const noDocumentosMsg = document.querySelector('.no-documentos');
-    if (noDocumentosMsg) {
-        noDocumentosMsg.style.display = itemsVisible === 0 ? 'block' : 'none';
-    }
-
-    showNotification(`Se encontraron ${itemsVisible} documentos`, 'info');
-}
-
-function setupHistorialPagination() {
-    const prevBtn = document.getElementById('prev-page');
-    const nextBtn = document.getElementById('next-page');
-
-    if (prevBtn) {
-        prevBtn.addEventListener('click', () => {
-            // Lógica de paginación
-        });
-    }
-
-    if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-            // Lógica de paginación
-        });
-    }
-}
-
-function showDocumentDetails(historialItem) {
-    const nombreDoc = historialItem.querySelector('.documento-nombre').textContent;
-    const fecha = historialItem.querySelector('.fecha').textContent;
-    const estado = historialItem.querySelector('.estado').textContent;
-
-    showNotification('Función de detalles en desarrollo', 'info');
-}
+window.updateProfileExperience = updateProfileExperience;
 
 // ===========================
 // FUNCIONES AUXILIARES PARA PLANTILLAS PDF
@@ -1866,53 +1883,82 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Cargar configuración avanzada
 function loadAdvancedConfig() {
-    const securityVerification = document.getElementById('securityVerification');
-    const adminAccessPanel = document.getElementById('adminAccessPanel');
-
-    // Resetear estado
-    if (securityVerification) securityVerification.style.display = 'block';
-    if (adminAccessPanel) adminAccessPanel.style.display = 'none';
-
+    loadProfileExperienceSettings();
+    checkOwnerAccess();
 }
 
-// Verificar acceso del owner con contraseña
-// ===========================
-// FUNCIONES PARA CONFIGURACIONES AVANZADAS REORGANIZADAS
-// ===========================
+async function changeProfilePassword() {
+    const currentInput = document.getElementById('profileCurrentPassword');
+    const newInput = document.getElementById('profileNewPassword');
+    const confirmInput = document.getElementById('profileConfirmPassword');
+    const message = document.getElementById('profilePasswordMessage');
+    const submitButton = document.querySelector('.password-settings-card .secondary-action');
+    const currentPassword = currentInput?.value || '';
+    const newPassword = newInput?.value || '';
+    const confirmPassword = confirmInput?.value || '';
+    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,128}$/;
 
-// Función para alternar entre tema actual y modo oscuro
-function toggleTheme(targetTheme) {
-    if (window.themeManager) {
-        const currentTheme = window.themeManager.getCurrentTheme();
+    const setMessage = (text, type = '') => {
+        if (!message) return;
+        message.textContent = text;
+        message.className = type;
+    };
 
-        if (currentTheme === targetTheme) {
-            // Si ya está en el tema objetivo, volver al tema por defecto
-            window.themeManager.changeTheme('orange');
-        } else {
-            // Cambiar al tema objetivo
-            window.themeManager.changeTheme(targetTheme);
+    setMessage('');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        setMessage('Completa los tres campos.', 'error');
+        return;
+    }
+    if (newPassword !== confirmPassword) {
+        setMessage('Las contraseñas nuevas no coinciden.', 'error');
+        return;
+    }
+    if (!passwordPattern.test(newPassword)) {
+        setMessage('La nueva contraseña no cumple los requisitos indicados.', 'error');
+        return;
+    }
+    if (currentPassword === newPassword) {
+        setMessage('La nueva contraseña debe ser diferente a la actual.', 'error');
+        return;
+    }
+
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Actualizando...';
+    }
+
+    try {
+        const response = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'No fue posible cambiar la contraseña.');
+
+        if (result.token) localStorage.setItem('token', result.token);
+        localStorage.removeItem('forcePasswordChange');
+        currentInput.value = '';
+        newInput.value = '';
+        confirmInput.value = '';
+        setMessage('Contraseña actualizada correctamente.', 'success');
+        showNotification('Contraseña actualizada correctamente', 'success');
+        window.dispatchEvent(new CustomEvent('authStateChanged', { detail: { authenticated: true } }));
+    } catch (error) {
+        setMessage(error.message, 'error');
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Actualizar contraseña';
         }
     }
 }
 
-// Función general para alternar configuraciones
-function toggleSetting(toggle) {
-    toggle.classList.toggle('active');
-
-    // Obtener el nombre de la configuración
-    const settingItem = toggle.closest('.setting-item');
-    const settingName = settingItem.querySelector('.setting-label').textContent;
-    const isEnabled = toggle.classList.contains('active');
-
-    // Guardar en localStorage
-    const settings = JSON.parse(localStorage.getItem('advancedSettings') || '{}');
-    settings[settingName] = isEnabled;
-    localStorage.setItem('advancedSettings', JSON.stringify(settings));
-
-    // Mostrar notificación
-    const status = isEnabled ? 'activado' : 'desactivado';
-    showNotification(`${settingName} ${status}`, 'success');
-}
+window.changeProfilePassword = changeProfilePassword;
 
 // Verificar si el usuario es owner y mostrar/ocultar secciones correspondientes
 function checkOwnerAccess() {
@@ -1949,27 +1995,9 @@ function checkOwnerAccess() {
         });
 }
 
-// Cargar configuraciones guardadas al inicializar - AHORA MANEJADO POR THEMEMANAGER.JS
 function loadAdvancedSettings() {
-    // Todas las configuraciones de temas ahora se manejan unificadamente
-    // No se necesita código adicional aquí
+    loadProfileExperienceSettings();
 }
-
-// Cargar otras configuraciones
-const settings = JSON.parse(localStorage.getItem('advancedSettings') || '{}');
-
-document.querySelectorAll('.setting-item').forEach(item => {
-    const label = item.querySelector('.setting-label')?.textContent;
-    const toggle = item.querySelector('.toggle-switch');
-
-    if (label && toggle && settings.hasOwnProperty(label)) {
-        if (settings[label]) {
-            toggle.classList.add('active');
-        } else {
-            toggle.classList.remove('active');
-        }
-    }
-});
 
 
 // Cancelar acceso al panel de owner

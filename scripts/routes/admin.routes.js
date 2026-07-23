@@ -4,24 +4,254 @@
    ======================================== */
 
 const express = require('express');
+const { once } = require('events');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs').promises;
 const jwt = require('jsonwebtoken');
+const pool = require('../db/pool');
 const authenticate = require('../middlewares/authenticate');
 const isOwner = require('../middlewares/isOwner');
 const isAdmin = require('../middlewares/isAdmin');
+const { generateDatabaseExport, sanitizeExportName } = require('../utils/databaseExport');
+const { ensureVisualContactColumns } = require('../utils/visualConfigSchema');
 
-// Importar DatabaseSetupManager del setup-db.js
-const DatabaseSetupManager = require('../setup-db');
+const NAME_PATTERN = /^[\p{L}\p{M}\p{N} .,'’_-]+$/u;
+const EMAIL_PATTERN = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,128}$/;
+const TABLE_IDENTIFIER_PATTERN = /^[A-Za-z0-9_]+$/;
+const SENSITIVE_COLUMN_PATTERN = /(?:password|private_key|secret|token|auth_version|logo_data|foto_perfil|hash|salt|cipher|encryption_(?:iv|tag))/i;
+const ALLOWED_PROFILE_PHOTO_MIMES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif'
+]);
+const PRESENCE_TIMEOUT_MS = 2 * 60 * 1000;
+const PDF_TEMPLATE_IDS = new Set(['clasico', 'moderno', 'minimalista', 'elegante']);
+const PDF_FONT_IDS = new Set([
+    'Helvetica', 'Helvetica-Bold', 'Helvetica-Oblique',
+    'Times-Roman', 'Times-Bold', 'Times-Italic',
+    'Courier', 'Courier-Bold'
+]);
+const PDF_BORDER_STYLES = new Set(['classic', 'solid', 'double', 'minimal', 'none']);
+const PDF_AVAL_VARIABLES = Object.freeze([
+    '$autores', '$titulo', '$modalidad', '$avalador', '$fecha', '$institucion', '$ubicacion'
+]);
+
+function clampNumber(value, fallback, min, max) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? Math.min(Math.max(numeric, min), max) : fallback;
+}
+
+function safePdfColor(value, fallback) {
+    return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value.trim())
+        ? value.trim().toLowerCase()
+        : fallback;
+}
+
+function safePdfFont(value, fallback) {
+    return PDF_FONT_IDS.has(value) ? value : fallback;
+}
+
+function normalizePdfConfiguration(input = {}) {
+    const selectedTemplate = PDF_TEMPLATE_IDS.has(input.selectedTemplate)
+        ? input.selectedTemplate
+        : 'clasico';
+    const colors = input.colorConfig && typeof input.colorConfig === 'object' ? input.colorConfig : {};
+    const fonts = input.fontConfig && typeof input.fontConfig === 'object' ? input.fontConfig : {};
+    const layout = input.layoutConfig && typeof input.layoutConfig === 'object' ? input.layoutConfig : {};
+    const border = input.borderConfig && typeof input.borderConfig === 'object' ? input.borderConfig : {};
+    const visual = input.visualConfig && typeof input.visualConfig === 'object' ? input.visualConfig : {};
+    const aval = input.avalTextConfig && typeof input.avalTextConfig === 'object' ? input.avalTextConfig : {};
+    const avalTemplate = typeof aval.template === 'string'
+        ? aval.template.normalize('NFC').trim().slice(0, 4000)
+        : '';
+
+    return {
+        selectedTemplate,
+        logoPath: '',
+        colorConfig: {
+            primary: safePdfColor(colors.primary, '#2563eb'),
+            secondary: safePdfColor(colors.secondary, '#64748b'),
+            accent: safePdfColor(colors.accent, '#f59e0b'),
+            text: safePdfColor(colors.text, '#1f2937'),
+            background: safePdfColor(colors.background, '#ffffff')
+        },
+        fontConfig: {
+            title: safePdfFont(fonts.title, 'Helvetica-Bold'),
+            body: safePdfFont(fonts.body, 'Helvetica'),
+            metadata: safePdfFont(fonts.metadata, 'Helvetica-Oblique'),
+            signature: safePdfFont(fonts.signature, 'Times-Bold')
+        },
+        layoutConfig: {
+            marginTop: clampNumber(layout.marginTop, 60, 20, 140),
+            marginBottom: clampNumber(layout.marginBottom, 60, 20, 140),
+            marginLeft: clampNumber(layout.marginLeft, 50, 20, 140),
+            marginRight: clampNumber(layout.marginRight, 50, 20, 140),
+            lineHeight: clampNumber(layout.lineHeight, 1.6, 1, 3),
+            titleSize: clampNumber(layout.titleSize, 24, 14, 48),
+            bodySize: clampNumber(layout.bodySize, 12, 8, 24)
+        },
+        borderConfig: {
+            style: PDF_BORDER_STYLES.has(border.style) ? border.style : 'classic',
+            width: clampNumber(border.width, 2, 0, 8),
+            color: safePdfColor(border.color, '#1f2937'),
+            cornerRadius: clampNumber(border.cornerRadius, 0, 0, 30),
+            showDecorative: border.showDecorative !== false
+        },
+        visualConfig: {
+            showLogo: visual.showLogo !== false,
+            showInstitution: visual.showInstitution !== false,
+            showDate: visual.showDate !== false,
+            showSignature: visual.showSignature !== false,
+            showAuthors: visual.showAuthors !== false,
+            showAvalador: visual.showAvalador !== false
+        },
+        avalTextConfig: {
+            template: avalTemplate,
+            variables: PDF_AVAL_VARIABLES
+        }
+    };
+}
+
+function effectivePresenceStatus(status, lastActivity, now = Date.now()) {
+    if (status === 'desconectado' || !lastActivity) return 'desconectado';
+    const lastActivityMs = new Date(lastActivity).getTime();
+    if (!Number.isFinite(lastActivityMs) || now - lastActivityMs > PRESENCE_TIMEOUT_MS) {
+        return 'desconectado';
+    }
+    return ['en_linea', 'ausente', 'ocupado'].includes(status)
+        ? status
+        : 'desconectado';
+}
+
+function serializePhotoVersion(value) {
+    if (!value) return null;
+    const timestamp = new Date(value).getTime();
+    return Number.isFinite(timestamp) ? String(timestamp) : null;
+}
+
+function sendAdminPhoto(req, res, user) {
+    if (!Buffer.isBuffer(user.foto_perfil)
+        || !user.foto_perfil.length
+        || !ALLOWED_PROFILE_PHOTO_MIMES.has(user.foto_perfil_mimetype)) {
+        return res.status(404).json({ success: false, message: 'El usuario no tiene foto de perfil' });
+    }
+
+    const version = serializePhotoVersion(user.foto_perfil_actualizada_at) || '0';
+    const etag = `\"admin-profile-${user.id}-${version}-${user.foto_perfil.length}\"`;
+    res.setHeader('Content-Type', user.foto_perfil_mimetype);
+    res.setHeader('Content-Length', user.foto_perfil.length);
+    res.setHeader('Cache-Control', 'private, max-age=300, must-revalidate');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('ETag', etag);
+    if (req.headers['if-none-match'] === etag) return res.status(304).end();
+    return res.send(user.foto_perfil);
+}
+
+function redactDatabaseRow(row) {
+    if (!row || typeof row !== 'object') return row;
+    return Object.fromEntries(
+        Object.entries(row).map(([key, value]) => {
+            if (SENSITIVE_COLUMN_PATTERN.test(key) && value !== null) {
+                return [key, '[PROTEGIDO]'];
+            }
+            if (Buffer.isBuffer(value)) {
+                return [key, `[BINARIO: ${value.length} bytes]`];
+            }
+            if (typeof value === 'string' && value.length > 500) {
+                return [key, `${value.slice(0, 500)}…`];
+            }
+            return [key, value];
+        })
+    );
+}
+
+function normalizeText(value) {
+    return typeof value === 'string' ? value.normalize('NFC').trim() : '';
+}
+
+function isValidName(value) {
+    return value.length >= 2 && value.length <= 100 && NAME_PATTERN.test(value);
+}
+
+function isValidEmail(value) {
+    return value.length >= 5 && value.length <= 254 && EMAIL_PATTERN.test(value);
+}
+
+function normalizeRole(value) {
+    if (value === 'user' || value === 'profesor') return 'profesor';
+    if (value === 'admin') return 'admin';
+    if (value === 'owner') return 'owner';
+    return null;
+}
+
+function generateSecurePassword(length = 18) {
+    const groups = [
+        'ABCDEFGHJKLMNPQRSTUVWXYZ',
+        'abcdefghijkmnopqrstuvwxyz',
+        '23456789',
+        '!@#$%*-_+'
+    ];
+    const allCharacters = groups.join('');
+    const password = groups.map(group => group[crypto.randomInt(group.length)]);
+
+    while (password.length < length) {
+        password.push(allCharacters[crypto.randomInt(allCharacters.length)]);
+    }
+
+    for (let index = password.length - 1; index > 0; index -= 1) {
+        const swapIndex = crypto.randomInt(index + 1);
+        [password[index], password[swapIndex]] = [password[swapIndex], password[index]];
+    }
+
+    return password.join('');
+}
+
+async function findManagedUser(userId) {
+    const normalizedId = Number(userId);
+    if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
+        return null;
+    }
+
+    const [users] = await pool.query(
+        `SELECT u.id, u.nombre, u.usuario, u.email, u.rol, u.estado_cuenta,
+                u.estado_presencia, u.ultima_actividad, u.active_key_id,
+                u.organizacion, u.cargo, u.departamento,
+                u.created_at, u.ultimo_acceso,
+                (u.foto_perfil IS NOT NULL) AS has_photo,
+                u.foto_perfil_actualizada_at,
+                (SELECT COUNT(*) FROM user_keys uk WHERE uk.user_id = u.id) AS keys_count,
+                (SELECT COUNT(*) FROM user_keys uk
+                 WHERE uk.user_id = u.id AND uk.expiration_date > NOW()) AS active_keys_count
+         FROM users u
+         WHERE u.id = ?
+         LIMIT 1`,
+        [normalizedId]
+    );
+    return users[0] || null;
+}
+
+function ownerProtectionMessage(req, targetUser) {
+    if (targetUser?.rol === 'owner' && req.userRole !== 'owner') {
+        return 'Solo un propietario puede administrar otra cuenta de propietario';
+    }
+    return null;
+}
 
 /* ========================================
    MIDDLEWARE DE AUTENTICACIÓN ADMIN
    ======================================== */
 
 // Middleware para autenticar tokens de admin del panel
-function authenticateAdmin(req, res, next) {
+async function authenticateAdmin(req, res, next) {
+    if (req.adminAuthenticated) {
+        return next();
+    }
+
     try {
         const authHeader = req.headers.authorization;
 
@@ -45,16 +275,68 @@ function authenticateAdmin(req, res, next) {
             });
         }
 
-        req.userId = decoded.id;
-        req.userRole = decoded.rol;
-        req.user = { usuario: decoded.usuario };
+        const [users] = await pool.query(
+            `SELECT id, nombre, usuario, email, rol, estado_cuenta, password, updated_at
+             FROM users
+             WHERE id = ?
+             LIMIT 1`,
+            [decoded.id]
+        );
+
+        if (users.length === 0) {
+            return res.status(401).json({
+                success: false,
+                message: 'Usuario administrativo no encontrado'
+            });
+        }
+
+        const user = users[0];
+
+        if (!authenticate.tokenMatchesCurrentUser(decoded, user)) {
+            return res.status(401).json({
+                success: false,
+                message: 'Token inválido o expirado'
+            });
+        }
+
+        if (user.estado_cuenta && user.estado_cuenta !== 'activo') {
+            return res.status(403).json({
+                success: false,
+                message: 'La cuenta administrativa no está activa'
+            });
+        }
+
+        if (!['admin', 'owner'].includes(user.rol)) {
+            return res.status(403).json({
+                success: false,
+                message: 'El usuario ya no tiene permisos administrativos'
+            });
+        }
+
+        req.userId = user.id;
+        req.userRole = user.rol;
+        req.authVersion = authenticate.createAuthVersion(user.id, user.password);
+        req.user = {
+            id: user.id,
+            nombre: user.nombre,
+            usuario: user.usuario,
+            email: user.email,
+            rol: user.rol,
+            estado_cuenta: user.estado_cuenta
+        };
+        req.adminAuthenticated = true;
 
         next();
     } catch (error) {
-        console.error('Error en autenticación admin:', error);
-        return res.status(401).json({
+        const isTokenError = error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError';
+        if (!isTokenError) {
+            console.error('Error validando la sesión administrativa:', error);
+        }
+        return res.status(isTokenError ? 401 : 503).json({
             success: false,
-            message: 'Token inválido o expirado'
+            message: isTokenError
+                ? 'Token inválido o expirado'
+                : 'No se pudo validar la sesión administrativa'
         });
     }
 }
@@ -63,20 +345,11 @@ function authenticateAdmin(req, res, next) {
    TOKENS TEMPORALES DE ADMINISTRACIÓN
    ======================================== */
 
-// Endpoint de prueba para verificar que las rutas funcionan
-router.get('/api/admin/test', (req, res) => {
-    res.json({
-        success: true,
-        message: 'Rutas de admin funcionando correctamente',
-        timestamp: new Date().toISOString()
-    });
-});
-
 // Almacén temporal para tokens de admin (en memoria)
 const adminTokens = new Map();
 
 // Generar token temporal para panel de administración
-router.post('/api/admin/generate-admin-token', authenticate, isOwner, async (req, res) => {
+router.post('/api/admin/generate-admin-token', authenticate, isAdmin, async (req, res) => {
     try {
         // Generar token temporal con expiración extendida
         const adminToken = jwt.sign(
@@ -85,19 +358,20 @@ router.post('/api/admin/generate-admin-token', authenticate, isOwner, async (req
                 rol: req.userRole,
                 usuario: req.user?.usuario || 'admin',
                 type: 'admin-panel',
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                authVersion: req.authVersion
             },
             process.env.JWT_SECRET,
-            { expiresIn: '24h' } // Cambiado de 1h a 24 horas
+            { expiresIn: '12h' }
         );
 
         // Guardar en memoria con expiración
-        const tokenId = Math.random().toString(36).substring(2, 15);
+        const tokenId = crypto.randomBytes(32).toString('hex');
         adminTokens.set(tokenId, {
             token: adminToken,
             userId: req.userId,
             createdAt: Date.now(),
-            expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 horas (cambiado de 1 hora)
+            expiresAt: Date.now() + (5 * 60 * 1000)
         });
 
         // Limpiar tokens expirados cada vez que se crea uno nuevo
@@ -110,7 +384,7 @@ router.post('/api/admin/generate-admin-token', authenticate, isOwner, async (req
         res.json({
             success: true,
             tokenId: tokenId,
-            expiresIn: 86400 // 24 horas en segundos (cambiado de 3600)
+            expiresIn: 300
         });
     } catch (error) {
         console.error('Error generando token de admin:', error);
@@ -140,14 +414,58 @@ router.post('/api/admin/exchange-admin-token', async (req, res) => {
             return res.status(404).json({ error: 'Token ID expirado' });
         }
 
+        // El identificador temporal solo puede intercambiarse una vez.
+        adminTokens.delete(tokenId);
+
         res.json({
             success: true,
             token: tokenData.token,
-            expiresAt: tokenData.expiresAt
+            expiresIn: 43200
         });
     } catch (error) {
         console.error('Error intercambiando token de admin:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// Todas las operaciones administrativas siguientes requieren el token del panel.
+router.use('/api/admin', authenticateAdmin);
+
+// Validar la sesión del panel con los permisos actuales de la base de datos.
+router.get('/api/admin/session', async (req, res) => {
+    try {
+        await pool.query(
+            `UPDATE users
+             SET estado_presencia = 'en_linea', ultima_actividad = NOW()
+             WHERE id = ?`,
+            [req.user.id]
+        );
+
+        res.json({
+            success: true,
+            user: {
+                id: req.user.id,
+                nombre: req.user.nombre || req.user.usuario,
+                usuario: req.user.usuario,
+                email: req.user.email,
+                rol: req.userRole,
+                estado_cuenta: req.user.estado_cuenta,
+                presenceStatus: 'en_linea'
+            }
+        });
+    } catch (error) {
+        console.error('Error actualizando la presencia administrativa:', error.message);
+        res.status(500).json({ success: false, message: 'No fue posible validar la sesión administrativa' });
+    }
+});
+
+router.post('/api/admin/session/heartbeat', async (req, res) => {
+    try {
+        await pool.query('UPDATE users SET ultima_actividad = NOW() WHERE id = ?', [req.user.id]);
+        res.json({ success: true, presenceStatus: 'en_linea' });
+    } catch (error) {
+        console.error('Error actualizando actividad administrativa:', error.message);
+        res.status(500).json({ success: false, message: 'No fue posible actualizar la actividad administrativa' });
     }
 });
 
@@ -168,21 +486,34 @@ router.get('/api/admin/config', authenticate, isAdmin, async (req, res) => {
 
         let config = {
             siteTitle: 'Firmas Digitales FD',
-            headerTitle: 'Firmas Digitales FD',
-            footerText: '© 2024 Firmas Digitales FD',
             contactEmail: '',
-            contactPhone: '',
-            maintenanceMode: false,
-            allowRegistration: true,
-            maxFileSize: 10485760, // 10MB
-            supportedFormats: ['pdf', 'doc', 'docx'],
-            sessionTimeout: 3600000 // 1 hora
+            contactPhone: ''
         };
 
         try {
             const configFile = await fs.readFile(configPath, 'utf8');
-            config = { ...config, ...JSON.parse(configFile) };
+            const fileConfig = JSON.parse(configFile);
+            config.siteTitle = fileConfig.siteTitle || fileConfig.title || config.siteTitle;
+            config.contactEmail = fileConfig.contactEmail || config.contactEmail;
+            config.contactPhone = fileConfig.contactPhone || config.contactPhone;
         } catch (error) {
+        }
+
+        try {
+            await ensureVisualContactColumns();
+            const [visualRows] = await pool.execute(
+                `SELECT institution_name, contact_email, contact_phone
+                 FROM visual_config
+                 WHERE id = 1
+                 LIMIT 1`
+            );
+            if (visualRows[0]?.institution_name) {
+                config.siteTitle = visualRows[0].institution_name;
+            }
+            config.contactEmail = visualRows[0]?.contact_email || config.contactEmail;
+            config.contactPhone = visualRows[0]?.contact_phone || config.contactPhone;
+        } catch (visualError) {
+            console.warn('No se pudo combinar la configuración visual:', visualError.message);
         }
 
         res.json(config);
@@ -198,36 +529,85 @@ router.get('/api/admin/config', authenticate, isAdmin, async (req, res) => {
 // Actualizar configuración
 router.post('/api/admin/config', authenticate, isOwner, async (req, res) => {
     try {
-        const {
-            siteTitle,
-            headerTitle,
-            footerText,
-            contactEmail,
-            contactPhone,
-            maintenanceMode,
-            allowRegistration,
-            maxFileSize,
-            supportedFormats,
-            sessionTimeout
-        } = req.body;
+        const { siteTitle, contactEmail, contactPhone } = req.body;
+        const normalizedSiteTitle = typeof siteTitle === 'string'
+            ? siteTitle.normalize('NFC').trim().slice(0, 120)
+            : '';
+        const normalizedContactEmail = typeof contactEmail === 'string'
+            ? contactEmail.normalize('NFC').trim().toLowerCase().slice(0, 254)
+            : '';
+        const normalizedContactPhone = typeof contactPhone === 'string'
+            ? contactPhone.normalize('NFC').trim().slice(0, 32)
+            : '';
+
+        if (!normalizedSiteTitle || /[<>]/.test(normalizedSiteTitle)) {
+            return res.status(400).json({
+                success: false,
+                message: 'El nombre de la institución es obligatorio y no puede contener etiquetas'
+            });
+        }
+        if (normalizedContactEmail && !EMAIL_PATTERN.test(normalizedContactEmail)) {
+            return res.status(400).json({
+                success: false,
+                message: 'El correo de contacto no tiene un formato válido'
+            });
+        }
+        if (normalizedContactPhone && !/^[0-9+\s().-]+$/.test(normalizedContactPhone)) {
+            return res.status(400).json({
+                success: false,
+                message: 'El teléfono de contacto contiene caracteres no permitidos'
+            });
+        }
+
+        const configPath = path.join(__dirname, '../../config.json');
+        let fileConfig = {};
+        try {
+            fileConfig = JSON.parse(await fs.readFile(configPath, 'utf8'));
+        } catch (error) {
+        }
 
         const config = {
-            siteTitle: siteTitle || 'Firmas Digitales FD',
-            headerTitle: headerTitle || 'Firmas Digitales FD',
-            footerText: footerText || '© 2024 Firmas Digitales FD',
-            contactEmail: contactEmail || '',
-            contactPhone: contactPhone || '',
-            maintenanceMode: Boolean(maintenanceMode),
-            allowRegistration: Boolean(allowRegistration),
-            maxFileSize: parseInt(maxFileSize) || 10485760,
-            supportedFormats: supportedFormats || ['pdf', 'doc', 'docx'],
-            sessionTimeout: parseInt(sessionTimeout) || 3600000,
+            ...fileConfig,
+            title: normalizedSiteTitle,
+            siteTitle: normalizedSiteTitle,
+            contactEmail: normalizedContactEmail,
+            contactPhone: normalizedContactPhone,
             lastUpdated: new Date().toISOString(),
             updatedBy: req.user.id
         };
+        delete config.headerTitle;
+        delete config.footer;
+        delete config.footerText;
+        delete config.allowRegistration;
 
-        const configPath = path.join(__dirname, '../../config.json');
         await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+
+        const footerText = `© ${new Date().getFullYear()} ${normalizedSiteTitle}. Todos los derechos reservados.`;
+        await ensureVisualContactColumns();
+        await pool.execute(
+            `INSERT INTO visual_config (
+                id,
+                institution_name,
+                contact_email,
+                contact_phone,
+                footer_text,
+                updated_by
+             )
+             VALUES (1, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+               institution_name = VALUES(institution_name),
+               contact_email = VALUES(contact_email),
+               contact_phone = VALUES(contact_phone),
+               footer_text = VALUES(footer_text),
+               updated_by = VALUES(updated_by)`,
+            [
+                normalizedSiteTitle,
+                normalizedContactEmail,
+                normalizedContactPhone,
+                footerText,
+                req.user.usuario || req.user.id || 'system'
+            ]
+        );
 
         res.json({
             success: true,
@@ -315,17 +695,29 @@ router.get('/api/admin/users', authenticate, isAdmin, async (req, res) => {
             SELECT 
                 u.id, 
                 u.nombre,
-                u.nombre_completo,
                 u.usuario, 
                 u.email,
                 u.rol, 
                 u.estado_cuenta,
+                u.active_key_id,
+                u.estado_presencia,
+                u.ultima_actividad,
+                (u.foto_perfil IS NOT NULL) AS has_photo,
+                u.foto_perfil_actualizada_at,
+                CASE
+                    WHEN u.estado_presencia = 'desconectado'
+                      OR u.ultima_actividad IS NULL
+                      OR u.ultima_actividad < DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+                    THEN 'desconectado'
+                    ELSE u.estado_presencia
+                END AS presencia_efectiva,
                 u.organizacion,
                 u.cargo,
                 u.departamento,
                 u.created_at,
                 u.ultimo_acceso,
-                COUNT(uk.id) as keys_count
+                COUNT(uk.id) AS keys_count,
+                COUNT(CASE WHEN uk.expiration_date > NOW() THEN 1 END) AS active_keys_count
             FROM users u
             LEFT JOIN user_keys uk ON u.id = uk.user_id
             GROUP BY u.id
@@ -336,17 +728,26 @@ router.get('/api/admin/users', authenticate, isAdmin, async (req, res) => {
 
         const users = result.map(user => ({
             id: user.id,
-            name: user.nombre_completo || user.nombre,
+            name: user.nombre,
             email: user.email || user.usuario,
             username: user.usuario,
             role: user.rol,
+            activeKeyId: user.active_key_id,
             status: user.estado_cuenta || 'activo',
+            accountStatus: user.estado_cuenta || 'activo',
+            selectedPresenceStatus: user.estado_presencia || 'desconectado',
+            presenceStatus: user.presencia_efectiva || 'desconectado',
+            lastSeenAt: user.ultima_actividad,
+            hasPhoto: Boolean(user.has_photo),
+            photoVersion: serializePhotoVersion(user.foto_perfil_actualizada_at),
+            photoUrl: user.has_photo ? `/api/admin/users/${user.id}/photo` : null,
             organization: user.organizacion,
             position: user.cargo,
             department: user.departamento,
             createdAt: user.created_at,
             lastLogin: user.ultimo_acceso,
-            keysCount: parseInt(user.keys_count || 0)
+            keysCount: Number(user.keys_count || 0),
+            activeKeysCount: Number(user.active_keys_count || 0)
         }));
 
         res.json(users);
@@ -357,20 +758,71 @@ router.get('/api/admin/users', authenticate, isAdmin, async (req, res) => {
             message: 'Error interno del servidor'
         });
     }
-});// Crear nuevo usuario
+});
+
+// Obtener foto persistida usando la sesión específica del panel administrativo.
+router.get('/api/admin/users/:userId/photo', async (req, res) => {
+    try {
+        const userId = Number(req.params.userId);
+        if (!Number.isInteger(userId) || userId <= 0) {
+            return res.status(400).json({ success: false, message: 'Usuario inválido' });
+        }
+        const [users] = await pool.query(
+            `SELECT id, foto_perfil, foto_perfil_mimetype, foto_perfil_actualizada_at
+             FROM users
+             WHERE id = ?
+             LIMIT 1`,
+            [userId]
+        );
+        if (users.length === 0) {
+            return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+        }
+        return sendAdminPhoto(req, res, users[0]);
+    } catch (error) {
+        console.error('Error obteniendo foto administrativa:', error);
+        return res.status(500).json({ success: false, message: 'Error interno del servidor' });
+    }
+});
+
+// Crear nuevo usuario
 router.post('/api/admin/users', authenticate, isAdmin, async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const name = normalizeText(req.body?.name);
+        const email = normalizeText(req.body?.email).toLowerCase();
+        const password = typeof req.body?.password === 'string' ? req.body.password : '';
+        const dbRole = normalizeRole(req.body?.role);
 
-        // Validaciones
-        if (!name || !email || !password) {
+        if (!isValidName(name)) {
             return res.status(400).json({
                 success: false,
-                message: 'Nombre, email y contraseña son requeridos'
+                message: 'El nombre debe tener entre 2 y 100 caracteres y no puede contener código HTML'
             });
         }
 
-        const pool = require('../db/pool');
+        if (!isValidEmail(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'El correo electrónico no es válido'
+            });
+        }
+
+        if (!PASSWORD_PATTERN.test(password)) {
+            return res.status(400).json({
+                success: false,
+                message: 'La contraseña debe tener entre 10 y 128 caracteres, con mayúscula, minúscula, número y símbolo'
+            });
+        }
+
+        if (!dbRole) {
+            return res.status(400).json({ success: false, message: 'Rol inválido' });
+        }
+
+        if (dbRole === 'owner' && req.userRole !== 'owner') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo un propietario puede crear otra cuenta de propietario'
+            });
+        }
 
         // Verificar si el usuario o email ya existe
         const [existingUser] = await pool.query(
@@ -386,27 +838,22 @@ router.post('/api/admin/users', authenticate, isAdmin, async (req, res) => {
         }
 
         // Encriptar contraseña
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Mapear role al formato de la nueva BD
-        const dbRole = role === 'admin' ? 'admin' : role === 'owner' ? 'owner' : 'profesor';
+        const hashedPassword = await bcrypt.hash(password, 12);
 
         const query = `
             INSERT INTO users (
                 nombre, 
-                nombre_completo, 
                 usuario, 
                 email, 
                 password, 
                 rol,
                 estado_cuenta,
-                ultimo_acceso
-            ) VALUES (?, ?, ?, ?, ?, ?, 'activo', NOW())
+                force_password_change
+            ) VALUES (?, ?, ?, ?, ?, 'activo', 1)
         `;
 
         const [result] = await pool.query(query, [
             name,
-            name, // nombre_completo
             email, // usuario
             email, // email
             hashedPassword,
@@ -418,6 +865,7 @@ router.post('/api/admin/users', authenticate, isAdmin, async (req, res) => {
             name: name,
             email: email,
             role: dbRole,
+            status: 'activo',
             created_at: new Date()
         };
 
@@ -428,11 +876,21 @@ router.post('/api/admin/users', authenticate, isAdmin, async (req, res) => {
                 id: newUser.id,
                 name: newUser.name,
                 email: newUser.email,
+                username: newUser.email,
                 role: newUser.role,
+                activeKeyId: null,
                 status: newUser.status,
+                accountStatus: newUser.status,
+                selectedPresenceStatus: 'desconectado',
+                presenceStatus: 'desconectado',
+                lastSeenAt: null,
+                hasPhoto: false,
+                photoVersion: null,
+                photoUrl: null,
                 createdAt: newUser.created_at,
                 signaturesCount: 0,
-                keysCount: 0
+                keysCount: 0,
+                activeKeysCount: 0
             }
         });
     } catch (error) {
@@ -444,36 +902,153 @@ router.post('/api/admin/users', authenticate, isAdmin, async (req, res) => {
     }
 });
 
+// Aplicar una misma acción a varios usuarios desde el panel.
+router.post('/api/admin/users/bulk-action', isAdmin, async (req, res) => {
+    try {
+        const { action, userIds } = req.body;
+        const ids = [...new Set((Array.isArray(userIds) ? userIds : [])
+            .map(Number)
+            .filter(id => Number.isInteger(id) && id > 0))];
+
+        if (ids.length === 0 || ids.length > 100) {
+            return res.status(400).json({
+                success: false,
+                message: 'Selecciona entre 1 y 100 usuarios válidos'
+            });
+        }
+
+        if (ids.includes(Number(req.userId))) {
+            return res.status(400).json({
+                success: false,
+                message: 'No puedes aplicar una acción masiva sobre tu propia cuenta'
+            });
+        }
+
+        const normalizedAction = String(action || '').trim().toLowerCase();
+        const statusActions = {
+            activate: 'activo',
+            activar: 'activo',
+            deactivate: 'inactivo',
+            desactivar: 'inactivo',
+            suspend: 'suspendido',
+            suspender: 'suspendido'
+        };
+        const placeholders = ids.map(() => '?').join(', ');
+
+        if (req.userRole !== 'owner') {
+            const [protectedUsers] = await pool.query(
+                `SELECT id FROM users WHERE id IN (${placeholders}) AND rol = 'owner' LIMIT 1`,
+                ids
+            );
+            if (protectedUsers.length > 0) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Solo un propietario puede administrar cuentas de propietario'
+                });
+            }
+        }
+
+        const protectOwners = req.userRole === 'owner' ? '' : " AND rol <> 'owner'";
+        let result;
+
+        if (normalizedAction === 'delete' || normalizedAction === 'eliminar') {
+            [result] = await pool.query(
+                `DELETE FROM users WHERE id IN (${placeholders})${protectOwners}`,
+                ids
+            );
+        } else if (statusActions[normalizedAction]) {
+            [result] = await pool.query(
+                `UPDATE users
+                 SET estado_cuenta = ?, updated_at = NOW()
+                 WHERE id IN (${placeholders})${protectOwners}`,
+                [statusActions[normalizedAction], ...ids]
+            );
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: 'Acción masiva no permitida'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Acción aplicada correctamente',
+            affectedUsers: result.affectedRows
+        });
+    } catch (error) {
+        console.error('Error en acción masiva de usuarios:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
 // Actualizar usuario
 router.put('/api/admin/users/:userId', authenticate, isAdmin, async (req, res) => {
     try {
-        const { userId } = req.params;
-        const { name, email, role, phone, notes, permissions } = req.body;
-
-        const pool = require('../db/pool');
-
-        // Verificar que el usuario existe
-        const [existingUser] = await pool.query(
-            'SELECT * FROM users WHERE id = ?',
-            [userId]
-        );
-
-        if (existingUser.length === 0) {
+        const targetUser = await findManagedUser(req.params.userId);
+        if (!targetUser) {
             return res.status(404).json({
                 success: false,
                 message: 'Usuario no encontrado'
             });
         }
 
-        // Actualizar usuario con campos expandidos de la nueva BD
-        const dbRole = role === 'admin' ? 'admin' : role === 'owner' ? 'owner' : 'profesor';
+        const protectionMessage = ownerProtectionMessage(req, targetUser);
+        if (protectionMessage) {
+            return res.status(403).json({ success: false, message: protectionMessage });
+        }
+
+        const name = normalizeText(req.body?.name);
+        const email = normalizeText(req.body?.email).toLowerCase();
+        const dbRole = normalizeRole(req.body?.role);
+
+        if (!isValidName(name) || !isValidEmail(email) || !dbRole) {
+            return res.status(400).json({
+                success: false,
+                message: 'Nombre, correo o rol inválido'
+            });
+        }
+
+        const changesRole = dbRole !== targetUser.rol;
+        if (changesRole && Number(targetUser.id) === Number(req.userId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'No puedes cambiar tu propio rol'
+            });
+        }
+
+        if (dbRole === 'owner' && req.userRole !== 'owner') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo un propietario puede otorgar el rol de propietario'
+            });
+        }
+
+        const [duplicates] = await pool.query(
+            'SELECT id FROM users WHERE (usuario = ? OR email = ?) AND id <> ? LIMIT 1',
+            [email, email, targetUser.id]
+        );
+        if (duplicates.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: 'El correo electrónico ya está registrado'
+            });
+        }
+
+        // Las cuentas creadas desde el panel usan el correo como identificador
+        // de acceso. Si el usuario conserva ese formato, mantener ambos campos
+        // sincronizados; los nombres de usuario personalizados no se alteran.
+        const username = targetUser.usuario === targetUser.email
+            ? email
+            : targetUser.usuario;
 
         const query = `
             UPDATE users 
             SET nombre = ?, 
-                nombre_completo = ?, 
-                usuario = ?, 
-                email = ?, 
+                email = ?,
+                usuario = ?,
                 rol = ?,
                 updated_at = NOW()
             WHERE id = ?
@@ -481,19 +1056,18 @@ router.put('/api/admin/users/:userId', authenticate, isAdmin, async (req, res) =
 
         const [result] = await pool.query(query, [
             name,
-            name, // nombre_completo
-            email, // usuario
-            email, // email
+            email,
+            username,
             dbRole,
-            userId
+            targetUser.id
         ]);
 
         const updatedUser = {
-            id: userId,
+            id: targetUser.id,
             name: name,
             email: email,
             role: dbRole,
-            status: 'activo'
+            status: targetUser.estado_cuenta || 'activo'
         };
 
         res.json({
@@ -503,10 +1077,29 @@ router.put('/api/admin/users/:userId', authenticate, isAdmin, async (req, res) =
                 id: updatedUser.id,
                 name: updatedUser.name,
                 email: updatedUser.email,
+                username,
                 role: updatedUser.role,
+                activeKeyId: targetUser.active_key_id,
                 status: updatedUser.status,
-                signaturesCount: 0,
-                keysCount: 0
+                accountStatus: updatedUser.status,
+                selectedPresenceStatus: targetUser.estado_presencia || 'desconectado',
+                presenceStatus: effectivePresenceStatus(
+                    targetUser.estado_presencia,
+                    targetUser.ultima_actividad
+                ),
+                lastSeenAt: targetUser.ultima_actividad,
+                hasPhoto: Boolean(targetUser.has_photo),
+                photoVersion: serializePhotoVersion(targetUser.foto_perfil_actualizada_at),
+                photoUrl: targetUser.has_photo
+                    ? `/api/admin/users/${targetUser.id}/photo`
+                    : null,
+                organization: targetUser.organizacion,
+                position: targetUser.cargo,
+                department: targetUser.departamento,
+                createdAt: targetUser.created_at,
+                lastLogin: targetUser.ultimo_acceso,
+                keysCount: Number(targetUser.keys_count || 0),
+                activeKeysCount: Number(targetUser.active_keys_count || 0)
             }
         });
     } catch (error) {
@@ -521,29 +1114,43 @@ router.put('/api/admin/users/:userId', authenticate, isAdmin, async (req, res) =
 // Cambiar rol de usuario
 router.put('/api/admin/users/:userId/role', authenticate, isAdmin, async (req, res) => {
     try {
-        const { userId } = req.params;
-        const { role } = req.body;
+        const targetUser = await findManagedUser(req.params.userId);
+        if (!targetUser) {
+            return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+        }
 
-        const validRoles = ['profesor', 'admin', 'owner'];
-        const dbRole = role === 'admin' ? 'admin' : role === 'owner' ? 'owner' : 'profesor';
-
-        if (!['user', 'admin', 'owner'].includes(role)) {
+        const dbRole = normalizeRole(req.body?.role);
+        if (!dbRole) {
             return res.status(400).json({
                 success: false,
                 message: 'Rol inválido'
             });
         }
 
-        const pool = require('../db/pool');
+        if (Number(targetUser.id) === Number(req.userId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'No puedes cambiar tu propio rol'
+            });
+        }
+
+        if ((targetUser.rol === 'owner' || dbRole === 'owner') && req.userRole !== 'owner') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo un propietario puede otorgar o retirar el rol de propietario'
+            });
+        }
 
         const [result] = await pool.query(
             'UPDATE users SET rol = ?, updated_at = NOW() WHERE id = ?',
-            [dbRole, userId]
+            [dbRole, targetUser.id]
         );
 
         res.json({
             success: true,
-            message: 'Rol actualizado correctamente'
+            message: 'Rol actualizado correctamente',
+            userId: targetUser.id,
+            role: dbRole
         });
     } catch (error) {
         console.error('Error cambiando rol:', error);
@@ -557,11 +1164,33 @@ router.put('/api/admin/users/:userId/role', authenticate, isAdmin, async (req, r
 // Cambiar estado de usuario
 router.put('/api/admin/users/:userId/status', authenticate, isAdmin, async (req, res) => {
     try {
-        const { userId } = req.params;
+        const targetUser = await findManagedUser(req.params.userId);
+        if (!targetUser) {
+            return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+        }
+
+        if (Number(targetUser.id) === Number(req.userId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'No puedes cambiar el estado de tu propia cuenta'
+            });
+        }
+
+        const protectionMessage = ownerProtectionMessage(req, targetUser);
+        if (protectionMessage) {
+            return res.status(403).json({ success: false, message: protectionMessage });
+        }
+
         const { status } = req.body;
 
         const validStatuses = ['activo', 'inactivo', 'suspendido', 'pendiente'];
-        const dbStatus = status === 'active' ? 'activo' : status === 'inactive' ? 'inactivo' : status;
+        const statusAliases = {
+            active: 'activo',
+            inactive: 'inactivo',
+            suspended: 'suspendido',
+            pending: 'pendiente'
+        };
+        const dbStatus = statusAliases[status] || status;
 
         if (!validStatuses.includes(dbStatus)) {
             return res.status(400).json({
@@ -570,16 +1199,17 @@ router.put('/api/admin/users/:userId/status', authenticate, isAdmin, async (req,
             });
         }
 
-        const pool = require('../db/pool');
-
         const [result] = await pool.query(
             'UPDATE users SET estado_cuenta = ?, updated_at = NOW() WHERE id = ?',
-            [dbStatus, userId]
+            [dbStatus, targetUser.id]
         );
 
         res.json({
             success: true,
-            message: 'Estado actualizado correctamente'
+            message: 'Estado actualizado correctamente',
+            userId: targetUser.id,
+            status: dbStatus,
+            accountStatus: dbStatus
         });
     } catch (error) {
         console.error('Error cambiando estado:', error);
@@ -593,18 +1223,26 @@ router.put('/api/admin/users/:userId/status', authenticate, isAdmin, async (req,
 // Resetear contraseña de usuario
 router.post('/api/admin/users/:userId/reset-password', authenticate, isAdmin, async (req, res) => {
     try {
-        const { userId } = req.params;
+        const targetUser = await findManagedUser(req.params.userId);
+        if (!targetUser) {
+            return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+        }
 
-        // Generar contraseña temporal
-        const temporaryPassword = Math.random().toString(36).slice(-8);
-        const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
+        const protectionMessage = ownerProtectionMessage(req, targetUser);
+        if (protectionMessage) {
+            return res.status(403).json({ success: false, message: protectionMessage });
+        }
 
-        const pool = require('../db/pool');
-
+        const temporaryPassword = generateSecurePassword();
+        const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
         const [result] = await pool.query(
-            'UPDATE users SET password = ? WHERE id = ?',
-            [hashedPassword, userId]
+            'UPDATE users SET password = ?, force_password_change = 1, updated_at = NOW() WHERE id = ?',
+            [hashedPassword, targetUser.id]
         );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+        }
 
         res.json({
             success: true,
@@ -623,16 +1261,8 @@ router.post('/api/admin/users/:userId/reset-password', authenticate, isAdmin, as
 // Eliminar usuario
 router.delete('/api/admin/users/:userId', authenticate, isAdmin, async (req, res) => {
     try {
-        const { userId } = req.params;
-
-        // Verificar que el usuario existe
-        const pool = require('../db/pool');
-        const [existingUser] = await pool.query(
-            'SELECT * FROM users WHERE id = ?',
-            [userId]
-        );
-
-        if (existingUser.length === 0) {
+        const targetUser = await findManagedUser(req.params.userId);
+        if (!targetUser) {
             return res.status(404).json({
                 success: false,
                 message: 'Usuario no encontrado'
@@ -640,23 +1270,29 @@ router.delete('/api/admin/users/:userId', authenticate, isAdmin, async (req, res
         }
 
         // No permitir eliminar al propio usuario
-        if (parseInt(userId) === req.userId) {
+        if (Number(targetUser.id) === Number(req.userId)) {
             return res.status(400).json({
                 success: false,
                 message: 'No puedes eliminar tu propio usuario'
             });
         }
 
+        const protectionMessage = ownerProtectionMessage(req, targetUser);
+        if (protectionMessage) {
+            return res.status(403).json({ success: false, message: protectionMessage });
+        }
+
         // Eliminar usuario (las claves foráneas deberían estar configuradas para CASCADE o SET NULL)
         const [result] = await pool.query(
             'DELETE FROM users WHERE id = ?',
-            [userId]
+            [targetUser.id]
         );
 
         if (result.affectedRows > 0) {
             res.json({
                 success: true,
-                message: 'Usuario eliminado correctamente'
+                message: 'Usuario eliminado correctamente',
+                deletedUserId: targetUser.id
             });
         } else {
             res.status(404).json({
@@ -852,6 +1488,13 @@ router.post('/api/admin/maintenance', authenticate, isOwner, async (req, res) =>
    ======================================== */
 
 const multer = require('multer');
+const ADMIN_UPLOAD_EXTENSIONS = Object.freeze({
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/gif': '.gif',
+    'image/x-icon': '.ico',
+    'image/vnd.microsoft.icon': '.ico'
+});
 
 // Configuración de multer para subida de archivos
 const storage = multer.diskStorage({
@@ -860,8 +1503,12 @@ const storage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         const timestamp = Date.now();
-        const ext = path.extname(file.originalname);
-        cb(null, `${req.body.type || 'file'}_${timestamp}${ext}`);
+        const safeType = String(req.body.type || 'file')
+            .toLowerCase()
+            .replace(/[^a-z0-9_-]/g, '')
+            .slice(0, 32) || 'file';
+        const suffix = crypto.randomBytes(8).toString('hex');
+        cb(null, `${safeType}_${timestamp}_${suffix}${ADMIN_UPLOAD_EXTENSIONS[file.mimetype]}`);
     }
 });
 
@@ -869,8 +1516,7 @@ const upload = multer({
     storage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
     fileFilter: (req, file, cb) => {
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/ico'];
-        if (allowedTypes.includes(file.mimetype)) {
+        if (ADMIN_UPLOAD_EXTENSIONS[file.mimetype]) {
             cb(null, true);
         } else {
             cb(new Error('Tipo de archivo no permitido'));
@@ -1169,151 +1815,13 @@ router.get('/api/admin/metrics', authenticate, isAdmin, async (req, res) => {
     }
 });
 
-/* ========================================
-   CONFIGURACIÓN GENERAL DEL ADMIN
-   ======================================== */
-
-// Obtener configuración general
-router.get('/api/admin/config', authenticate, isAdmin, async (req, res) => {
-    try {
-        // Configuración básica por defecto
-        const defaultConfig = {
-            siteName: 'Sistema de Firmas Digitales',
-            version: '2.0',
-            maintenanceMode: false,
-            allowRegistration: true,
-            maxFileSize: 10, // MB
-            sessionTimeout: 30, // minutos
-            backupFrequency: 'daily'
-        };
-
-        res.json({
-            success: true,
-            config: defaultConfig
-        });
-
-    } catch (error) {
-        console.error('Error obteniendo configuración:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor al obtener configuración'
-        });
-    }
-});
-
-// Guardar configuración general
-router.post('/api/admin/config', authenticate, isAdmin, async (req, res) => {
-    try {
-        const config = req.body;
-
-        res.json({
-            success: true,
-            message: 'Configuración guardada exitosamente'
-        });
-
-    } catch (error) {
-        console.error('Error guardando configuración:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor al guardar configuración'
-        });
-    }
-});
-
-/* ========================================
-   GESTIÓN DE BASE DE DATOS
-   ======================================== */
-
-// Obtener métricas del sistema
-router.get('/api/admin/metrics', authenticate, isAdmin, async (req, res) => {
-    try {
-        const pool = require('../db/pool');
-
-        // Verificar conexión a BD
-        let dbStatus = { online: false, status: 'Sin conexión', class: 'offline' };
-
-        try {
-            const connection = await pool.getConnection();
-            dbStatus = { online: true, status: 'Conectado', class: 'online' };
-            connection.release();
-        } catch (dbError) {
-            console.warn('Error de conexión a BD:', dbError.message);
-        }
-
-        // Si no hay conexión a BD, devolver métricas básicas
-        if (!dbStatus.online) {
-            return res.json({
-                success: true,
-                metrics: {
-                    users: { total: 0, change: 0, changeText: 'Sin BD' },
-                    documents: { total: 0, change: 0, changeText: 'Sin BD' },
-                    keys: { total: 0, change: 0, changeText: 'Sin BD' },
-                    systemStatus: dbStatus
-                }
-            });
-        }
-
-        // Obtener métricas reales de la BD
-        const connection = await pool.getConnection();
-
-        // Usuarios
-        const [userResult] = await connection.query('SELECT COUNT(*) as total FROM users WHERE estado_cuenta = "activo"');
-        const usersTotal = userResult[0].total;
-
-        // Documentos (usando user_keys como aproximación ya que no hay tabla documentos en v2)
-        const [docResult] = await connection.query('SELECT COUNT(*) as total FROM user_keys');
-        const docsTotal = docResult[0].total;
-
-        // Llaves
-        const [keyResult] = await connection.query('SELECT COUNT(*) as total FROM user_keys');
-        const keysTotal = keyResult[0].total;
-
-        connection.release();
-
-        res.json({
-            success: true,
-            metrics: {
-                users: {
-                    total: usersTotal,
-                    change: 0, // TODO: Calcular cambio real
-                    changeText: '+0 este mes'
-                },
-                documents: {
-                    total: docsTotal,
-                    change: 0,
-                    changeText: '+0 esta semana'
-                },
-                keys: {
-                    total: keysTotal,
-                    change: 0,
-                    changeText: '+0 este mes'
-                },
-                systemStatus: dbStatus
-            }
-        });
-
-    } catch (error) {
-        console.error('Error obteniendo métricas:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor al obtener métricas',
-            metrics: {
-                users: { total: 0, change: 0, changeText: 'Error' },
-                documents: { total: 0, change: 0, changeText: 'Error' },
-                keys: { total: 0, change: 0, changeText: 'Error' },
-                systemStatus: { online: false, status: 'Error', class: 'error' }
-            }
-        });
-    }
-});
-
 // Obtener estado de la base de datos
-router.get('/api/admin/database/status', authenticate, isAdmin, async (req, res) => {
-    try {
-        const pool = require('../db/pool');
+router.get('/api/admin/database/status', authenticateAdmin, isAdmin, async (req, res) => {
+    let connection;
 
+    try {
         // Verificar conexión
-        const connection = await pool.getConnection();
+        connection = await pool.getConnection();
         const [tables] = await connection.query('SHOW TABLES');
         const [dbInfo] = await connection.query('SELECT VERSION() as version, DATABASE() as database_name');
         const [tableCount] = await connection.query('SELECT COUNT(*) as count FROM information_schema.TABLES WHERE table_schema = DATABASE()');
@@ -1325,8 +1833,6 @@ router.get('/api/admin/database/status', authenticate, isAdmin, async (req, res)
             FROM information_schema.TABLES
             WHERE table_schema = DATABASE()
         `);
-
-        connection.release();
 
         res.json({
             success: true,
@@ -1343,56 +1849,47 @@ router.get('/api/admin/database/status', authenticate, isAdmin, async (req, res)
         res.status(500).json({
             success: false,
             online: false,
-            error: 'Error interno del servidor',
-            message: error.message
+            error: 'Error interno del servidor'
         });
+    } finally {
+        if (connection) {
+            connection.release();
+        }
     }
 });
 
-// POST route for status (for compatibility with frontend)
-router.post('/api/admin/database/status', authenticate, isAdmin, async (req, res) => {
+// Probar la conexión sin ejecutar operaciones de mantenimiento.
+router.post('/api/admin/database/test-connection', authenticateAdmin, isAdmin, async (req, res) => {
+    let connection;
+
     try {
-        const pool = require('../db/pool');
-
-        // Verificar conexión
-        const connection = await pool.getConnection();
-        const [tables] = await connection.query('SHOW TABLES');
-        const [dbInfo] = await connection.query('SELECT VERSION() as version, DATABASE() as database_name');
-        const [tableCount] = await connection.query('SELECT COUNT(*) as count FROM information_schema.TABLES WHERE table_schema = DATABASE()');
-
-        // Obtener tamaño de la base de datos
-        const [dbSize] = await connection.query(`
-            SELECT
-                ROUND(SUM(\`data_length\` + \`index_length\`) / 1024 / 1024, 2) as size_mb
-            FROM information_schema.TABLES
-            WHERE table_schema = DATABASE()
-        `);
-
-        connection.release();
+        connection = await pool.getConnection();
+        const [rows] = await connection.query(
+            'SELECT VERSION() AS version, DATABASE() AS database_name'
+        );
 
         res.json({
             success: true,
-            online: true,
-            version: dbInfo[0].version,
-            database: dbInfo[0].database_name,
-            tableCount: tableCount[0].count,
-            size: `${dbSize[0].size_mb || 0} MB`,
-            tables: tables.map(row => Object.values(row)[0])
+            connected: true,
+            version: rows[0].version,
+            database: rows[0].database_name
         });
-
     } catch (error) {
-        console.error('❌ Error obteniendo estado de BD:', error);
-        res.status(500).json({
+        console.error('Error probando conexión de BD:', error);
+        res.status(503).json({
             success: false,
-            online: false,
-            error: 'Error interno del servidor',
-            message: error.message
+            connected: false,
+            message: 'No se pudo conectar a la base de datos'
         });
+    } finally {
+        if (connection) {
+            connection.release();
+        }
     }
 });
 
 // Obtener lista de tablas
-router.get('/api/admin/database/tables', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/database/tables', authenticateAdmin, isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
         const connection = await pool.getConnection();
@@ -1440,780 +1937,47 @@ router.get('/api/admin/database/tables', authenticate, isAdmin, async (req, res)
     }
 });
 
-// Instalar base de datos
-router.post('/api/admin/database/install', authenticateAdmin, async (req, res) => {
+// Exportar una copia SQL sin ejecutar cambios sobre la base de datos activa.
+router.get('/api/admin/database/export', authenticateAdmin, isOwner, async (req, res) => {
+    let connection;
     try {
-        const fs = require('fs').promises;
-        const path = require('path');
-        const pool = require('../db/pool');
+        connection = await pool.getConnection();
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const databaseName = sanitizeExportName(process.env.DB_NAME || 'firmas_digitales');
+        const fileName = `${databaseName}-${timestamp}.sql`;
 
-        // Leer archivo SQL
-        const sqlFilePath = path.join(__dirname, '../../firmas_digitales_v2.sql');
-        const sqlContent = await fs.readFile(sqlFilePath, 'utf8');
+        res.status(200);
+        res.setHeader('Content-Type', 'application/sql; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        res.setHeader('Cache-Control', 'no-store');
 
-        // Dividir el SQL en statements individuales
-        const statements = sqlContent
-            .split(';')
-            .map(stmt => stmt.trim())
-            .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
-
-        const connection = await pool.getConnection();
-
-        // Ejecutar cada statement
-        for (let i = 0; i < statements.length; i++) {
-            const statement = statements[i];
-            if (statement.toUpperCase().includes('USE FIRMAS_DIGITALES')) {
-                // Cambiar a la base de datos correcta
-                await connection.query('USE firmas_digitales');
-            } else if (statement.length > 0) {
-                try {
-                    await connection.query(statement);
-                } catch (stmtError) {
-                    console.warn(`Advertencia en statement ${i + 1}:`, stmtError.message);
-                    // Continuar con el siguiente statement
-                }
-            }
+        for await (const chunk of generateDatabaseExport(connection, { databaseName })) {
+            if (!res.write(chunk)) await once(res, 'drain');
         }
-
-        connection.release();
-
-        res.json({
-            success: true,
-            message: 'Base de datos instalada correctamente',
-            installed: true
-        });
-
+        return res.end();
     } catch (error) {
-        console.error('Error instalando base de datos:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al instalar la base de datos',
-            error: error.message
-        });
-    }
-});
-
-// Crear respaldo de la base de datos usando setup-db.js
-router.post('/api/admin/database/backup', authenticateAdmin, async (req, res) => {
-    try {
-        // Crear instancia del DatabaseSetupManager
-        const setupManager = new DatabaseSetupManager();
-
-        // Verificar conexión
-        if (!await setupManager.connect()) {
+        console.error('Error exportando la base de datos:', error.message);
+        if (!res.headersSent) {
             return res.status(500).json({
                 success: false,
-                message: 'No se pudo conectar a la base de datos'
+                message: 'No fue posible exportar la base de datos'
             });
         }
-
-        // Verificar que la base de datos existe
-        const dbExists = await setupManager.databaseExists();
-        if (!dbExists) {
-            await setupManager.connection.destroy();
-            return res.status(400).json({
-                success: false,
-                message: 'La base de datos no existe'
-            });
-        }
-
-        // Reconectar con la base de datos específica
-        await setupManager.connection.destroy();
-        const connectSuccess = await setupManager.connect();
-        if (!connectSuccess) {
-            return res.status(500).json({
-                success: false,
-                message: 'No se pudo reconectar a la base de datos'
-            });
-        }
-        await setupManager.connection.query(`USE \`${setupManager.config.database}\``);
-
-        // Crear el backup usando la funcionalidad del setup-db.js
-        const backupFile = await setupManager.createBackup();
-
-        // Cerrar conexión
-        await setupManager.connection.destroy();
-
-        if (backupFile) {
-            res.json({
-                success: true,
-                message: 'Respaldo creado correctamente usando setup-db.js',
-                backupFile: path.basename(backupFile),
-                fullPath: backupFile
-            });
-        } else {
-            res.status(500).json({
-                success: false,
-                message: 'Error al crear el respaldo'
-            });
-        }
-
-    } catch (error) {
-        console.error('Error en respaldo de BD:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al crear respaldo de la base de datos',
-            error: error.message
-        });
+        return res.end('\n-- La exportación se interrumpió por un error.\n');
+    } finally {
+        if (connection) connection.release();
     }
 });
 
-// Optimizar base de datos
-router.post('/api/admin/database/optimize', authenticateAdmin, async (req, res) => {
-    try {
-        const pool = require('../db/pool');
-        const connection = await pool.getConnection();
-
-        // Obtener todas las tablas
-        const [tables] = await connection.query('SHOW TABLES');
-        const tableNames = tables.map(row => Object.values(row)[0]);
-
-        // Optimizar cada tabla
-        const results = [];
-        for (const tableName of tableNames) {
-            try {
-                await connection.query(`OPTIMIZE TABLE \`${tableName}\``);
-                results.push({ table: tableName, status: 'optimized' });
-            } catch (error) {
-                results.push({ table: tableName, status: 'error', error: error.message });
-            }
-        }
-
-        connection.release();
-
-        res.json({
-            success: true,
-            message: 'Optimización completada',
-            results: results
-        });
-
-    } catch (error) {
-        console.error('Error optimizando BD:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al optimizar la base de datos',
-            error: error.message
-        });
-    }
-});
-
-// Eliminar todas las tablas de la base de datos (GET - para compatibilidad)
-router.get('/api/admin/database/drop', authenticateAdmin, async (req, res) => {
-    try {
-        const pool = require('../db/pool');
-        const connection = await pool.getConnection();
-
-        try {
-            // Obtener lista de todas las tablas
-            const [tables] = await connection.query('SHOW TABLES');
-
-            if (tables.length === 0) {
-                return res.json({
-                    success: true,
-                    message: 'No hay tablas para eliminar',
-                    tables: []
-                });
-            }
-
-            // Mostrar las tablas que se eliminarían
-            const tableNames = tables.map(row => Object.values(row)[0]);
-
-            res.json({
-                success: true,
-                message: `Se eliminarían ${tableNames.length} tablas`,
-                tables: tableNames,
-                warning: 'Esta es una operación destructiva. Use POST para confirmar.'
-            });
-
-        } finally {
-            connection.release();
-        }
-
-    } catch (error) {
-        console.error('Error obteniendo lista de tablas para drop:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener lista de tablas',
-            error: error.message
-        });
-    }
-});
-
-// Eliminar todas las tablas de la base de datos
-router.post('/api/admin/database/drop', authenticateAdmin, async (req, res) => {
-    try {
-        const pool = require('../db/pool');
-        const connection = await pool.getConnection();
-
-        try {
-            // Obtener lista de todas las tablas (excluyendo vistas)
-            const [tables] = await connection.query('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"');
-
-            if (tables.length === 0) {
-                return res.json({
-                    success: true,
-                    message: 'No hay tablas para eliminar'
-                });
-            }
-
-            // Desactivar restricciones de clave foránea temporalmente
-            await connection.query('SET FOREIGN_KEY_CHECKS = 0');
-
-            // Eliminar todas las tablas
-            const tableNames = tables.map(row => Object.values(row)[0]);
-            const droppedTables = [];
-            const errors = [];
-
-            for (const tableName of tableNames) {
-                try {
-                    await connection.query(`DROP TABLE \`${tableName}\``);
-                    droppedTables.push(tableName);
-                } catch (error) {
-                    errors.push({ table: tableName, error: error.message });
-                }
-            }
-
-            // Reactivar restricciones de clave foránea
-            await connection.query('SET FOREIGN_KEY_CHECKS = 1');
-
-            res.json({
-                success: true,
-                message: `Se eliminaron ${droppedTables.length} tablas correctamente`,
-                droppedTables: droppedTables,
-                errors: errors
-            });
-
-        } finally {
-            connection.release();
-        }
-
-    } catch (error) {
-        console.error('Error eliminando tablas:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al eliminar las tablas',
-            error: error.message
-        });
-    }
-});
-
-// Resetear base de datos (reiniciar datos por defecto) - GET
-router.get('/api/admin/database/reset', authenticateAdmin, async (req, res) => {
-    try {
-        const pool = require('../db/pool');
-        const connection = await pool.getConnection();
-
-        try {
-            // Obtener lista de tablas existentes
-            const [tables] = await connection.query('SHOW TABLES');
-            const tableCount = tables.length;
-            const tableNames = tables.map(row => Object.values(row)[0]);
-
-            // Contar registros en tablas principales
-            const tableStats = [];
-            const tablesToCheck = ['users', 'user_keys', 'pdf_documents', 'signatures'];
-
-            for (const tableName of tablesToCheck) {
-                if (tableNames.includes(tableName)) {
-                    try {
-                        const [countResult] = await connection.query(`SELECT COUNT(*) as total FROM \`${tableName}\``);
-                        tableStats.push({
-                            table: tableName,
-                            records: countResult[0].total
-                        });
-                    } catch (error) {
-                        tableStats.push({
-                            table: tableName,
-                            records: 0,
-                            error: 'Error al contar'
-                        });
-                    }
-                }
-            }
-
-            res.json({
-                success: true,
-                message: 'Información de reinicio disponible',
-                currentTables: tableCount,
-                tableStats: tableStats,
-                warning: 'Esta operación limpiará los datos de las tablas pero mantendrá la estructura. Use POST para confirmar.'
-            });
-
-        } finally {
-            connection.release();
-        }
-
-    } catch (error) {
-        console.error('Error obteniendo información de reset:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener información de reinicio',
-            error: error.message
-        });
-    }
-});
-
-// Resetear base de datos usando setup-db.js (NO elimina tablas, solo datos)
-router.post('/api/admin/database/reset', authenticateAdmin, async (req, res) => {
-    try {
-        // Crear instancia del DatabaseSetupManager
-        const setupManager = new DatabaseSetupManager();
-
-        // Verificar conexión
-        if (!await setupManager.connect()) {
-            return res.status(500).json({
-                success: false,
-                message: 'No se pudo conectar a la base de datos'
-            });
-        }
-
-        // Verificar que la base de datos existe
-        const dbExists = await setupManager.databaseExists();
-        if (!dbExists) {
-            await setupManager.connection.destroy();
-            return res.status(400).json({
-                success: false,
-                message: 'La base de datos no existe'
-            });
-        }
-
-        // Reconectar con la base de datos específica
-        await setupManager.connection.destroy();
-        const connectSuccess = await setupManager.connect();
-        if (!connectSuccess) {
-            return res.status(500).json({
-                success: false,
-                message: 'No se pudo reconectar a la base de datos'
-            });
-        }
-        await setupManager.connection.query(`USE \`${setupManager.config.database}\``);
-
-        // Ejecutar reset usando la funcionalidad del setup-db.js
-        const resetSuccess = await setupManager.resetDatabase();
-
-        // Cerrar conexión
-        await setupManager.connection.destroy();
-
-        if (resetSuccess) {
-            res.json({
-                success: true,
-                message: 'Base de datos reseteada correctamente usando setup-db.js (datos eliminados, estructura conservada)',
-                method: 'setup-db.js'
-            });
-        } else {
-            res.status(500).json({
-                success: false,
-                message: 'Error al resetear la base de datos'
-            });
-        }
-
-    } catch (error) {
-        console.error('Error reseteando BD:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al reiniciar la base de datos',
-            error: error.message
-        });
-    }
-});
-
-// Restaurar base de datos desde backup - GET (información)
-router.get('/api/admin/database/restore', authenticateAdmin, async (req, res) => {
-    try {
-        const fs = require('fs').promises;
-        const path = require('path');
-
-        // Verificar directorio de backups
-        const backupDir = path.join(__dirname, '../../backups');
-
-        let backupFiles = [];
-        let latestBackup = null;
-
-        try {
-            const files = await fs.readdir(backupDir);
-            backupFiles = files
-                .filter(file => file.endsWith('.sql'))
-                .sort()
-                .reverse(); // Más reciente primero
-
-            if (backupFiles.length > 0) {
-                latestBackup = backupFiles[0];
-                const stats = await fs.stat(path.join(backupDir, latestBackup));
-                latestBackup = {
-                    name: latestBackup,
-                    size: stats.size,
-                    created: stats.birthtime
-                };
-            }
-        } catch (error) {
-            // Directorio no existe o no se puede leer
-        }
-
-        res.json({
-            success: true,
-            message: 'Información de restauración disponible',
-            backupFiles: backupFiles,
-            latestBackup: latestBackup,
-            backupDir: backupDir,
-            warning: 'Esta operación restaurará la base de datos desde un backup. Se creará un backup de seguridad antes. Use POST para confirmar.'
-        });
-
-    } catch (error) {
-        console.error('Error obteniendo información de restauración:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener información de restauración',
-            error: error.message
-        });
-    }
-});
-
-// Restaurar base de datos desde backup usando setup-db.js
-router.post('/api/admin/database/restore', authenticateAdmin, async (req, res) => {
-    try {
-        const { backupFile } = req.body;
-
-        // Crear instancia del DatabaseSetupManager
-        const setupManager = new DatabaseSetupManager();
-
-        // Verificar conexión
-        if (!await setupManager.connect()) {
-            return res.status(500).json({
-                success: false,
-                message: 'No se pudo conectar a la base de datos'
-            });
-        }
-
-        // Verificar que la base de datos existe
-        const dbExists = await setupManager.databaseExists();
-        if (!dbExists) {
-            await setupManager.connection.destroy();
-            return res.status(400).json({
-                success: false,
-                message: 'La base de datos no existe'
-            });
-        }
-
-        // Reconectar con la base de datos específica
-        await setupManager.connection.destroy();
-        const connectSuccess = await setupManager.connect();
-        if (!connectSuccess) {
-            return res.status(500).json({
-                success: false,
-                message: 'No se pudo reconectar a la base de datos'
-            });
-        }
-        await setupManager.connection.query(`USE \`${setupManager.config.database}\``);
-
-        // Ejecutar restauración usando la funcionalidad del setup-db.js
-        const restoreSuccess = await setupManager.restoreBackup(backupFile);
-
-        // Cerrar conexión
-        await setupManager.connection.destroy();
-
-        if (restoreSuccess) {
-            res.json({
-                success: true,
-                message: 'Base de datos restaurada correctamente desde backup usando setup-db.js',
-                method: 'setup-db.js',
-                backupFile: backupFile || 'último backup disponible'
-            });
-        } else {
-            res.status(500).json({
-                success: false,
-                message: 'Error al restaurar la base de datos desde backup'
-            });
-        }
-
-    } catch (error) {
-        console.error('Error restaurando BD:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al restaurar la base de datos desde backup',
-            error: error.message
-        });
-    }
-});
-
-// Ejecutar migraciones de base de datos - GET
-router.get('/api/admin/database/migrate', authenticateAdmin, async (req, res) => {
-    try {
-        const pool = require('../db/pool');
-        const connection = await pool.getConnection();
-
-        try {
-            // Obtener información de la base de datos
-            const [tables] = await connection.query('SHOW TABLES');
-            const [dbInfo] = await connection.query('SELECT VERSION() as version');
-
-            res.json({
-                success: true,
-                message: 'Información de migraciones disponible',
-                currentTables: tables.length,
-                dbVersion: dbInfo[0].version,
-                tables: tables.map(row => Object.values(row)[0]),
-                warning: 'Esta operación ejecutará migraciones. Use POST para confirmar.'
-            });
-
-        } finally {
-            connection.release();
-        }
-
-    } catch (error) {
-        console.error('Error obteniendo información de migraciones:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener información de migraciones',
-            error: error.message
-        });
-    }
-});
-
-// Ejecutar migraciones de base de datos
-router.post('/api/admin/database/migrate', authenticateAdmin, async (req, res) => {
-    try {
-        const pool = require('../db/pool');
-        const connection = await pool.getConnection();
-
-        try {
-            // Aquí implementarías la lógica de migraciones
-            // Por ahora, solo verificamos la conexión y estructura
-
-            const [tables] = await connection.query('SHOW TABLES');
-            const [dbInfo] = await connection.query('SELECT VERSION() as version');
-
-            res.json({
-                success: true,
-                message: 'Migraciones ejecutadas correctamente',
-                currentTables: tables.length,
-                dbVersion: dbInfo[0].version
-            });
-
-        } finally {
-            connection.release();
-        }
-
-    } catch (error) {
-        console.error('Error ejecutando migraciones:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al ejecutar migraciones',
-            error: error.message
-        });
-    }
-});
-
-// Crear estructura inicial de base de datos - GET
-router.get('/api/admin/database/create', authenticateAdmin, async (req, res) => {
-    try {
-        const pool = require('../db/pool');
-        const connection = await pool.getConnection();
-
-        try {
-            // Verificar si ya existe estructura
-            const [tables] = await connection.query('SHOW TABLES');
-
-            if (tables.length > 0) {
-                return res.json({
-                    success: false,
-                    message: 'La base de datos ya contiene tablas. Use /reset para recrear la estructura.',
-                    existingTables: tables.map(row => Object.values(row)[0])
-                });
-            }
-
-            // Verificar si existe el archivo SQL
-            const fs = require('fs').promises;
-            const path = require('path');
-            const sqlPath = path.join(__dirname, '../../firmas_digitales.sql');
-
-            let sqlExists = false;
-            let sqlSize = 0;
-            try {
-                const stats = await fs.stat(sqlPath);
-                sqlExists = true;
-                sqlSize = stats.size;
-            } catch (e) {
-                sqlExists = false;
-            }
-
-            res.json({
-                success: true,
-                message: 'Listo para crear estructura de base de datos',
-                sqlFileExists: sqlExists,
-                sqlFileSize: sqlSize,
-                warning: 'Esta operación creará la estructura inicial. Use POST para confirmar.'
-            });
-
-        } finally {
-            connection.release();
-        }
-
-    } catch (error) {
-        console.error('Error verificando estructura:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al verificar estructura de base de datos',
-            error: error.message
-        });
-    }
-});
-
-// Crear estructura inicial de base de datos
-router.post('/api/admin/database/create', authenticateAdmin, async (req, res) => {
-    try {
-        const pool = require('../db/pool');
-        const connection = await pool.getConnection();
-
-        try {
-            // Verificar si ya existe estructura
-            const [tables] = await connection.query('SHOW TABLES');
-
-            if (tables.length > 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'La base de datos ya contiene tablas. Use /reset para recrear la estructura.'
-                });
-            }
-
-            // Crear estructura desde el archivo SQL
-            const fs = require('fs').promises;
-            const path = require('path');
-            const sqlPath = path.join(__dirname, '../../firmas_digitales.sql');
-
-            try {
-                const sqlContent = await fs.readFile(sqlPath, 'utf8');
-                const statements = sqlContent.split(';').filter(stmt => stmt.trim().length > 0);
-
-                for (const statement of statements) {
-                    if (statement.trim()) {
-                        await connection.query(statement);
-                    }
-                }
-
-                res.json({
-                    success: true,
-                    message: 'Estructura de base de datos creada correctamente',
-                    createdTables: statements.length
-                });
-
-            } catch (sqlError) {
-                console.error('Error leyendo archivo SQL:', sqlError);
-                res.status(500).json({
-                    success: false,
-                    message: 'Error al leer el archivo SQL de estructura',
-                    error: sqlError.message
-                });
-            }
-
-        } finally {
-            connection.release();
-        }
-
-    } catch (error) {
-        console.error('Error creando estructura BD:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al crear la estructura de base de datos',
-            error: error.message
-        });
-    }
-});
-
-// Poblar base de datos con datos de prueba - GET
-router.get('/api/admin/database/seed', authenticateAdmin, async (req, res) => {
-    try {
-        const pool = require('../db/pool');
-        const connection = await pool.getConnection();
-
-        try {
-            // Verificar que existan las tablas necesarias
-            const [tables] = await connection.query('SHOW TABLES');
-
-            if (tables.length === 0) {
-                return res.json({
-                    success: false,
-                    message: 'No existe estructura de base de datos. Use /create primero.',
-                    tables: []
-                });
-            }
-
-            res.json({
-                success: true,
-                message: 'Listo para poblar base de datos',
-                tables: tables.map(row => Object.values(row)[0]),
-                warning: 'Esta operación agregará datos de prueba. Use POST para confirmar.'
-            });
-
-        } finally {
-            connection.release();
-        }
-
-    } catch (error) {
-        console.error('Error verificando estructura para seed:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al verificar estructura de base de datos',
-            error: error.message
-        });
-    }
-});
-
-// Poblar base de datos con datos de prueba
-router.post('/api/admin/database/seed', authenticateAdmin, async (req, res) => {
-    try {
-        const pool = require('../db/pool');
-        const connection = await pool.getConnection();
-
-        try {
-            // Verificar que existan las tablas necesarias
-            const [tables] = await connection.query('SHOW TABLES');
-
-            if (tables.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'No existe estructura de base de datos. Use /create primero.'
-                });
-            }
-
-            // Aquí implementarías la lógica para poblar con datos de prueba
-            // Por ejemplo, insertar usuarios de prueba, documentos, etc.
-
-            // Datos de ejemplo básicos
-            const seedResults = {
-                users: 0,
-                documents: 0,
-                keys: 0
-            };
-
-            res.json({
-                success: true,
-                message: 'Base de datos poblada con datos de prueba',
-                results: seedResults
-            });
-
-        } finally {
-            connection.release();
-        }
-
-    } catch (error) {
-        console.error('Error poblando BD:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al poblar la base de datos',
-            error: error.message
-        });
-    }
-});
-
-router.post('/api/admin/database/table-details', authenticateAdmin, async (req, res) => {
+router.post('/api/admin/database/table-details', authenticateAdmin, isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
         const { tableName } = req.body;
 
-        if (!tableName) {
+        if (!tableName || !TABLE_IDENTIFIER_PATTERN.test(tableName)) {
             return res.status(400).json({
                 success: false,
-                message: 'Nombre de tabla requerido'
+                message: 'Nombre de tabla invalido'
             });
         }
 
@@ -2223,6 +1987,13 @@ router.post('/api/admin/database/table-details', authenticateAdmin, async (req, 
             FROM information_schema.TABLES
             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
         `, [tableName]);
+
+        if (tableInfo.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Tabla no encontrada'
+            });
+        }
 
         // Obtener estructura de columnas
         const [columns] = await pool.query(`
@@ -2242,7 +2013,7 @@ router.post('/api/admin/database/table-details', authenticateAdmin, async (req, 
         let sampleData = [];
         try {
             const [data] = await pool.query(`SELECT * FROM \`${tableName}\` LIMIT 5`);
-            sampleData = data;
+            sampleData = data.map(redactDatabaseRow);
         } catch (error) {
             // Si hay error al obtener datos, continuar sin ellos
         }
@@ -2272,7 +2043,7 @@ router.post('/api/admin/database/table-details', authenticateAdmin, async (req, 
     }
 });
 
-router.post('/api/admin/database/table-data', authenticateAdmin, async (req, res) => {
+router.post('/api/admin/database/table-data', authenticateAdmin, isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
         const { tableName, page = 1, limit = 10 } = req.body;
@@ -2288,7 +2059,7 @@ router.post('/api/admin/database/table-data', authenticateAdmin, async (req, res
             });
         }
 
-        if (!tableName || typeof tableName !== 'string' || tableName.trim() === '') {
+        if (!tableName || typeof tableName !== 'string' || !TABLE_IDENTIFIER_PATTERN.test(tableName)) {
             return res.status(400).json({
                 success: false,
                 message: 'Nombre de tabla requerido y debe ser válido'
@@ -2316,7 +2087,7 @@ router.post('/api/admin/database/table-data', authenticateAdmin, async (req, res
         let data = [];
         try {
             const [rows] = await pool.query(`SELECT * FROM \`${tableName}\` LIMIT ? OFFSET ?`, [limitNum, offset]);
-            data = rows;
+            data = rows.map(redactDatabaseRow);
         } catch (queryError) {
             console.error(`Error al consultar tabla ${tableName}:`, queryError);
             return res.status(500).json({
@@ -2510,15 +2281,19 @@ router.post('/api/admin/upload-favicon', authenticate, isAdmin, faviconUpload.si
    ======================================== */
 
 // Ruta para obtener lista de plantillas PDF
-router.get('/api/admin/pdf/templates', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/pdf/templates', authenticateAdmin, isAdmin, async (req, res) => {
     try {
+        const [configurationRows] = await pool.execute(
+            'SELECT selected_template FROM global_pdf_config WHERE id = 1 LIMIT 1'
+        );
+        const selectedTemplate = configurationRows[0]?.selected_template || 'clasico';
         // Lista de plantillas disponibles
         const templates = [
             {
                 id: 'clasico',
                 name: 'Clásico',
                 description: 'Plantilla formal tradicional',
-                active: true,
+                active: selectedTemplate === 'clasico',
                 colors: {
                     primary: '#1e40af',
                     secondary: '#64748b',
@@ -2529,7 +2304,7 @@ router.get('/api/admin/pdf/templates', authenticate, isAdmin, async (req, res) =
                 id: 'moderno',
                 name: 'Moderno',
                 description: 'Diseño contemporáneo',
-                active: false,
+                active: selectedTemplate === 'moderno',
                 colors: {
                     primary: '#2563eb',
                     secondary: '#60a5fa',
@@ -2540,7 +2315,7 @@ router.get('/api/admin/pdf/templates', authenticate, isAdmin, async (req, res) =
                 id: 'minimalista',
                 name: 'Minimalista',
                 description: 'Estilo limpio y simple',
-                active: false,
+                active: selectedTemplate === 'minimalista',
                 colors: {
                     primary: '#6b7280',
                     secondary: '#9ca3af',
@@ -2551,7 +2326,7 @@ router.get('/api/admin/pdf/templates', authenticate, isAdmin, async (req, res) =
                 id: 'elegante',
                 name: 'Elegante',
                 description: 'Diseño sofisticado',
-                active: false,
+                active: selectedTemplate === 'elegante',
                 colors: {
                     primary: '#7c3aed',
                     secondary: '#a78bfa',
@@ -2575,7 +2350,7 @@ router.get('/api/admin/pdf/templates', authenticate, isAdmin, async (req, res) =
 });
 
 // Ruta para obtener configuración de base de datos
-router.get('/api/admin/database/config', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/database/config', authenticateAdmin, isAdmin, async (req, res) => {
     try {
         const dbConfig = {
             host: process.env.DB_HOST || 'localhost',
@@ -2618,55 +2393,42 @@ router.get('/api/admin/database/config', authenticate, isAdmin, async (req, res)
 // Ruta para obtener logs del sistema
 router.get('/api/admin/system/logs', authenticate, isAdmin, async (req, res) => {
     try {
-        const logs = [
-            {
-                id: 1,
-                timestamp: new Date().toISOString(),
-                level: 'INFO',
-                message: 'Sistema iniciado correctamente',
-                source: 'server.js',
-                user: 'system'
-            },
-            {
-                id: 2,
-                timestamp: new Date(Date.now() - 3600000).toISOString(),
-                level: 'INFO',
-                message: 'Usuario admin inició sesión',
-                source: 'auth.middleware',
-                user: 'admin'
-            },
-            {
-                id: 3,
-                timestamp: new Date(Date.now() - 7200000).toISOString(),
-                level: 'WARN',
-                message: 'Intento de acceso no autorizado',
-                source: 'security.middleware',
-                user: 'unknown'
-            },
-            {
-                id: 4,
-                timestamp: new Date(Date.now() - 10800000).toISOString(),
-                level: 'ERROR',
-                message: 'Error de conexión a base de datos',
-                source: 'db.pool',
-                user: 'system'
-            },
-            {
-                id: 5,
-                timestamp: new Date(Date.now() - 14400000).toISOString(),
-                level: 'INFO',
-                message: 'Backup de base de datos completado',
-                source: 'backup.service',
-                user: 'system'
-            }
-        ];
+        const requestedLimit = Number.parseInt(req.query.limit, 10);
+        const limit = Number.isInteger(requestedLimit)
+            ? Math.min(Math.max(requestedLimit, 1), 200)
+            : 100;
+        const [activityLogs] = await pool.query(
+            `SELECT l.id,
+                    l.created_at AS timestamp,
+                    l.accion,
+                    l.descripcion,
+                    l.ip_address,
+                    COALESCE(u.usuario, 'system') AS user
+             FROM user_activity_log l
+             LEFT JOIN users u ON u.id = l.user_id
+             ORDER BY l.created_at DESC
+             LIMIT ?`,
+            [limit]
+        );
 
-        res.json({
+        const logsFromDatabase = activityLogs.map(log => ({
+            id: log.id,
+            timestamp: log.timestamp,
+            level: /error|fail|denied|unauthorized/i.test(log.accion) ? 'WARN' : 'INFO',
+            message: log.descripcion || log.accion,
+            action: log.accion,
+            source: 'user_activity_log',
+            user: log.user,
+            ipAddress: log.ip_address
+        }));
+
+        return res.json({
             success: true,
-            logs: logs,
-            total: logs.length,
-            levels: ['ERROR', 'WARN', 'INFO', 'DEBUG']
+            logs: logsFromDatabase,
+            total: logsFromDatabase.length,
+            levels: ['WARN', 'INFO']
         });
+
     } catch (error) {
         console.error('Error obteniendo logs del sistema:', error);
         res.status(500).json({
@@ -2677,7 +2439,7 @@ router.get('/api/admin/system/logs', authenticate, isAdmin, async (req, res) => 
 });
 
 // Ruta para obtener configuración específica de template
-router.get('/api/admin/pdf/templates/:templateId/config', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/pdf/templates/:templateId/config', authenticateAdmin, isAdmin, async (req, res) => {
     try {
         const { templateId } = req.params;
 
@@ -2745,7 +2507,7 @@ router.get('/api/admin/pdf/templates/:templateId/config', authenticate, isAdmin,
 });
 
 // Ruta para guardar configuración de template específico
-router.put('/api/admin/pdf/templates/:templateId/config', authenticate, isAdmin, async (req, res) => {
+router.put('/api/admin/pdf/templates/:templateId/config', authenticateAdmin, isOwner, async (req, res) => {
     try {
         const { templateId } = req.params;
         const configData = req.body;
@@ -2777,7 +2539,7 @@ router.put('/api/admin/pdf/templates/:templateId/config', authenticate, isAdmin,
 });
 
 // Ruta para obtener configuración PDF general
-router.get('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/pdf/config', authenticateAdmin, isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
         // Consultar configuración PDF global desde la base de datos
@@ -2870,17 +2632,10 @@ router.get('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
 });
 
 // Ruta para guardar configuración PDF global
-router.put('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
+router.put('/api/admin/pdf/config', authenticateAdmin, isOwner, async (req, res) => {
     try {
-        const pool = require('../db/pool');
-        const configData = req.body;
-
-        const adminUsername = req.user?.username || 'admin';
-
-        // Asegurar que selectedTemplate tenga un valor por defecto
-        if (!configData.selectedTemplate || configData.selectedTemplate === '') {
-            configData.selectedTemplate = 'clasico';
-        }
+        const configData = normalizePdfConfiguration(req.body);
+        const adminUsername = req.user?.usuario || req.user?.email || `user:${req.userId}`;
 
         // Preparar datos para guardar en BD
         const colorConfig = JSON.stringify(configData.colorConfig || {});
@@ -2912,7 +2667,7 @@ router.put('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
                 updated_by = VALUES(updated_by)
         `, [
             configData.selectedTemplate,
-            configData.logoPath || '',
+            '',
             colorConfig,
             fontConfig,
             layoutConfig,
@@ -2924,7 +2679,8 @@ router.put('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Configuración PDF guardada correctamente'
+            message: 'Configuración PDF guardada correctamente',
+            config: configData
         });
     } catch (error) {
         console.error('Error guardando configuración PDF global:', error);
@@ -2936,15 +2692,14 @@ router.put('/api/admin/pdf/config', authenticate, isAdmin, async (req, res) => {
 });
 
 // Ruta para generar vista previa de PDF con configuración específica
-router.post('/api/admin/pdf/preview', authenticate, isAdmin, async (req, res) => {
+router.post('/api/admin/pdf/preview', authenticateAdmin, isAdmin, async (req, res) => {
     try {
         const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
-        const fs = require("fs");
-        const path = require("path");
         const { TemplateManager } = require('../templates/template.manager');
 
-        // Obtener configuración del body
-        const config = req.body;
+        // La vista previa acepta únicamente el mismo conjunto de opciones seguras
+        // que puede persistirse en la configuración global.
+        const config = normalizePdfConfiguration(req.body);
 
         // Crear documento PDF en blanco como base
         const pdfDoc = await PDFDocument.create();
@@ -2957,20 +2712,31 @@ router.post('/api/admin/pdf/preview', authenticate, isAdmin, async (req, res) =>
         const timesFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
         const timesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
+        const [visualRows] = await pool.execute(
+            'SELECT institution_name FROM visual_config WHERE id = 1 LIMIT 1'
+        );
+        const institutionName = visualRows[0]?.institution_name || 'Firmas Digitales FD';
+
         // Datos de ejemplo para la vista previa
         const previewData = {
             titulo: 'Vista Previa - Configuración PDF',
-            institucion: config.institutionName || 'Universidad de Ejemplo',
+            institucion: institutionName,
             autores: ['Autor de Prueba'],
-            avalador: 'Avalador de Prueba',
+            avaladoPor: 'Avalador de Prueba',
+            modalidad: 'Trabajo de grado',
+            ubicacion: 'BOGOTÁ, COLOMBIA',
             fecha: new Date().toLocaleDateString('es-ES'),
-            contenido: 'Este es un documento de vista previa generado con la configuración actual. Permite visualizar cómo se verá el PDF final con los márgenes, fuentes, colores y elementos visuales configurados.',
+            contenido: '',
             signatureData: null,
             logo: config.logoPath || null
         };
 
         // Crear instancia del TemplateManager
         const templateManager = new TemplateManager();
+        previewData.contenido = await templateManager.replaceAvalVariables(
+            config.avalTextConfig?.template || 'Concepto de aval para $titulo, desarrollado por $autores.',
+            previewData
+        );
 
         // Usar configuración proporcionada o configuración global
         const templateConfig = config || await templateManager.getGlobalConfig();
@@ -2988,7 +2754,7 @@ router.post('/api/admin/pdf/preview', authenticate, isAdmin, async (req, res) =>
 
         // Dibujar plantilla específica (si existe el método)
         if (templateManager.drawTemplate) {
-            await templateManager.drawTemplate(page, templateName, width, height, documentData, helveticaFont, helveticaBold, timesFont, timesBold, templateConfig);
+            await templateManager.drawTemplate(page, templateName, width, height, documentData, helveticaFont, helveticaBold, timesFont, timesBold, templateConfig, pdfDoc);
         } else {
             // Dibujo básico si no hay método específico
             page.drawText(previewData.titulo, {
@@ -3037,8 +2803,6 @@ router.post('/api/admin/pdf/preview', authenticate, isAdmin, async (req, res) =>
 // Endpoint para obtener la ubicación del sistema
 router.get('/api/system/location', async (req, res) => {
     try {
-        const os = require('os');
-
         // Intentar obtener ubicación basada en configuración regional del sistema
         let location = 'UBICACIÓN, PAÍS';
 
@@ -3076,8 +2840,6 @@ router.get('/api/system/location', async (req, res) => {
         res.json({
             success: true,
             location: location,
-            hostname: os.hostname(),
-            platform: os.platform(),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
         });
     } catch (error) {

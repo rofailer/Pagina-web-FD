@@ -2,6 +2,37 @@
    SECCIÓN DE BASE DE DATOS - DISEÑO COMPACTO
    ======================================== */
 
+/* Implementación 2026: estado, copia SQL y explorador de solo lectura. */
+.database-admin-layout { display: grid; gap: 1.25rem; }
+.database-summary-card .admin-tool-actions { justify-content: flex-start; margin-top: 1rem; }
+.database-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; margin-top: 1.15rem; }
+.database-stats > div { display: grid; gap: .2rem; min-width: 0; border: 1px solid var(--admin-border, #e2e8f0); border-radius: 13px; background: var(--admin-surface, #f8fafc); padding: .9rem; }
+.database-stats strong { overflow: hidden; color: var(--admin-text, #0f172a); text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; }
+.database-stats span { color: var(--admin-text-muted, #64748b); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.database-security-note { margin: 1rem 0 0; color: var(--admin-text-muted, #64748b); font-size: .75rem; line-height: 1.55; }
+.database-browser-card { padding: 0; overflow: hidden; }
+.database-browser-card > .admin-tool-heading { padding: 1.25rem 1.35rem; border-bottom: 1px solid var(--admin-border, #e2e8f0); }
+.database-browser-grid { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: 520px; }
+.database-table-list { max-height: 650px; overflow: auto; border-right: 1px solid var(--admin-border, #e2e8f0); background: var(--admin-surface, #f8fafc); padding: .65rem; }
+.database-table-button { display: flex; align-items: center; justify-content: space-between; gap: .7rem; width: 100%; border: 0; border-radius: 9px; background: transparent; color: var(--admin-text, #334155); padding: .72rem; text-align: left; cursor: pointer; font: inherit; }
+.database-table-button:hover, .database-table-button:focus-visible { background: var(--admin-card, #fff); color: var(--admin-primary, #f97316); outline: none; }
+.database-table-button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .78rem; font-weight: 750; }
+.database-table-button small { flex: 0 0 auto; color: var(--admin-text-muted, #64748b); font-size: .65rem; }
+.database-table-view { min-width: 0; padding: 1rem; }
+.database-empty { display: grid; place-items: center; min-height: 300px; color: var(--admin-text-muted, #64748b); text-align: center; }
+.database-table-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; }
+.database-table-heading h3 { margin: 0; color: var(--admin-text, #0f172a); font-size: 1rem; }
+.database-table-heading span { color: var(--admin-text-muted, #64748b); font-size: .72rem; }
+.database-table-scroll { width: 100%; overflow: auto; border: 1px solid var(--admin-border, #e2e8f0); border-radius: 12px; }
+.database-table-scroll table { width: 100%; border-collapse: collapse; background: var(--admin-card, #fff); font-size: .72rem; }
+.database-table-scroll th, .database-table-scroll td { max-width: 260px; overflow: hidden; border-bottom: 1px solid var(--admin-border, #e2e8f0); padding: .7rem .8rem; color: var(--admin-text, #334155); text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.database-table-scroll th { position: sticky; top: 0; z-index: 1; background: var(--admin-surface, #f8fafc); font-weight: 800; }
+.database-pagination { display: flex; align-items: center; justify-content: center; gap: .8rem; margin-top: 1rem; }
+.database-pagination span { color: var(--admin-text-muted, #64748b); font-size: .75rem; }
+
+@media (max-width: 800px) { .database-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .database-browser-grid { grid-template-columns: 1fr; } .database-table-list { display: flex; max-height: none; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--admin-border, #e2e8f0); } .database-table-button { flex: 0 0 180px; } }
+@media (max-width: 520px) { .database-stats { grid-template-columns: 1fr; } .database-pagination { flex-wrap: wrap; } }
+
 /* Variables específicas para base de datos */
 :root {
   --db-spacing-xs: 0.5rem; /* 8px */

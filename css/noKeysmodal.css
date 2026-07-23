@@ -6,31 +6,37 @@
   display: none;
   position: fixed;
   z-index: 9999;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background-color: rgba(17, 24, 39, 0.56);
+  backdrop-filter: blur(2px);
 }
 
 #createKeysGuideModal .modal-content {
   background-color: #fff;
-  margin: 10% auto;
-  padding: 30px;
-  border-radius: 12px;
+  margin: 0;
+  padding: 32px;
+  border-radius: 14px;
   border-top: 4px solid var(--primary-color);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  width: 90%;
-  max-width: 480px;
+  box-shadow: 0 24px 60px rgba(17, 24, 39, 0.26);
+  width: min(100%, 460px);
+  min-width: 0;
+  max-width: 460px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  box-sizing: border-box;
   text-align: center;
-  animation: modalFadeIn 0.3s;
+  animation: modalFadeIn 0.24s ease-out;
   position: relative;
 }
 
 @keyframes modalFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-30px) scale(0.95);
+    transform: translateY(14px) scale(0.98);
   }
   to {
     opacity: 1;
@@ -40,9 +46,10 @@
 
 #createKeysGuideModal h2 {
   color: #333;
-  margin-bottom: 15px;
+  margin: 0 0 20px;
   font-size: 24px;
   font-weight: 600;
+  line-height: 1.2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -50,66 +57,77 @@
 }
 
 #createKeysGuideModal .modal-icon {
-  width: 48px;
-  height: 48px;
-  margin-bottom: 20px;
-  display: inline-block;
-  color: #6c757d;
-  opacity: 0.8;
+  width: 30px;
+  height: 30px;
+  padding: 8px;
+  box-sizing: content-box;
+  flex-shrink: 0;
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.1);
+  border: 1px solid rgba(var(--primary-rgb), 0.22);
+  border-radius: 12px;
 }
 
 #createKeysGuideModal .modal-description {
-  margin-bottom: 20px;
-  font-size: 16px;
-  line-height: 1.5;
-  color: #555;
-  text-align: left;
+  margin: 0 0 22px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #5f6873;
+  text-align: center;
 }
 
 #createKeysGuideModal .modal-description strong {
+  display: block;
+  margin-bottom: 5px;
   color: var(--primary-color);
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
 }
 
 #createKeysGuideModal .modal-subdescription {
-  color: #6c757d;
-  margin-bottom: 30px;
+  display: grid;
+  gap: 10px;
+  margin: 0 0 26px;
+  padding: 0;
   font-size: 14px;
-  line-height: 1.5;
-  background: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-  border-left: 3px solid #dee2e6;
   text-align: left;
 }
 
 #createKeysGuideModal .feature-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
-}
-
-#createKeysGuideModal .feature-item:last-child {
-  margin-bottom: 0;
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(var(--primary-rgb), 0.16);
+  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--primary-rgb), 0.08),
+    rgba(var(--primary-rgb), 0.025)
+  );
 }
 
 #createKeysGuideModal .feature-item svg {
   color: var(--primary-color);
   flex-shrink: 0;
-  margin-top: 2px;
+  box-sizing: content-box;
+  padding: 6px;
+  border: 1px solid rgba(var(--primary-rgb), 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
 }
 
 #createKeysGuideModal .feature-item span {
   flex: 1;
-  line-height: 1.4;
+  color: #5f6873;
+  line-height: 1.45;
 }
 
 #createKeysGuideModal .modal-buttons {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
+  gap: 10px;
 }
 
 #goToCreateKeysBtn {
@@ -119,25 +137,22 @@
     var(--secondary-color)
   );
   color: white;
-  padding: 14px 28px;
+  min-height: 50px;
+  padding: 13px 20px;
   border: none;
-  border-radius: 8px;
+  border-radius: 7px;
   cursor: pointer;
   font-size: 16px;
   font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(255, 149, 69, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  box-shadow: 0 4px 14px rgba(var(--primary-rgb), 0.3);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 #goToCreateKeysBtn:hover {
-  background: linear-gradient(
-    135deg,
-    var(--secondary-color),
-    var(--accent-color)
-  );
+  filter: brightness(1.04);
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(var(--primary-rgb), 0.4);
 }
@@ -148,49 +163,110 @@
 }
 
 #skipCreateKeysBtn {
-  background: #f8f9fa;
-  color: #6c757d;
-  padding: 14px 28px;
-  border: 2px solid #dee2e6;
-  border-radius: 8px;
+  min-height: 50px;
+  background: #fff;
+  color: #59616b;
+  padding: 13px 20px;
+  border: 1px solid #d7dce1;
+  border-radius: 7px;
   cursor: pointer;
   font-size: 16px;
-  font-weight: 500;
-  transition: all 0.3s ease;
+  font-weight: 600;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 #skipCreateKeysBtn:hover {
-  background: #e9ecef;
-  border-color: #adb5bd;
-  color: #495057;
+  background: rgba(var(--primary-rgb), 0.06);
+  border-color: rgba(var(--primary-rgb), 0.48);
+  color: #3f4750;
   transform: translateY(-1px);
 }
 
 #skipCreateKeysBtn svg {
   width: 16px;
   height: 16px;
+  color: var(--primary-color);
+}
+
+#goToCreateKeysBtn:focus-visible,
+#skipCreateKeysBtn:focus-visible {
+  outline: 3px solid rgba(var(--primary-rgb), 0.28);
+  outline-offset: 2px;
 }
 
 /* Responsive */
 @media (max-width: 600px) {
+  #createKeysGuideModal {
+    padding: 12px;
+  }
+
   #createKeysGuideModal .modal-content {
-    margin: 5% auto;
-    padding: 25px 20px;
-    max-width: 95%;
+    width: 100%;
+    max-width: 420px;
+    max-height: calc(100vh - 24px);
+    margin: 0;
+    padding: 26px 20px 22px;
   }
 
   #createKeysGuideModal .modal-buttons {
-    flex-direction: column;
-    align-items: center;
+    grid-template-columns: 1fr;
   }
 
   #goToCreateKeysBtn,
   #skipCreateKeysBtn {
     width: 100%;
-    max-width: 280px;
     justify-content: center;
+  }
+}
+
+@media (max-width: 420px) {
+  #createKeysGuideModal h2 {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+[data-theme="dark"] #createKeysGuideModal .modal-content {
+  background: rgba(17, 27, 46, 0.98);
+  color: var(--text-primary);
+  border-color: var(--primary-color);
+}
+
+[data-theme="dark"] #createKeysGuideModal h2 {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] #createKeysGuideModal .modal-description,
+[data-theme="dark"] #createKeysGuideModal .feature-item span {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] #createKeysGuideModal .feature-item {
+  background: rgba(var(--primary-rgb), 0.08);
+  border-color: rgba(var(--primary-rgb), 0.22);
+}
+
+[data-theme="dark"] #createKeysGuideModal .feature-item svg {
+  background: rgba(17, 27, 46, 0.82);
+  border-color: rgba(var(--primary-rgb), 0.24);
+}
+
+[data-theme="dark"] #skipCreateKeysBtn {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #createKeysGuideModal .modal-content {
+    animation: none;
+  }
+
+  #goToCreateKeysBtn,
+  #skipCreateKeysBtn {
+    transition: none;
   }
 }

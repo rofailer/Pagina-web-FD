@@ -29,8 +29,8 @@ document.addEventListener("DOMContentLoaded", () => {
     keyPasswordForm.onsubmit = (e) => {
         e.preventDefault();
         const password = keyPasswordInput.value;
-        if (!password || password.length < 4) {
-            keyPasswordError.textContent = "La contraseña debe tener al menos 4 caracteres.";
+        if (!password || password.length < 12) {
+            keyPasswordError.textContent = "La contraseña debe tener al menos 12 caracteres.";
             keyPasswordError.style.display = "block";
             return;
         }

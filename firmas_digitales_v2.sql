@@ -14,18 +14,24 @@ SET time_zone = "+00:00";
 -- ====================================
 
 -- Eliminar tablas en orden correcto (respetando foreign keys)
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS document_attachments;
 DROP TABLE IF EXISTS user_activity_log;
 DROP TABLE IF EXISTS user_preferences;
 DROP TABLE IF EXISTS user_keys;
 DROP TABLE IF EXISTS global_template_config;
+DROP TABLE IF EXISTS global_pdf_config;
+DROP TABLE IF EXISTS theme_config;
+DROP TABLE IF EXISTS visual_config;
 DROP TABLE IF EXISTS users;
+SET FOREIGN_KEY_CHECKS = 1;
 
 -- ====================================
 -- 2. CREAR TABLA USERS EXPANDIDA
 -- ====================================
 
 CREATE TABLE users (
-  -- Campos originales
+  -- Identidad y acceso
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(100) NOT NULL,
   usuario VARCHAR(50) NOT NULL UNIQUE,
@@ -34,26 +40,26 @@ CREATE TABLE users (
   active_key_id INT DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   
-  -- Campos expandidos - Información Personal
-  nombre_completo VARCHAR(255) DEFAULT NULL,
+  -- Información personal
   email VARCHAR(255) DEFAULT NULL,
   organizacion VARCHAR(255) DEFAULT NULL,
   biografia TEXT DEFAULT NULL,
-  foto_perfil TEXT DEFAULT NULL,
+  foto_perfil MEDIUMBLOB DEFAULT NULL COMMENT 'Contenido binario persistente de la foto de perfil',
+  foto_perfil_mimetype VARCHAR(50) DEFAULT NULL,
+  foto_perfil_actualizada_at TIMESTAMP(3) NULL DEFAULT NULL,
   telefono VARCHAR(20) DEFAULT NULL,
   direccion TEXT DEFAULT NULL,
   
-  -- Campos expandidos - Información Académica/Profesional
+  -- Información académica/profesional
   cargo VARCHAR(255) DEFAULT NULL,
   departamento VARCHAR(255) DEFAULT NULL,
   grado_academico VARCHAR(100) DEFAULT NULL,
   
-  -- Campos expandidos - Configuraciones del Sistema
-  zona_horaria VARCHAR(50) DEFAULT 'America/Bogota',
-  idioma VARCHAR(10) DEFAULT 'es',
+  -- Estado de la cuenta
   estado_cuenta ENUM('activo','inactivo','suspendido','pendiente') DEFAULT 'activo',
-  notificaciones_email BOOLEAN DEFAULT TRUE,
-  autenticacion_2fa BOOLEAN DEFAULT FALSE,
+  estado_presencia ENUM('en_linea','ausente','ocupado','desconectado') NOT NULL DEFAULT 'desconectado',
+  ultima_actividad TIMESTAMP NULL DEFAULT NULL,
+  force_password_change BOOLEAN NOT NULL DEFAULT FALSE,
   ultimo_acceso TIMESTAMP NULL DEFAULT NULL,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
@@ -73,7 +79,7 @@ CREATE TABLE user_keys (
   public_key TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   expiration_date DATETIME NOT NULL,
-  encryption_type VARCHAR(32) DEFAULT 'aes-256-cbc',
+  encryption_type VARCHAR(32) NOT NULL DEFAULT 'aes-256-gcm-v2',
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -155,11 +161,13 @@ CREATE TABLE visual_config (
   background VARCHAR(20) NOT NULL DEFAULT 'fondo1',
   favicon VARCHAR(255) DEFAULT '../../favicon.ico',
   institution_name VARCHAR(255) DEFAULT 'Firmas Digitales FD',
+  contact_email VARCHAR(254) DEFAULT '',
+  contact_phone VARCHAR(32) DEFAULT '',
   -- Campos para almacenar logo como datos binarios
   logo_data LONGBLOB NULL COMMENT 'Datos binarios del logo',
   logo_mimetype VARCHAR(100) NULL COMMENT 'Tipo MIME del logo (image/png, image/jpeg, etc.)',
   logo_filename VARCHAR(255) NULL COMMENT 'Nombre original del archivo del logo',
-  footer_text TEXT,
+  footer_text TEXT DEFAULT '© 2026 Firmas Digitales FD. Todos los derechos reservados.',
   admin_header_title VARCHAR(255) DEFAULT 'Panel Administrativo',
   updated_by VARCHAR(100) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -218,6 +226,7 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_estado_cuenta ON users(estado_cuenta);
 CREATE INDEX idx_users_organizacion ON users(organizacion);
 CREATE INDEX idx_users_ultimo_acceso ON users(ultimo_acceso);
+CREATE INDEX idx_users_ultima_actividad ON users(ultima_actividad);
 CREATE INDEX idx_users_rol ON users(rol);
 
 -- Índices para tabla user_keys
@@ -254,8 +263,19 @@ INSERT INTO theme_config (id, selected_theme, custom_color, timestamp) VALUES
 (1, 'orange', NULL, UNIX_TIMESTAMP() * 1000);
 
 -- Insertar configuración visual por defecto
-INSERT INTO visual_config (id, background, favicon, institution_name, logo_data, logo_mimetype, logo_filename) VALUES
-(1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', NULL, NULL, NULL);
+INSERT INTO visual_config (
+  id,
+  background,
+  favicon,
+  institution_name,
+  contact_email,
+  contact_phone,
+  logo_data,
+  logo_mimetype,
+  logo_filename,
+  footer_text
+) VALUES
+(1, 'fondo1', '../../favicon.ico', 'Firmas Digitales FD', '', '', NULL, NULL, NULL, '© 2026 Firmas Digitales FD. Todos los derechos reservados.');
 
 -- ====================================
 -- 11. INSERTAR USUARIOS ADMIN Y OWNER
@@ -267,36 +287,28 @@ INSERT INTO users (
     usuario, 
     password, 
     rol,
-    nombre_completo,
     email,
     organizacion,
     biografia,
     cargo,
     departamento,
     grado_academico,
-    zona_horaria,
-    idioma,
     estado_cuenta,
-    notificaciones_email,
-    autenticacion_2fa,
+    force_password_change,
     ultimo_acceso
 ) VALUES (
-    'Administrador',
-    'admin',
-    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
-    'admin',
     'Administrador del Sistema',
+    'admin',
+    '!DISABLED-SEED-ACCOUNT!',
+    'admin',
     'admin@universidad.edu',
     'Universidad Ejemplo',
     'Administrador principal del sistema de firmas digitales. Responsable de la configuración general, gestión de usuarios y mantenimiento del sistema.',
     'Administrador de Sistemas',
     'Tecnología e Informática',
     'Ingeniero de Sistemas',
-    'America/Bogota',
-    'es',
     'activo',
     TRUE,
-    FALSE,
     NOW()
 );
 
@@ -306,36 +318,28 @@ INSERT INTO users (
     usuario,
     password,
     rol,
-    nombre_completo,
     email,
     organizacion,
     biografia,
     cargo,
     departamento,
     grado_academico,
-    zona_horaria,
-    idioma,
     estado_cuenta,
-    notificaciones_email,
-    autenticacion_2fa,
+    force_password_change,
     ultimo_acceso
 ) VALUES (
-    'Owner',
-    'owner',
-    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
-    'owner',
     'Propietario del Sistema',
+    'owner',
+    '!DISABLED-SEED-ACCOUNT!',
+    'owner',
     'owner@universidad.edu',
     'Universidad Ejemplo',
     'Propietario y responsable principal del sistema. Supervisa el desarrollo, implementación y políticas de uso del sistema de firmas digitales.',
     'Director de Proyecto',
     'Administración y Gestión',
     'Doctor en Educación',
-    'America/Bogota',
-    'es',
     'activo',
     TRUE,
-    FALSE,
     NOW()
 );
 
@@ -345,36 +349,26 @@ INSERT INTO users (
     usuario,
     password,
     rol,
-    nombre_completo,
     email,
     organizacion,
     biografia,
     cargo,
     departamento,
     grado_academico,
-    zona_horaria,
-    idioma,
     estado_cuenta,
-    notificaciones_email,
-    autenticacion_2fa,
     ultimo_acceso
 ) VALUES (
-    'Usuario Prueba',
-    'prueba',
-    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
-    'profesor',
     'Usuario de Pruebas del Sistema',
+    'prueba',
+    '!DISABLED-SEED-ACCOUNT!',
+    'profesor',
     'prueba@universidad.edu',
     'Universidad Ejemplo',
     'Usuario de pruebas para testing del sistema de firmas digitales.',
     'Profesor de Pruebas',
     'Departamento de Testing',
     'Licenciado en Informática',
-    'America/Bogota',
-    'es',
     'activo',
-    TRUE,
-    FALSE,
     NOW()
 );
 
@@ -384,132 +378,97 @@ INSERT INTO users (
     usuario,
     password,
     rol,
-    nombre_completo,
     email,
     organizacion,
     biografia,
     cargo,
     departamento,
     grado_academico,
-    zona_horaria,
-    idioma,
     estado_cuenta,
-    notificaciones_email,
-    autenticacion_2fa,
     ultimo_acceso
 ) VALUES
 (
-    'María González',
-    'maria.gonzalez',
-    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
-    'profesor',
     'María González Rodríguez',
+    'maria.gonzalez',
+    '!DISABLED-SEED-ACCOUNT!',
+    'profesor',
     'maria.gonzalez@universidad.edu',
     'Universidad Ejemplo',
     'Profesora de Matemáticas con más de 15 años de experiencia en educación superior.',
     'Profesora Titular',
     'Matemáticas',
     'Doctora en Matemáticas',
-    'America/Bogota',
-    'es',
     'activo',
-    TRUE,
-    FALSE,
     NOW()
 ),
 (
-    'Carlos Rodríguez',
-    'carlos.rodriguez',
-    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
-    'profesor',
     'Carlos Rodríguez Sánchez',
+    'carlos.rodriguez',
+    '!DISABLED-SEED-ACCOUNT!',
+    'profesor',
     'carlos.rodriguez@universidad.edu',
     'Universidad Ejemplo',
     'Profesor de Física especializado en mecánica cuántica y física teórica.',
     'Profesor Asociado',
     'Física',
     'Doctor en Física',
-    'America/Bogota',
-    'es',
     'activo',
-    TRUE,
-    FALSE,
     NOW()
 ),
 (
-    'Ana López',
-    'ana.lopez',
-    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
-    'profesor',
     'Ana López Martínez',
+    'ana.lopez',
+    '!DISABLED-SEED-ACCOUNT!',
+    'profesor',
     'ana.lopez@universidad.edu',
     'Universidad Ejemplo',
     'Profesora de Literatura Hispanoamericana y teoría crítica literaria.',
     'Profesora Titular',
     'Literatura',
     'Doctora en Literatura',
-    'America/Bogota',
-    'es',
     'activo',
-    TRUE,
-    FALSE,
     NOW()
 ),
 (
-    'Ricardo Vega',
-    'ricardo.vega',
-    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
-    'profesor',
     'Dr. Ricardo Antonio Vega Mendoza',
+    'ricardo.vega',
+    '!DISABLED-SEED-ACCOUNT!',
+    'profesor',
     'ricardo.vega@universidad.edu',
     'Universidad Nacional Tecnológica',
     'Doctor en Ingeniería de Sistemas con especialización en desarrollo de software y gestión documental.',
     'Profesor Titular',
     'Ingeniería de Sistemas',
     'Doctor en Ingeniería',
-    'America/Bogota',
-    'es',
     'activo',
-    TRUE,
-    FALSE,
     NOW()
 ),
 (
-    'Laura Sánchez',
-    'laura.sanchez',
-    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
-    'profesor',
     'Laura Sánchez Pérez',
+    'laura.sanchez',
+    '!DISABLED-SEED-ACCOUNT!',
+    'profesor',
     'laura.sanchez@universidad.edu',
     'Universidad Ejemplo',
     'Profesora de Biología especializada en genética molecular.',
     'Profesora Asistente',
     'Biología',
     'Doctora en Biología',
-    'America/Bogota',
-    'es',
     'activo',
-    TRUE,
-    FALSE,
     NOW()
 ),
 (
-    'Pedro Ramírez',
-    'pedro.ramirez',
-    '$2b$10$AMYRUaW9laypULTfHnPCIeQFsWb61dfkx88eh8RheozXQdUMAvZMe',
-    'profesor',
     'Pedro Ramírez Torres',
+    'pedro.ramirez',
+    '!DISABLED-SEED-ACCOUNT!',
+    'profesor',
     'pedro.ramirez@universidad.edu',
     'Universidad Ejemplo',
     'Profesor de Historia Contemporánea y estudios políticos.',
     'Profesor Titular',
     'Historia',
     'Doctor en Historia',
-    'America/Bogota',
-    'es',
     'activo',
-    TRUE,
-    FALSE,
     NOW()
 );
 
@@ -624,7 +583,7 @@ WHERE TABLE_SCHEMA = DATABASE()
 AND TABLE_NAME IN ('users', 'user_keys', 'global_pdf_config', 'theme_config', 'user_preferences', 'user_activity_log', 'visual_config');
 
 SELECT 'USUARIOS CREADOS:' as info;
-SELECT usuario, nombre_completo, email, rol, estado_cuenta
+SELECT usuario, nombre, email, rol, estado_cuenta
 FROM users
 WHERE usuario IN ('admin', 'owner', 'prueba', 'maria.gonzalez', 'carlos.rodriguez', 'ana.lopez', 'ricardo.vega', 'laura.sanchez', 'pedro.ramirez');
 
@@ -650,15 +609,8 @@ FROM global_pdf_config;
 - visual_config (configuración visual global)
 
 ✅ USUARIOS CREADOS:
-- admin / 123 (Administrador del Sistema)
-- owner / 123 (Propietario del Sistema)
-- prueba / 123 (Usuario de Pruebas)
-- maria.gonzalez / 123 (Profesora de Matemáticas)
-- carlos.rodriguez / 123 (Profesor de Física)
-- ana.lopez / 123 (Profesora de Literatura)
-- ricardo.vega / 123 (Dr. Ricardo Antonio Vega Mendoza - Profesor de Ingeniería de Sistemas)
-- laura.sanchez / 123 (Profesora de Biología)
-- pedro.ramirez / 123 (Profesor de Historia)
+- admin y owner se inicializan automáticamente al arrancar la aplicación.
+- Las cuentas de demostración quedan bloqueadas hasta que un owner les asigne una contraseña.
 
 ✅ CARACTERÍSTICAS:
 - Sistema completo de perfiles expandidos
@@ -669,13 +621,12 @@ FROM global_pdf_config;
 - Vistas para consultas frecuentes
 
 🔐 CREDENCIALES DE ACCESO:
-Usuario: admin | Contraseña: 123
-Usuario: owner | Contraseña: 123
-Usuario: prueba | Contraseña: 123
-Usuarios de prueba: maria.gonzalez, carlos.rodriguez, ana.lopez, ricardo.vega, laura.sanchez, pedro.ramirez | Contraseña: 123
+Configura INITIAL_ADMIN_PASSWORD e INITIAL_OWNER_PASSWORD antes del primer arranque.
+Si se omiten, la aplicación genera contraseñas aleatorias y las muestra una sola vez
+en la consola. Ambas cuentas deben cambiarlas al iniciar sesión por primera vez.
 
 ⚠️ IMPORTANTE:
-- Las contraseñas están hasheadas con bcrypt
-- El sistema está listo para producción
+- El SQL por sí solo no habilita ninguna contraseña conocida.
+- Importa este archivo en una base vacía y después inicia o reinicia la aplicación.
 - Todos los campos nuevos tienen valores por defecto apropiados
 */

@@ -70,26 +70,34 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 28px;
+  gap: clamp(12px, 2vw, 24px);
 }
 
-.stat-item {
+.hero-stats .stat-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex: 1 1 0;
+  min-width: 0;
   gap: 4px;
+  padding: 8px 4px;
 }
 
-.stat-number {
-  font-size: 1.5em;
+.hero-stats .stat-number {
+  font-size: clamp(1.05rem, 1.7vw, 1.45rem);
   font-weight: 700;
   color: var(--primary-color);
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
-.stat-label {
-  font-size: 0.9em;
+.hero-stats .stat-label {
+  font-size: clamp(0.74rem, 1vw, 0.88rem);
   color: #64748b;
   font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .stat-divider {
@@ -909,8 +917,22 @@
     grid-template-columns: 1fr;
   }
 
-  .stat-number {
-    font-size: 1.2em;
+  .hero-stats {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .hero-stats .stat-number {
+    font-size: 1rem;
+  }
+
+  .hero-stats .stat-label {
+    font-size: 0.7rem;
+    white-space: normal;
+  }
+
+  .hero-stats .stat-divider {
+    height: 36px;
   }
 
   .section-separator {

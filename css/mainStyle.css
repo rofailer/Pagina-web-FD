@@ -323,7 +323,11 @@ li {
    ========================= */
 
 /* Reset base para todos los botones */
-button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) {
+button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close):not(
+    .mobile-profile-presence-toggle
+  ):not(.mobile-profile-presence-option):not(.profile-presence-button):not(
+    .profile-presence-option
+  ) {
   /* Reset básico */
   margin: 0;
   padding: 0;
@@ -366,7 +370,11 @@ button:not(.clear-btn):not(.change-btn-circular):not(.mobile-menu-close) {
 
 /* Feedback visual en hover */
 button:not(.clear-btn):not(.change-btn-circular):not(
-    .mobile-menu-close
+  .mobile-menu-close
+  ):not(.mobile-profile-presence-toggle):not(
+    .mobile-profile-presence-option
+  ):not(.profile-presence-button):not(
+    .profile-presence-option
   ):hover:not(:disabled) {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
@@ -376,7 +384,11 @@ button:not(.clear-btn):not(.change-btn-circular):not(
 
 /* Feedback visual en active/click */
 button:not(.clear-btn):not(.change-btn-circular):not(
-    .mobile-menu-close
+  .mobile-menu-close
+  ):not(.mobile-profile-presence-toggle):not(
+    .mobile-profile-presence-option
+  ):not(.profile-presence-button):not(
+    .profile-presence-option
   ):active:not(:disabled) {
   transform: translateY(0);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -385,7 +397,11 @@ button:not(.clear-btn):not(.change-btn-circular):not(
 
 /* Estado deshabilitado */
 button:not(.clear-btn):not(.change-btn-circular):not(
-    .mobile-menu-close
+  .mobile-menu-close
+  ):not(.mobile-profile-presence-toggle):not(
+    .mobile-profile-presence-option
+  ):not(.profile-presence-button):not(
+    .profile-presence-option
   ):disabled {
   cursor: not-allowed !important;
   transform: none !important;
@@ -439,17 +455,17 @@ button:not(.clear-btn):not(.change-btn-circular):not(
 
 .navigation-confirm-modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
   opacity: 0;
   visibility: hidden;
-  transition: all 0.3s ease-out;
+  transition:
+    opacity 0.24s ease,
+    visibility 0.24s ease;
 }
 
 .navigation-confirm-modal.show {
@@ -459,26 +475,57 @@ button:not(.clear-btn):not(.change-btn-circular):not(
 
 .navigation-confirm-backdrop {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.56);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
 }
 
 .navigation-confirm-content {
-  background: white;
-  border-radius: 20px;
-  padding: 40px 30px;
+  width: min(100%, 480px);
+  max-width: 480px;
+  padding: 34px 36px 32px;
+  background: var(--surface-raised, #ffffff);
+  border: 1px solid rgba(var(--primary-rgb), 0.2);
+  border-radius: 26px;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-width: 420px;
-  width: 90%;
+  box-shadow:
+    0 28px 75px rgba(15, 23, 42, 0.24),
+    0 8px 24px rgba(var(--primary-rgb), 0.12);
   position: relative;
   z-index: 1;
-  transform: scale(0.9) translateY(20px);
-  transition: all 0.3s ease-out;
-  border-top: 6px solid var(--primary-color);
+  isolation: isolate;
+  overflow: hidden;
+  transform: translateY(18px) scale(0.97);
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
+}
+
+.navigation-confirm-content::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: linear-gradient(
+    90deg,
+    var(--primary-color),
+    var(--secondary-color, var(--primary-color))
+  );
+  z-index: 2;
+}
+
+.navigation-confirm-content::after {
+  content: "";
+  position: absolute;
+  top: -100px;
+  right: -85px;
+  width: 210px;
+  height: 210px;
+  border-radius: 50%;
+  background: rgba(var(--primary-rgb), 0.08);
+  z-index: -1;
+  pointer-events: none;
 }
 
 .navigation-confirm-modal.show .navigation-confirm-content {
@@ -487,69 +534,83 @@ button:not(.clear-btn):not(.change-btn-circular):not(
 
 .navigation-confirm-close {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 40px;
-  height: 40px;
-  background: none !important;
+  top: 18px;
+  right: 18px;
+  width: 38px;
+  height: 38px;
+  background: var(--surface-muted, #f1f5f9) !important;
   box-shadow: none !important;
-  border: none;
+  border: 1px solid var(--theme-border-color, #e2e8f0);
+  border-radius: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666 !important;
+  color: var(--text-secondary-color, #64748b) !important;
   z-index: 8600 !important;
-  transition: all 0.2s ease;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .navigation-confirm-close:hover {
-  color: #333 !important;
-  transform: scale(1.2) !important;
+  color: var(--primary-color) !important;
+  border-color: rgba(var(--primary-rgb), 0.42);
+  background: rgba(var(--primary-rgb), 0.1) !important;
+  transform: translateY(-1px) !important;
 }
 
 .navigation-confirm-icon {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 20px;
-  opacity: 0.9;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6c757d;
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.11);
+  border: 1px solid rgba(var(--primary-rgb), 0.24);
+  border-radius: 24px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 10px 24px rgba(var(--primary-rgb), 0.13);
 }
 
 .navigation-confirm-icon svg {
-  width: 64px !important;
-  height: 64px !important;
+  width: 36px !important;
+  height: 36px !important;
   stroke: currentColor !important;
   fill: none !important;
-  stroke-width: 2 !important;
+  stroke-width: 1.8 !important;
   display: block !important;
 }
 
 .navigation-confirm-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 14px;
 }
 
 .navigation-confirm-header h3 {
-  margin: 16px 0 0 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #333;
+  margin: 0;
+  color: var(--text-color, #0f172a);
+  font-size: clamp(1.28rem, 3vw, 1.55rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
 }
 
 .navigation-confirm-body {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 26px;
 }
 
 .navigation-confirm-body p {
   margin: 0;
-  font-size: 16px;
-  color: #666;
-  line-height: 1.5;
+  color: var(--text-secondary-color, #64748b);
+  font-size: 0.98rem;
+  line-height: 1.65;
 }
 
 .navigation-confirm-actions {
@@ -559,17 +620,20 @@ button:not(.clear-btn):not(.change-btn-circular):not(
 }
 
 .navigation-confirm-title {
-  margin: 0 0 15px 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #333;
+  margin: 0 0 12px;
+  color: var(--text-color, #0f172a);
+  font-size: clamp(1.28rem, 3vw, 1.55rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
 }
 
 .navigation-confirm-message {
-  margin: 0 0 30px 0;
-  font-size: 16px;
-  color: #666;
-  line-height: 1.5;
+  max-width: 390px;
+  margin: 0 auto 26px;
+  color: var(--text-secondary-color, #64748b);
+  font-size: 0.98rem;
+  line-height: 1.65;
 }
 
 .navigation-confirm-buttons {
@@ -578,81 +642,125 @@ button:not(.clear-btn):not(.change-btn-circular):not(
   justify-content: center;
 }
 
-.navigation-confirm-btn {
-  border: none;
-  padding: 12px 30px;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
+.navigation-confirm-btn,
+.navigation-confirm-actions :is(.btn-primary, .btn-secondary) {
+  min-width: 0;
+  min-height: 46px;
+  flex: 1 1 0;
+  padding: 11px 18px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1.25;
   cursor: pointer;
-  transition: all 0.2s ease;
   outline: none;
-  min-width: 120px;
+  box-shadow: none;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
-.navigation-confirm-btn.primary {
-  background: #ef4444;
+.navigation-confirm-btn.primary,
+.navigation-confirm-actions .btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--primary-color),
+    var(--secondary-color, var(--primary-color))
+  );
   color: white;
+  box-shadow: 0 9px 20px rgba(var(--primary-rgb), 0.24);
 }
 
-.navigation-confirm-btn.primary:hover:not(:disabled) {
-  background: #dc2626;
+.navigation-confirm-btn.primary:hover:not(:disabled),
+.navigation-confirm-actions .btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(var(--primary-rgb), 0.32);
+  filter: brightness(1.03);
+}
+
+.navigation-confirm-btn.secondary,
+.navigation-confirm-actions .btn-secondary {
+  color: var(--text-color, #0f172a);
+  background: var(--surface-muted, #f1f5f9);
+  border-color: var(--theme-border-color, #e2e8f0);
+}
+
+.navigation-confirm-btn.secondary:hover:not(:disabled),
+.navigation-confirm-actions .btn-secondary:hover:not(:disabled) {
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.09);
+  border-color: rgba(var(--primary-rgb), 0.36);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-  filter: brightness(1.1);
 }
 
-.navigation-confirm-btn.secondary {
-  background: #6b7280;
-  color: white;
-}
-
-.navigation-confirm-btn.secondary:hover:not(:disabled) {
-  background: #4b5563;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
-  filter: brightness(1.1);
+.navigation-confirm-btn:focus-visible,
+.navigation-confirm-actions :is(.btn-primary, .btn-secondary):focus-visible {
+  outline: 3px solid rgba(var(--primary-rgb), 0.28);
+  outline-offset: 3px;
 }
 
 /* Responsive para modal de confirmación de navegación */
 @media (max-width: 768px) {
+  .navigation-confirm-modal {
+    align-items: flex-end;
+    padding: 14px;
+  }
+
   .navigation-confirm-content {
-    padding: 24px 20px;
-    margin: 16px;
-    max-width: 90%;
+    width: 100%;
+    max-width: 520px;
+    padding: 30px 22px 22px;
+    border-radius: 23px;
   }
 
   .navigation-confirm-icon {
-    width: 48px;
-    height: 48px;
-    margin-bottom: 16px;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 18px;
+    border-radius: 20px;
   }
 
   .navigation-confirm-icon svg {
-    width: 48px !important;
-    height: 48px !important;
-    stroke: currentColor !important;
-    fill: none !important;
-    stroke-width: 2 !important;
-    display: block !important;
+    width: 31px !important;
+    height: 31px !important;
   }
 
   .navigation-confirm-title {
-    font-size: 20px;
+    font-size: 1.25rem;
   }
 
   .navigation-confirm-message {
-    font-size: 14px;
+    margin-bottom: 22px;
+    font-size: 0.9rem;
   }
 
-  .navigation-confirm-buttons {
+  .navigation-confirm-buttons,
+  .navigation-confirm-actions {
     flex-direction: column;
     gap: 8px;
   }
 
-  .navigation-confirm-btn {
+  .navigation-confirm-btn,
+  .navigation-confirm-actions :is(.btn-primary, .btn-secondary) {
     width: 100%;
-    min-width: auto;
+    flex: none;
+  }
+
+  .navigation-confirm-actions .btn-secondary {
+    order: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigation-confirm-modal,
+  .navigation-confirm-content,
+  .navigation-confirm-btn,
+  .navigation-confirm-actions :is(.btn-primary, .btn-secondary) {
+    transition: none;
   }
 }
 

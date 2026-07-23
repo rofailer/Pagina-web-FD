@@ -1,1774 +1,520 @@
-<!DOCTYPE html>
-<html lang="es">
+<!doctype html>
+<html lang="es" data-theme="orange">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Panel Administrativo</title>
-
-    <link rel="stylesheet" href="/admin/css/admin.css" />
-    <link rel="stylesheet" href="/admin/css/admin-shared.css" />
-    <link rel="stylesheet" href="/admin/css/secciones/pdf-config.css" />
-    <link rel="stylesheet" href="/admin/css/secciones/admin-user-management.css" />
-    <link rel="stylesheet" href="/admin/css/admin-responsive.css" />
-    <link rel="stylesheet" href="/admin/css/secciones/general-config.css" />
-    <link rel="stylesheet" href="/admin/css/panelAdmin.css" />
-    <link rel="stylesheet" href="/admin/css/secciones/database.css" />
-    <link rel="stylesheet" href="/admin/css/secciones/backgrounds.css" />
-    <link rel="stylesheet" href="/admin/css/secciones/aval-text-config.css" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Administración | Firmas Digitales FD</title>
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/css/themeSelector.css" />
-    <link rel="stylesheet" href="/css/restoreConfirmModal.css" />
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-
-    <!-- Inicialización temprana del tema - NO aplica tema, solo prepara para themeManager -->
-    <script>
-      (function () {
-        // Solo preparar configuración inicial, NO aplicar tema
-        // themeManager.js se encargará de aplicar el tema correcto
-        const availableThemes = [
-          "orange",
-          "blue",
-          "green",
-          "purple",
-          "red",
-          "teal",
-          "dark",
-        ];
-
-        // Leer configuración actual para que themeManager la considere
-        const storedTheme = localStorage.getItem("selectedTheme");
-        const storedCustomColor = localStorage.getItem("customColor");
-
-        // NO aplicar tema aquí - dejar que themeManager.js lo haga
-        // Esto evita conflictos entre la inicialización y el sistema unificado
-      })();
-
-      // Verificación inicial de autenticación
-      (function () {
-        const urlParams = new URLSearchParams(window.location.search);
-        const tokenId = urlParams.get("tid");
-        const token = localStorage.getItem("token");
-
-        // Si no hay tokenId ni token, redirigir al login
-        if (!tokenId && !token) {
-          console.log(
-            "🔐 No hay token de administración, redirigiendo al login"
-          );
-          window.location.href = "/adminLogin";
-          return;
-        }
-
-        // Si hay token pero no tokenId, dejar que panelAdmin.js valide el token
-        if (!tokenId && token) {
-          console.log(
-            "🔐 Token existente encontrado, validando con panelAdmin.js"
-          );
-          // No redirigir, dejar que panelAdmin.js maneje la validación
-          return;
-        }
-
-        // Si hay tokenId, proceder normalmente (dejará que panelAdmin.js lo maneje)
-        console.log(
-          "🔐 TokenId presente, procediendo con autenticación normal"
-        );
-      })();
-
-      // Script para mejorar formularios administrativos
-      (function() {
-        document.addEventListener('DOMContentLoaded', function() {
-          // Inicializar efectos de foco en grupos de formulario
-          // Esto se maneja ahora desde panelAdmin.js para evitar duplicación
-
-          // Función para toggle de contraseña
-          window.togglePasswordVisibility = function(inputId) {
-            const input = document.getElementById(inputId);
-            const toggleBtn = input.nextElementSibling;
-
-            if (input && toggleBtn) {
-              const isPassword = input.type === 'password';
-              input.type = isPassword ? 'text' : 'password';
-
-              // Actualizar el icono del botón
-              const svg = toggleBtn.querySelector('svg');
-              if (svg) {
-                if (isPassword) {
-                  // Cambiar a icono de "ocultar"
-                  svg.innerHTML = `
-                    <path d="M2.99902 3L20.999 21M9.8433 9.91364C9.32066 10.4536 8.99902 11.1892 8.99902 12C8.99902 13.6569 10.3422 15 11.999 15C12.8215 15 13.5667 14.669 14.1086 14.133M6.49902 6.64715C4.59972 7.90034 3.15305 9.78394 2.45703 12C3.73128 16.0571 7.52159 19 11.9992 19C13.9881 19 15.8414 18.4194 17.3988 17.4184M10.999 5.04939C11.328 5.01673 11.6617 5 11.9992 5C16.4769 5 20.2672 7.94291 21.5414 12C21.2607 12.894 20.8577 13.7338 20.3522 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  `;
-                } else {
-                  // Cambiar a icono de "mostrar"
-                  svg.innerHTML = `
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                  `;
-                }
-              }
-
-              // Sin animación
-            }
-          };
-
-          // ========================================
-          // FUNCIONES PARA TEXTO DEL AVAL CONFIGURABLE
-          // ========================================
-
-          // Función para insertar variables en el textarea
-          window.insertVariable = function(variable) {
-            const textarea = document.getElementById('pdfAvalText');
-            if (!textarea) return;
-
-            const cursorPos = textarea.selectionStart;
-            const textBefore = textarea.value.substring(0, cursorPos);
-            const textAfter = textarea.value.substring(textarea.selectionEnd);
-            
-            // Si es un salto de línea, insertar un salto de línea real
-            let insertText;
-            if (variable === '\\n') {
-              insertText = '\n';
-            } else {
-              insertText = '$' + variable;
-            }
-            
-            // Insertar variable en posición del cursor
-            textarea.value = textBefore + insertText + textAfter;
-            
-            // Restaurar foco y posición del cursor
-            textarea.focus();
-            textarea.selectionStart = textarea.selectionEnd = cursorPos + insertText.length;
-            
-            // Efecto visual de inserción
-            textarea.classList.add('variable-inserted');
-            setTimeout(() => {
-              textarea.classList.remove('variable-inserted');
-            }, 1000);
-
-            // Actualizar vista previa automáticamente
-            updateAvalPreview();
-          };
-
-          // Función para actualizar vista previa del texto
-          window.updateAvalPreview = async function() {
-            const textarea = document.getElementById('pdfAvalText');
-            const preview = document.getElementById('avalTextPreview');
-            
-            if (!textarea || !preview) return;
-
-            let text = textarea.value;
-            
-            if (!text || text.trim() === '') {
-              preview.innerHTML = '<p><em>Escribe texto en el editor para ver la vista previa.</em></p>';
-              return;
-            }
-
-            // Obtener datos reales de configuración
-            let institutionName = 'Universidad Nacional Tecnológica'; // Fallback temporal
-            let locationName = 'UBICACIÓN, PAÍS'; // Fallback temporal
-            
-            try {
-              // Obtener nombre de institución real
-              const institutionResponse = await fetch('/api/config/institution', {
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-              });
-              if (institutionResponse.ok) {
-                const institutionData = await institutionResponse.json();
-                institutionName = institutionData.institution_name || institutionName;
-              }
-              // Obtener ubicación real de la máquina
-              const locationResponse = await fetch('/api/system/location');
-              if (locationResponse.ok) {
-                const locationData = await locationResponse.json();
-                locationName = locationData.location || locationName;
-              }
-            } catch (error) {
-              console.warn('Error obteniendo datos reales:', error);
-            }
-
-            // Datos de ejemplo para la vista previa con valores reales donde sea posible
-            const exampleData = {
-              '$autores': 'Ana Sofía Ramírez Torres, Carlos Miguel Herrera López',
-              '$titulo': 'SISTEMA INTELIGENTE DE GESTIÓN DOCUMENTAL PARA INSTITUCIONES ACADÉMICAS',
-              '$modalidad': 'Ingeniería de Sistemas',
-              '$avalador': 'DR. RICARDO ANTONIO VEGA MENDOZA',
-              '$fecha': new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }),
-              '$institucion': institutionName,
-              '$ubicacion': locationName
-            };
-
-            // Reemplazar variables por valores de ejemplo
-            let previewText = text;
-            Object.keys(exampleData).forEach(variable => {
-              const value = exampleData[variable];
-              const highlightedValue = `<span class="variable-highlight">${value}</span>`;
-              previewText = previewText.replace(new RegExp(variable.replace('$', '\\$'), 'g'), highlightedValue);
-            });
-
-            // Reemplazar saltos de línea (\n o \r\n) por <br>
-            previewText = previewText.replace(/\n/g, '<br>');
-
-            preview.innerHTML = `<p>${previewText}</p>`;
-          };
-
-          // Inicializar vista previa automática
-          const avalTextarea = document.getElementById('pdfAvalText');
-          if (avalTextarea) {
-            // Actualizar vista previa cuando se escriba
-            avalTextarea.addEventListener('input', updateAvalPreview);
-            
-            // Actualizar vista previa inicial
-            setTimeout(updateAvalPreview, 100);
-          }
-        });
-      })();
-    </script>
+    <link rel="stylesheet" href="/admin/css/admin.css" />
+    <link rel="stylesheet" href="/admin/css/secciones/admin-user-management.css?v=20260722-4" />
+    <link rel="stylesheet" href="/admin/css/secciones/pdf-config.css?v=20260722-4" />
+    <link rel="stylesheet" href="/admin/css/secciones/database.css?v=20260722-3" />
+    <link rel="stylesheet" href="/admin/css/panelAdmin.css?v=20260723-1" />
+    <link rel="stylesheet" href="/admin/css/admin-responsive.css?v=20260722-3" />
   </head>
-  <body class="admin-body" data-bg="default">
-    <!-- Header administrativo -->
-    <header class="admin-header">
-      <div class="admin-header-content">
-        <!-- Botón hamburguesa para móvil -->
-        <button
-          class="admin-mobile-toggle"
-          id="mobileToggleBtn"
-          aria-label="Abrir menú"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M3 12h18M3 6h18M3 18h18"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-        </button>
-        <div class="admin-logo">
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 24 24"
-            fill="none"
-            class="admin-logo-icon"
-          >
-            <rect
-              x="3"
-              y="4"
-              width="18"
-              height="18"
-              rx="2"
-              ry="2"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <line
-              x1="16"
-              y1="2"
-              x2="16"
-              y2="6"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <line
-              x1="8"
-              y1="2"
-              x2="8"
-              y2="6"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <line
-              x1="3"
-              y1="10"
-              x2="21"
-              y2="10"
-              stroke="currentColor"
-              stroke-width="2"
-            />
-            <path d="M8 14h.01" stroke="currentColor" stroke-width="2" />
-            <path d="M12 14h.01" stroke="currentColor" stroke-width="2" />
-            <path d="M16 14h.01" stroke="currentColor" stroke-width="2" />
-            <path d="M8 18h.01" stroke="currentColor" stroke-width="2" />
-            <path d="M12 18h.01" stroke="currentColor" stroke-width="2" />
-          </svg>
-          <div class="admin-logo-text">
-            <h1>Panel de Administración</h1>
-            <span id="adminHeaderSubtitle">Sistema de Firmas Digitales</span>
-          </div>
-        </div>
 
-        <div class="admin-header-actions">
-          <!-- Indicador de usuario activo -->
-          <div class="admin-user-indicator" id="admin-user-indicator" style="display: none;">
-            <div class="admin-user-avatar">U</div>
-            <div class="admin-user-info">
-              <span class="admin-user-name">Cargando...</span>
-              <span class="admin-user-role">Verificando...</span>
-            </div>
-            <div class="admin-user-status"></div>
-          </div>
+  <body class="admin-body" data-bg="fondo1">
+    <div class="admin-auth-loading" id="adminAuthLoading" role="status" aria-live="polite">
+      <span class="admin-spinner" aria-hidden="true"></span>
+      <p>Validando acceso administrativo…</p>
+    </div>
 
-          <!-- Botón para volver al sitio principal -->
-          <button
-            class="admin-btn secondary main-site-btn"
-            id="mainSiteBtn"
-            onclick="goToMainSite()"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
-                stroke="currentColor"
-                stroke-width="2"
-              />
-              <polyline
-                points="9,22 9,12 15,12 15,22"
-                stroke="currentColor"
-                stroke-width="2"
-              />
-            </svg>
-            Ir al Sitio
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <!-- Layout principal -->
-    <div class="admin-layout">
-      <!-- Sidebar de navegación -->
-      <aside class="admin-sidebar">
-        <nav class="admin-nav">
-          <div class="admin-nav-section">
-            <h3>Configuración</h3>
+    <div class="admin-shell" id="adminShell" hidden>
+      <header class="admin-header">
+        <div class="admin-header-content">
+          <div class="admin-brand-group">
             <button
-              class="admin-nav-item active"
-              data-tab="configuracion-general"
+              class="admin-icon-button admin-mobile-toggle"
+              id="mobileToggleBtn"
+              type="button"
+              aria-label="Abrir navegación"
+              aria-expanded="false"
+              aria-controls="adminSidebar"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="3"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-              <span>Configuración General</span>
-            </button>
-          </div>
-
-          <div class="admin-nav-section">
-            <h3>Usuarios</h3>
-            <button class="admin-nav-item" data-tab="gestion-usuarios">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <circle
-                  cx="12"
-                  cy="7"
-                  r="4"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-              <span>Gestión de Usuarios</span>
-            </button>
-          </div>
-
-          <div class="admin-nav-section">
-            <h3>Personalización</h3>
-
-            <button class="admin-nav-item" data-tab="temas-colores">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <span>Temas y Colores</span>
+              <span aria-hidden="true">☰</span>
             </button>
 
-            <button class="admin-nav-item" data-tab="configuracion-pdf">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <polyline
-                  points="14,2 14,8 20,8"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <line
-                  x1="16"
-                  y1="13"
-                  x2="8"
-                  y2="13"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <line
-                  x1="16"
-                  y1="17"
-                  x2="8"
-                  y2="17"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <polyline
-                  points="10,9 9,9 8,9"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-              <span>Configuración PDF</span>
-            </button>
+            <span
+              class="admin-brand-logo"
+              role="img"
+              aria-label="Icono de Firmas Digitales"
+            ></span>
+            <div class="admin-brand-copy">
+              <strong>Administración</strong>
+              <span id="adminHeaderSubtitle" data-institution-name>Firmas Digitales FD</span>
+            </div>
           </div>
 
-          <div class="admin-nav-section">
-            <h3>Sistema</h3>
-            <button class="admin-nav-item" data-tab="base-datos">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <ellipse
-                  cx="12"
-                  cy="5"
-                  rx="9"
-                  ry="3"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-              <span>Base de Datos</span>
+          <div class="admin-header-actions">
+            <button class="admin-site-link" type="button" id="mainSiteBtn">
+              <span aria-hidden="true">←</span>
+              <span>Volver al sitio</span>
             </button>
 
-            <button class="admin-nav-item" data-tab="sistema-avanzado">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="3"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-              <span>Sistema Avanzado</span>
-            </button>
-          </div>
-        </nav>
-
-        <!-- Contenedor para botón móvil -->
-        <div class="admin-sidebar-mobile-actions" id="sidebarMobileActions">
-          <button
-            class="admin-btn secondary main-site-btn-mobile"
-            onclick="goToMainSite()"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
-                stroke="currentColor"
-                stroke-width="2"
-              />
-              <polyline
-                points="9,22 9,12 15,12 15,22"
-                stroke="currentColor"
-                stroke-width="2"
-              />
-            </svg>
-            <span>Volver al Sitio</span>
-          </button>
-        </div>
-      </aside>
-
-      <!-- Contenido principal -->
-      <main class="admin-main">
-        <!-- Dashboard de métricas -->
-        <div class="admin-metrics" id="adminMetrics">
-          <div class="metric-card">
-            <div class="metric-icon users">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <circle
-                  cx="12"
-                  cy="7"
-                  r="4"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-            </div>
-            <div class="metric-content">
-              <h4>Usuarios Totales</h4>
-              <span class="metric-value" id="totalUsers">--</span>
-              <span class="metric-change positive">+3 este mes</span>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon documents">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <polyline
-                  points="14,2 14,8 20,8"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <line
-                  x1="16"
-                  y1="13"
-                  x2="8"
-                  y2="13"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <line
-                  x1="16"
-                  y1="17"
-                  x2="8"
-                  y2="17"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-            </div>
-            <div class="metric-content">
-              <h4>Documentos Firmados</h4>
-              <span class="metric-value" id="totalDocs">--</span>
-              <span class="metric-change positive">+12 esta semana</span>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon keys">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-            </div>
-            <div class="metric-content">
-              <h4>Llaves Activas</h4>
-              <span class="metric-value" id="totalKeys">--</span>
-              <span class="metric-change neutral">Sin cambios</span>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon status">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="M9 12l2 2 4-4"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-            </div>
-            <div class="metric-content">
-              <h4>Estado del Sistema</h4>
-              <span class="metric-value text">Óptimo</span>
-              <span class="metric-change positive">100% uptime</span>
+            <div class="admin-session" id="adminUserIndicator" aria-label="Sesión administrativa">
+              <div class="admin-session-avatar" id="adminSessionAvatar" aria-hidden="true">A</div>
+              <div class="admin-session-copy">
+                <strong id="adminSessionName">Administrador</strong>
+                <span id="adminSessionRole">Cargando…</span>
+              </div>
             </div>
           </div>
         </div>
+      </header>
 
-        <!-- Contenido de pestañas -->
-        <div class="admin-content">
-          <!-- TAB 1: CONFIGURACIÓN GENERAL -->
-          <div class="admin-tab-content active" id="tab-configuracion-general">
-            <h2>Configuración General</h2>
-            <p class="tab-description">
-              Configura la identidad principal de tu institución
-            </p>
+      <div class="admin-sidebar-overlay" id="adminSidebarOverlay" hidden></div>
 
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--admin-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 6c3-1 6 1 8 0s6-1 8 0v12c-3 1-6-1-8 0s-6 1-8 0V6z"/>
+      <div class="admin-layout">
+        <aside class="admin-sidebar" id="adminSidebar">
+          <div class="admin-sidebar-intro">
+            <span class="admin-eyebrow">Panel de control</span>
+            <p>Personas, documentos, identidad y mantenimiento del sitio.</p>
+          </div>
+
+          <nav class="admin-nav" aria-label="Secciones administrativas">
+            <button class="admin-nav-item active" type="button" data-tab="gestion-usuarios">
+              <span class="admin-nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="8" r="3.5"></circle>
+                  <path d="M5.5 20c.4-4 2.7-6.2 6.5-6.2s6.1 2.2 6.5 6.2"></path>
                 </svg>
-                Identidad de la Institución
-              </h3>
+              </span>
+              <span>
+                <strong>Usuarios</strong>
+                <small>Cuentas y accesos</small>
+              </span>
+            </button>
 
-              <!-- Contenedor principal con flexbox -->
-              <div class="admin-section-content">
-                <!-- Campo 1: Identidad de la Institución -->
-                <div class="admin-field institution-field">
-                  <div class="field-header">
-                    <h4>Nombre de la Institución</h4>
-                  </div>
-                  <div class="field-content">
-                    <input
-                      type="text"
-                      id="institutionName"
-                      placeholder="Ej: Universidad Nacional"
-                      class="admin-input"
-                      value="Firmas Digitales FD"
-                    />
-                    <span class="admin-input-help">
-                      Este nombre se usará en el header, footer, título de la página y otros elementos del sitio
-                    </span>
-                  </div>
+            <button class="admin-nav-item" type="button" data-tab="configuracion-general">
+              <span class="admin-nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05-2.86 2.86-.05-.05A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.55V21h-4v-.05a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.88.34l-.05.05-2.86-2.86.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3v-4h.05A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.05-.05 2.86-2.86.05.05A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3h4v.05A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.05-.05 2.86 2.86-.05.05A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21v4h-.05a1.7 1.7 0 0 0-1.55 1Z"></path>
+                </svg>
+              </span>
+              <span>
+                <strong>Configuración general</strong>
+                <small>Identidad del sitio</small>
+              </span>
+            </button>
+
+            <button class="admin-nav-item" type="button" data-tab="apariencia">
+              <span class="admin-nav-icon" aria-hidden="true">◐</span>
+              <span>
+                <strong>Apariencia</strong>
+                <small>Temas y fondos</small>
+              </span>
+            </button>
+
+            <button class="admin-nav-item" type="button" data-tab="pdf-aval">
+              <span class="admin-nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M6 3h8l4 4v14H6z"></path>
+                  <path d="M14 3v5h4M9 12h6M9 16h6"></path>
+                </svg>
+              </span>
+              <span>
+                <strong>PDF aval</strong>
+                <small>Plantilla y contenido</small>
+              </span>
+            </button>
+
+            <button class="admin-nav-item" type="button" data-tab="base-datos" data-owner-only>
+              <span class="admin-nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <ellipse cx="12" cy="5.5" rx="7" ry="3"></ellipse>
+                  <path d="M5 5.5v6c0 1.65 3.13 3 7 3s7-1.35 7-3v-6"></path>
+                  <path d="M5 11.5v6c0 1.65 3.13 3 7 3s7-1.35 7-3v-6"></path>
+                </svg>
+              </span>
+              <span>
+                <strong>Base de datos</strong>
+                <small>Consulta y respaldo</small>
+              </span>
+            </button>
+          </nav>
+
+          <div class="admin-sidebar-footer">
+            <p>Los cambios administrativos se validan según tu rol.</p>
+          </div>
+        </aside>
+
+        <main class="admin-main" id="adminMain">
+          <section class="admin-tab-content active" id="tab-gestion-usuarios" data-panel="gestion-usuarios">
+            <div class="admin-page-heading">
+              <div>
+                <span class="admin-eyebrow">Personas y acceso</span>
+                <h1>Gestión de usuarios</h1>
+                <p>Administra cuentas, roles, llaves y estados desde un solo lugar.</p>
+              </div>
+              <button class="admin-btn admin-btn-primary" type="button" id="openCreateUserBtn">
+                <span aria-hidden="true">＋</span>
+                Agregar usuario
+              </button>
+            </div>
+
+            <div class="user-metrics" aria-label="Resumen de usuarios">
+              <article class="user-metric-card">
+                <span class="user-metric-icon metric-users" aria-hidden="true">◎</span>
+                <div>
+                  <strong id="metricTotalUsers">—</strong>
+                  <span>Usuarios</span>
                 </div>
+              </article>
+              <article class="user-metric-card">
+                <span class="user-metric-icon metric-online" aria-hidden="true">●</span>
+                <div>
+                  <strong id="metricOnlineUsers">—</strong>
+                  <span>En línea</span>
+                </div>
+              </article>
+              <article class="user-metric-card">
+                <span class="user-metric-icon metric-keys" aria-hidden="true">⌁</span>
+                <div>
+                  <strong id="metricUsersWithKeys">—</strong>
+                  <span>Con llaves</span>
+                </div>
+              </article>
+              <article class="user-metric-card">
+                <span class="user-metric-icon metric-admins" aria-hidden="true">◆</span>
+                <div>
+                  <strong id="metricAdminUsers">—</strong>
+                  <span>Administradores</span>
+                </div>
+              </article>
+            </div>
 
-                <!-- Campo 2: Favicon -->
-                <div class="admin-field favicon-field">
-                  <div class="field-header">
-                    <h4>Favicon del Sitio</h4>
-                  </div>
-                  <div class="field-content">
-                    <div class="favicon-preview">
-                      <img id="currentFavicon" src="../../../favicon.ico" alt="Favicon actual" />
-                      <span>Favicon Actual</span>
-                    </div>
-                    <div class="favicon-controls">
-                      <label for="faviconUpload">Cambiar favicon:</label>
-                      <button class="visual-config-btn secondary select-file-btn" onclick="selectFaviconFile()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                          <polyline points="7,10 12,15 17,10"/>
-                          <line x1="12" y1="15" x2="12" y2="3"/>
-                        </svg>
-                        Seleccionar Archivo
-                      </button>
-                      <span class="admin-input-help">Formatos: ICO, PNG, JPG (32x32px recomendado)</span>
-                      <input
-                        type="file"
-                        id="faviconUpload"
-                        accept="image/x-icon,image/png,image/jpeg,image/gif"
-                        onchange="handleFaviconChange(event)"
-                        style="display: none;"
-                      />
-                    </div>
+            <div class="users-panel">
+              <div class="users-toolbar">
+                <label class="users-search">
+                  <span class="sr-only">Buscar usuarios</span>
+                  <span class="users-search-icon" aria-hidden="true">⌕</span>
+                  <input
+                    type="search"
+                    id="userSearch"
+                    placeholder="Buscar por nombre, correo o usuario"
+                    autocomplete="off"
+                  />
+                </label>
+
+                <div class="users-filters" aria-label="Filtros de usuarios">
+                  <label>
+                    <span>Rol</span>
+                    <select id="userRoleFilter">
+                      <option value="all">Todos</option>
+                      <option value="owner">Propietario</option>
+                      <option value="admin">Administrador</option>
+                      <option value="user">Usuario</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Presencia</span>
+                    <select id="userPresenceFilter">
+                      <option value="all">Todos</option>
+                      <option value="online">En línea</option>
+                      <option value="away">Ausente</option>
+                      <option value="busy">Ocupado</option>
+                      <option value="offline">Desconectado</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Cuenta</span>
+                    <select id="userAccountFilter">
+                      <option value="all">Todas</option>
+                      <option value="active">Activa</option>
+                      <option value="inactive">Inactiva</option>
+                      <option value="suspended">Suspendida</option>
+                      <option value="pending">Pendiente</option>
+                    </select>
+                  </label>
+                  <button class="admin-icon-button users-refresh" type="button" id="refreshUsersBtn" title="Actualizar usuarios">
+                    <span aria-hidden="true">↻</span>
+                    <span class="sr-only">Actualizar usuarios</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="users-table" aria-live="polite" aria-busy="true">
+                <div class="users-table-header" aria-hidden="true">
+                  <span>Usuario</span>
+                  <span>Rol</span>
+                  <span>Cuenta</span>
+                  <span>Llaves</span>
+                  <span>Acciones</span>
+                </div>
+                <div class="users-list" id="usersList">
+                  <div class="users-loading-state">
+                    <span class="admin-spinner" aria-hidden="true"></span>
+                    <p>Cargando usuarios…</p>
                   </div>
                 </div>
               </div>
             </div>
+          </section>
 
-            <!-- Botón General de Guardar Configuración -->
-            <div class="global-config-actions" style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
-                  <button class="save-global-background" id="saveGeneralConfigBtn" onclick="saveGeneralConfig()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" stroke-width="2"></path>
-                      <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="2"></polyline>
-                      <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="2"></polyline>
-                    </svg>
-                    Guardar Configuración
-                  </button>
-
-                  <button class="reset-background" onclick="resetGeneralConfig()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" fill="none"></path>
-                      <path d="M3 3v5h5" stroke="currentColor" stroke-width="2"></path>
-                    </svg>
-                    Restablecer
-                  </button>
+          <section class="admin-tab-content" id="tab-configuracion-general" data-panel="configuracion-general" hidden>
+            <div class="admin-page-heading">
+              <div>
+                <span class="admin-eyebrow">Identidad</span>
+                <h1>Configuración general</h1>
+                <p>Define los textos principales y datos de contacto del sitio.</p>
+              </div>
             </div>
-          </div>
 
-          <!-- TAB 2: GESTIÓN DE USUARIOS -->
-          <div class="admin-tab-content" id="tab-gestion-usuarios">
-            <h2>Gestión de Usuarios</h2>
-            <p class="tab-description">
-              Administra las cuentas de usuario y sus permisos
-            </p>
+            <form class="settings-card admin-form" id="generalConfigForm">
+              <div class="settings-card-heading">
+                <div>
+                  <h2>Información del sitio</h2>
+                  <p>Estos datos se reutilizan en las áreas públicas.</p>
+                </div>
+              </div>
 
-            <div class="admin-section">
-              <div class="admin-section-header">
-                <h3>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <circle
-                      cx="9"
-                      cy="7"
-                      r="4"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <path
-                      d="M22 21v-2a4 4 0 0 0-3-3.87"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <path
-                      d="M16 3.13a4 4 0 0 1 0 7.75"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                  </svg>
-                  Crear Nuevo Usuario
-                </h3>
-                <button class="admin-btn primary" onclick="toggleUserForm()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <line
-                      x1="12"
-                      y1="5"
-                      x2="12"
-                      y2="19"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <line
-                      x1="5"
-                      y1="12"
-                      x2="19"
-                      y2="12"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                  </svg>
-                  Nuevo Usuario
+              <div class="settings-grid">
+                <label class="admin-field admin-field-wide">
+                  <span>Nombre de la institución</span>
+                  <input type="text" id="siteTitle" name="siteTitle" maxlength="120" required />
+                  <small>Este nombre se mostrará en el encabezado, el acceso administrativo, el tutorial, el pie de página y los documentos.</small>
+                </label>
+                <label class="admin-field">
+                  <span>Correo de contacto</span>
+                  <input type="email" id="contactEmail" name="contactEmail" maxlength="254" />
+                </label>
+                <label class="admin-field">
+                  <span>Teléfono de contacto</span>
+                  <input type="tel" id="contactPhone" name="contactPhone" maxlength="32" />
+                </label>
+                <div class="site-icon-field admin-field-wide" aria-labelledby="faviconHeading">
+                  <div class="site-icon-copy">
+                    <span id="faviconHeading">Icono del sitio</span>
+                    <small>Usa una imagen cuadrada en formato ICO, PNG o JPG.</small>
+                  </div>
+                  <div class="site-icon-editor">
+                    <img class="favicon-preview" id="currentFavicon" src="/favicon.ico" alt="Icono actual del sitio" />
+                    <div class="site-icon-actions">
+                      <label class="admin-btn admin-btn-secondary" for="faviconUpload">Seleccionar imagen</label>
+                      <input class="sr-only" type="file" id="faviconUpload" accept="image/x-icon,image/png,image/jpeg,image/gif" />
+                      <button class="admin-btn admin-btn-primary" type="button" id="uploadFaviconBtn" disabled>Guardar icono</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="settings-actions">
+                <button class="admin-btn admin-btn-primary" type="submit">Guardar configuración</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="admin-tab-content" id="tab-apariencia" data-panel="apariencia" hidden>
+            <div class="admin-page-heading">
+              <div>
+                <span class="admin-eyebrow">Personalización</span>
+                <h1>Apariencia</h1>
+                <p>Elige el color y el fondo que verán todos los usuarios.</p>
+              </div>
+            </div>
+
+            <section class="appearance-card" aria-labelledby="themesHeading">
+              <div class="settings-card-heading">
+                <div>
+                  <h2 id="themesHeading">Tema de color</h2>
+                  <p>El tema se aplica inmediatamente en todo el sitio.</p>
+                </div>
+              </div>
+
+              <div class="theme-grid" id="themeGrid">
+                <button class="theme-choice" type="button" data-theme-option="orange">
+                  <span class="theme-swatch swatch-orange" aria-hidden="true"></span>
+                  <strong>Naranja</strong>
+                  <small>Cálido y cercano</small>
+                </button>
+                <button class="theme-choice" type="button" data-theme-option="blue">
+                  <span class="theme-swatch swatch-blue" aria-hidden="true"></span>
+                  <strong>Azul</strong>
+                  <small>Clásico y confiable</small>
+                </button>
+                <button class="theme-choice" type="button" data-theme-option="green">
+                  <span class="theme-swatch swatch-green" aria-hidden="true"></span>
+                  <strong>Verde</strong>
+                  <small>Sereno y natural</small>
+                </button>
+                <button class="theme-choice" type="button" data-theme-option="purple">
+                  <span class="theme-swatch swatch-purple" aria-hidden="true"></span>
+                  <strong>Violeta</strong>
+                  <small>Creativo y distintivo</small>
+                </button>
+                <button class="theme-choice" type="button" data-theme-option="teal">
+                  <span class="theme-swatch swatch-teal" aria-hidden="true"></span>
+                  <strong>Turquesa</strong>
+                  <small>Fresco y técnico</small>
+                </button>
+                <button class="theme-choice theme-choice-dark" type="button" data-theme-option="dark">
+                  <span class="theme-swatch swatch-dark" aria-hidden="true"></span>
+                  <strong>Modo oscuro</strong>
+                  <small>Menos brillo, más contraste</small>
                 </button>
               </div>
 
-              <!-- Formulario de creación de usuario (oculto por defecto) -->
-              <div
-                class="user-form-container"
-                id="userFormContainer"
-                style="display: none"
-              >
-                <form class="admin-form" id="createUserForm">
-                  <div class="admin-form-grid">
-                    <div class="admin-form-group">
-                      <label for="userFullName">Nombre Completo *</label>
-                      <input
-                        type="text"
-                        id="userFullName"
-                        name="name"
-                        required
-                        class="admin-input"
-                        placeholder="Juan Pérez García"
-                      />
-                    </div>
-
-                    <div class="admin-form-group">
-                      <label for="userIdNumber">Número de ID *</label>
-                      <input
-                        type="text"
-                        id="userIdNumber"
-                        name="idNumber"
-                        required
-                        class="admin-input"
-                        placeholder="12345678"
-                      />
-                    </div>
-
-                    <div class="admin-form-group">
-                      <label for="userName">Nombre de Usuario *</label>
-                      <input
-                        type="text"
-                        id="userName"
-                        name="username"
-                        required
-                        class="admin-input"
-                        placeholder="jperez"
-                      />
-                      <span class="admin-input-help"
-                        >Solo letras, números y guiones bajos</span
-                      >
-                    </div>
-
-                    <div class="admin-form-group">
-                      <label for="userPassword">Contraseña *</label>
-                      <div class="password-input-container">
-                        <input
-                          type="password"
-                          id="userPassword"
-                          name="password"
-                          required
-                          class="admin-input"
-                          placeholder="••••••••"
-                        />
-                        <button
-                          type="button"
-                          class="password-toggle"
-                          onclick="togglePasswordVisibility('userPassword')"
-                        >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                          >
-                            <path
-                              d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                              stroke="currentColor"
-                              stroke-width="2"
-                            />
-                            <circle
-                              cx="12"
-                              cy="12"
-                              r="3"
-                              stroke="currentColor"
-                              stroke-width="2"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div class="admin-form-group">
-                      <label for="userRole">Rol del Usuario *</label>
-                      <select id="userRole" name="role" required class="admin-select">
-                        <option value="">Seleccionar rol...</option>
-                        <option value="user">Usuario</option>
-                        <option value="admin">Administrador</option>
-                        <option value="owner">Propietario</option>
-                      </select>
-                      <span class="admin-input-help"
-                        >Los administradores tienen acceso completo al
-                        sistema</span
-                      >
-                    </div>
-
-                    <div class="admin-form-group">
-                      <label for="userEmail">Correo Electrónico *</label>
-                      <input
-                        type="email"
-                        id="userEmail"
-                        name="email"
-                        required
-                        class="admin-input"
-                        placeholder="usuario@universidad.edu"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="admin-form-actions">
-                    <button type="submit" class="admin-btn success">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <path
-                          d="M20 6L9 17l-5-5"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        />
-                      </svg>
-                      Crear Usuario
-                    </button>
-                    <button
-                      type="button"
-                      class="admin-btn secondary"
-                      onclick="cancelUserForm()"
-                    >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <line
-                          x1="18"
-                          y1="6"
-                          x2="6"
-                          y2="18"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        />
-                        <line
-                          x1="6"
-                          y1="6"
-                          x2="18"
-                          y2="18"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        />
-                      </svg>
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              <!-- Lista de usuarios existentes -->
-              <div class="users-list-container">
-                <h4>Usuarios Existentes</h4>
-                <div class="users-list" id="usersList">
-                  <!-- Los usuarios se cargarán dinámicamente -->
+              <div class="custom-color-row">
+                <div>
+                  <strong>Color personalizado</strong>
+                  <small>Usa un color hexadecimal para crear tu propia variante.</small>
+                </div>
+                <div class="custom-color-controls">
+                  <input type="color" id="customThemeColor" value="#ff9545" aria-label="Color personalizado" />
+                  <input type="text" id="customThemeHex" value="#FF9545" maxlength="7" aria-label="Código hexadecimal" />
+                  <button class="admin-btn admin-btn-secondary" type="button" id="applyCustomThemeBtn">Aplicar</button>
                 </div>
               </div>
-            </div>
-          </div>
+            </section>
 
-          <!-- TAB 3: PERSONALIZACIÓN VISUAL -->
-          <div class="admin-tab-content" id="tab-temas-colores">
-            <h2>Temas y Colores</h2>
-            <p class="tab-description">
-              Configura la apariencia y temas del sitio web. Los cambios se
-              aplicarán globalmente para todos los usuarios.
-            </p>
-
-            <!-- Sistema de Temas Dinámicos -->
-            <div class="admin-theme-selector">
-              <div class="theme-control-section">
-                <div class="theme-control-header">
-                  <svg
-                    class="theme-icon"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="5"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <path
-                      d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                  </svg>
-                  <h3>Temas Predefinidos</h3>
-                </div>
-
-                <div class="theme-grid" id="adminThemeGrid">
-                  <div class="theme-option-card" data-theme="orange">
-                    <div
-                      class="theme-color-preview"
-                      style="background: #ff9545"
-                    ></div>
-                    <span class="theme-name">Naranja</span>
-                  </div>
-
-                  <div class="theme-option-card" data-theme="blue">
-                    <div
-                      class="theme-color-preview"
-                      style="background: #3b82f6"
-                    ></div>
-                    <span class="theme-name">Azul</span>
-                  </div>
-
-                  <div class="theme-option-card" data-theme="green">
-                    <div
-                      class="theme-color-preview"
-                      style="background: #10b981"
-                    ></div>
-                    <span class="theme-name">Verde</span>
-                  </div>
-
-                  <div class="theme-option-card" data-theme="purple">
-                    <div
-                      class="theme-color-preview"
-                      style="background: #8b5cf6"
-                    ></div>
-                    <span class="theme-name">Morado</span>
-                  </div>
-
-                  <div class="theme-option-card" data-theme="red">
-                    <div
-                      class="theme-color-preview"
-                      style="background: #ef4444"
-                    ></div>
-                    <span class="theme-name">Rojo</span>
-                  </div>
-
-                  <div class="theme-option-card" data-theme="teal">
-                    <div
-                      class="theme-color-preview"
-                      style="background: #14b8a6"
-                    ></div>
-                    <span class="theme-name">Teal</span>
-                  </div>
-                </div>
-
-                <!-- Color Personalizado -->
-                <div class="custom-color-section">
-                  <div class="custom-color-header">
-                    <h4>Color Personalizado</h4>
-                    <p class="custom-color-description">
-                      Elige un color personalizado para tu sitio web
-                    </p>
-                  </div>
-
-                  <div class="custom-color-input-group">
-                    <div class="color-input-wrapper">
-                      <input
-                        type="color"
-                        id="customColorPicker"
-                        class="custom-color-input"
-                        value="#ff9545"
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      id="hexColorInput"
-                      class="hex-input"
-                      value="#ff9545"
-                      placeholder="#000000"
-                      maxlength="7"
-                    />
-                    <button class="apply-custom-btn" id="applyCustomColor">
-                      Aplicar
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Acciones -->
-                <div class="theme-actions" style="display: flex; gap: 1rem; justify-content: flex-end;">
-                  <button class="save-global-theme" id="saveGlobalTheme">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" stroke-width="2"/>
-                      <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="2"/>
-                      <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    Guardar Configuración
-                  </button>
-                  <button class="reset-theme" id="resetThemeBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" fill="none"/>
-                      <path d="M3 3v5h5" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    Restablecer
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Sistema de Backgrounds -->
-            <div class="background-selector">
-              <div class="background-control-section">
-                <div class="background-control-header">
-                  <svg
-                    class="background-icon"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <rect
-                      x="3"
-                      y="3"
-                      width="18"
-                      height="18"
-                      rx="2"
-                      ry="2"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <circle
-                      cx="9"
-                      cy="9"
-                      r="2"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                    <path
-                      d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    />
-                  </svg>
-                  <h3>Backgrounds del Sitio</h3>
-                </div>
-
-                <!-- Grid de opciones de background - Estilos aplicados en admin.css -->
-                <div class="background-grid">
-                  <div class="background-option-card" data-bg="fondo1">
-                    <div class="background-preview">
-                      <img
-                        src="../../../recursos/Fondo.jpg"
-                        alt="Background 1"
-                        class="background-image"
-                      />
-                    </div>
-                    <span class="background-name">Fondo Principal</span>
-                  </div>
-
-                  <div class="background-option-card" data-bg="fondo2">
-                    <div class="background-preview">
-                      <img
-                        src="../../../recursos/Fondo2.jpg"
-                        alt="Background 2"
-                        class="background-image"
-                      />
-                    </div>
-                    <span class="background-name">Fondo Secundario</span>
-                  </div>
-                </div>
-
-                <!-- Acciones de Background -->
-                <div class="background-actions" style="display: flex; gap: 1rem; justify-content: flex-end;">
-                  <button class="save-global-background" id="saveGlobalBackground">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" stroke-width="2"/>
-                      <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="2"/>
-                      <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    Guardar Configuración
-                  </button>
-                  <button class="reset-background" id="resetBackgroundBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" fill="none"/>
-                      <path d="M3 3v5h5" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    Restablecer
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- TAB 4: CONFIGURACIÓN PDF -->
-          <div class="admin-tab-content" id="tab-configuracion-pdf">
-            <h2>Configuración de PDFs</h2>
-            <p class="tab-description">
-              Personaliza las plantillas y configuraciones de documentos PDF con opciones avanzadas
-            </p>
-
-            <!-- SECCIÓN 1: PLANTILLA PRINCIPAL -->
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <polyline
-                    points="14,2 14,8 20,8"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <line
-                    x1="16"
-                    y1="13"
-                    x2="8"
-                    y2="13"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <line
-                    x1="16"
-                    y1="17"
-                    x2="8"
-                    y2="17"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Plantilla Principal
-              </h3>
-
-              <div class="admin-form-grid">
-                <div class="admin-form-group">
-                  <label for="pdfSelectedTemplate">Plantilla Seleccionada</label>
-                  <select id="pdfSelectedTemplate" class="admin-select">
-                    <option value="clasico">Diseño Clásico</option>
-                    <option value="moderno">Diseño Moderno</option>
-                    <option value="minimalista">Diseño Minimalista</option>
-                    <option value="elegante">Diseño Elegante</option>
-                    <option value="custom">Personalizado</option>
-                  </select>
-                  <span class="admin-input-help">Elige la plantilla base para todos los PDFs</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- SECCIÓN 2: FUENTE Y COLOR GENERAL -->
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M4 7V4h16v3M9 20h6M12 4v16" stroke="currentColor" stroke-width="2"/>
-                </svg>
-                Fuente y Color General
-              </h3>
-              <div class="admin-form-grid">
-                <div class="admin-form-group">
-                  <label for="pdfGeneralFont">Fuente General</label>
-                  <select id="pdfGeneralFont" class="admin-select">
-                    <option value="Helvetica">Helvetica</option>
-                    <option value="Times-Roman">Times Roman</option>
-                    <option value="Courier">Courier</option>
-                  </select>
-                  <span class="admin-input-help">Fuente única para todo el documento PDF</span>
-                </div>
-                <div class="admin-form-group">
-                  <label for="pdfGeneralColor">Color de Fuente</label>
-                  <input type="color" id="pdfGeneralColor" class="admin-input color-input" value="#1f2937" />
-                  <span class="admin-input-help">Color general de la fuente del PDF</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- SECCIÓN 3: TEXTO DEL AVAL -->
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M4 7V4h16v3M9 20h6M12 4v16" stroke="currentColor" stroke-width="2"/>
-                </svg>
-                Texto del Aval
-              </h3>
-              <div class="admin-form-grid">
-                <div class="admin-form-group full-width">
-                  <label for="pdfAvalText">Texto del Aval</label>
-                  <textarea id="pdfAvalText" class="admin-input" rows="6" placeholder="Escribe aquí el texto del aval..."></textarea>
-                  <span class="admin-input-help">
-                    Texto principal que aparecerá en el PDF del aval. Utiliza las variables dinámicas disponibles.
-                  </span>
-                </div>
-                <div class="admin-form-group full-width">
-                  <h4>Variables Dinámicas Disponibles</h4>
-                  <div class="variables-grid">
-                    <div class="variable-item" onclick="insertVariable('autores')">
-                      <code>autores</code>
-                      <span>Nombres de los autores del trabajo</span>
-                    </div>
-                    <div class="variable-item" onclick="insertVariable('titulo')">
-                      <code>titulo</code>
-                      <span>Título del trabajo de grado</span>
-                    </div>
-                    <div class="variable-item" onclick="insertVariable('modalidad')">
-                      <code>modalidad</code>
-                      <span>Modalidad de grado (ej: Programa de Ingeniería)</span>
-                    </div>
-                    <div class="variable-item" onclick="insertVariable('avalador')">
-                      <code>avalador</code>
-                      <span>Nombre de quien avala el documento</span>
-                    </div>
-                    <div class="variable-item" onclick="insertVariable('fecha')">
-                      <code>fecha</code>
-                      <span>Fecha actual del documento</span>
-                    </div>
-                    <div class="variable-item" onclick="insertVariable('institucion')">
-                      <code>institucion</code>
-                      <span>Nombre de la institución</span>
-                    </div>
-                    <div class="variable-item" onclick="insertVariable('ubicacion')">
-                      <code>ubicacion</code>
-                      <span>Ubicación donde se emite el documento</span>
-                    </div>
-                    <div class="variable-item salto-linea" onclick="insertVariable('\\n')">
-                      <code>Salto de línea</code>
-                      <span>Inserta un salto de línea real en el texto. Se mostrará tanto en la vista previa como en el PDF generado.</span>
-                    </div>
-                  </div>
-                  <span class="admin-input-help">
-                    Haz clic en cualquier variable para insertarla en el texto del aval.
-                  </span>
-                </div>
-                <div class="admin-form-group full-width">
-                  <div class="text-preview-section">
-                    <h4>Vista Previa del Texto</h4>
-                    <div class="text-preview" id="avalTextPreview">
-                      <p>La vista previa aparecerá aquí con las variables reemplazadas por valores de ejemplo.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            
-            <!-- SECCIÓN 7: LOGO INSTITUCIONAL -->
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect
-                    x="3"
-                    y="3"
-                    width="18"
-                    height="18"
-                    rx="2"
-                    ry="2"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <circle
-                    cx="9"
-                    cy="9"
-                    r="2"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <path
-                    d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Logo Institucional
-              </h3>
-
-              <div class="admin-form-grid">
-                <div class="admin-form-group full-width">
-                  <div class="logo-preview-section">
-                    <label>Vista Previa del Logo</label>
-                    <div class="logo-preview-container">
-                      <img id="pdfLogoPreview" src="" alt="Logo actual" style="display:none; max-width:120px; max-height:120px;" />
-                      <div class="logo-placeholder" id="pdfLogoPlaceholder" style="display:flex; align-items:center; justify-content:center; flex-direction:column;">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="1" opacity="0.3"/>
-                          <circle cx="9" cy="9" r="2" stroke="currentColor" stroke-width="1" opacity="0.5"/>
-                          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" stroke="currentColor" stroke-width="1" opacity="0.5"/>
-                        </svg>
-                        <p>Logo no encontrado</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="admin-form-group full-width">
-                  <label for="pdfLogoPath">Seleccionar Logo</label>
-                  <div class="file-input-container">
-                    <input
-                      type="file"
-                      id="pdfLogoPath"
-                      class="file-input-hidden"
-                      accept="image/*"
-                    />
-                    <label for="pdfLogoPath" class="file-input-label">
-                      <svg class="file-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" stroke="currentColor" stroke-width="2"/>
-                        <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
-                        <circle cx="10" cy="13" r="2" stroke="currentColor" stroke-width="2"/>
-                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" stroke="currentColor" stroke-width="2"/>
-                      </svg>
-                      <span class="file-input-text">Seleccionar imagen</span>
-                      <span class="file-input-button">Examinar</span>
-                    </label>
-                  </div>
-                  <span class="admin-input-help">Selecciona un archivo de imagen (PNG, JPG, SVG) para usar como logo en los PDFs</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- ACCIONES -->
-            <div class="admin-actions" style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
-              <button class="save-global-background" id="savePdfConfigBtn" onclick="savePdfConfig()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" stroke-width="2"></path>
-                  <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="2"></polyline>
-                  <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="2"></polyline>
-                </svg>
-                Guardar Configuración
-              </button>
-              <button class="reset-background" onclick="resetPdfConfig()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" fill="none"></path>
-                  <path d="M3 3v5h5" stroke="currentColor" stroke-width="2"></path>
-                </svg>
-                Restablecer
-              </button>
-            </div>
-          </div>
-
-          <!-- TAB 5: BASE DE DATOS -->
-          <div class="admin-tab-content active" id="tab-base-datos">
-            <h2>Administración de Base de Datos</h2>
-            <p class="tab-description">
-              Monitorea y administra la base de datos del sistema con comandos avanzados.
-            </p>
-
-            <!-- ADMINISTRACIÓN DE BASE DE DATOS -->
-            <div class="db-main-section">
-              <!-- PANEL IZQUIERDO: COMANDOS -->
-              <div class="db-operations-panel">
-                <!-- Header -->
-                <div class="db-section-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <ellipse cx="12" cy="5" rx="8" ry="3" stroke="currentColor" stroke-width="2"/>
-                    <path d="M4 5v6c0 2.5 3.5 4.5 8 4.5s8-2 8-4.5V5" stroke="currentColor" stroke-width="2"/>
-                    <path d="M4 11v6c0 2.5 3.5 4.5 8 4.5s8-2 8-4.5v-6" stroke="currentColor" stroke-width="2"/>
-                  </svg>
-                  <h3>Base de Datos</h3>
-                </div>
-
-                <!-- Estado de conexión -->
-                <div class="db-status-section">
-                  <div class="db-status-card" id="dbStatusCard">
-                    <div class="db-status-layout">
-                      <div class="db-status-info">
-                        <div class="db-status-details">
-                          <h5 id="dbStatusTitle">
-                            <span>Verificando...</span>
-                            <div class="db-status-indicator" id="dbStatusIndicator"></div>
-                          </h5>
-                          <p id="dbStatusDetails">Conectando a la base de datos</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Comandos -->
-                <div class="db-commands-section">
-                  <h4>Comandos</h4>
-                  <div class="db-commands-grid">
-                    <button class="db-cmd-btn" onclick="adminPanel.testDatabaseConnection()" title="Probar conexión">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" stroke="currentColor" stroke-width="2"/>
-                      </svg>
-                      <span>Probar</span>
-                    </button>
-
-                    <button class="db-cmd-btn" id="backupDbBtn" onclick="adminPanel.backupDatabase()" title="Crear respaldo">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2"/>
-                        <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2"/>
-                        <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2"/>
-                      </svg>
-                      <span>Backup</span>
-                    </button>
-
-                    <button class="db-cmd-btn" onclick="adminPanel.runDbCommand('reset')" title="Reiniciar datos">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <polyline points="23,4 23,10 17,10" stroke="currentColor" stroke-width="2"/>
-                        <polyline points="1,20 1,14 7,14" stroke="currentColor" stroke-width="2"/>
-                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2"/>
-                      </svg>
-                      <span>Reset</span>
-                    </button>
-
-                    <button class="db-cmd-btn" onclick="adminPanel.restoreDatabase()" title="Restaurar desde backup">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2"/>
-                        <polyline points="17,8 12,3 7,8" stroke="currentColor" stroke-width="2"/>
-                        <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2"/>
-                      </svg>
-                      <span>Restaurar</span>
-                    </button>
-
-                    <button class="db-cmd-btn" onclick="adminPanel.runDbCommand('status')" title="Ver estado">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                        <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2"/>
-                      </svg>
-                      <span>Estado</span>
-                    </button>
-                  </div>
+            <section class="appearance-card" aria-labelledby="backgroundHeading">
+              <div class="settings-card-heading">
+                <div>
+                  <h2 id="backgroundHeading">Fondo del sitio</h2>
+                  <p>Selecciona una de las composiciones visuales disponibles.</p>
                 </div>
               </div>
 
-              <!-- PANEL CENTRAL: RESULTADOS -->
-              <div class="db-results-panel">
-                <!-- Header simplificado -->
-                <div class="db-viewer-header">
-                  <h3>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                      <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="2"/>
-                      <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="2"/>
-                      <line x1="6" y1="8" x2="6" y2="8" stroke="currentColor" stroke-width="2"/>
-                      <line x1="10" y1="8" x2="10" y2="8" stroke="currentColor" stroke-width="2"/>
-                      <line x1="14" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="2"/>
-                      <line x1="18" y1="8" x2="18" y2="8" stroke="currentColor" stroke-width="2"/>
-                      <line x1="6" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="2"/>
-                      <line x1="10" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="2"/>
-                      <line x1="14" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="2"/>
-                      <line x1="18" y1="12" x2="18" y2="12" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    Resultados
-                  </h3>
-                  <div class="action-buttons">
-                    <button class="clear-btn" onclick="adminPanel.clearResults()" title="Limpiar">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
-                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
-                      </svg>
-                      <span>Limpiar</span>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Contenido directo -->
-                <div class="results-content" id="resultsContent">
-                  <div class="no-results">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
-                      <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
-                      <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
-                      <line x1="6" y1="8" x2="18" y2="8" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
-                      <line x1="6" y1="12" x2="18" y2="12" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
-                      <circle cx="9" cy="10" r="1" fill="currentColor" opacity="0.5"/>
-                      <circle cx="15" cy="10" r="1" fill="currentColor" opacity="0.5"/>
-                      <circle cx="12" cy="14" r="1" fill="currentColor" opacity="0.5"/>
-                    </svg>
-                    <p>Selecciona una tabla para ver sus datos</p>
-                  </div>
-                </div>
-
-                <!-- Resultados de comandos -->
-                <div class="db-command-results" id="dbResultsSection" style="display: none">
-                  <div class="db-results-header">
-                    <h4>Información de Tablas</h4>
-                  </div>
-                  <div class="db-results-content" id="dbResultsContent">
-                    <div class="db-loading">
-                      <div class="spinner"></div>
-                      <span>Ejecutando comando...</span>
-                    </div>
-                  </div>
-                </div>
+              <div class="background-grid" id="backgroundGrid">
+                <button class="background-option-card" type="button" data-bg="fondo1">
+                  <span class="background-preview preview-fondo1" aria-hidden="true"></span>
+                  <span><strong>Fondo claro</strong><small>Ondas suaves en tonos cálidos</small></span>
+                </button>
+                <button class="background-option-card" type="button" data-bg="fondo2">
+                  <span class="background-preview preview-fondo2" aria-hidden="true"></span>
+                  <span><strong>Fondo alternativo</strong><small>Composición clara con profundidad</small></span>
+                </button>
+                <button class="background-option-card" type="button" data-bg="fondoOscuro">
+                  <span class="background-preview preview-fondo-oscuro" aria-hidden="true"></span>
+                  <span><strong>Fondo oscuro</strong><small>La misma temática para ambientes oscuros</small></span>
+                </button>
               </div>
 
-              <!-- PANEL DERECHO: TABLAS -->
-              <div class="db-tables-panel">
-                <!-- Header simplificado -->
-                <div class="db-viewer-header">
-                  <h3>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                      <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="2"/>
-                      <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    Tablas
-                  </h3>
-                  <button class="refresh-btn" onclick="adminPanel.refreshTables()" title="Actualizar">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                      <polyline points="23,4 23,10 17,10" stroke="currentColor" stroke-width="2"/>
-                      <polyline points="1,20 1,14 7,14" stroke="currentColor" stroke-width="2"/>
-                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    <span>Refresh</span>
-                  </button>
-                </div>
-
-                <!-- Lista directa -->
-                <div class="tables-list" id="tablesList">
-                  <div class="db-loading">
-                    <div class="spinner"></div>
-                    <span>Cargando...</span>
-                  </div>
-                </div>
+              <div class="settings-actions">
+                <button class="admin-btn admin-btn-secondary" type="button" id="resetBackgroundBtn">Restablecer fondo</button>
+                <button class="admin-btn admin-btn-primary" type="button" id="saveGlobalBackground">Guardar fondo</button>
               </div>
-            </div>
+            </section>
+          </section>
 
-          <!-- TAB 6: SISTEMA AVANZADO -->
-          <div class="admin-tab-content" id="tab-sistema-avanzado">
-            <h2>Sistema Avanzado</h2>
-            <p class="tab-description">
-              Configuraciones avanzadas y logs del sistema
-            </p>
+          <section class="admin-tab-content" id="tab-pdf-aval" data-panel="pdf-aval" hidden>
+            <div id="pdfAdminTool"></div>
+          </section>
 
-            <div class="admin-section">
-              <h3>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <polyline
-                    points="14,2 14,8 20,8"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <line
-                    x1="16"
-                    y1="13"
-                    x2="8"
-                    y2="13"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                  <line
-                    x1="16"
-                    y1="17"
-                    x2="8"
-                    y2="17"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                Logs de Actividad
-              </h3>
-
-              <div class="logs-container">
-                <div class="logs-header">
-                  <div class="logs-filters">
-                    <select class="admin-select" id="logFilter">
-                      <option value="all">Todas las actividades</option>
-                      <option value="admin">Solo administrativas</option>
-                      <option value="user">Solo usuarios</option>
-                      <option value="system">Solo sistema</option>
-                    </select>
-                    <button class="admin-btn secondary" onclick="refreshLogs()">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <polyline
-                          points="23,4 23,10 17,10"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        />
-                        <polyline
-                          points="1,20 1,14 7,14"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        />
-                        <path
-                          d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        />
-                      </svg>
-                      Actualizar
-                    </button>
-                  </div>
-                </div>
-                <div class="logs-list" id="systemLogs">
-                  <!-- Los logs se cargan dinámicamente -->
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-
-    <!-- Modal de confirmación -->
-    <div class="admin-modal" id="confirmModal" style="display: none">
-      <div class="admin-modal-content">
-        <div class="admin-modal-header">
-          <h3 id="confirmModalTitle">Confirmar Acción</h3>
-          <button class="admin-modal-close" onclick="closeConfirmModal()">
-            &times;
-          </button>
-        </div>
-        <div class="admin-modal-body">
-          <p id="confirmModalMessage">
-            ¿Estás seguro de que quieres realizar esta acción?
-          </p>
-        </div>
-        <div class="admin-modal-footer">
-          <button
-            class="admin-btn danger"
-            id="confirmModalBtn"
-            onclick="executeConfirmedAction()"
-          >
-            Confirmar
-          </button>
-          <button class="admin-btn secondary" onclick="closeConfirmModal()">
-            Cancelar
-          </button>
-        </div>
+          <section class="admin-tab-content" id="tab-base-datos" data-panel="base-datos" data-owner-only hidden>
+            <div id="databaseAdminTool"></div>
+          </section>
+        </main>
       </div>
     </div>
 
-    <!-- Loading overlay -->
-    <div class="admin-loading" id="adminLoading" style="display: none">
-      <div class="admin-loading-content">
-        <div class="admin-spinner"></div>
-        <p>Procesando...</p>
+    <div class="admin-operation-loading" id="adminOperationLoading" hidden role="status" aria-live="polite">
+      <div>
+        <span class="admin-spinner" aria-hidden="true"></span>
+        <p id="adminOperationText">Procesando…</p>
       </div>
     </div>
 
-    <!-- Script de validación de autenticación de máxima seguridad -->
-    <!-- Scripts del sistema administrativo -->
+    <dialog class="admin-dialog" id="userEditorDialog">
+      <form class="admin-dialog-card admin-form" id="userEditorForm">
+        <header class="admin-dialog-header">
+          <div>
+            <span class="admin-eyebrow" id="userEditorEyebrow">Nueva cuenta</span>
+            <h2 id="userEditorTitle">Agregar usuario</h2>
+          </div>
+          <button class="admin-icon-button" type="button" data-close-dialog="userEditorDialog" aria-label="Cerrar">×</button>
+        </header>
+
+        <div class="admin-dialog-body">
+          <div class="settings-grid">
+            <label class="admin-field">
+              <span>Nombre completo</span>
+              <input type="text" id="editorUserName" name="name" minlength="2" maxlength="100" required />
+            </label>
+            <label class="admin-field">
+              <span>Correo electrónico</span>
+              <input type="email" id="editorUserEmail" name="email" maxlength="254" required />
+            </label>
+            <label class="admin-field" id="editorPasswordField">
+              <span>Contraseña temporal</span>
+              <input type="password" id="editorUserPassword" name="password" minlength="10" maxlength="128" autocomplete="new-password" />
+              <small>Debe incluir mayúscula, minúscula, número y símbolo.</small>
+            </label>
+            <label class="admin-field">
+              <span>Rol</span>
+              <select id="editorUserRole" name="role" required>
+                <option value="user">Usuario</option>
+                <option value="admin">Administrador</option>
+                <option value="owner">Propietario</option>
+              </select>
+              <small id="editorRoleHelp">Los permisos se aplican inmediatamente.</small>
+            </label>
+          </div>
+        </div>
+
+        <footer class="admin-dialog-footer">
+          <button class="admin-btn admin-btn-secondary" type="button" data-close-dialog="userEditorDialog">Cancelar</button>
+          <button class="admin-btn admin-btn-primary" type="submit" id="saveUserBtn">Crear usuario</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog class="admin-dialog admin-dialog-small" id="confirmDialog">
+      <div class="admin-dialog-card">
+        <header class="admin-dialog-header">
+          <div>
+            <span class="admin-eyebrow">Confirmación</span>
+            <h2 id="confirmDialogTitle">Confirmar acción</h2>
+          </div>
+          <button class="admin-icon-button" type="button" data-close-dialog="confirmDialog" aria-label="Cerrar">×</button>
+        </header>
+        <div class="admin-dialog-body">
+          <p id="confirmDialogMessage"></p>
+        </div>
+        <footer class="admin-dialog-footer">
+          <button class="admin-btn admin-btn-secondary" type="button" data-close-dialog="confirmDialog">Cancelar</button>
+          <button class="admin-btn admin-btn-danger" type="button" id="confirmDialogAction">Confirmar</button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog class="admin-dialog admin-dialog-small" id="temporaryPasswordDialog">
+      <div class="admin-dialog-card">
+        <header class="admin-dialog-header">
+          <div>
+            <span class="admin-eyebrow">Acceso temporal</span>
+            <h2>Contraseña restablecida</h2>
+          </div>
+          <button class="admin-icon-button" type="button" data-close-dialog="temporaryPasswordDialog" aria-label="Cerrar">×</button>
+        </header>
+        <div class="admin-dialog-body">
+          <p>Comparte esta contraseña de forma segura. Solo se mostrará una vez.</p>
+          <div class="temporary-password-row">
+            <input id="temporaryPasswordValue" type="text" readonly aria-label="Contraseña temporal" />
+            <button class="admin-btn admin-btn-secondary" type="button" id="copyTemporaryPasswordBtn">Copiar</button>
+          </div>
+        </div>
+        <footer class="admin-dialog-footer">
+          <button class="admin-btn admin-btn-primary" type="button" data-close-dialog="temporaryPasswordDialog">Entendido</button>
+        </footer>
+      </div>
+    </dialog>
+
     <script src="/scripts/frontend/notifications.js"></script>
-    <script src="/admin/js/admin.frontend.js"></script>
-    <script src="/admin/js/user-management.js"></script>
-    <script src="/admin/js/advanced-config.js"></script>
-
-    <!-- Inicialización del AdminPanel -->
-    <script>
-      // Crear instancia global del AdminPanel después de que se carguen los scripts
-      document.addEventListener('DOMContentLoaded', function() {
-        window.adminPanel = new AdminPanel();
-
-        // Cargar configuración de institución al iniciar
-        if (window.adminPanel && window.adminPanel.loadInstitutionConfig) {
-          window.adminPanel.loadInstitutionConfig();
-        }
-      });
-    </script>
-
-    <!-- Sistema unificado de temas -->
+    <script src="/admin/js/user-management.js?v=20260722-4"></script>
+    <script src="/admin/js/admin.frontend.js?v=20260722-5"></script>
+    <script src="/admin/js/advanced-config.js?v=20260722-4"></script>
     <script src="/scripts/utils/themeManager.js"></script>
-    <script src="/scripts/frontend/visualConfig.frontend.js"></script>
-
-    <!-- Inicialización de backgrounds para panel admin -->
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        // Inicializar backgrounds en el panel de administración
-        const visualManager = new VisualCustomizationManager();
-
-        // Marcar el background actualmente activo
-        setTimeout(() => {
-          const currentBg = localStorage.getItem('globalBackground') || 'fondo1';
-          const activeOption = document.querySelector(`[data-bg="${currentBg}"]`);
-          if (activeOption) {
-            activeOption.classList.add('selected');
-          }
-
-          // Verificación de estilos CSS aplicados para backgrounds
-          console.log('🎨 Verificación de estilos CSS para backgrounds:');
-          const backgroundCards = document.querySelectorAll('.background-option-card');
-          backgroundCards.forEach((card, index) => {
-            const computedStyle = window.getComputedStyle(card);
-            console.log(`📋 Card ${index + 1}:`, {
-              borderColor: computedStyle.borderColor,
-              boxShadow: computedStyle.boxShadow,
-              transform: computedStyle.transform,
-              backgroundColor: computedStyle.backgroundColor
-            });
-          });
-
-          if (backgroundCards.length > 0) {
-            console.log('✅ Estilos CSS aplicados correctamente para backgrounds');
-          } else {
-            console.log('ℹ️ No se encontraron cards de background (esto es normal si no hay backgrounds configurados)');
-          }
-        }, 100);
-      });
-    </script>
-
-    <!-- Scripts principales del panel administrativo -->
-    <script src="/admin/js/panelAdmin.js"></script>
+    <script src="/scripts/frontend/visualConfig.frontend.js?v=4"></script>
+    <script src="/admin/js/panelAdmin.js?v=20260722"></script>
   </body>
 </html>

@@ -1,38 +1,26 @@
 {
   "name": "demo",
   "version": "1.0.0",
-  "main": "scripts.js",
+  "main": "scripts/server.js",
   "scripts": {
     "start": "node scripts/server.js",
     "dev": "node scripts/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "db:setup": "node scripts/setup-db.js",
-    "db:sync": "node scripts/setup-db.js --sync",
-    "db:backup": "node scripts/setup-db.js --backup",
-    "db:reset": "node scripts/setup-db.js --reset",
-    "db:status": "node scripts/setup-db.js --status",
-    "db:install": "node scripts/setup-db.js --install",
-    "db:restore": "node scripts/setup-db.js --restore",
-    "db:drop-all": "node scripts/setup-db.js --drop-all",
-    "db:help": "node scripts/setup-db.js --help"
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "Este proyecto esta en fase de creacion por el momento, permite, firmar y verificar documentos digitales utilizando llaves públicas y privadas. Las llaves tienen un tiempo de expiración configurable, y el sistema asegura que las firmas expiradas solo puedan usarse para verificar documentos, no para firmar nuevos.",
+  "engines": {
+    "node": ">=26.5.0"
+  },
   "dependencies": {
-    "bcryptjs": "^3.0.2",
-    "body-parser": "^1.20.3",
-    "canvas": "^3.2.0",
-    "child_process": "^1.0.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.5.0",
-    "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.2",
-    "mysql2": "^3.14.0",
-    "pdf-lib": "^1.17.1",
-    "pdf-poppler": "^0.2.1",
-    "pdf2pic": "^3.2.0"
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.2.0",
+    "mysql2": "^3.23.1",
+    "pdf-lib": "^1.17.1"
   }
 }

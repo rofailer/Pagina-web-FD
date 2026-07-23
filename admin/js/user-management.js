@@ -1,830 +1,884 @@
-/* ========================================
-   GESTIÓN AVANZADA DE USUARIOS - MÓDULO ADMINISTRATIVO
-   ======================================== */
-
 class UserManagement {
-    constructor(adminPanel) {
-        this.adminPanel = adminPanel;
-        this.users = [];
-        this.roles = ['owner', 'admin', 'user'];
-        this.currentEditUser = null;
+  constructor(adminPanel) {
+    this.adminPanel = adminPanel;
+    this.users = [];
+    this.filteredUsers = [];
+    this.editorMode = 'create';
+    this.editingUserId = null;
+    this.loadingPromise = null;
+    this.submitInProgress = false;
+    this.photoCache = new Map();
+    this.presenceTimer = null;
+    this.lastPresenceHeartbeatAt = 0;
+    this.confirmCallback = null;
 
-        this.init();
-    }
+    this.bindEvents();
+  }
 
-    // Helper para obtener headers de autenticación
-    getAuthHeaders() {
-        const token = localStorage.getItem('token');
-        return {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        };
-    }
+  get authHeaders() {
+    return {
+      Authorization: `Bearer ${this.adminPanel.getAdminToken()}`,
+      'Content-Type': 'application/json'
+    };
+  }
 
-    init() {
-        this.setupAdvancedEventListeners();
-        this.loadUserRoles();
-    }
+  bindEvents() {
+    const search = document.getElementById('userSearch');
+    const roleFilter = document.getElementById('userRoleFilter');
+    const presenceFilter = document.getElementById('userPresenceFilter');
+    const accountFilter = document.getElementById('userAccountFilter');
+    const usersList = document.getElementById('usersList');
+    const editorForm = document.getElementById('userEditorForm');
 
-    setupAdvancedEventListeners() {
-        // Búsqueda de usuarios
-        const searchInput = document.getElementById('userSearch');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                this.filterUsers(e.target.value);
-            });
-        }
+    search?.addEventListener('input', () => this.applyFilters());
+    roleFilter?.addEventListener('change', () => this.applyFilters());
+    presenceFilter?.addEventListener('change', () => this.applyFilters());
+    accountFilter?.addEventListener('change', () => this.applyFilters());
+    document.getElementById('refreshUsersBtn')?.addEventListener('click', () => this.loadUsers());
+    document.getElementById('openCreateUserBtn')?.addEventListener('click', () => this.openCreateDialog());
+    editorForm?.addEventListener('submit', (event) => this.handleEditorSubmit(event));
 
-        // Filtros por rol
-        const roleFilters = document.querySelectorAll('.role-filter');
-        roleFilters.forEach(filter => {
-            filter.addEventListener('change', () => {
-                this.applyFilters();
-            });
+    usersList?.addEventListener('change', (event) => this.handleListChange(event));
+    usersList?.addEventListener('click', (event) => this.handleListClick(event));
+
+    document.addEventListener('click', (event) => {
+      const closeButton = event.target.closest('[data-close-dialog]');
+      if (!closeButton) return;
+      this.closeDialog(closeButton.dataset.closeDialog);
+    });
+
+    document.getElementById('confirmDialogAction')?.addEventListener('click', async () => {
+      const callback = this.confirmCallback;
+      this.confirmCallback = null;
+      this.closeDialog('confirmDialog');
+      if (callback) await callback();
+    });
+
+    document.getElementById('copyTemporaryPasswordBtn')?.addEventListener('click', () => {
+      this.copyTemporaryPassword();
+    });
+
+    window.addEventListener('beforeunload', () => this.dispose());
+  }
+
+  async loadUsers({ silent = false } = {}) {
+    if (this.loadingPromise) return this.loadingPromise;
+
+    const table = document.querySelector('.users-table');
+    if (!silent) this.renderLoading();
+    table?.setAttribute('aria-busy', 'true');
+
+    this.loadingPromise = (async () => {
+      try {
+        await this.refreshCurrentUserPresence();
+        const response = await fetch(`${this.adminPanel.apiBase}/users`, {
+          headers: { Authorization: `Bearer ${this.adminPanel.getAdminToken()}` },
+          cache: 'no-store'
         });
 
-        // Acciones en masa
-        const bulkActions = document.getElementById('bulkUserActions');
-        if (bulkActions) {
-            bulkActions.addEventListener('change', (e) => {
-                this.handleBulkAction(e.target.value);
-            });
-        }
+        if (!response.ok) throw new Error(await this.readError(response, 'No se pudieron cargar los usuarios'));
 
-        // Selección múltiple
-        document.addEventListener('change', (e) => {
-            if (e.target.classList.contains('user-checkbox')) {
-                this.updateBulkActions();
-            }
-        });
+        const payload = await response.json();
+        const rows = Array.isArray(payload) ? payload : payload.users || payload.data || [];
+        this.users = rows.map((user) => this.normalizeUser(user)).filter((user) => user.id);
+        this.updateMetrics();
+        this.applyFilters();
+        this.startPresenceRefresh();
+        return this.users;
+      } catch (error) {
+        console.error('Error cargando usuarios:', error);
+        if (!silent || this.users.length === 0) this.renderError(error.message);
+        this.adminPanel.showNotification(error.message, 'error');
+        return this.users;
+      } finally {
+        table?.setAttribute('aria-busy', 'false');
+        this.loadingPromise = null;
+      }
+    })();
+
+    return this.loadingPromise;
+  }
+
+  normalizeUser(rawUser = {}) {
+    const id = Number(rawUser.id);
+    const keysCount = this.toNonNegativeNumber(rawUser.keysCount ?? rawUser.keys_count);
+    const activeKeysCount = this.toNonNegativeNumber(rawUser.activeKeysCount ?? rawUser.active_keys_count);
+    const activeKeyId = Number(rawUser.activeKeyId ?? rawUser.active_key_id) || null;
+    const hasPhoto = Boolean(
+      rawUser.hasPhoto
+      ?? rawUser.has_photo
+      ?? rawUser.photoUrl
+      ?? rawUser.photo_url
+      ?? rawUser.foto_perfil
+    );
+
+    return {
+      ...rawUser,
+      id: Number.isInteger(id) && id > 0 ? id : null,
+      name: String(rawUser.name ?? rawUser.nombre ?? rawUser.username ?? rawUser.usuario ?? 'Usuario'),
+      email: String(rawUser.email ?? rawUser.username ?? rawUser.usuario ?? ''),
+      username: String(rawUser.username ?? rawUser.usuario ?? ''),
+      role: this.normalizeRole(rawUser.role ?? rawUser.rol),
+      accountStatus: this.normalizeAccountStatus(
+        rawUser.accountStatus ?? rawUser.account_status ?? rawUser.estado_cuenta ?? rawUser.status
+      ),
+      presenceStatus: this.normalizePresence(
+        rawUser.presenceStatus ?? rawUser.presence_status ?? rawUser.estado_presencia
+      ),
+      selectedPresenceStatus: this.normalizePresence(
+        rawUser.selectedPresenceStatus
+        ?? rawUser.selected_presence_status
+        ?? rawUser.estado_presencia
+        ?? rawUser.presenceStatus
+      ),
+      lastSeenAt: rawUser.lastSeenAt ?? rawUser.last_seen_at ?? rawUser.ultimo_acceso ?? rawUser.lastLogin ?? null,
+      createdAt: rawUser.createdAt ?? rawUser.created_at ?? null,
+      keysCount,
+      activeKeysCount,
+      activeKeyId,
+      hasActiveKey: Boolean(rawUser.hasActiveKey ?? rawUser.has_active_key) || Boolean(activeKeyId) || activeKeysCount > 0,
+      photoUrl: hasPhoto
+        ? String(rawUser.photoUrl ?? rawUser.photo_url ?? rawUser.foto_perfil ?? '')
+        : '',
+      photoVersion: String(rawUser.photoVersion ?? rawUser.photo_version ?? rawUser.updated_at ?? '')
+    };
+  }
+
+  normalizeRole(value) {
+    const role = String(value || '').toLowerCase();
+    if (role === 'owner') return 'owner';
+    if (role === 'admin') return 'admin';
+    return 'user';
+  }
+
+  normalizeAccountStatus(value) {
+    const statuses = {
+      activo: 'active',
+      active: 'active',
+      inactivo: 'inactive',
+      inactive: 'inactive',
+      suspendido: 'suspended',
+      suspended: 'suspended',
+      pendiente: 'pending',
+      pending: 'pending'
+    };
+    return statuses[String(value || '').toLowerCase()] || 'active';
+  }
+
+  normalizePresence(value) {
+    const statuses = {
+      online: 'online',
+      en_linea: 'online',
+      'en linea': 'online',
+      'en línea': 'online',
+      away: 'away',
+      ausente: 'away',
+      busy: 'busy',
+      ocupado: 'busy',
+      offline: 'offline',
+      desconectado: 'offline'
+    };
+    return statuses[String(value || '').toLowerCase()] || 'offline';
+  }
+
+  toNonNegativeNumber(value) {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? Math.floor(number) : 0;
+  }
+
+  applyFilters() {
+    const query = String(document.getElementById('userSearch')?.value || '').trim().toLocaleLowerCase('es');
+    const role = document.getElementById('userRoleFilter')?.value || 'all';
+    const presence = document.getElementById('userPresenceFilter')?.value || 'all';
+    const account = document.getElementById('userAccountFilter')?.value || 'all';
+
+    this.filteredUsers = this.users.filter((user) => {
+      const haystack = `${user.name} ${user.email} ${user.username}`.toLocaleLowerCase('es');
+      return (!query || haystack.includes(query))
+        && (role === 'all' || user.role === role)
+        && (presence === 'all' || user.presenceStatus === presence)
+        && (account === 'all' || user.accountStatus === account);
+    });
+
+    this.renderUsers();
+  }
+
+  updateMetrics() {
+    this.setMetric('metricTotalUsers', this.users.length);
+    this.setMetric('metricOnlineUsers', this.users.filter((user) => user.presenceStatus === 'online').length);
+    this.setMetric('metricUsersWithKeys', this.users.filter((user) => user.keysCount > 0).length);
+    this.setMetric('metricAdminUsers', this.users.filter((user) => ['admin', 'owner'].includes(user.role)).length);
+  }
+
+  setMetric(id, value) {
+    const element = document.getElementById(id);
+    if (element) element.textContent = new Intl.NumberFormat('es-CO').format(value);
+  }
+
+  renderLoading() {
+    const container = document.getElementById('usersList');
+    if (!container) return;
+    container.innerHTML = `
+      <div class="users-loading-state">
+        <span class="admin-spinner" aria-hidden="true"></span>
+        <p>Cargando usuarios…</p>
+      </div>
+    `;
+  }
+
+  renderError(message) {
+    const container = document.getElementById('usersList');
+    if (!container) return;
+    container.innerHTML = `
+      <div class="users-error-state">
+        <strong>No fue posible cargar los usuarios</strong>
+        <p>${this.escapeHTML(message || 'Intenta nuevamente en unos segundos.')}</p>
+        <button class="admin-btn admin-btn-secondary" type="button" data-action="retry">Reintentar</button>
+      </div>
+    `;
+  }
+
+  renderUsers() {
+    const container = document.getElementById('usersList');
+    if (!container) return;
+
+    this.prunePhotoCache();
+
+    if (this.filteredUsers.length === 0) {
+      container.innerHTML = `
+        <div class="users-empty-state">
+          <strong>No hay usuarios que coincidan</strong>
+          <p>Prueba con otra búsqueda o restablece los filtros.</p>
+          <button class="admin-btn admin-btn-secondary" type="button" data-action="clear-filters">Limpiar filtros</button>
+        </div>
+      `;
+      return;
     }
 
-    async loadUserRoles() {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.warn('No hay token disponible para cargar roles');
-                return;
-            }
+    container.innerHTML = this.filteredUsers.map((user) => this.renderUserRow(user)).join('');
+    this.loadAuthenticatedPhotos();
+  }
 
-            const response = await fetch(`${this.adminPanel.apiBase}/user-roles`, {
-                method: 'GET',
-                headers: this.getAuthHeaders()
-            });
+  renderUserRow(user) {
+    const isSelf = Number(user.id) === Number(this.adminPanel.currentUser?.id);
+    const currentRole = this.adminPanel.currentRole;
+    const protectedOwner = user.role === 'owner' && currentRole !== 'owner';
+    const canChangeRole = !isSelf && !protectedOwner;
+    const canChangeAccount = !isSelf && !protectedOwner;
+    const canDelete = !isSelf && !protectedOwner;
+    const canEdit = !protectedOwner;
+    const canReset = !protectedOwner;
+    const initials = this.getInitials(user.name);
+    const photoKey = this.getPhotoKey(user);
+    const cachedPhoto = this.photoCache.get(user.id);
+    const cachedUrl = cachedPhoto?.key === photoKey ? cachedPhoto.objectUrl : '';
+    const presenceLabel = this.translatePresence(user.presenceStatus);
 
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success && data.data) {
-                    this.renderRoleFilters(data.data);
-                } else {
-                    console.error('Respuesta inválida del servidor:', data);
-                }
-            } else {
-                console.error('Error en la respuesta:', response.status, response.statusText);
-            }
-        } catch (error) {
-            console.error('Error cargando roles:', error);
-        }
-    }
-
-    renderRoleFilters(roles) {
-        const container = document.getElementById('roleFiltersContainer');
-        if (!container) return;
-
-        const filtersHTML = roles.map(role => `
-            <label class="filter-checkbox">
-                <input type="checkbox" class="role-filter" value="${role.id}" checked>
-                <span class="checkmark"></span>
-                ${role.name} (${role.count})
-            </label>
-        `).join('');
-
-        container.innerHTML = filtersHTML;
-    }
-
-    filterUsers(searchTerm) {
-        const filteredUsers = this.users.filter(user => {
-            const matchesSearch = !searchTerm ||
-                user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.email.toLowerCase().includes(searchTerm.toLowerCase());
-
-            return matchesSearch;
-        });
-
-        this.renderFilteredUsers(filteredUsers);
-    }
-
-    applyFilters() {
-        const selectedRoles = Array.from(document.querySelectorAll('.role-filter:checked'))
-            .map(checkbox => checkbox.value);
-
-        const searchTerm = document.getElementById('userSearch')?.value || '';
-
-        const filteredUsers = this.users.filter(user => {
-            const matchesRole = selectedRoles.length === 0 || selectedRoles.includes(user.role);
-            const matchesSearch = !searchTerm ||
-                user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.email.toLowerCase().includes(searchTerm.toLowerCase());
-
-            return matchesRole && matchesSearch;
-        });
-
-        this.renderFilteredUsers(filteredUsers);
-    }
-
-    renderFilteredUsers(users) {
-        const container = document.getElementById('usersList');
-        if (!container) return;
-
-        if (users.length === 0) {
-            container.innerHTML = `
-                <div class="admin-alert info">
-                    <div class="admin-alert-content">
-                        <h4>No se encontraron usuarios</h4>
-                        <p>Ajusta los filtros o términos de búsqueda.</p>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-
-        const usersHTML = users.map(user => `
-            <div class="admin-user-row ${user.status}" data-user-id="${user.id}">
-                <div class="user-select">
-                    <input type="checkbox" class="user-checkbox" value="${user.id}">
-                </div>
-                <div class="user-info">
-                    <div class="user-avatar" style="background: ${this.getUserColor(user.id)}">
-                        ${user.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div class="user-details">
-                        <h4>${user.name}</h4>
-                        <span>${user.email}</span>
-                        <div class="user-meta">
-                            <span class="user-last-login">Último acceso: ${this.formatDate(user.lastLogin)}</span>
-                            <span class="user-created">Creado: ${this.formatDate(user.createdAt)}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="user-role ${user.role}">
-                    <select class="role-selector" data-user-id="${user.id}">
-                        ${this.roles.map(role => `
-                            <option value="${role}" ${user.role === role ? 'selected' : ''}>
-                                ${this.adminPanel.translateRole(role)}
-                            </option>
-                        `).join('')}
-                    </select>
-                </div>
-                <div class="user-status">
-                    <div class="admin-switch">
-                        <input type="checkbox" ${user.status === 'active' ? 'checked' : ''} 
-                               data-user-id="${user.id}" data-action="toggle-status">
-                        <span class="admin-switch-slider"></span>
-                    </div>
-                    <span class="${user.status}">${this.adminPanel.translateStatus(user.status)}</span>
-                </div>
-                <div class="user-stats">
-                    <div class="stat-item">
-                        <span class="stat-value">${user.signaturesCount || 0}</span>
-                        <span class="stat-label">Firmas</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value">${user.keysCount || 0}</span>
-                        <span class="stat-label">Llaves</span>
-                    </div>
-                </div>
-                <div class="user-actions">
-                    <div class="action-dropdown">
-                        <button class="action-toggle" data-user-id="${user.id}">
-                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
-                            </svg>
-                        </button>
-                        <div class="action-menu" id="userActions_${user.id}">
-                            <button class="action-item" data-action="edit" data-user-id="${user.id}">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                </svg>
-                                Editar
-                            </button>
-                            <button class="action-item" data-action="reset-password" data-user-id="${user.id}">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2m-2-2h-3m-7 0h3m0 0V9a2 2 0 012-2m0 0a2 2 0 012-2m-2 2H9a2 2 0 00-2 2v10a2 2 0 002 2h6a2 2 0 002-2V9a2 2 0 00-2-2z"></path>
-                                </svg>
-                                Resetear Contraseña
-                            </button>
-                            <button class="action-item" data-action="view-activity" data-user-id="${user.id}">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                </svg>
-                                Ver Actividad
-                            </button>
-                            <hr class="action-separator">
-                            <button class="action-item danger" data-action="delete" data-user-id="${user.id}">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                </svg>
-                                Eliminar
-                            </button>
-                        </div>
-                    </div>
-                </div>
+    return `
+      <article class="admin-user-row ${protectedOwner ? 'is-protected' : ''}" data-user-id="${user.id}">
+        <div class="user-identity">
+          <div class="user-avatar-wrap" title="${this.escapeAttribute(presenceLabel)}">
+            <span class="user-avatar-fallback" aria-hidden="true">${this.escapeHTML(initials)}</span>
+            <img
+              class="user-avatar"
+              alt="Foto de ${this.escapeAttribute(user.name)}"
+              ${cachedUrl ? `src="${this.escapeAttribute(cachedUrl)}"` : 'hidden'}
+              ${user.photoUrl ? `data-photo-url="${this.escapeAttribute(user.photoUrl)}" data-photo-key="${this.escapeAttribute(photoKey)}"` : ''}
+            />
+            <span class="presence-dot ${user.presenceStatus}" aria-label="${this.escapeAttribute(presenceLabel)}"></span>
+          </div>
+          <div class="user-primary">
+            <div class="user-name-line">
+              <strong>${this.escapeHTML(user.name)}</strong>
+              ${isSelf ? '<span class="user-self-badge">Tú</span>' : ''}
             </div>
-        `).join('');
-
-        container.innerHTML = `
-            <div class="admin-user-header">
-                <div class="select-all">
-                    <input type="checkbox" id="selectAllUsers">
-                </div>
-                <span>Usuario</span>
-                <span>Rol</span>
-                <span>Estado</span>
-                <span>Estadísticas</span>
-                <span>Acciones</span>
+            <span>${this.escapeHTML(user.email || user.username || 'Sin correo')}</span>
+            <div class="user-presence-copy">
+              <b>${this.escapeHTML(presenceLabel)}</b>
+              <span>·</span>
+              <span>${this.escapeHTML(this.formatLastSeen(user.lastSeenAt, user.presenceStatus))}</span>
             </div>
-            ${usersHTML}
-        `;
+          </div>
+        </div>
 
-        this.setupUserRowEvents();
+        <div class="user-control user-role-control">
+          <select data-action="change-role" aria-label="Rol de ${this.escapeAttribute(user.name)}" ${canChangeRole ? '' : 'disabled'}>
+            ${this.roleOptions(user.role)}
+          </select>
+          <small>${protectedOwner ? 'Cuenta protegida' : isSelf ? 'Tu rol actual' : 'Permisos del usuario'}</small>
+        </div>
+
+        <div class="user-control user-account-control">
+          <select data-action="change-account" aria-label="Estado de cuenta de ${this.escapeAttribute(user.name)}" ${canChangeAccount ? '' : 'disabled'}>
+            ${this.accountOptions(user.accountStatus)}
+          </select>
+          <small class="account-status-copy ${user.accountStatus}">${this.escapeHTML(this.translateAccountStatus(user.accountStatus))}</small>
+        </div>
+
+        <div class="user-keys">
+          <span class="key-count-badge">${user.keysCount} ${user.keysCount === 1 ? 'llave' : 'llaves'}</span>
+          ${user.hasActiveKey ? '<span class="active-key-badge">Activa</span>' : ''}
+        </div>
+
+        <div class="user-actions">
+          <button
+            class="user-action-button icon-only"
+            type="button"
+            data-action="edit"
+            ${canEdit ? '' : 'disabled'}
+            title="Editar usuario"
+            aria-label="Editar a ${this.escapeAttribute(user.name)}"
+          >
+            <svg class="user-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="m4 20 4.1-.9L19 8.2a2.3 2.3 0 0 0-3.2-3.2L4.9 15.9 4 20Z" />
+              <path d="m14.8 6 3.2 3.2M4.9 15.9l3.2 3.2" />
+            </svg>
+          </button>
+          <button
+            class="user-action-button icon-only"
+            type="button"
+            data-action="reset-password"
+            ${canReset ? '' : 'disabled'}
+            title="Restablecer contraseña"
+            aria-label="Restablecer contraseña de ${this.escapeAttribute(user.name)}"
+          >
+            <svg class="user-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M7.5 10V7.5a4.5 4.5 0 0 1 9 0V10m-10 0h11a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 17.5 20h-11A1.5 1.5 0 0 1 5 18.5v-7A1.5 1.5 0 0 1 6.5 10Z" />
+              <path d="M12 14v2.5" />
+            </svg>
+          </button>
+          <button
+            class="user-action-button icon-only danger"
+            type="button"
+            data-action="delete"
+            ${canDelete ? '' : 'disabled'}
+            title="Eliminar usuario"
+            aria-label="Eliminar a ${this.escapeAttribute(user.name)}"
+          >
+            <svg class="user-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" />
+            </svg>
+          </button>
+        </div>
+      </article>
+    `;
+  }
+
+  roleOptions(selectedRole) {
+    const canGrantOwner = this.adminPanel.currentRole === 'owner';
+    return [
+      ['user', 'Usuario'],
+      ['admin', 'Administrador'],
+      ['owner', 'Propietario']
+    ].map(([value, label]) => {
+      const disabled = value === 'owner' && !canGrantOwner && selectedRole !== 'owner';
+      return `<option value="${value}" ${selectedRole === value ? 'selected' : ''} ${disabled ? 'disabled' : ''}>${label}</option>`;
+    }).join('');
+  }
+
+  accountOptions(selectedStatus) {
+    return [
+      ['active', 'Activa'],
+      ['inactive', 'Inactiva'],
+      ['suspended', 'Suspendida'],
+      ['pending', 'Pendiente']
+    ].map(([value, label]) => (
+      `<option value="${value}" ${selectedStatus === value ? 'selected' : ''}>${label}</option>`
+    )).join('');
+  }
+
+  handleListChange(event) {
+    const control = event.target.closest('select[data-action]');
+    if (!control) return;
+    const row = control.closest('[data-user-id]');
+    const user = this.findUser(row?.dataset.userId);
+    if (!user) return;
+
+    if (control.dataset.action === 'change-role') {
+      this.changeUserRole(user, control.value, control);
+    } else if (control.dataset.action === 'change-account') {
+      this.changeAccountStatus(user, control.value, control);
+    }
+  }
+
+  handleListClick(event) {
+    const actionButton = event.target.closest('[data-action]');
+    if (!actionButton || actionButton.disabled) return;
+
+    const action = actionButton.dataset.action;
+    if (action === 'retry') {
+      this.loadUsers();
+      return;
+    }
+    if (action === 'clear-filters') {
+      this.clearFilters();
+      return;
     }
 
-    setupUserRowEvents() {
-        const container = document.getElementById('usersList');
-        if (!container) return;
+    const row = actionButton.closest('[data-user-id]');
+    const user = this.findUser(row?.dataset.userId);
+    if (!user) return;
 
-        // Usar event delegation para mejor rendimiento y evitar problemas con elementos recreados
-        container.addEventListener('change', (e) => {
-            // Cambio de rol
-            if (e.target.classList.contains('role-selector')) {
-                this.changeUserRole(e.target.dataset.userId, e.target.value);
-            }
+    if (action === 'edit') this.openEditDialog(user);
+    if (action === 'delete') this.confirmDelete(user);
+    if (action === 'reset-password') this.confirmPasswordReset(user);
+  }
 
-            // Toggle de estado
-            if (e.target.hasAttribute('data-action') && e.target.getAttribute('data-action') === 'toggle-status') {
-                this.toggleUserStatus(e.target.dataset.userId, e.target.checked);
-            }
+  clearFilters() {
+    const search = document.getElementById('userSearch');
+    const role = document.getElementById('userRoleFilter');
+    const presence = document.getElementById('userPresenceFilter');
+    const account = document.getElementById('userAccountFilter');
+    if (search) search.value = '';
+    if (role) role.value = 'all';
+    if (presence) presence.value = 'all';
+    if (account) account.value = 'all';
+    this.applyFilters();
+  }
 
-            // Selección múltiple
-            if (e.target.classList.contains('user-checkbox')) {
-                this.updateBulkActions();
-            }
-        });
+  findUser(userId) {
+    return this.users.find((user) => Number(user.id) === Number(userId));
+  }
 
-        container.addEventListener('click', (e) => {
-            // Menús de acciones
-            if (e.target.closest('.action-toggle')) {
-                const toggle = e.target.closest('.action-toggle');
-                e.stopPropagation();
-                this.toggleActionMenu(toggle.dataset.userId);
-            }
+  async changeUserRole(user, newRole, control) {
+    const previousRole = user.role;
+    if (newRole === previousRole) return;
+    control.disabled = true;
 
-            // Acciones específicas
-            if (e.target.closest('.action-item')) {
-                const item = e.target.closest('.action-item');
-                const action = item.dataset.action;
-                const userId = item.dataset.userId;
-                this.handleUserAction(action, userId);
-            }
-        });
+    try {
+      const response = await fetch(`${this.adminPanel.apiBase}/users/${user.id}/role`, {
+        method: 'PUT',
+        headers: this.authHeaders,
+        body: JSON.stringify({ role: newRole })
+      });
+      if (!response.ok) throw new Error(await this.readError(response, 'No se pudo cambiar el rol'));
+      user.role = this.normalizeRole(newRole);
+      this.updateMetrics();
+      this.adminPanel.showNotification('Rol actualizado correctamente', 'success');
+    } catch (error) {
+      control.value = previousRole;
+      this.adminPanel.showNotification(error.message, 'error');
+    } finally {
+      control.disabled = false;
+    }
+  }
 
-        // Seleccionar todos (fuera del contenedor de usuarios)
-        const selectAll = document.getElementById('selectAllUsers');
-        if (selectAll) {
-            selectAll.addEventListener('change', (e) => {
-                this.toggleSelectAll(e.target.checked);
-            });
-        }
+  async changeAccountStatus(user, newStatus, control) {
+    const previousStatus = user.accountStatus;
+    if (newStatus === previousStatus) return;
+    control.disabled = true;
 
-        // Cerrar menús al hacer clic fuera
-        document.addEventListener('click', () => {
-            document.querySelectorAll('.action-menu').forEach(menu => {
-                menu.style.display = 'none';
-            });
-        });
+    try {
+      const response = await fetch(`${this.adminPanel.apiBase}/users/${user.id}/status`, {
+        method: 'PUT',
+        headers: this.authHeaders,
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (!response.ok) throw new Error(await this.readError(response, 'No se pudo cambiar el estado de la cuenta'));
+      user.accountStatus = this.normalizeAccountStatus(newStatus);
+      this.adminPanel.showNotification('Estado de cuenta actualizado', 'success');
+      this.applyFilters();
+    } catch (error) {
+      control.value = previousStatus;
+      this.adminPanel.showNotification(error.message, 'error');
+    } finally {
+      control.disabled = false;
+    }
+  }
+
+  openCreateDialog() {
+    this.editorMode = 'create';
+    this.editingUserId = null;
+    const form = document.getElementById('userEditorForm');
+    form?.reset();
+
+    document.getElementById('userEditorEyebrow').textContent = 'Nueva cuenta';
+    document.getElementById('userEditorTitle').textContent = 'Agregar usuario';
+    document.getElementById('saveUserBtn').textContent = 'Crear usuario';
+    document.getElementById('editorPasswordField').hidden = false;
+    const password = document.getElementById('editorUserPassword');
+    if (password) password.required = true;
+
+    const role = document.getElementById('editorUserRole');
+    if (role) {
+      role.disabled = false;
+      role.value = 'user';
+      role.querySelector('option[value="owner"]')?.toggleAttribute('disabled', this.adminPanel.currentRole !== 'owner');
     }
 
-    toggleActionMenu(userId) {
-        const menu = document.getElementById(`userActions_${userId}`);
-        if (menu) {
-            const isVisible = menu.style.display === 'block';
+    document.getElementById('editorRoleHelp').textContent = 'Los permisos se aplican inmediatamente.';
+    this.openDialog('userEditorDialog');
+    setTimeout(() => document.getElementById('editorUserName')?.focus(), 0);
+  }
 
-            // Cerrar todos los menús
-            document.querySelectorAll('.action-menu').forEach(m => {
-                m.style.display = 'none';
-            });
+  openEditDialog(user) {
+    this.editorMode = 'edit';
+    this.editingUserId = user.id;
+    const isSelf = Number(user.id) === Number(this.adminPanel.currentUser?.id);
+    const role = document.getElementById('editorUserRole');
 
-            // Mostrar/ocultar el menú actual
-            menu.style.display = isVisible ? 'none' : 'block';
-        }
+    document.getElementById('userEditorEyebrow').textContent = 'Datos de cuenta';
+    document.getElementById('userEditorTitle').textContent = 'Editar usuario';
+    document.getElementById('saveUserBtn').textContent = 'Guardar cambios';
+    document.getElementById('editorUserName').value = user.name;
+    document.getElementById('editorUserEmail').value = user.email;
+    document.getElementById('editorPasswordField').hidden = true;
+    const password = document.getElementById('editorUserPassword');
+    if (password) {
+      password.required = false;
+      password.value = '';
     }
 
-    async handleUserAction(action, userId) {
-        switch (action) {
-            case 'edit':
-                await this.editUser(userId);
-                break;
-            case 'reset-password':
-                await this.resetUserPassword(userId);
-                break;
-            case 'view-activity':
-                await this.viewUserActivity(userId);
-                break;
-            case 'delete':
-                await this.deleteUser(userId);
-                break;
-        }
+    if (role) {
+      role.value = user.role;
+      role.disabled = isSelf;
+      role.querySelector('option[value="owner"]')?.toggleAttribute(
+        'disabled',
+        this.adminPanel.currentRole !== 'owner' && user.role !== 'owner'
+      );
     }
 
-    async editUser(userId) {
-        try {
-            const user = this.users.find(u => u.id === userId);
-            if (!user) return;
+    document.getElementById('editorRoleHelp').textContent = isSelf
+      ? 'Por seguridad no puedes cambiar tu propio rol.'
+      : 'Los permisos se aplican inmediatamente.';
+    this.openDialog('userEditorDialog');
+  }
 
-            this.currentEditUser = user;
+  async handleEditorSubmit(event) {
+    event.preventDefault();
+    if (this.submitInProgress) return;
 
-            const modalHTML = `
-                <div class="admin-modal" id="editUserModal">
-                    <div class="admin-modal-content">
-                        <div class="admin-modal-header">
-                            <h3>Editar Usuario</h3>
-                            <button class="admin-modal-close" onclick="this.closest('.admin-modal').remove()">×</button>
-                        </div>
-                        <div class="admin-modal-body">
-                            <form id="editUserForm" class="admin-form">
-                                <div class="admin-form-grid">
-                                    <div class="admin-form-group">
-                                        <label for="editUserName">Nombre Completo</label>
-                                        <input type="text" id="editUserName" name="name" class="admin-input" 
-                                               value="${user.name}" required>
-                                    </div>
-                                    <div class="admin-form-group">
-                                        <label for="editUserEmail">Correo Electrónico</label>
-                                        <input type="email" id="editUserEmail" name="email" class="admin-input" 
-                                               value="${user.email}" required>
-                                    </div>
-                                    <div class="admin-form-group">
-                                        <label for="editUserRole">Rol</label>
-                                        <select id="editUserRole" name="role" class="admin-select" required>
-                                            ${this.roles.map(role => `
-                                                <option value="${role}" ${user.role === role ? 'selected' : ''}>
-                                                    ${this.adminPanel.translateRole(role)}
-                                                </option>
-                                            `).join('')}
-                                        </select>
-                                    </div>
-                                    <div class="admin-form-group">
-                                        <label for="editUserPhone">Teléfono</label>
-                                        <input type="tel" id="editUserPhone" name="phone" class="admin-input" 
-                                               value="${user.phone || ''}">
-                                    </div>
-                                    <div class="admin-form-group full-width">
-                                        <label for="editUserNotes">Notas</label>
-                                        <textarea id="editUserNotes" name="notes" class="admin-textarea" 
-                                                  rows="3" placeholder="Notas adicionales sobre el usuario">${user.notes || ''}</textarea>
-                                    </div>
-                                </div>
-                                <div class="user-permissions">
-                                    <h4>Permisos Especiales</h4>
-                                    <div class="permission-grid">
-                                        <label class="permission-item">
-                                            <input type="checkbox" name="permissions[]" value="manage_users" 
-                                                   ${user.permissions?.includes('manage_users') ? 'checked' : ''}>
-                                            <span>Gestionar Usuarios</span>
-                                        </label>
-                                        <label class="permission-item">
-                                            <input type="checkbox" name="permissions[]" value="manage_themes" 
-                                                   ${user.permissions?.includes('manage_themes') ? 'checked' : ''}>
-                                            <span>Gestionar Temas</span>
-                                        </label>
-                                        <label class="permission-item">
-                                            <input type="checkbox" name="permissions[]" value="manage_pdf" 
-                                                   ${user.permissions?.includes('manage_pdf') ? 'checked' : ''}>
-                                            <span>Configurar PDF</span>
-                                        </label>
-                                        <label class="permission-item">
-                                            <input type="checkbox" name="permissions[]" value="view_logs" 
-                                                   ${user.permissions?.includes('view_logs') ? 'checked' : ''}>
-                                            <span>Ver Logs del Sistema</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="admin-modal-footer">
-                            <button type="button" class="admin-btn secondary" onclick="this.closest('.admin-modal').remove()">Cancelar</button>
-                            <button type="button" class="admin-btn primary" onclick="adminPanel.userManagement.updateUser()">Actualizar Usuario</button>
-                        </div>
-                    </div>
-                </div>
-            `;
+    const form = event.currentTarget;
+    if (!form.reportValidity()) return;
 
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-        } catch (error) {
-            console.error('Error abriendo editor de usuario:', error);
-            this.adminPanel.showNotification('Error al cargar datos del usuario', 'error');
-        }
+    const currentUser = this.findUser(this.editingUserId);
+    const payload = {
+      name: document.getElementById('editorUserName').value.trim(),
+      email: document.getElementById('editorUserEmail').value.trim(),
+      role: document.getElementById('editorUserRole').disabled
+        ? currentUser?.role || 'user'
+        : document.getElementById('editorUserRole').value
+    };
+
+    if (this.editorMode === 'create') {
+      payload.password = document.getElementById('editorUserPassword').value;
     }
 
-    async updateUser() {
-        try {
-            if (!this.currentEditUser) return;
+    this.submitInProgress = true;
+    const saveButton = document.getElementById('saveUserBtn');
+    saveButton.disabled = true;
+    this.adminPanel.showLoading(this.editorMode === 'create' ? 'Creando usuario…' : 'Guardando cambios…');
 
-            const form = document.getElementById('editUserForm');
-            const formData = new FormData(form);
-            const userData = Object.fromEntries(formData.entries());
+    try {
+      const url = this.editorMode === 'create'
+        ? `${this.adminPanel.apiBase}/users`
+        : `${this.adminPanel.apiBase}/users/${this.editingUserId}`;
+      const response = await fetch(url, {
+        method: this.editorMode === 'create' ? 'POST' : 'PUT',
+        headers: this.authHeaders,
+        body: JSON.stringify(payload)
+      });
 
-            // Obtener permisos seleccionados
-            const permissions = Array.from(form.querySelectorAll('input[name="permissions[]"]:checked'))
-                .map(checkbox => checkbox.value);
-            userData.permissions = permissions;
+      if (!response.ok) {
+        throw new Error(await this.readError(
+          response,
+          this.editorMode === 'create' ? 'No se pudo crear el usuario' : 'No se pudo actualizar el usuario'
+        ));
+      }
 
-            const response = await fetch(`${this.adminPanel.apiBase}/users/${this.currentEditUser.id}`, {
-                method: 'PUT',
-                headers: this.getAuthHeaders(),
-                body: JSON.stringify(userData)
-            });
+      this.closeDialog('userEditorDialog');
+      await this.loadUsers({ silent: true });
+      this.adminPanel.showNotification(
+        this.editorMode === 'create' ? 'Usuario creado correctamente' : 'Usuario actualizado correctamente',
+        'success'
+      );
+    } catch (error) {
+      this.adminPanel.showNotification(error.message, 'error');
+    } finally {
+      this.submitInProgress = false;
+      saveButton.disabled = false;
+      this.adminPanel.hideLoading();
+    }
+  }
 
-            if (response.ok) {
-                const updatedUser = await response.json();
+  confirmDelete(user) {
+    this.openConfirmation({
+      title: 'Eliminar usuario',
+      message: `Se eliminará la cuenta de ${user.name} y sus datos asociados. Esta acción no se puede deshacer.`,
+      actionLabel: 'Eliminar usuario',
+      callback: () => this.deleteUser(user)
+    });
+  }
 
-                // Actualizar usuario en la lista local
-                const index = this.users.findIndex(u => u.id === this.currentEditUser.id);
-                if (index !== -1) {
-                    this.users[index] = updatedUser;
-                }
+  async deleteUser(user) {
+    this.adminPanel.showLoading('Eliminando usuario…');
+    try {
+      const response = await fetch(`${this.adminPanel.apiBase}/users/${user.id}`, {
+        method: 'DELETE',
+        headers: this.authHeaders
+      });
+      if (!response.ok) throw new Error(await this.readError(response, 'No se pudo eliminar el usuario'));
 
-                this.applyFilters(); // Re-renderizar la lista
-                this.adminPanel.updateMetrics();
+      this.users = this.users.filter((item) => Number(item.id) !== Number(user.id));
+      this.releasePhoto(user.id);
+      this.updateMetrics();
+      this.applyFilters();
+      this.adminPanel.showNotification('Usuario eliminado correctamente', 'success');
+    } catch (error) {
+      this.adminPanel.showNotification(error.message, 'error');
+    } finally {
+      this.adminPanel.hideLoading();
+    }
+  }
 
-                document.getElementById('editUserModal').remove();
-                this.adminPanel.showNotification('Usuario actualizado correctamente', 'success');
+  confirmPasswordReset(user) {
+    this.openConfirmation({
+      title: 'Restablecer contraseña',
+      message: `Se generará una contraseña temporal para ${user.name}. Su sesión actual dejará de ser válida.`,
+      actionLabel: 'Generar contraseña',
+      callback: () => this.resetUserPassword(user)
+    });
+  }
 
-                this.currentEditUser = null;
-            } else {
-                const error = await response.json();
-                throw new Error(error.message || 'Error al actualizar usuario');
-            }
-        } catch (error) {
-            console.error('Error actualizando usuario:', error);
-            this.adminPanel.showNotification(error.message || 'Error al actualizar usuario', 'error');
-        }
+  async resetUserPassword(user) {
+    this.adminPanel.showLoading('Generando contraseña temporal…');
+    try {
+      const response = await fetch(`${this.adminPanel.apiBase}/users/${user.id}/reset-password`, {
+        method: 'POST',
+        headers: this.authHeaders
+      });
+      if (!response.ok) throw new Error(await this.readError(response, 'No se pudo restablecer la contraseña'));
+
+      const result = await response.json();
+      document.getElementById('temporaryPasswordValue').value = result.temporaryPassword || '';
+      this.openDialog('temporaryPasswordDialog');
+      this.adminPanel.showNotification('Contraseña temporal generada', 'success');
+    } catch (error) {
+      this.adminPanel.showNotification(error.message, 'error');
+    } finally {
+      this.adminPanel.hideLoading();
+    }
+  }
+
+  openConfirmation({ title, message, actionLabel, callback }) {
+    document.getElementById('confirmDialogTitle').textContent = title;
+    document.getElementById('confirmDialogMessage').textContent = message;
+    document.getElementById('confirmDialogAction').textContent = actionLabel;
+    this.confirmCallback = callback;
+    this.openDialog('confirmDialog');
+  }
+
+  openDialog(dialogId) {
+    const dialog = document.getElementById(dialogId);
+    if (!dialog) return;
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else dialog.setAttribute('open', '');
+  }
+
+  closeDialog(dialogId) {
+    const dialog = document.getElementById(dialogId);
+    if (!dialog) return;
+    if (typeof dialog.close === 'function' && dialog.open) dialog.close();
+    else dialog.removeAttribute('open');
+    if (dialogId === 'confirmDialog') this.confirmCallback = null;
+  }
+
+  async copyTemporaryPassword() {
+    const input = document.getElementById('temporaryPasswordValue');
+    const value = input?.value || '';
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      this.adminPanel.showNotification('Contraseña copiada', 'success');
+    } catch {
+      input.select();
+      document.execCommand('copy');
+      this.adminPanel.showNotification('Contraseña copiada', 'success');
+    }
+  }
+
+  startPresenceRefresh() {
+    if (this.presenceTimer) return;
+    this.presenceTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible' && this.adminPanel.currentTab === 'gestion-usuarios') {
+        this.loadUsers({ silent: true });
+      }
+    }, 45000);
+  }
+
+  async refreshCurrentUserPresence() {
+    const now = Date.now();
+    if (now - this.lastPresenceHeartbeatAt < 30000) return;
+
+    const sessionToken = localStorage.getItem('token');
+    if (!sessionToken || !this.sessionTokenBelongsToCurrentUser(sessionToken)) return;
+
+    this.lastPresenceHeartbeatAt = now;
+    try {
+      const response = await fetch('/api/profile/heartbeat', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${sessionToken}` },
+        cache: 'no-store'
+      });
+      if (!response.ok) this.lastPresenceHeartbeatAt = 0;
+    } catch {
+      this.lastPresenceHeartbeatAt = 0;
+    }
+  }
+
+  sessionTokenBelongsToCurrentUser(token) {
+    try {
+      const encodedPayload = String(token).split('.')[1];
+      if (!encodedPayload) return false;
+      const normalized = encodedPayload.replace(/-/g, '+').replace(/_/g, '/');
+      const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
+      const payload = JSON.parse(window.atob(normalized + padding));
+      return Number(payload.id) === Number(this.adminPanel.currentUser?.id);
+    } catch {
+      return false;
+    }
+  }
+
+  async loadAuthenticatedPhotos() {
+    const images = [...document.querySelectorAll('#usersList img[data-photo-url]')];
+    await Promise.allSettled(images.map((image) => this.loadAuthenticatedPhoto(image)));
+  }
+
+  async loadAuthenticatedPhoto(image) {
+    const row = image.closest('[data-user-id]');
+    const userId = Number(row?.dataset.userId);
+    const photoUrl = image.dataset.photoUrl;
+    const photoKey = image.dataset.photoKey;
+    if (!userId || !photoUrl || !photoKey) return;
+
+    const cached = this.photoCache.get(userId);
+    if (cached?.key === photoKey) {
+      image.src = cached.objectUrl;
+      image.hidden = false;
+      return;
     }
 
-    async resetUserPassword(userId) {
-        try {
-            const user = this.users.find(u => u.id === userId);
-            if (!user) return;
+    try {
+      const objectUrl = await this.fetchPhotoObjectUrl(photoUrl);
+      const previous = this.photoCache.get(userId);
+      if (previous?.objectUrl) URL.revokeObjectURL(previous.objectUrl);
+      this.photoCache.set(userId, { key: photoKey, objectUrl });
+      image.addEventListener('error', () => { image.hidden = true; }, { once: true });
+      image.src = objectUrl;
+      image.hidden = false;
+    } catch (error) {
+      image.hidden = true;
+      console.warn(`No se pudo cargar la foto del usuario ${userId}:`, error.message);
+    }
+  }
 
-            const confirmed = confirm(`¿Estás seguro de que quieres resetear la contraseña de ${user.name}?`);
-            if (!confirmed) return;
+  async fetchPhotoObjectUrl(photoUrl, depth = 0) {
+    if (depth > 1) throw new Error('Respuesta de foto inválida');
+    const url = new URL(photoUrl, window.location.origin);
+    if (url.origin !== window.location.origin) throw new Error('Origen de foto no permitido');
 
-            this.adminPanel.showLoading('Reseteando contraseña...');
+    const response = await fetch(url.pathname + url.search, {
+      headers: { Authorization: `Bearer ${this.adminPanel.getAdminToken()}` },
+      cache: 'no-store'
+    });
+    if (!response.ok) throw new Error(`Foto no disponible (${response.status})`);
 
-            const response = await fetch(`${this.adminPanel.apiBase}/users/${userId}/reset-password`, {
-                method: 'POST'
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-
-                // Mostrar nueva contraseña temporal
-                const modalHTML = `
-                    <div class="admin-modal" id="passwordResetModal">
-                        <div class="admin-modal-content">
-                            <div class="admin-modal-header">
-                                <h3>Contraseña Reseteada</h3>
-                                <button class="admin-modal-close" onclick="this.closest('.admin-modal').remove()">×</button>
-                            </div>
-                            <div class="admin-modal-body">
-                                <div class="admin-alert success">
-                                    <div class="admin-alert-content">
-                                        <h4>Contraseña reseteada exitosamente</h4>
-                                        <p>La nueva contraseña temporal para <strong>${user.name}</strong> es:</p>
-                                    </div>
-                                </div>
-                                <div class="password-display">
-                                    <input type="text" value="${result.temporaryPassword}" readonly class="admin-input" id="tempPassword">
-                                    <button type="button" class="admin-btn secondary" onclick="navigator.clipboard.writeText(document.getElementById('tempPassword').value); this.textContent = 'Copiado!'">
-                                        Copiar
-                                    </button>
-                                </div>
-                                <p class="password-note">El usuario deberá cambiar esta contraseña en su próximo inicio de sesión.</p>
-                            </div>
-                            <div class="admin-modal-footer">
-                                <button type="button" class="admin-btn primary" onclick="this.closest('.admin-modal').remove()">Entendido</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                document.body.insertAdjacentHTML('beforeend', modalHTML);
-                this.adminPanel.showNotification('Contraseña reseteada correctamente', 'success');
-            } else {
-                throw new Error('Error al resetear contraseña');
-            }
-        } catch (error) {
-            console.error('Error reseteando contraseña:', error);
-            this.adminPanel.showNotification('Error al resetear contraseña', 'error');
-        } finally {
-            this.adminPanel.hideLoading();
-        }
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const payload = await response.json();
+      const nestedUrl = payload.photoUrl || payload.photoPath;
+      if (!nestedUrl) throw new Error('El usuario no tiene foto');
+      return this.fetchPhotoObjectUrl(nestedUrl, depth + 1);
     }
 
-    async viewUserActivity(userId) {
-        try {
-            const user = this.users.find(u => u.id === userId);
-            if (!user) return;
+    const blob = await response.blob();
+    if (!blob.type.startsWith('image/')) throw new Error('El archivo recibido no es una imagen');
+    return URL.createObjectURL(blob);
+  }
 
-            this.adminPanel.showLoading('Cargando actividad del usuario...');
+  getPhotoKey(user) {
+    return `${user.photoUrl}|${user.photoVersion}`;
+  }
 
-            const response = await fetch(`${this.adminPanel.apiBase}/users/${userId}/activity`);
-            if (response.ok) {
-                const activity = await response.json();
-                this.showUserActivityModal(user, activity);
-            } else {
-                throw new Error('Error al cargar actividad');
-            }
-        } catch (error) {
-            console.error('Error cargando actividad:', error);
-            this.adminPanel.showNotification('Error al cargar actividad del usuario', 'error');
-        } finally {
-            this.adminPanel.hideLoading();
-        }
+  prunePhotoCache() {
+    const ids = new Set(this.users.map((user) => Number(user.id)));
+    for (const userId of this.photoCache.keys()) {
+      if (!ids.has(Number(userId))) this.releasePhoto(userId);
     }
+  }
 
-    showUserActivityModal(user, activity) {
-        const activityHTML = activity.map(item => `
-            <div class="activity-item ${item.type}">
-                <div class="activity-icon">
-                    ${this.getActivityIcon(item.type)}
-                </div>
-                <div class="activity-content">
-                    <h5>${item.action}</h5>
-                    <p>${item.description}</p>
-                    <span class="activity-time">${this.formatDate(item.timestamp)}</span>
-                </div>
-            </div>
-        `).join('');
+  releasePhoto(userId) {
+    const cached = this.photoCache.get(Number(userId));
+    if (cached?.objectUrl) URL.revokeObjectURL(cached.objectUrl);
+    this.photoCache.delete(Number(userId));
+  }
 
-        const modalHTML = `
-            <div class="admin-modal" id="userActivityModal">
-                <div class="admin-modal-content" style="max-width: 600px;">
-                    <div class="admin-modal-header">
-                        <h3>Actividad de ${user.name}</h3>
-                        <button class="admin-modal-close" onclick="this.closest('.admin-modal').remove()">×</button>
-                    </div>
-                    <div class="admin-modal-body">
-                        <div class="activity-timeline">
-                            ${activityHTML || '<p class="text-center">No hay actividad registrada.</p>'}
-                        </div>
-                    </div>
-                    <div class="admin-modal-footer">
-                        <button type="button" class="admin-btn secondary" onclick="this.closest('.admin-modal').remove()">Cerrar</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
+  dispose() {
+    if (this.presenceTimer) window.clearInterval(this.presenceTimer);
+    for (const cached of this.photoCache.values()) {
+      if (cached.objectUrl) URL.revokeObjectURL(cached.objectUrl);
     }
+    this.photoCache.clear();
+  }
 
-    getActivityIcon(type) {
-        const icons = {
-            'login': '🔑',
-            'logout': '🚪',
-            'sign': '✍️',
-            'verify': '✅',
-            'upload': '📁',
-            'download': '📥',
-            'settings': '⚙️',
-            'error': '❌'
-        };
-        return icons[type] || '📝';
+  getInitials(name) {
+    return String(name || 'U')
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join('') || 'U';
+  }
+
+  translatePresence(status) {
+    return {
+      online: 'En línea',
+      away: 'Ausente',
+      busy: 'Ocupado',
+      offline: 'Desconectado'
+    }[status] || 'Desconectado';
+  }
+
+  translateAccountStatus(status) {
+    return {
+      active: 'Acceso habilitado',
+      inactive: 'Acceso inhabilitado',
+      suspended: 'Cuenta suspendida',
+      pending: 'Activación pendiente'
+    }[status] || 'Estado desconocido';
+  }
+
+  formatLastSeen(value, presenceStatus) {
+    if (presenceStatus === 'online') return 'Activo ahora';
+    if (!value) return 'Sin actividad reciente';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Sin actividad reciente';
+
+    const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+    if (seconds < 60) return 'Hace un momento';
+    if (seconds < 3600) return `Hace ${Math.floor(seconds / 60)} min`;
+    if (seconds < 86400) return `Hace ${Math.floor(seconds / 3600)} h`;
+    if (seconds < 604800) return `Hace ${Math.floor(seconds / 86400)} d`;
+    return new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+  }
+
+  async readError(response, fallback) {
+    try {
+      const body = await response.json();
+      return body.message || body.error || fallback;
+    } catch {
+      return fallback;
     }
+  }
 
-    async changeUserRole(userId, newRole) {
-        try {
-            const response = await fetch(`${this.adminPanel.apiBase}/users/${userId}/role`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ role: newRole })
-            });
+  escapeHTML(value) {
+    const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return String(value ?? '').replace(/[&<>"']/g, (character) => entities[character]);
+  }
 
-            if (response.ok) {
-                // Actualizar usuario local
-                const user = this.users.find(u => u.id === userId);
-                if (user) {
-                    user.role = newRole;
-                }
-
-                this.adminPanel.showNotification('Rol actualizado correctamente', 'success');
-            } else {
-                throw new Error('Error al cambiar rol');
-            }
-        } catch (error) {
-            console.error('Error cambiando rol:', error);
-            this.adminPanel.showNotification('Error al cambiar rol del usuario', 'error');
-        }
-    }
-
-    async toggleUserStatus(userId, isActive) {
-        try {
-            const status = isActive ? 'active' : 'inactive';
-
-            const response = await fetch(`${this.adminPanel.apiBase}/users/${userId}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ status })
-            });
-
-            if (response.ok) {
-                // Actualizar usuario local
-                const user = this.users.find(u => u.id === userId);
-                if (user) {
-                    user.status = status;
-                }
-
-                this.adminPanel.showNotification(
-                    `Usuario ${isActive ? 'activado' : 'desactivado'} correctamente`,
-                    'success'
-                );
-            } else {
-                throw new Error('Error al cambiar estado');
-            }
-        } catch (error) {
-            console.error('Error cambiando estado:', error);
-            this.adminPanel.showNotification('Error al cambiar estado del usuario', 'error');
-        }
-    }
-
-    async deleteUser(userId) {
-        try {
-            const user = this.users.find(u => u.id === userId);
-            if (!user) {
-                this.adminPanel.showNotification('Usuario no encontrado', 'error');
-                return;
-            }
-
-            // Confirmación de eliminación
-            const confirmed = confirm(`¿Estás seguro de que quieres eliminar al usuario "${user.name}"? Esta acción no se puede deshacer.`);
-            if (!confirmed) return;
-
-            this.adminPanel.showLoading('Eliminando usuario...');
-
-            const response = await fetch(`${this.adminPanel.apiBase}/users/${userId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-
-            if (response.ok) {
-                // Remover usuario de la lista local
-                this.users = this.users.filter(u => u.id !== userId);
-
-                // Re-renderizar la lista
-                this.applyFilters();
-
-                this.adminPanel.showNotification('Usuario eliminado correctamente', 'success');
-            } else {
-                const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-                throw new Error(errorData.message || 'Error al eliminar usuario');
-            }
-        } catch (error) {
-            console.error('Error eliminando usuario:', error);
-            this.adminPanel.showNotification(error.message || 'Error al eliminar usuario', 'error');
-        } finally {
-            this.adminPanel.hideLoading();
-        }
-    }
-
-    async createUser(userData) {
-        try {
-            this.adminPanel.showLoading('Creando usuario...');
-
-            const response = await fetch(`${this.adminPanel.apiBase}/users`, {
-                method: 'POST',
-                headers: this.getAuthHeaders(),
-                body: JSON.stringify(userData)
-            });
-
-            if (response.ok) {
-                const newUser = await response.json();
-
-                // Agregar usuario a la lista local
-                this.users.push(newUser.user || newUser);
-
-                // Re-renderizar la lista
-                this.applyFilters();
-
-                this.adminPanel.showNotification('Usuario creado correctamente', 'success');
-                return newUser;
-            } else {
-                const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-                throw new Error(errorData.message || 'Error al crear usuario');
-            }
-        } catch (error) {
-            console.error('Error creando usuario:', error);
-            this.adminPanel.showNotification(error.message || 'Error al crear usuario', 'error');
-            throw error;
-        } finally {
-            this.adminPanel.hideLoading();
-        }
-    }
-
-    toggleSelectAll(checked) {
-        document.querySelectorAll('.user-checkbox').forEach(checkbox => {
-            checkbox.checked = checked;
-        });
-        this.updateBulkActions();
-    }
-
-    updateBulkActions() {
-        const selectedUsers = document.querySelectorAll('.user-checkbox:checked');
-        const bulkActions = document.getElementById('bulkUserActions');
-
-        if (bulkActions) {
-            bulkActions.style.display = selectedUsers.length > 0 ? 'block' : 'none';
-        }
-    }
-
-    async handleBulkAction(action) {
-        const selectedUserIds = Array.from(document.querySelectorAll('.user-checkbox:checked'))
-            .map(checkbox => checkbox.value);
-
-        if (selectedUserIds.length === 0) return;
-
-        const confirmed = confirm(`¿Estás seguro de aplicar "${action}" a ${selectedUserIds.length} usuario(s)?`);
-        if (!confirmed) return;
-
-        try {
-            this.adminPanel.showLoading(`Aplicando acción a ${selectedUserIds.length} usuarios...`);
-
-            const response = await fetch(`${this.adminPanel.apiBase}/users/bulk-action`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action,
-                    userIds: selectedUserIds
-                })
-            });
-
-            if (response.ok) {
-                await this.adminPanel.loadUsers(); // Recargar lista
-                this.adminPanel.showNotification('Acción aplicada correctamente', 'success');
-            } else {
-                throw new Error('Error en acción masiva');
-            }
-        } catch (error) {
-            console.error('Error en acción masiva:', error);
-            this.adminPanel.showNotification('Error al aplicar acción masiva', 'error');
-        } finally {
-            this.adminPanel.hideLoading();
-        }
-    }
-
-    getUserColor(userId) {
-        const colors = [
-            '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
-            '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'
-        ];
-        return colors[userId % colors.length];
-    }
-
-    formatDate(dateString) {
-        if (!dateString) return 'Nunca';
-
-        const date = new Date(dateString);
-        const now = new Date();
-        const diff = now - date;
-
-        const minutes = Math.floor(diff / 60000);
-        const hours = Math.floor(diff / 3600000);
-        const days = Math.floor(diff / 86400000);
-
-        if (minutes < 1) return 'Ahora mismo';
-        if (minutes < 60) return `Hace ${minutes} minuto${minutes > 1 ? 's' : ''}`;
-        if (hours < 24) return `Hace ${hours} hora${hours > 1 ? 's' : ''}`;
-        if (days < 7) return `Hace ${days} día${days > 1 ? 's' : ''}`;
-
-        return date.toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
+  escapeAttribute(value) {
+    return this.escapeHTML(value).replace(/`/g, '&#96;');
+  }
 }
 
-// Exportar para uso en el panel principal
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = UserManagement;
-}
+window.UserManagement = UserManagement;

@@ -266,22 +266,6 @@
   font-size: 0.9em;
 }
 
-.author-required {
-  font-size: 0.8em;
-  color: #dc2626;
-  background: rgba(220, 38, 38, 0.1);
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-.author-optional {
-  font-size: 0.8em;
-  color: #059669;
-  background: rgba(5, 150, 105, 0.1);
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
 .author-input {
   width: 100%;
   padding: 12px;
@@ -295,66 +279,6 @@
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
-}
-
-.authors-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-}
-
-.add-author-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9em;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.add-author-btn:hover {
-  background: var(--accent-color);
-  transform: translateY(-1px);
-}
-
-.add-author-btn:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.authors-count {
-  font-size: 0.9em;
-  color: #6b7280;
-}
-
-.remove-author-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 24px;
-  height: 24px;
-  background: #dc2626;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-}
-
-.remove-author-btn:hover {
-  background: #b91c1c;
-  transform: scale(1.1);
 }
 
 .author-field-group {

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Panel Administrativo - Firmas Digitales FD</title>
+    <title>Acceso administrativo - Firmas Digitales FD</title>
     <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
 
     <!-- Meta tags para SEO -->
@@ -13,11 +13,34 @@
     />
     <meta name="robots" content="noindex, nofollow" />
 
+    <!-- Aplicar la última preferencia conocida antes del primer render. -->
+    <script>
+      (function () {
+        const allowedThemes = ["orange", "blue", "green", "purple", "red", "teal", "dark", "custom"];
+        const allowedBackgrounds = ["fondo1", "fondo2", "fondoOscuro"];
+        const cachedTheme = localStorage.getItem("selectedTheme");
+        const cachedColor = localStorage.getItem("customColor");
+        const cachedBackground = localStorage.getItem("globalBackground");
+
+        document.documentElement.classList.add("visual-pending");
+        if (allowedThemes.includes(cachedTheme)) {
+          document.documentElement.dataset.theme = cachedTheme;
+        }
+        if (cachedTheme === "custom" && /^#[0-9a-f]{6}$/i.test(cachedColor || "")) {
+          document.documentElement.style.setProperty("--primary-color", cachedColor);
+        }
+
+        window.__initialAdminVisuals = {
+          background: allowedBackgrounds.includes(cachedBackground) ? cachedBackground : "fondo1",
+        };
+      })();
+    </script>
+
     <!-- Estilos del panel administrativo -->
     <link rel="stylesheet" href="/admin/css/admin.css" />
     <link rel="stylesheet" href="/admin/css/admin-shared.css" />
     <link rel="stylesheet" href="/admin/css/admin-responsive.css" />
-    <link rel="stylesheet" href="/admin/css/loginAdmin.css" />
+    <link rel="stylesheet" href="/admin/css/loginAdmin.css?v=20260722-4" />
 
     <!-- Sistema de Temas Dinámicos -->
     <link rel="stylesheet" href="/css/themeSelector.css" />
@@ -26,23 +49,70 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>
   <body class="admin-access-page" data-bg="fondo1">
-    <div class="access-container">
-      <div class="access-header">
-        <h1 class="access-title">Panel Administrativo</h1>
-        <p class="access-subtitle">
-          Accede al sistema de administración para gestionar usuarios,
-          configuraciones y monitorear el sistema.
-        </p>
-      </div>
+    <script>
+      document.body.dataset.bg = window.__initialAdminVisuals?.background || "fondo1";
+    </script>
 
-      <div id="alertContainer"></div>
+    <main class="access-shell">
+      <section class="access-brand" aria-label="Información del sistema">
+        <a href="/" class="brand-link" aria-label="Volver al sitio principal">
+          <img
+            class="brand-logo"
+            src="/recursos/logotipo-de-github.png"
+            alt="Icono de Firmas Digitales"
+            data-brand-logo
+          />
+          <span class="brand-name" data-institution-name>Firmas Digitales FD</span>
+        </a>
 
-      <form class="access-form" id="adminAccessForm">
+        <div class="brand-copy">
+          <h2>Panel de administrador</h2>
+          <p>
+            Gestiona usuarios y personaliza el sitio desde un espacio protegido
+            que conserva la misma identidad visual de la plataforma.
+          </p>
+        </div>
+
+        <div class="security-note">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="4" y="10" width="16" height="11" rx="2" stroke="currentColor" stroke-width="2" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span>Acceso exclusivo para administradores autorizados</span>
+        </div>
+      </section>
+
+      <section class="access-container" aria-labelledby="adminAccessTitle">
+        <a href="/" class="back-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M19 12H5M11 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Volver al sitio
+        </a>
+
+        <div class="access-header">
+          <span class="mobile-brand">
+            <img
+              src="/recursos/logotipo-de-github.png"
+              alt="Icono de Firmas Digitales"
+              data-brand-logo
+            />
+            <span data-institution-name>Firmas Digitales FD</span>
+          </span>
+          <h1 class="access-title" id="adminAccessTitle">Panel Administrativo</h1>
+          <p class="access-subtitle">
+            Ingresa con una cuenta autorizada para continuar.
+          </p>
+        </div>
+
+        <div id="alertContainer" aria-live="polite"></div>
+
+        <form class="access-form" id="adminAccessForm">
         <!-- Campo de usuario - se oculta si ya hay sesión activa -->
         <div class="form-group" id="emailGroup">
           <label for="email">Usuario o Email</label>
@@ -76,93 +146,40 @@
           </button>
         </div>
 
-        <!-- Contenedor de botones secundarios (visible cuando hay sesión activa) -->
-        <div
-          class="secondary-buttons"
-          id="secondaryButtons"
-          style="display: none"
-        >
-          <div class="button-row">
-            <button
-              type="button"
-              class="access-btn tertiary"
-              onclick="window.location.href='/'"
-            >
-              <svg
-                class="btn-icon"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M19 12H5M5 12L12 19M5 12L12 5"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <span class="btn-text">Volver al Sitio</span>
-            </button>
+        </form>
+      </section>
+    </main>
 
-            <button
-              type="button"
-              class="access-btn secondary"
-              id="changeUserBtn"
-            >
-              <svg
-                class="btn-icon"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <span class="btn-text">Cambiar Usuario</span>
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
-
-    <!-- Inicialización temprana del tema - NO aplica tema, solo prepara para themeManager -->
+    <!-- Revelar la interfaz cuando tema y fondo estén listos. -->
     <script>
       (function () {
-        // Solo preparar configuración inicial, NO aplicar tema
-        // themeManager.js se encargará de aplicar el tema correcto
-        const availableThemes = [
-          "orange",
-          "blue",
-          "green",
-          "purple",
-          "red",
-          "teal",
-          "dark",
-        ];
+        const state = {
+          theme: window.themeManagerReady === true,
+          visual: window.visualConfigLoaded === true,
+        };
+        const reveal = () => {
+          if (!state.theme || !state.visual) return;
+          document.documentElement.classList.remove("visual-pending");
+          document.documentElement.classList.add("visual-ready");
+        };
 
-        // Leer configuración actual para que themeManager la considere
-        const storedTheme = localStorage.getItem("selectedTheme");
-        const storedCustomColor = localStorage.getItem("customColor");
+        window.addEventListener("themeReady", () => {
+          state.theme = true;
+          reveal();
+        }, { once: true });
 
-        // NO aplicar tema aquí - dejar que themeManager.js lo haga
-        // Esto evita conflictos entre la inicialización y el sistema unificado
+        window.addEventListener("visualConfigLoaded", () => {
+          state.visual = true;
+          reveal();
+        }, { once: true });
+
+        window.setTimeout(() => {
+          state.theme = true;
+          state.visual = true;
+          reveal();
+        }, 2500);
+
+        reveal();
       })();
     </script>
 
@@ -170,9 +187,9 @@
     <script src="/scripts/utils/themeManager.js"></script>
 
     <!-- Sistema de Configuración Visual -->
-    <script src="/scripts/frontend/visualConfig.frontend.js"></script>
+    <script src="/scripts/frontend/visualConfig.frontend.js?v=4"></script>
 
     <!-- Script específico del login administrativo -->
-    <script src="/admin/js/loginAdmin.js"></script>
+    <script src="/admin/js/loginAdmin.js?v=20260722-3"></script>
   </body>
 </html>

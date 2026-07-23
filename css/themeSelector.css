@@ -7,6 +7,21 @@
    ========================= */
 
 /* Paletas de colores predefinidas */
+:root {
+  --primary-color: #ff9545;
+  --primary-rgb: 255, 149, 69;
+  --secondary-color: #ff6b35;
+  --accent-color: #ff7b00;
+  --page-bg: #f8fafc;
+  --surface-color: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-muted: #f1f5f9;
+  --text-color: #0f172a;
+  --text-secondary-color: #64748b;
+  --theme-border-color: #e2e8f0;
+  --theme-shadow-color: rgba(15, 23, 42, 0.12);
+}
+
 [data-theme="orange"] {
   --primary-color: #ff9545;
   --primary-rgb: 255, 149, 69;
@@ -50,21 +65,72 @@
 }
 
 [data-theme="dark"] {
-  --primary-color: #6366f1;
-  --primary-rgb: 99, 102, 241;
-  --secondary-color: #4f46e5;
-  --accent-color: #4338ca;
+  --primary-color: #818cf8;
+  --primary-rgb: 129, 140, 248;
+  --secondary-color: #6366f1;
+  --accent-color: #a5b4fc;
 
   /* Variables específicas del modo oscuro */
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
+  --bg-primary: #0b1120;
+  --bg-secondary: #111b2e;
+  --bg-tertiary: #1b2940;
   --text-primary: #f1f5f9;
   --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
-  --border-color: #334155;
+  --border-color: #2a3952;
+  --border-color-hover: #405170;
   --shadow-color: rgba(0, 0, 0, 0.5);
   --overlay-bg: rgba(15, 23, 42, 0.9);
+
+  --page-bg: var(--bg-primary);
+  --surface-color: var(--bg-secondary);
+  --surface-raised: #152238;
+  --surface-muted: var(--bg-tertiary);
+  --text-color: var(--text-primary);
+  --text-secondary-color: var(--text-secondary);
+  --theme-border-color: var(--border-color);
+  --theme-shadow-color: rgba(0, 0, 0, 0.42);
+
+  /* El panel administrativo consume estas variables compartidas. */
+  --admin-bg: var(--bg-primary);
+  --admin-bg-light: var(--bg-secondary);
+  --admin-bg-hover: var(--bg-tertiary);
+  --admin-card-bg: var(--bg-secondary);
+  --admin-surface: var(--bg-secondary);
+  --admin-surface-dark: var(--bg-tertiary);
+  --admin-border: var(--border-color);
+  --admin-border-dark: var(--border-color-hover);
+  --admin-text: var(--text-primary);
+  --admin-text-secondary: var(--text-secondary);
+  --admin-text-muted: var(--text-muted);
+}
+
+/* Fondos globales: una sola ruta y la misma composición en sitio, acceso y
+   panel. El oscuro puede elegirse de forma independiente. */
+body:not(.admin-body):not(.admin-access-page)[data-bg="fondo1"],
+body.admin-body[data-bg="fondo1"],
+body.admin-access-page[data-bg="fondo1"] {
+  background: linear-gradient(rgba(180, 180, 180, 0.1), rgba(200, 200, 200, 0.05)),
+    url("../recursos/Fondo.jpg") center / cover no-repeat fixed;
+}
+
+body:not(.admin-body):not(.admin-access-page)[data-bg="fondo2"],
+body.admin-body[data-bg="fondo2"],
+body.admin-access-page[data-bg="fondo2"] {
+  background: linear-gradient(rgba(180, 180, 180, 0.1), rgba(200, 200, 200, 0.05)),
+    url("../recursos/Fondo2.jpg") center / cover no-repeat fixed;
+}
+
+body:not(.admin-body):not(.admin-access-page)[data-bg="fondoOscuro"],
+body.admin-body[data-bg="fondoOscuro"],
+body.admin-access-page[data-bg="fondoOscuro"] {
+  background: linear-gradient(rgba(7, 12, 24, 0.18), rgba(7, 12, 24, 0.42)),
+    url("../recursos/FondoOscuro.png") center / cover no-repeat fixed;
+}
+
+[data-theme="dark"] body[data-bg] {
+  background: linear-gradient(rgba(5, 10, 21, 0.3), rgba(5, 10, 21, 0.56)),
+    url("../recursos/FondoOscuro.png") center / cover no-repeat fixed;
 }
 
 /* Estilos globales para modo oscuro */
@@ -134,31 +200,92 @@
   color: var(--text-primary);
 }
 
-[data-theme="dark"] .btn,
-[data-theme="dark"] button:not(.admin-mobile-toggle) {
-  background-color: var(--primary-color);
-  color: white;
-}
-
 [data-theme="dark"] .section-container {
-  background-color: var(--bg-primary);
+  background-color: transparent;
 }
 
 [data-theme="dark"] #inicioSection,
 [data-theme="dark"] #firmarSection,
 [data-theme="dark"] #verificarSection,
 [data-theme="dark"] #contactoSection {
-  background-color: var(--bg-primary);
+  background-color: transparent;
   color: var(--text-primary);
+}
+
+/* Superficies principales del sitio público. */
+[data-theme="dark"] .content {
+  background: rgba(7, 12, 24, 0.72);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .hero-title,
+[data-theme="dark"] .section-title,
+[data-theme="dark"] .floating-card h3,
+[data-theme="dark"] .feature-card h3,
+[data-theme="dark"] .contact-card h3,
+[data-theme="dark"] .auth-modal h2 {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .hero-description,
+[data-theme="dark"] .section-desc,
+[data-theme="dark"] .stat-label,
+[data-theme="dark"] .feature-card p,
+[data-theme="dark"] .contact-card p {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .hero-stats,
+[data-theme="dark"] .floating-card,
+[data-theme="dark"] .feature-card,
+[data-theme="dark"] .contact-card,
+[data-theme="dark"] .auth-modal .modal-content,
+[data-theme="dark"] .profile-dropdown,
+[data-theme="dark"] .navigation-confirm-content {
+  background: rgba(17, 27, 46, 0.96);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+  box-shadow: 0 18px 50px var(--theme-shadow-color);
+}
+
+/* Estructura del panel: evita islas blancas aunque sus hojas legacy usen
+   valores literales. */
+[data-theme="dark"] .admin-sidebar,
+[data-theme="dark"] .admin-content,
+[data-theme="dark"] .admin-section,
+[data-theme="dark"] .admin-tab-content,
+[data-theme="dark"] .metric-card,
+[data-theme="dark"] .admin-field,
+[data-theme="dark"] .users-list-container {
+  background: rgba(17, 27, 46, 0.96);
+  color: var(--admin-text);
+  border-color: var(--admin-border);
+}
+
+[data-theme="dark"] .admin-nav-section h3,
+[data-theme="dark"] .admin-tab-content h2,
+[data-theme="dark"] .admin-section h3,
+[data-theme="dark"] .admin-field h4 {
+  color: var(--admin-text);
+}
+
+[data-theme="dark"] .admin-nav-item {
+  color: var(--admin-text-secondary);
+}
+
+[data-theme="dark"] .admin-nav-item:hover {
+  background: var(--admin-bg-hover);
+  color: var(--admin-text);
+}
+
+[data-theme="dark"] .admin-nav-item.active {
+  background: rgba(var(--primary-rgb), 0.16);
+  color: var(--primary-color);
 }
 
 /* Estilos específicos para login administrativo */
 [data-theme="dark"] .admin-access-page {
-  background: linear-gradient(
-    135deg,
-    var(--bg-secondary) 0%,
-    var(--bg-primary) 100%
-  );
+  color: var(--text-primary);
 }
 
 [data-theme="dark"] .access-container {
@@ -272,6 +399,21 @@
   min-width: 140px;
 }
 
+[data-theme="dark"] .theme-dropdown {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.42);
+}
+
+[data-theme="dark"] .theme-option {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .theme-option:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
 .theme-dropdown.active {
   opacity: 1;
   visibility: visible;
@@ -354,6 +496,19 @@
    ========================= */
 
 @media (max-width: 768px) {
+  body:not(.admin-body):not(.admin-access-page)[data-bg="fondo1"],
+  body.admin-body[data-bg="fondo1"],
+  body.admin-access-page[data-bg="fondo1"],
+  body:not(.admin-body):not(.admin-access-page)[data-bg="fondo2"],
+  body.admin-body[data-bg="fondo2"],
+  body.admin-access-page[data-bg="fondo2"],
+  body:not(.admin-body):not(.admin-access-page)[data-bg="fondoOscuro"],
+  body.admin-body[data-bg="fondoOscuro"],
+  body.admin-access-page[data-bg="fondoOscuro"],
+  [data-theme="dark"] body[data-bg] {
+    background-attachment: scroll;
+  }
+
   .theme-btn {
     width: 48px; /* mayor en móvil también */
     height: 48px;

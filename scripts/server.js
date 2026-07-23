@@ -5,21 +5,24 @@ require('dotenv').config({
 
 const express = require("express");
 const app = express();
+const crypto = require("crypto");
 const path = require("path");
 const fs = require("fs");
-const cors = require("cors");
 const multer = require("multer");
-const { PDFDocument, rgb } = require("pdf-lib");
+const { PDFDocument } = require("pdf-lib");
 const pool = require('./db/pool');
 const authenticate = require('./middlewares/authenticate');
-const isAdmin = require('./middlewares/isAdmin');
-const isOwner = require('./middlewares/isOwner');
-const { encrypt, decrypt, decryptWithPassword, decryptAES, decryptWithType, generateFileHash, generateManifest, verifyManifest } = require('./utils/crypto');
+const { configureAppSecurity } = require('./middlewares/security');
+const { initializePrivilegedAccounts } = require('./utils/privilegedAccountBootstrap');
+const {
+  decryptWithType,
+  signPayload,
+  verifyPayloadSignature,
+  generateFileHash,
+  generateManifest,
+  verifyManifest
+} = require('./utils/crypto');
 const PORT = process.env.PORT || 3000;
-
-// Middlewares globales (asegúrate de que estén antes de las rutas)
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 const authRoutes = require('./routes/auth.routes');
 const keysRoutes = require('./routes/keys.routes');
@@ -27,13 +30,7 @@ const pdfTemplateRoutes = require('./routes/pdfTemplate.routes');
 const profileRoutes = require('./routes/profile.routes');
 const adminRoutes = require('./routes/admin.routes');
 const visualConfigRoutes = require('./routes/visualConfig.routes');
-
-app.use('/api', authRoutes);
-app.use(keysRoutes);
-app.use('/api/pdf-template', pdfTemplateRoutes);
-app.use(adminRoutes);  // ✅ Sin prefijo - las rutas incluyen /api/admin/ completos
-app.use(profileRoutes);
-app.use('/api', visualConfigRoutes);
+const tutorialRoutes = require('./routes/tutorial.routes');
 
 
 // Validar variables de entorno críticas
@@ -43,13 +40,22 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
+if (Buffer.byteLength(process.env.JWT_SECRET, 'utf8') < 32) {
+  const message = 'JWT_SECRET debe tener al menos 32 bytes para resistir ataques de fuerza bruta';
+  if (process.env.NODE_ENV === 'production') {
+    console.error(`ERROR: ${message}`);
+    process.exit(1);
+  }
+  console.warn(`ADVERTENCIA: ${message}`);
+}
+
 // =================== Crear directorios necesarios ===================
 function createRequiredDirectories() {
   const directories = [
     path.join(__dirname, '../uploads'),
     path.join(__dirname, '../uploads/admin'),
+    path.join(__dirname, '../uploads/logos'),
     path.join(__dirname, '../downloads'),
-    path.join(__dirname, '../llaves')
   ];
 
   directories.forEach(dir => {
@@ -63,58 +69,69 @@ function createRequiredDirectories() {
 // Crear directorios al iniciar el servidor
 createRequiredDirectories();
 
-// Middlewares globales
+const downloadsDirectory = path.resolve(__dirname, '../downloads');
+const downloadTokens = new Map();
+const DOWNLOAD_TOKEN_TTL_MS = 10 * 60 * 1000;
+
+function removeFileQuietly(filePath) {
+  try {
+    if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch (error) {
+    console.error('No se pudo eliminar un archivo de descarga:', error.message);
+  }
+}
+
+function cleanupExpiredDownloads() {
+  const now = Date.now();
+  for (const [token, entry] of downloadTokens.entries()) {
+    if (entry.expiresAt <= now) {
+      downloadTokens.delete(token);
+      removeFileQuietly(entry.filePath);
+    }
+  }
+}
+
+function createDownloadToken(filePath, userId) {
+  const resolvedPath = path.resolve(filePath);
+  if (!resolvedPath.startsWith(`${downloadsDirectory}${path.sep}`)) {
+    throw new Error('Ruta de descarga fuera del directorio permitido');
+  }
+
+  cleanupExpiredDownloads();
+  const token = crypto.randomBytes(32).toString('hex');
+  downloadTokens.set(token, {
+    filePath: resolvedPath,
+    userId: Number(userId),
+    expiresAt: Date.now() + DOWNLOAD_TOKEN_TTL_MS
+  });
+  return token;
+}
+
+// Los archivos generados que hayan quedado huérfanos se eliminan al iniciar.
+for (const entry of fs.readdirSync(downloadsDirectory, { withFileTypes: true })) {
+  if (!entry.isFile() || entry.name.startsWith('.')) continue;
+  const filePath = path.join(downloadsDirectory, entry.name);
+  try {
+    const age = Date.now() - fs.statSync(filePath).mtimeMs;
+    if (age > 24 * 60 * 60 * 1000) removeFileQuietly(filePath);
+  } catch (error) {
+    console.error('No se pudo revisar una descarga antigua:', error.message);
+  }
+}
+
+const downloadCleanupTimer = setInterval(cleanupExpiredDownloads, 60 * 1000);
+downloadCleanupTimer.unref();
+
+// Middlewares globales: deben registrarse antes de cualquier ruta.
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+configureAppSecurity(app);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-app.use(cors());
-
-// Logging middleware optimizado (solo en desarrollo)
-if (process.env.NODE_ENV !== 'production') {
-  // Cache para evitar logs repetidos
-  const logCache = new Map();
-  const LOG_CACHE_DURATION = 30000; // 30 segundos
-
-  app.use((req, res, next) => {
-    const now = Date.now();
-    const cacheKey = `${req.method} ${req.url}`;
-
-    // Solo loggear si no se ha loggeado recientemente o es una ruta importante
-    const shouldLog = !logCache.has(cacheKey) ||
-      (now - logCache.get(cacheKey)) > LOG_CACHE_DURATION ||
-      !req.url.includes('/api/global-theme-config') ||
-      req.url === '/' ||
-      req.url.startsWith('/admin') ||
-      req.url.startsWith('/panelAdmin') ||
-      req.url.startsWith('/adminLogin') ||
-      req.url.includes('/api/login') ||
-      req.url.includes('/api/auth/me') ||
-      req.url.includes('/api/admin/generate-admin-token');
-
-    if (shouldLog) {
-      logCache.set(cacheKey, now);
-
-      // Limpiar cache antigua
-      for (const [key, timestamp] of logCache.entries()) {
-        if (now - timestamp > LOG_CACHE_DURATION) {
-          logCache.delete(key);
-        }
-      }
-    }
-
-    next();
-  });
-}
 
 // Configuración de archivos estáticos ANTES de las rutas
 app.use("/css", express.static(path.join(__dirname, "../css"), { maxAge: "1d" }));
-app.use("/scripts", express.static(path.join(__dirname, "./"), {
-  maxAge: "1d",
-  setHeaders: (res, path) => {
-    if (path.endsWith('.js')) {
-      res.setHeader('Content-Type', 'application/javascript');
-    }
-  }
-}));
 app.use("/scripts/frontend", express.static(path.join(__dirname, "./frontend"), {
   maxAge: "1d",
   setHeaders: (res, path) => {
@@ -123,23 +140,13 @@ app.use("/scripts/frontend", express.static(path.join(__dirname, "./frontend"), 
     }
   }
 }));
-app.use("/scripts/utils", express.static(path.join(__dirname, "./utils"), {
-  maxAge: "1d",
-  setHeaders: (res, path) => {
-    if (path.endsWith('.js')) {
-      res.setHeader('Content-Type', 'application/javascript');
-    }
-  }
-}));
-app.use("/scripts/templates", express.static(path.join(__dirname, "./templates"), {
-  maxAge: "1d",
-  setHeaders: (res, path) => {
-    if (path.endsWith('.js')) {
-      res.setHeader('Content-Type', 'application/javascript');
-    }
-  }
-}));
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.get("/scripts/utils/tutorial.js", (req, res) => {
+  res.sendFile(path.join(__dirname, "utils/tutorial.js"), { maxAge: "1d" });
+});
+app.get("/scripts/utils/themeManager.js", (req, res) => {
+  res.sendFile(path.join(__dirname, "utils/themeManager.js"), { maxAge: "1d" });
+});
+app.use("/uploads/admin", express.static(path.join(__dirname, "../uploads/admin")));
 app.use("/recursos", express.static(path.join(__dirname, "../recursos")));
 app.use("/html", express.static(path.join(__dirname, "../html"), { maxAge: "1d" }));
 // Rutas específicas para archivos del admin
@@ -153,10 +160,34 @@ app.use("/admin/js", express.static(path.join(__dirname, "../admin/js"), {
   }
 }));
 app.use("/admin", express.static(path.join(__dirname, "../admin"), { maxAge: "1d" }));
-app.use("/downloads", express.static(path.join(__dirname, "../downloads")));
-
 // Servir favicon desde la raíz
 app.use("/favicon.ico", express.static(path.join(__dirname, "../favicon.ico"), { maxAge: "1d" }));
+
+// Descarga de un solo uso. El archivo no queda publicado como contenido estático.
+app.get('/downloads/:token', (req, res, next) => {
+  const token = String(req.params.token || '');
+  if (!/^[a-f0-9]{64}$/.test(token)) {
+    return res.status(404).json({ error: 'Descarga no encontrada o expirada' });
+  }
+
+  cleanupExpiredDownloads();
+  const entry = downloadTokens.get(token);
+  if (!entry || entry.expiresAt <= Date.now() || !fs.existsSync(entry.filePath)) {
+    if (entry) {
+      downloadTokens.delete(token);
+      removeFileQuietly(entry.filePath);
+    }
+    return res.status(404).json({ error: 'Descarga no encontrada o expirada' });
+  }
+
+  // Consumir el token antes de enviar para impedir descargas concurrentes repetidas.
+  downloadTokens.delete(token);
+  res.setHeader('Cache-Control', 'no-store');
+  return res.download(entry.filePath, path.basename(entry.filePath), (error) => {
+    removeFileQuietly(entry.filePath);
+    if (error && !res.headersSent) next(error);
+  });
+});
 
 // Middleware para manejar rutas .well-known (Chrome DevTools, etc.)
 app.use('/.well-known', (req, res) => {
@@ -164,17 +195,15 @@ app.use('/.well-known', (req, res) => {
   res.status(404).end();
 });
 
-// Configuración de multer para subir archivos
-const upload = multer({ dest: path.join(__dirname, "../uploads") });
-
-// Crear carpetas necesarias si no existen
-[
-  path.join(__dirname, "../downloads"),
-  path.join(__dirname, "../llaves"),
-  path.join(__dirname, "../uploads"),
-].forEach((dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+// Configuración general de archivos. Los anexos pueden ser de cualquier tipo,
+// pero cada archivo tiene un límite para evitar agotar el almacenamiento.
+const maxUploadSizeMb = Number.parseInt(process.env.MAX_UPLOAD_SIZE_MB, 10) || 25;
+const upload = multer({
+  dest: path.join(__dirname, "../uploads"),
+  limits: {
+    fileSize: maxUploadSizeMb * 1024 * 1024,
+    files: 51,
+    fields: 50
   }
 });
 
@@ -189,7 +218,6 @@ app.use(async (req, res, next) => {
 
   if (requiresDb) {
     try {
-      const pool = require('./db/pool');
       const connection = await pool.getConnection();
       connection.release();
       // BD está disponible
@@ -202,9 +230,8 @@ app.use(async (req, res, next) => {
       if (req.path.startsWith('/api/')) {
         return res.status(503).json({
           success: false,
-          message: 'Base de datos no disponible. Por favor, instala la base de datos desde el panel de administración.',
-          offline: true,
-          installUrl: '/panelAdmin'
+          message: 'Base de datos no disponible. Verifica la conexión e importa firmas_digitales_v2.sql desde tu proveedor.',
+          offline: true
         });
       }
     }
@@ -261,13 +288,13 @@ app.get('/health', async (req, res) => {
     res.status(503).json({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
-      error: error.message,
+      error: 'database_unavailable',
       database: 'disconnected'
     });
   }
 });
 
-// Panel de administración - funciona sin BD (para instalar BD)
+// Panel de administración - la interfaz puede abrirse aunque la BD esté desconectada.
 // REMOVIDO: Esta ruta estaba duplicada, se mantiene solo la versión más abajo
 
 // Login de administración - funciona sin BD
@@ -282,6 +309,13 @@ app.get('/firmar', (req, res) => res.redirect('/#firmar'));
 app.get('/verificar', (req, res) => res.redirect('/#verificar'));
 app.get('/perfil', (req, res) => res.redirect('/#perfil'));
 app.get('/contacto', (req, res) => res.redirect('/#contacto'));
+app.get('/tutorial', (req, res) => {
+  const filePath = path.join(__dirname, "../html/tutorial.html");
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("Tutorial no encontrado");
+  }
+  res.sendFile(filePath);
+});
 
 // =================== RUTAS LIMPIAS PARA PANEL DE ADMINISTRACIÓN ===================
 
@@ -320,9 +354,6 @@ app.get('/acceso-denegado', (req, res) => {
   res.sendFile(filePath);
 });
 
-// Alias para /forbidden -> redirige a /acceso-denegado
-app.get('/forbidden', (req, res) => res.redirect('/acceso-denegado'));
-
 // =================== REDIRECCIONES PARA COMPATIBILIDAD ===================
 
 // Redirecciones de URLs antiguas a nuevas rutas limpias
@@ -335,12 +366,13 @@ app.get('/forbidden', (req, res) => res.redirect(301, '/acceso-denegado'));
 
 
 // =================== Routers backend ===================
-app.use(authRoutes);
+app.use('/api', authRoutes);
 app.use(keysRoutes);
 app.use('/api/pdf-template', pdfTemplateRoutes);
-app.use(adminRoutes);  // ✅ Sin prefijo - las rutas incluyen /api/admin/ completos
+app.use(adminRoutes);
 app.use(profileRoutes);
 app.use('/api', visualConfigRoutes);
+app.use('/api/tutorial', tutorialRoutes);
 
 // =================== Rutas para configuración de plantillas ===================
 
@@ -351,225 +383,130 @@ app.use('/api', visualConfigRoutes);
 // ✅ Usa la tabla global_pdf_config en lugar de archivos JSON o global_template_config
 // ✅ Todas las rutas están disponibles en /api/pdf-template/*
 
-// =================== Rutas de configuración ===================
-const configPath = path.join(__dirname, "../config.json");
-
-app.get("/api/config", (req, res) => {
-  if (!fs.existsSync(configPath)) return res.json({});
-  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-  res.json(config);
-});
-
-// Endpoint público para obtener configuración global de temas
-app.get('/api/global-theme-config', async (req, res) => {
-  try {
-    const pool = require('./db/pool');
-
-    // Intentar cargar desde base de datos
-    try {
-      const [rows] = await pool.execute(
-        'SELECT selected_theme, custom_color, timestamp, updated_by FROM theme_config WHERE id = 1'
-      );
-
-      if (rows.length > 0) {
-        const dbConfig = {
-          selectedTheme: rows[0].selected_theme,
-          customColor: rows[0].custom_color,
-          timestamp: rows[0].timestamp,
-          updatedBy: rows[0].updated_by
-        };
-
-        return res.json({
-          success: true,
-          theme: dbConfig
-        });
-      }
-    } catch (dbError) {
-      console.warn('Error leyendo configuración de BD:', dbError);
-    }
-
-    // Configuración por defecto si no hay nada en BD
-    const defaultConfig = {
-      selectedTheme: 'orange',
-      customColor: null,
-      timestamp: Date.now()
-    };
-
-    return res.json({
-      success: true,
-      theme: defaultConfig
-    });
-
-    res.json({
-      success: true,
-      theme: defaultConfig
-    });
-  } catch (error) {
-    console.error('Error obteniendo configuración global de tema:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor'
-    });
-  }
-});
-
-app.post("/api/config", authenticate, (req, res) => {
-  if (req.userRole !== "admin") {
-    return res.status(403).json({ error: "No tienes permisos para realizar esta acción" });
-  }
-  try {
-    const config = req.body;
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Error al guardar configuraciones:", err);
-    res.status(500).json({ error: "Error interno del servidor" });
-  }
-});
-
-// =================== Rutas de administración ===================
-
-// Configurar multer para logos (en memoria)
-const logoUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB máximo
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Solo se permiten archivos de imagen'), false);
-    }
-  }
-});
-
-// Endpoint para subir logo institucional
-app.post("/api/upload/logo", authenticate, logoUpload.single("logo"), async (req, res) => {
-  if (req.userRole !== "admin") {
-    return res.status(403).json({ error: "No tienes permisos para realizar esta acción" });
-  }
-
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No se proporcionó ningún archivo" });
-    }
-
-    // El archivo ya está en memoria como buffer
-    const logoBuffer = req.file.buffer;
-    const logoMimetype = req.file.mimetype;
-
-    // Guardar en la base de datos
-    await pool.query(
-      "UPDATE visual_config SET logo_data = ?, logo_mimetype = ? WHERE id = 1",
-      [logoBuffer, logoMimetype]
-    );
-
-    // Retornar URL del logo para preview
-    const logoDataUrl = `data:${logoMimetype};base64,${logoBuffer.toString('base64')}`;
-
-    res.json({
-      success: true,
-      message: "Logo subido correctamente",
-      logoDataUrl: logoDataUrl
-    });
-
-  } catch (err) {
-    console.error("Error al subir logo:", err);
-    res.status(500).json({ error: "Error interno del servidor" });
-  }
-});
-
 // =================== Rutas de firma y verificación ===================
-// ====================================
-// ENDPOINT TEMPORAL PARA DEBUG - VERIFICAR USUARIOS Y LLAVES
-// ====================================
-app.get("/debug/users", async (req, res) => {
+function safeUnlink(filePath) {
+  if (!filePath) return;
   try {
-    const [users] = await pool.query(
-      "SELECT id, nombre, usuario, active_key_id FROM users WHERE rol = 'profesor' LIMIT 5"
-    );
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch (error) {
+    console.error('No se pudo limpiar un archivo temporal:', error.message);
+  }
+}
 
-    const userDetails = [];
-    for (const user of users) {
-      const [keys] = await pool.query(
-        "SELECT id, key_name, created_at, expiration_date FROM user_keys WHERE user_id = ? AND id = ?",
-        [user.id, user.active_key_id]
+function cleanupUploadedFiles(req) {
+  if (req.file && req.file.path) safeUnlink(req.file.path);
+  if (!req.files) return;
+  Object.values(req.files).flat().forEach(file => safeUnlink(file && file.path));
+}
+
+function parsePositiveInteger(value) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function getPdfKeywordText(pdfDoc) {
+  const keywords = pdfDoc.getKeywords();
+  if (Array.isArray(keywords)) return keywords.join(' ');
+  return typeof keywords === 'string' ? keywords : '';
+}
+
+function getSecurityKeyword(keywordText, name) {
+  const match = keywordText.match(new RegExp(`(?:^|[\\s,;])${name}:([^\\s,;]+)`, 'i'));
+  return match ? match[1] : null;
+}
+
+function extractPdfSecurityMetadata(pdfDoc) {
+  const keywordText = getPdfKeywordText(pdfDoc);
+  const signerKeyword = getSecurityKeyword(keywordText, 'SIGNER_USER_ID');
+  const signingKeyKeyword = getSecurityKeyword(keywordText, 'SIGNING_KEY_ID');
+  const signatureVersion = getSecurityKeyword(keywordText, 'SIGNATURE_VERSION');
+  const keywordSignerId = parsePositiveInteger(signerKeyword);
+  const legacyAuthorId = parsePositiveInteger((pdfDoc.getAuthor() || '').split('|')[0]);
+  const signerUserId = keywordSignerId || legacyAuthorId;
+  const signingKeyId = parsePositiveInteger(signingKeyKeyword);
+  const hasV2Metadata = signerKeyword !== null || signingKeyKeyword !== null || signatureVersion !== null;
+
+  let invalidReason = null;
+  if (hasV2Metadata && (!keywordSignerId || !signingKeyId || signatureVersion !== '2')) {
+    invalidReason = 'Los metadatos criptograficos del documento estan incompletos o son invalidos.';
+  } else if (keywordSignerId && legacyAuthorId && keywordSignerId !== legacyAuthorId) {
+    invalidReason = 'Los identificadores del firmante dentro del documento no coinciden.';
+  }
+
+  return {
+    keywordText,
+    signerUserId,
+    signingKeyId,
+    signatureVersion,
+    isLegacy: !hasV2Metadata,
+    invalidReason
+  };
+}
+
+async function getPublicKeyCandidates(signerUserId, signingKeyId = null) {
+  if (!signerUserId) return [];
+  if (signingKeyId) {
+    const [rows] = await pool.query(
+      'SELECT id, user_id, public_key, encryption_type FROM user_keys WHERE id = ? AND user_id = ? LIMIT 1',
+      [signingKeyId, signerUserId]
+    );
+    return rows;
+  }
+  // Un documento legado solo puede probar llaves pertenecientes al firmante embebido.
+  const [rows] = await pool.query(
+    'SELECT id, user_id, public_key, encryption_type FROM user_keys WHERE user_id = ? ORDER BY created_at DESC LIMIT 100',
+    [signerUserId]
+  );
+  return rows;
+}
+
+function verifyWithPublicKeyCandidates(payload, signatureBase64, keyRows) {
+  let decryptableKeyCount = 0;
+  for (const row of keyRows) {
+    try {
+      const publicKey = decryptWithType(
+        row.public_key,
+        String(row.user_id),
+        row.encryption_type
       );
-
-      userDetails.push({
-        id: user.id,
-        nombre: user.nombre,
-        usuario: user.usuario,
-        active_key_id: user.active_key_id,
-        has_active_key: keys.length > 0,
-        active_key: keys.length > 0 ? {
-          id: keys[0].id,
-          name: keys[0].key_name,
-          created: keys[0].created_at,
-          expires: keys[0].expiration_date
-        } : null
-      });
+      decryptableKeyCount += 1;
+      if (verifyPayloadSignature(payload, signatureBase64, publicKey)) {
+        return { verified: true, keyId: Number(row.id), decryptableKeyCount };
+      }
+    } catch (error) {
+      console.error(`No se pudo usar la llave publica ${row.id}:`, error.message);
     }
-
-    res.json({ users: userDetails });
-  } catch (error) {
-    console.error('Error checking users:', error);
-    res.status(500).json({ error: error.message });
   }
-});
-
-// ====================================
-// ENDPOINT TEMPORAL PARA DEBUG - VERIFICAR CONFIG VISUAL
-// ====================================
-app.get("/debug/visual-config", async (req, res) => {
-  try {
-    const [pdfConfigRows] = await pool.query(
-      "SELECT selected_template, color_config, font_config, layout_config, border_config, visual_config FROM global_pdf_config WHERE id = 1"
-    );
-
-    const [visualConfigRows] = await pool.query(
-      "SELECT institution_name, logo_data, logo_mimetype FROM visual_config WHERE id = 1"
-    );
-
-    const pdfConfig = pdfConfigRows.length > 0 ? pdfConfigRows[0] : null;
-    const visualConfig = visualConfigRows.length > 0 ? visualConfigRows[0] : null;
-
-    const response = {
-      pdfConfig: pdfConfig ? {
-        selected_template: pdfConfig.selected_template,
-        visual_config: typeof pdfConfig.visual_config === 'string' ? JSON.parse(pdfConfig.visual_config || '{}') : pdfConfig.visual_config
-      } : null,
-      visualConfig: visualConfig ? {
-        institution_name: visualConfig.institution_name,
-        has_logo_data: !!visualConfig.logo_data,
-        logo_mimetype: visualConfig.logo_mimetype
-      } : null
-    };
-
-    res.json(response);
-  } catch (error) {
-    console.error('Error checking visual config:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
+  return { verified: false, keyId: null, decryptableKeyCount };
+}
 
 app.post("/sign-document", authenticate, upload.fields([{ name: "document", maxCount: 1 }, { name: "attachments", maxCount: 50 }]), async (req, res) => {
   const userId = req.userId;
   const keyPassword = req.body.keyPassword;
   const { renderPdfWithTemplate } = require("./templates/template.manager");
   const { TemplateManager } = require("./templates/template.manager");
+  let tempBlankPath = null;
+  let avaladoFilePath = null;
+  let completed = false;
 
   try {
+    if (!req.files || !req.files.document || !req.files.document[0]) {
+      return res.status(400).json({ error: "El documento PDF es requerido." });
+    }
+    if (typeof keyPassword !== 'string' || keyPassword.length === 0 || keyPassword.length > 1024) {
+      return res.status(400).json({ error: "La contrasena de la llave no es valida." });
+    }
     // Obtener la llave privada activa del usuario
     const [rows] = await pool.query(
-      "SELECT private_key, encryption_type, expiration_date FROM user_keys WHERE id = (SELECT active_key_id FROM users WHERE id = ?)",
-      [userId]
+      "SELECT id, user_id, private_key, encryption_type, expiration_date FROM user_keys WHERE id = (SELECT active_key_id FROM users WHERE id = ?) AND user_id = ?",
+      [userId, userId]
     );
     if (rows.length === 0) {
       return res.status(400).json({ error: "No hay una llave activa seleccionada" });
     }
 
     const encryptedPrivateKey = rows[0].private_key;
-    const encryptionType = rows[0].encryption_type || "aes-256-cbc";
+    const encryptionType = rows[0].encryption_type;
     let privateKey;
     try {
       privateKey = decryptWithType(encryptedPrivateKey, keyPassword, encryptionType);
@@ -584,29 +521,16 @@ app.post("/sign-document", authenticate, upload.fields([{ name: "document", maxC
 
     // Guardar la llave privada en un archivo temporal
     const tempDir = path.join(__dirname, "../uploads");
-    const privateKeyPath = path.join(tempDir, `private_key_${Date.now()}.pem`);
-    fs.writeFileSync(privateKeyPath, privateKey, "utf8");
+    const signingKeyId = Number(rows[0].id);
 
     // Firmar el documento con la llave privada
     const documentPath = req.files.document[0].path;
-    const signedFilePath = `${documentPath}.signed`;
-    const { exec } = require("child_process");
+    const documentBytes = fs.readFileSync(documentPath);
+    const signatureBase64 = signPayload(documentBytes, privateKey);
 
     // Normalizar rutas para OpenSSL (evitar problemas con letras de unidad en Windows)
-    const normalizedPrivateKeyPath = privateKeyPath.replace(/\\/g, '/');
-    const normalizedDocumentPath = documentPath.replace(/\\/g, '/');
-    const normalizedSignedFilePath = signedFilePath.replace(/\\/g, '/');
-
-    const signCommand = `openssl dgst -sign "${normalizedPrivateKeyPath}" -keyform PEM -sha256 -out "${normalizedSignedFilePath}" "${normalizedDocumentPath}"`;
-    exec(signCommand, async (err) => {
+    {
       // NO eliminar privateKeyPath aquí - se necesita para firmar manifest si hay anexos
-      if (err) {
-        console.error("Error al firmar documento:", err);
-        return res.status(500).json({ error: "Error al firmar el documento" });
-      }
-      const signatureBinary = fs.readFileSync(signedFilePath);
-      const signatureBase64 = signatureBinary.toString("base64").trim();
-
       // ==================== PREPARAR INFORMACIÓN DE ANEXOS ====================
       let attachmentCount = 0;
       let attachmentNames = [];
@@ -703,15 +627,14 @@ app.post("/sign-document", authenticate, upload.fields([{ name: "document", maxC
       };
 
       // Crear PDF base (hoja en blanco tamaño carta)
-      const { PDFDocument } = require('pdf-lib');
       const blankPdfDoc = await PDFDocument.create();
       blankPdfDoc.addPage([612, 792]); // Carta
       const blankPdfBytes = await blankPdfDoc.save();
-      const tempBlankPath = path.join(tempDir, `blank_${Date.now()}.pdf`);
+      tempBlankPath = path.join(tempDir, `blank_${Date.now()}.pdf`);
       fs.writeFileSync(tempBlankPath, blankPdfBytes);
 
       // Renderizar PDF con plantilla usando el sistema modular
-      const avaladoFilePath = path.join(__dirname, "../downloads", `avalado_${Date.now()}.pdf`);
+      avaladoFilePath = path.join(__dirname, "../downloads", `avalado_${Date.now()}.pdf`);
 
       // El TemplateManager manejará la configuración específica de la plantilla
       await renderPdfWithTemplate(tempBlankPath, avaladoFilePath, data, templateConfig);
@@ -722,8 +645,16 @@ app.post("/sign-document", authenticate, upload.fields([{ name: "document", maxC
       finalPdfDoc.setSubject(signatureBase64);
       finalPdfDoc.setAuthor(`${userInfo[0].id}|${userInfo[0].nombre}|${userInfo[0].usuario}`);
       finalPdfDoc.setTitle("Documento Avalado");
-      finalPdfDoc.setKeywords(["firma digital", "avalado", "documento"]);
-      finalPdfDoc.setCreator("Firmas Digitales FD");
+      finalPdfDoc.setKeywords([
+        "firma digital",
+        "avalado",
+        "documento",
+        "SIGNATURE_VERSION:2",
+        "SIGNATURE_ALGORITHM:RSA-SHA256",
+        `SIGNER_USER_ID:${userId}`,
+        `SIGNING_KEY_ID:${signingKeyId}`
+      ]);
+      finalPdfDoc.setCreator(institutionName);
       finalPdfDoc.setCreationDate(new Date());
       finalPdfDoc.setModificationDate(new Date());
 
@@ -743,32 +674,14 @@ app.post("/sign-document", authenticate, upload.fields([{ name: "document", maxC
         attachmentNames = attachmentFiles.map(f => f.name);
 
         // Generar manifest determinista
-        manifestJson = generateManifest(attachmentFiles);
+        manifestJson = generateManifest(attachmentFiles, {
+          signerId: userId,
+          signingKeyId,
+          documentSignature: signatureBase64
+        });
 
         // Firmar el manifest con la llave privada del usuario
-        const manifestPath = path.join(tempDir, `manifest_${Date.now()}.json`);
-        const manifestSigPath = `${manifestPath}.sig`;
-        fs.writeFileSync(manifestPath, manifestJson, 'utf8');
-
-        // Normalizar rutas para OpenSSL (evitar problemas con letras de unidad en Windows)
-        const normalizedManifestPath = manifestPath.replace(/\\/g, '/');
-        const normalizedManifestSigPath = manifestSigPath.replace(/\\/g, '/');
-
-        const signManifestCommand = `openssl dgst -sign "${normalizedPrivateKeyPath}" -keyform PEM -sha256 -out "${normalizedManifestSigPath}" "${normalizedManifestPath}"`;
-        await new Promise((resolve, reject) => {
-          exec(signManifestCommand, (err) => {
-            if (err) {
-              console.error('Error al firmar manifest:', err);
-              reject(err);
-            } else {
-              const manifestSigBinary = fs.readFileSync(manifestSigPath);
-              manifestSignature = manifestSigBinary.toString('base64').trim();
-              fs.unlinkSync(manifestPath);
-              fs.unlinkSync(manifestSigPath);
-              resolve();
-            }
-          });
-        });
+        manifestSignature = signPayload(manifestJson, privateKey);
 
         // Calcular estadísticas de anexos
         attachmentCount = attachmentFiles.length;
@@ -776,11 +689,19 @@ app.post("/sign-document", authenticate, upload.fields([{ name: "document", maxC
 
         // Embeber manifest completo en base64 en Keywords (Producer tiene límite de caracteres)
         const manifestBase64 = Buffer.from(manifestJson).toString('base64');
-        const currentKeywords = finalPdfDoc.getKeywords() || [];
         const manifestDataKeyword = `MANIFEST_JSON:${manifestBase64}`;
         const manifestSigKeyword = `ATTACHMENT_MANIFEST_SIG:${manifestSignature}`;
-        const updatedKeywords = [...currentKeywords, manifestDataKeyword, manifestSigKeyword];
-        finalPdfDoc.setKeywords(updatedKeywords);
+        finalPdfDoc.setKeywords([
+          "firma digital",
+          "avalado",
+          "documento",
+          "SIGNATURE_VERSION:2",
+          "SIGNATURE_ALGORITHM:RSA-SHA256",
+          `SIGNER_USER_ID:${userId}`,
+          `SIGNING_KEY_ID:${signingKeyId}`,
+          manifestDataKeyword,
+          manifestSigKeyword
+        ]);
 
         // Limpiar archivos temporales de anexos
         req.files.attachments.forEach(file => {
@@ -804,21 +725,22 @@ app.post("/sign-document", authenticate, upload.fields([{ name: "document", maxC
         );
       }
 
-      // Limpieza de archivos temporales
-      fs.unlinkSync(documentPath);
-      fs.unlinkSync(signedFilePath);
-      fs.unlinkSync(tempBlankPath);
-      fs.unlinkSync(privateKeyPath); // Eliminar llave privada temporal al final
-
+      const downloadToken = createDownloadToken(avaladoFilePath, userId);
+      completed = true;
       res.json({
         success: true,
-        downloadUrl: `/downloads/${path.basename(avaladoFilePath)}`,
+        downloadUrl: `/downloads/${downloadToken}`,
+        downloadExpiresIn: DOWNLOAD_TOKEN_TTL_MS,
         attachmentsProcessed: attachmentCount
       });
-    });
+    }
   } catch (err) {
     console.error("Error en el proceso de firma:", err);
     res.status(500).json({ error: "Error en el proceso de firma" });
+  } finally {
+    cleanupUploadedFiles(req);
+    safeUnlink(tempBlankPath);
+    if (!completed) safeUnlink(avaladoFilePath);
   }
 });
 
@@ -834,13 +756,9 @@ app.post("/extract-signer-info", authenticate, upload.single("signedFile"), asyn
 
     // Usar pdf-lib para leer metadatos
     const pdfDoc = await PDFDocument.load(pdfBytes);
-    const author = pdfDoc.getAuthor();
-    const subject = pdfDoc.getSubject();
+    const securityMetadata = extractPdfSecurityMetadata(pdfDoc);
 
-    // Limpiar archivo temporal
-    fs.unlinkSync(signedFile.path);
-
-    if (!author || !author.includes('|')) {
+    if (securityMetadata.invalidReason || !securityMetadata.signerUserId) {
       return res.json({
         success: false,
         message: "El documento no contiene información del firmante válida."
@@ -848,12 +766,10 @@ app.post("/extract-signer-info", authenticate, upload.single("signedFile"), asyn
     }
 
     // Parsear información del firmante (formato: id|nombre|usuario)
-    const [signerUserId, signerName, signerUsername] = author.split('|');
-
     // Verificar que el firmante existe en la base de datos
     const [userRows] = await pool.query(
       "SELECT id, nombre, usuario FROM users WHERE id = ? AND rol = 'profesor'",
-      [signerUserId]
+      [securityMetadata.signerUserId]
     );
 
     if (userRows.length === 0) {
@@ -866,34 +782,30 @@ app.post("/extract-signer-info", authenticate, upload.single("signedFile"), asyn
     res.json({
       success: true,
       signer: {
-        id: parseInt(signerUserId),
-        nombre: signerName,
-        usuario: signerUsername
+        id: Number(userRows[0].id),
+        nombre: userRows[0].nombre,
+        usuario: userRows[0].usuario
       },
-      message: `Documento firmado por: ${signerName}`
+      signingKeyId: securityMetadata.signingKeyId,
+      legacyDocument: securityMetadata.isLegacy,
+      message: `Documento firmado por: ${userRows[0].nombre}`
     });
 
   } catch (error) {
     console.error("Error al extraer información del firmante:", error);
 
     // Limpiar archivo temporal en caso de error
-    if (req.file && req.file.path) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (e) {
-        console.error("Error al limpiar archivo temporal:", e);
-      }
-    }
-
     res.status(500).json({
       success: false,
       error: "Error al procesar el documento firmado."
     });
+  } finally {
+    cleanupUploadedFiles(req);
   }
 });
 
-// Endpoint público para obtener profesores (sin autenticación requerida)
-app.get('/api/profesores', async (req, res) => {
+// El directorio de profesores solo está disponible para usuarios autenticados.
+app.get('/api/profesores', authenticate, async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT id, nombre FROM users WHERE rol = 'profesor'");
     res.json(rows);
@@ -903,7 +815,7 @@ app.get('/api/profesores', async (req, res) => {
   }
 });
 
-// Endpoint con autenticación para profesores (mantener por compatibilidad)
+// Alias autenticado mantenido por compatibilidad.
 app.get('/api/profesores-auth', authenticate, async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT id, nombre FROM users WHERE rol = 'profesor'");
@@ -918,32 +830,23 @@ app.post("/verify-document", authenticate, upload.fields([
   { name: "signedFile", maxCount: 1 },
   { name: "originalFile", maxCount: 1 }
 ]), async (req, res) => {
-  const profesorId = req.body.profesorId;
-
-  // Validaciones iniciales
-  if (!profesorId) {
-    return res.status(400).json({ error: "ID del profesor/tutor es requerido." });
-  }
-
-  if (!req.files || !req.files.signedFile || !req.files.signedFile[0]) {
-    return res.status(400).json({ error: "El archivo avalado es requerido." });
-  }
-
-  if (!req.files.originalFile || !req.files.originalFile[0]) {
-    return res.status(400).json({ error: "El archivo original es requerido." });
-  }
-
   try {
-    const { signedFile, originalFile } = req.files;
+    const profesorId = parsePositiveInteger(req.body.profesorId);
+    if (!profesorId) {
+      return res.status(400).json({ error: "ID del profesor/tutor es requerido." });
+    }
+    if (!req.files || !req.files.signedFile || !req.files.signedFile[0]) {
+      return res.status(400).json({ error: "El archivo avalado es requerido." });
+    }
+    if (!req.files.originalFile || !req.files.originalFile[0]) {
+      return res.status(400).json({ error: "El archivo original es requerido." });
+    }
 
-    // Verificar si los archivos son idénticos
+    const { signedFile, originalFile } = req.files;
     if (signedFile[0].originalname === originalFile[0].originalname &&
       signedFile[0].size === originalFile[0].size) {
-
-      // Verificar contenido para confirmar
       const signedContent = fs.readFileSync(signedFile[0].path);
       const originalContent = fs.readFileSync(originalFile[0].path);
-
       if (signedContent.equals(originalContent)) {
         return res.status(400).json({
           error: "Los archivos subidos son idénticos. El archivo avalado debe ser diferente al archivo original."
@@ -951,17 +854,40 @@ app.post("/verify-document", authenticate, upload.fields([
       }
     }
 
-    const [rows] = await pool.query(
-      "SELECT public_key FROM user_keys WHERE user_id = (SELECT id FROM users WHERE id = ?) ORDER BY created_at DESC LIMIT 1",
-      [profesorId]
-    );
-    if (rows.length === 0) {
-      return res.status(400).json({ error: "No se encontró la llave pública del profesor/tutor seleccionado." });
-    }
-    const encryptedPublicKey = rows[0].public_key;
-    const publicKey = decryptAES(encryptedPublicKey, String(profesorId), 'aes-256-cbc');
     const signedPdfBytes = fs.readFileSync(signedFile[0].path);
     const pdfDoc = await PDFDocument.load(signedPdfBytes);
+    const securityMetadata = extractPdfSecurityMetadata(pdfDoc);
+    if (securityMetadata.invalidReason || !securityMetadata.signerUserId) {
+      return res.status(400).json({
+        verified: false,
+        reason: 'invalid_metadata',
+        message: securityMetadata.invalidReason || 'No se pudo identificar al firmante del documento.'
+      });
+    }
+    if (securityMetadata.signerUserId !== profesorId) {
+      return res.json({
+        valid: false,
+        professorMatch: false,
+        signatureMatch: false,
+        reason: 'key_mismatch',
+        message: 'El profesor seleccionado no corresponde al identificador del firmante del documento.'
+      });
+    }
+
+    const candidateRows = await getPublicKeyCandidates(
+      securityMetadata.signerUserId,
+      securityMetadata.signingKeyId
+    );
+    if (candidateRows.length === 0) {
+      return res.status(400).json({
+        verified: false,
+        reason: 'signing_key_not_found',
+        message: securityMetadata.signingKeyId
+          ? 'No se encontró la llave exacta con la que se firmó el documento.'
+          : 'No se encontraron llaves históricas del firmante.'
+      });
+    }
+
     const signatureBase64 = pdfDoc.getSubject()?.trim();
     if (!signatureBase64) {
       return res.status(400).json({
@@ -969,58 +895,41 @@ app.post("/verify-document", authenticate, upload.fields([
         message: "El documento no contiene una firma válida en los metadatos."
       });
     }
-    const signatureBuffer = Buffer.from(signatureBase64, "base64");
-    const signaturePath = path.join(__dirname, "../uploads", `firma_${Date.now()}.bin`);
-    fs.writeFileSync(signaturePath, signatureBuffer);
-    const publicKeyPath = path.join(__dirname, "../uploads", `public_key_${Date.now()}.pem`);
-    fs.writeFileSync(publicKeyPath, publicKey);
-    const { exec } = require("child_process");
-    const command = `openssl dgst -verify "${publicKeyPath}" -keyform PEM -sha256 -signature "${signaturePath}" "${originalFile[0].path}"`;
-    exec(command, (error, stdout, stderr) => {
-      let result = {
+
+    const originalBytes = fs.readFileSync(originalFile[0].path);
+    const verification = verifyWithPublicKeyCandidates(originalBytes, signatureBase64, candidateRows);
+    if (verification.decryptableKeyCount === 0) {
+      return res.status(500).json({
+        verified: false,
+        reason: 'public_key_unavailable',
+        message: 'La llave pública registrada está dañada o no puede descifrarse.'
+      });
+    }
+    if (!verification.verified) {
+      return res.json({
         valid: false,
-        professorMatch: false,
+        professorMatch: true,
         signatureMatch: false,
-        message: ""
-      };
+        reason: 'invalid_signature',
+        signingKeyId: securityMetadata.signingKeyId,
+        legacyDocument: securityMetadata.isLegacy,
+        message: 'El firmante coincide, pero el archivo original no supera la verificación criptográfica.'
+      });
+    }
 
-      if (error) {
-        if (stderr.includes("block type is not 01") || stderr.includes("padding check failed")) {
-          result.message = "La llave pública del profesor/tutor seleccionado NO corresponde con la firma del documento avalado. Por favor, selecciona otro profesor/tutor.";
-          result.reason = "key_mismatch";
-          return res.json(result);
-        } else {
-          result.message = "El profesor/tutor seleccionado sí avaló el documento, pero el archivo original NO coincide con el aval. El documento pudo haber sido modificado.";
-          result.reason = "invalid_signature";
-          return res.json(result);
-        }
-      } else if (stdout.includes("Verified OK")) {
-        result.valid = true;
-        result.professorMatch = true;
-        result.signatureMatch = true;
-        result.message = "✅ El profesor/tutor seleccionado avaló el documento y la firma digital es válida. El documento no ha sido modificado.";
-        return res.json(result);
-      } else {
-        result.professorMatch = true;
-        result.signatureMatch = false;
-        result.message = "El profesor/tutor seleccionado sí avaló el documento, pero el archivo original NO coincide con el aval. El documento pudo haber sido modificado.";
-        result.reason = "invalid_signature";
-        return res.json(result);
-      }
-
-      // Limpieza de archivos temporales
-      try {
-        fs.unlinkSync(signedFile[0].path);
-        fs.unlinkSync(originalFile[0].path);
-        fs.unlinkSync(signaturePath);
-        fs.unlinkSync(publicKeyPath);
-      } catch (e) {
-        console.error("Error al limpiar archivos temporales:", e);
-      }
+    return res.json({
+      valid: true,
+      professorMatch: true,
+      signatureMatch: true,
+      signingKeyId: verification.keyId,
+      legacyDocument: securityMetadata.isLegacy,
+      message: 'El firmante y el archivo original coinciden. La firma digital es válida.'
     });
   } catch (error) {
     console.error("Error en el proceso de verificación:", error);
     res.status(500).json({ verified: false, message: "Error en el proceso de verificación." });
+  } finally {
+    cleanupUploadedFiles(req);
   }
 });
 
@@ -1035,23 +944,13 @@ app.post("/verify-attachments", authenticate, upload.fields([
     }
 
     const signedPdfFile = req.files.signedPdf[0];
-    const pdfBaseName = req.body.pdfFileName || signedPdfFile.originalname;
-
-    // Cargar el PDF y extraer el manifest y su firma desde Keywords
     const pdfBytes = fs.readFileSync(signedPdfFile.path);
     const pdfDoc = await PDFDocument.load(pdfBytes);
-    const keywords = pdfDoc.getKeywords() || '';
+    const keywordText = getPdfKeywordText(pdfDoc);
+    const manifestSignature = getSecurityKeyword(keywordText, 'ATTACHMENT_MANIFEST_SIG');
+    const manifestBase64 = getSecurityKeyword(keywordText, 'MANIFEST_JSON');
 
-    // Extraer firma del manifest desde Keywords
-    const manifestSigMatch = keywords.match(/ATTACHMENT_MANIFEST_SIG:([A-Za-z0-9+/=]+)/);
-
-    // Extraer manifest JSON desde Keywords (base64)
-    const manifestDataMatch = keywords.match(/MANIFEST_JSON:([A-Za-z0-9+/=]+)/);
-
-    if (!manifestSigMatch && !manifestDataMatch) {
-      // Limpiar archivo temporal
-      fs.unlinkSync(signedPdfFile.path);
-
+    if (!manifestSignature && !manifestBase64) {
       return res.json({
         success: true,
         hasAttachments: false,
@@ -1059,182 +958,163 @@ app.post("/verify-attachments", authenticate, upload.fields([
       });
     }
 
-    const manifestSignatureFromPdf = manifestSigMatch ? manifestSigMatch[1] : null;
-
-    // Intentar obtener manifest desde el PDF primero (es más confiable)
-    let originalManifest = null;
-    let originalManifestSignature = null;
-    let expectedFileCount = null;
-    let foundInPdf = false;
-
-    if (manifestDataMatch) {
-      // Decodificar manifest desde el PDF
-      try {
-        const manifestJsonBase64 = manifestDataMatch[1];
-        const manifestJsonString = Buffer.from(manifestJsonBase64, 'base64').toString('utf-8');
-        originalManifest = JSON.parse(manifestJsonString);
-        originalManifestSignature = manifestSignatureFromPdf;
-        expectedFileCount = originalManifest.files ? Object.keys(originalManifest.files).length : 0;
-        foundInPdf = true;
-      } catch (error) {
-        console.error('Error al decodificar manifest del PDF:', error);
-        // Continuar para intentar desde BD
-      }
-    }
-
-    // Si no se encontró en el PDF, buscar en la BD
-    if (!foundInPdf) {
-      const [manifestRows] = await pool.query(
-        "SELECT manifest_json, manifest_signature, file_count FROM document_attachments WHERE document_filename = ? ORDER BY created_at DESC LIMIT 1",
-        [pdfBaseName]
-      );
-
-      if (manifestRows.length === 0) {
-        // Permitir que continúe si hay anexos subidos
-        originalManifest = { files: {} };
-        originalManifestSignature = null;
-        expectedFileCount = 0;
-      } else {
-        originalManifest = JSON.parse(manifestRows[0].manifest_json);
-        originalManifestSignature = manifestRows[0].manifest_signature;
-        expectedFileCount = manifestRows[0].file_count;
-      }
-    }
-
-    // Usar firma del PDF si estamos leyendo desde allí, sino usar firma de BD
-    const signatureToVerify = foundInPdf ? manifestSignatureFromPdf : originalManifestSignature;
-
-    // Verificar que la firma del manifest es válida - PERO permitir continuar si hay anexos subidos sin manifest
-    if (!signatureToVerify && (!req.files.attachments || req.files.attachments.length === 0)) {
-      // Sin firma Y sin anexos subidos = error
-      fs.unlinkSync(signedPdfFile.path);
-
-      return res.json({
+    if (!manifestSignature || !manifestBase64 || manifestBase64.length > 1_400_000) {
+      return res.status(400).json({
         success: false,
-        error: "No se encontró información de anexos en este documento."
+        reason: 'invalid_manifest_metadata',
+        error: 'Los metadatos criptográficos de los anexos están incompletos o son inválidos.'
       });
     }
 
-    // Si hay firma pero no coincide (verificar solo si tenemos ambas fuentes)
-    if (foundInPdf && manifestSignatureFromPdf && originalManifestSignature && manifestSignatureFromPdf !== originalManifestSignature) {
-      fs.unlinkSync(signedPdfFile.path);
-
-      return res.json({
+    let manifestJson;
+    let manifest;
+    try {
+      manifestJson = Buffer.from(manifestBase64, 'base64').toString('utf8');
+      manifest = JSON.parse(manifestJson);
+    } catch (error) {
+      return res.status(400).json({
         success: false,
-        error: "La firma del manifest en el PDF no coincide con la firma esperada. El documento pudo haber sido modificado."
+        reason: 'invalid_manifest',
+        error: 'El manifiesto de anexos está dañado.'
       });
     }
 
-    // Verificar archivos anexos si fueron subidos
-    let verificationResult = {
-      success: true,
-      hasAttachments: !!(req.files.attachments && req.files.attachments.length > 0),
-      noManifestFound: !signatureToVerify,  // Nuevo flag para indicar que no hay manifest
-      expectedFileCount: expectedFileCount,
-      uploadedFileCount: 0,
-      filesMatched: [],
-      filesModified: [],
-      filesMissing: [],
-      filesExtra: [],
-      note: !signatureToVerify ? 'Este documento no tiene un manifest de anexos registrado. Los archivos subidos se procesarán como referencia.' : undefined
-    };
+    const securityMetadata = extractPdfSecurityMetadata(pdfDoc);
+    if (securityMetadata.invalidReason || !securityMetadata.signerUserId) {
+      return res.status(400).json({
+        success: false,
+        reason: 'invalid_signer_metadata',
+        error: securityMetadata.invalidReason || 'No se pudo identificar al firmante del manifiesto.'
+      });
+    }
 
-    if (req.files.attachments && req.files.attachments.length > 0) {
-      const uploadedFiles = req.files.attachments.map(file => ({
-        name: file.originalname,
-        buffer: fs.readFileSync(file.path)
-      }));
+    const candidateRows = await getPublicKeyCandidates(
+      securityMetadata.signerUserId,
+      securityMetadata.signingKeyId
+    );
+    if (candidateRows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        reason: 'signing_key_not_found',
+        error: 'No se encontró la llave pública usada para firmar los anexos.'
+      });
+    }
 
-      verificationResult.uploadedFileCount = uploadedFiles.length;
+    const signatureVerification = verifyWithPublicKeyCandidates(
+      manifestJson,
+      manifestSignature,
+      candidateRows
+    );
+    if (!signatureVerification.verified) {
+      return res.status(400).json({
+        success: false,
+        reason: 'invalid_manifest_signature',
+        error: 'La firma criptográfica del manifiesto no es válida.'
+      });
+    }
 
-      // Si no hay manifest (documento firmado sin anexos), solo reportar archivos subidos
-      if (!signatureToVerify) {
-        // Listar los archivos subidos como "filesExtra" ya que no tienen contrapartida en manifest
-        verificationResult.filesExtra = uploadedFiles.map(f => f.name);
-        verificationResult.success = true; // Aceptar como exitoso, solo que son anexos no verificables
-        verificationResult.statusCode = 'no-manifest-available';
-        verificationResult.message = `ℹ️ ${uploadedFiles.length} archivo(s) subido(s) sin manifest registrado. No pueden ser verificados contra una firma original.`;
-      } else {
-        // Usar función de verificación del módulo crypto
-        const verification = verifyManifest(uploadedFiles, originalManifest);
+    if (manifest.version === '2.0.0') {
+      const documentSignature = pdfDoc.getSubject()?.trim();
+      const contextIsValid =
+        Number(manifest.signer_id) === securityMetadata.signerUserId &&
+        Number(manifest.signing_key_id) === signatureVerification.keyId &&
+        typeof documentSignature === 'string' &&
+        manifest.document_signature_sha256 === generateFileHash(documentSignature);
 
-        verificationResult.filesMatched = verification.filesMatched;
-        verificationResult.filesModified = verification.filesModified;
-        verificationResult.filesMissing = verification.filesMissing;
-        verificationResult.filesExtra = verification.filesExtra;
-        verificationResult.success = verification.isValid;
-
-        // Mensaje descriptivo
-        if (verification.isValid) {
-          verificationResult.message = `✅ Los ${uploadedFiles.length} anexo(s) son auténticos y no han sido modificados.`;
-        } else {
-          const issues = [];
-          if (verification.filesModified.length > 0) {
-            issues.push(`${verification.filesModified.length} modificado(s)`);
-          }
-          if (verification.filesMissing.length > 0) {
-            issues.push(`${verification.filesMissing.length} faltante(s)`);
-          }
-          if (verification.filesExtra.length > 0) {
-            issues.push(`${verification.filesExtra.length} extra(s)`);
-          }
-          verificationResult.message = `⚠️ Problemas detectados: ${issues.join(', ')}.`;
-        }
+      if (!contextIsValid) {
+        return res.status(400).json({
+          success: false,
+          reason: 'manifest_context_mismatch',
+          error: 'El manifiesto no pertenece a la firma principal de este documento.'
+        });
       }
-
-      // Limpiar archivos temporales de anexos
-      req.files.attachments.forEach(file => {
-        if (fs.existsSync(file.path)) {
-          fs.unlinkSync(file.path);
-        }
+    } else if (manifest.version !== '1.0.0') {
+      return res.status(400).json({
+        success: false,
+        reason: 'unsupported_manifest_version',
+        error: 'La versión del manifiesto no es compatible.'
       });
-    } else {
-      // No se subieron anexos, pero el documento tiene manifest
-      const manifestFileNames = Object.keys(originalManifest.files || {});
-      verificationResult.uploadedFileCount = 0;
-      verificationResult.success = true;  // Cambiar a true porque no hay error, solo no se verificaron
-      verificationResult.statusCode = 'no-attachments-provided';  // Estado específico
-      verificationResult.message = `El documento incluye ${expectedFileCount} anexo(s), pero no se subió ninguno para verificar. Los anexos están registrados en el PDF.`;
-      verificationResult.manifestFileList = manifestFileNames;
-      verificationResult.note = 'Para verificar que los anexos no han sido modificados, puedes recargarlos y verificarlos.';
     }
 
-    // Limpiar PDF temporal
-    fs.unlinkSync(signedPdfFile.path);
+    if (!manifest.files || typeof manifest.files !== 'object' || Array.isArray(manifest.files)) {
+      return res.status(400).json({
+        success: false,
+        reason: 'invalid_manifest',
+        error: 'La lista de anexos del manifiesto no es válida.'
+      });
+    }
 
-    res.json(verificationResult);
+    const expectedFileNames = Object.keys(manifest.files);
+    const expectedFileCount = expectedFileNames.length;
+    const uploadedFiles = (req.files.attachments || []).map(file => ({
+      name: file.originalname,
+      buffer: fs.readFileSync(file.path)
+    }));
+
+    if (uploadedFiles.length === 0) {
+      return res.json({
+        success: true,
+        cryptographicallyVerified: true,
+        hasAttachments: true,
+        statusCode: 'no-attachments-provided',
+        expectedFileCount,
+        uploadedFileCount: 0,
+        manifestFileList: expectedFileNames,
+        signingKeyId: signatureVerification.keyId,
+        legacyDocument: securityMetadata.isLegacy,
+        message: `El manifiesto firmado es válido e incluye ${expectedFileCount} anexo(s). Súbelos para comprobar su contenido.`
+      });
+    }
+
+    const fileVerification = verifyManifest(uploadedFiles, manifest);
+    const issues = [];
+    if (fileVerification.filesModified.length > 0) issues.push(`${fileVerification.filesModified.length} modificado(s)`);
+    if (fileVerification.filesMissing.length > 0) issues.push(`${fileVerification.filesMissing.length} faltante(s)`);
+    if (fileVerification.filesExtra.length > 0) issues.push(`${fileVerification.filesExtra.length} extra(s)`);
+
+    return res.json({
+      success: fileVerification.isValid,
+      cryptographicallyVerified: true,
+      hasAttachments: true,
+      expectedFileCount,
+      uploadedFileCount: uploadedFiles.length,
+      filesMatched: fileVerification.filesMatched,
+      filesModified: fileVerification.filesModified,
+      filesMissing: fileVerification.filesMissing,
+      filesExtra: fileVerification.filesExtra,
+      signingKeyId: signatureVerification.keyId,
+      legacyDocument: securityMetadata.isLegacy,
+      message: fileVerification.isValid
+        ? `Los ${uploadedFiles.length} anexo(s) son auténticos y no han sido modificados.`
+        : `Se detectaron problemas en los anexos: ${issues.join(', ')}.`
+    });
 
   } catch (error) {
     console.error("Error al verificar anexos:", error);
-
-    // Limpiar archivos temporales en caso de error
-    if (req.files) {
-      if (req.files.signedPdf) {
-        req.files.signedPdf.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
-      }
-      if (req.files.attachments) {
-        req.files.attachments.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
-      }
-    }
-
     res.status(500).json({
       success: false,
-      error: "Error al verificar anexos: " + error.message
+      error: "Error interno al verificar los anexos."
     });
+  } finally {
+    cleanupUploadedFiles(req);
   }
-});
-
-// =================== Rutas protegidas por rol ===================
-app.get('/admin-only', authenticate, isAdmin, (req, res) => {
-  res.json({ message: "Solo admin y owner pueden ver esto" });
-});
-app.get('/owner-only', authenticate, isOwner, (req, res) => {
-  res.json({ message: "Solo el owner puede ver esto" });
 });
 
 // =================== Manejo de errores global ===================
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'El cuerpo JSON de la solicitud no es válido' });
+  }
+
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({
+      error: err.code === 'LIMIT_FILE_SIZE'
+        ? `Cada archivo debe pesar máximo ${maxUploadSizeMb} MB`
+        : 'La carga de archivos supera los límites permitidos'
+    });
+  }
+
+  console.error(err.stack || err);
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 
@@ -1247,54 +1127,55 @@ app.use((req, res) => {
   });
 });
 
-// =================== Rutas de descarga ===================
-app.get('/downloads/:file', (req, res) => {
-  const filePath = path.join(__dirname, '../downloads', req.params.file);
-
-  // Verificar si el archivo existe
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'Archivo no encontrado' });
-  }
-
-  // Servir el archivo sin eliminarlo (para permitir múltiples descargas)
-  res.download(filePath, (err) => {
-    if (err) {
-      console.error('Error al descargar archivo:', err);
-    }
-    // Nota: Ya no eliminamos el archivo automáticamente para permitir descargas múltiples
-    // Los archivos se pueden limpiar periódicamente o manualmente si es necesario
-  });
-});
-
 // =================== Inicio del servidor ===================
-const server = app.listen(PORT, '0.0.0.0', () => {
-  const url = `http://localhost:${PORT}`;
-  console.log('🚀 Servidor corriendo en:', url);
-  console.log('Haz click o copia el enlace para abrir la web.');
-});
+let server;
 
-// =================== Manejo de errores del servidor ===================
-server.on('error', (err) => {
-  console.error('Error del servidor:', err);
-  if (err.code === 'EADDRINUSE') {
-    console.error(`Puerto ${PORT} ya está en uso`);
+async function startServer() {
+  try {
+    await initializePrivilegedAccounts();
+  } catch (error) {
+    if (error.code === 'INVALID_INITIAL_PASSWORD') {
+      throw error;
+    }
+    // La página pública y /health siguen disponibles si la base de datos aún
+    // no está lista. Al conectarla o importarla, basta reiniciar la aplicación.
+    console.warn('No se pudieron preparar las cuentas iniciales:', error.message);
   }
+
+  server = app.listen(PORT, '0.0.0.0', () => {
+    const url = `http://localhost:${PORT}`;
+    console.log('🚀 Servidor corriendo en:', url);
+    console.log('Haz click o copia el enlace para abrir la web.');
+  });
+
+  server.on('error', (err) => {
+    console.error('Error del servidor:', err);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Puerto ${PORT} ya está en uso`);
+    }
+    process.exit(1);
+  });
+}
+
+startServer().catch(error => {
+  console.error('No fue posible iniciar el servidor:', error.message);
+  process.exit(1);
 });
 
 // =================== Manejo de errores no capturados ===================
 process.on('uncaughtException', (err) => {
   console.error('Excepción no capturada:', err);
-  // No hacer exit aquí para evitar crashes
+  process.exit(1);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.error('Promesa rechazada no manejada:', reason);
-  // No hacer exit aquí para evitar crashes
+  process.exit(1);
 });
 
 // =================== Graceful shutdown ===================
 process.on('SIGTERM', () => {
-
+  if (!server) return process.exit(0);
   server.close((err) => {
     if (err) {
       console.error('❌ Error al cerrar servidor:', err);
@@ -1310,6 +1191,7 @@ process.on('SIGTERM', () => {
 });
 
 process.on('SIGINT', () => {
+  if (!server) return process.exit(0);
   server.close(() => {
     process.exit(0);
   });

@@ -4,8 +4,8 @@
 
 ### 📋 **1. NUEVOS CAMPOS EN BASE DE DATOS**
 
-**Información Personal Expandida:**
-- ✅ `nombre_completo` - Nombre completo del usuario
+**Información Personal:**
+- ✅ `nombre` - Nombre completo canónico del usuario
 - ✅ `email` - Correo electrónico (único)
 - ✅ `organizacion` - Universidad/Empresa
 - ✅ `biografia` - Descripción personal
@@ -18,21 +18,17 @@
 - ✅ `departamento` - Facultad o departamento
 - ✅ `grado_academico` - Nivel educativo
 
-**Configuraciones del Sistema:**
-- ✅ `zona_horaria` - Para manejo de fechas (Default: America/Bogota)
-- ✅ `idioma` - Idioma preferido (Default: es)
+**Estado y seguridad de la cuenta:**
 - ✅ `estado_cuenta` - activo/inactivo/suspendido/pendiente
-- ✅ `notificaciones_email` - Preferencias de notificaciones
-- ✅ `autenticacion_2fa` - Autenticación de dos factores
+- ✅ `force_password_change` - Obliga a reemplazar la contraseña inicial
 - ✅ `ultimo_acceso` - Timestamp del último login
 - ✅ `updated_at` - Fecha de última actualización
 
 ### 📊 **2. NUEVAS TABLAS**
 
 **`user_preferences`:**
-- Configuraciones personalizables por usuario
+- Progreso y preferencias propias del tutorial
 - Sistema clave-valor flexible
-- Permite temas, preferencias de templates, etc.
 
 **`user_activity_log`:**
 - Registro completo de actividades del usuario
@@ -42,7 +38,7 @@
 ### 🛠 **3. NUEVAS APIs IMPLEMENTADAS**
 
 **`GET /api/profile`**
-- Obtiene perfil completo + preferencias + estadísticas
+- Obtiene los datos vigentes del perfil y sus estadísticas
 - Incluye conteo de llaves activas/expiradas
 
 **`PUT /api/profile/personal`**
@@ -55,25 +51,16 @@
 - Manejo automático de archivos antiguos
 - Validación de tipo de imagen
 
-**`PUT /api/profile/settings`**
-- Configuraciones del sistema (timezone, idioma, 2FA)
-- Preferencias de notificaciones
-
-**`PUT /api/profile/preferences`**
-- Configuraciones personalizadas
-- Sistema flexible de preferencias
-
 **`GET /api/profile/activity`**
 - Historial de actividades del usuario
 - Paginación incluida
 
 ### 🎨 **4. MEJORAS EN FRONTEND**
 
-**Formulario Expandido:**
+**Formulario de perfil:**
 - ✅ Campos adicionales organizados en secciones
 - ✅ Diseño responsivo con filas de 2 columnas
-- ✅ Selectores para grado académico y zona horaria
-- ✅ Checkboxes para configuraciones boolean
+- ✅ Un único nombre compartido por perfil, firmas y administración
 - ✅ Validación de email en tiempo real
 
 **Subida de Archivos:**

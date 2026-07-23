@@ -11,7 +11,15 @@ const {
 } = require('../controllers/pdfTemplate.controller');
 
 const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const ALLOWED_LOGO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        cb(ALLOWED_LOGO_TYPES.has(file.mimetype) ? null : new Error('Tipo de imagen no permitido'),
+            ALLOWED_LOGO_TYPES.has(file.mimetype));
+    }
+});
 
 // Obtener configuración global de plantilla PDF (todos los usuarios)
 router.get('/config', getPdfTemplateConfig);

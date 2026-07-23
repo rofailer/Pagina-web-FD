@@ -1,74 +1,130 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
 
+const PASSWORD_CHANGE_ALLOWED_PATHS = new Set([
+    '/api/auth/change-password',
+    '/api/auth/logout',
+    '/api/auth/me',
+    '/api/auth-status',
+    '/api/profile/heartbeat',
+    '/api/profile/presence'
+]);
+
+function mustChangePassword(user) {
+    return Boolean(user?.force_password_change);
+}
+
+function createAuthVersion(userId, passwordHash) {
+    if (!process.env.JWT_SECRET || !passwordHash) {
+        return null;
+    }
+
+    return crypto
+        .createHmac('sha256', process.env.JWT_SECRET)
+        .update(`${userId}:${passwordHash}`)
+        .digest('base64url')
+        .slice(0, 32);
+}
+
+function safeEqual(left, right) {
+    if (typeof left !== 'string' || typeof right !== 'string') {
+        return false;
+    }
+
+    const leftBuffer = Buffer.from(left);
+    const rightBuffer = Buffer.from(right);
+    return leftBuffer.length === rightBuffer.length
+        && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function tokenMatchesCurrentUser(payload, user) {
+    const expectedVersion = createAuthVersion(user.id, user.password);
+    return safeEqual(payload.authVersion, expectedVersion);
+}
+
 /**
- * Middleware para autenticar usuarios mediante JWT.
- * Agrega req.userId, req.userRole y req.user si el token es válido.
+ * Autentica usuarios mediante JWT y vuelve a consultar permisos y estado en BD.
  */
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
+    // Las rutas administrativas ya validaron el token y el rol vigente en BD.
+    if (req.adminAuthenticated && req.userId) {
+        return next();
+    }
 
     const authHeader = req.headers.authorization;
-
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: "No autorizado: token no proporcionado" });
+        return res.status(401).json({ error: 'No autorizado: token no proporcionado' });
     }
-    const token = authHeader.split(" ")[1];
+
     try {
+        const token = authHeader.slice(7).trim();
         const payload = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Verificar inactividad (30 días = 30 * 24 * 60 * 60 * 1000 ms)
-        const inactivityLimit = 30 * 24 * 60 * 60 * 1000; // 30 días
-        const lastAccess = new Date(payload.iat * 1000); // iat es "issued at" del token
-        const now = new Date();
-
-        if (now - lastAccess > inactivityLimit) {
-            return res.status(401).json({ error: "Token expirado por inactividad" });
+        if (!payload.id || payload.type === 'admin-panel') {
+            return res.status(401).json({ error: 'Token inválido o expirado' });
         }
 
-        req.userId = payload.id;
-        req.userRole = payload.rol;
+        const [rows] = await pool.query(
+            `SELECT id, nombre, usuario, password, rol, estado_cuenta,
+                    force_password_change
+             FROM users
+             WHERE id = ?
+             LIMIT 1`,
+            [payload.id]
+        );
 
-        // Agregar también req.user para compatibilidad con nuevas rutas
+        if (rows.length === 0 || !tokenMatchesCurrentUser(payload, rows[0])) {
+            return res.status(401).json({ error: 'Token inválido o expirado' });
+        }
+
+        const userData = rows[0];
+        if (userData.estado_cuenta && userData.estado_cuenta !== 'activo') {
+            return res.status(403).json({ error: 'La cuenta no está activa' });
+        }
+
+        req.userId = userData.id;
+        req.userRole = userData.rol;
+        req.authVersion = createAuthVersion(userData.id, userData.password);
+        req.forcePasswordChange = mustChangePassword(userData);
         req.user = {
-            id: payload.id,
-            rol: payload.rol,
-            usuario: payload.usuario || payload.username || 'unknown'
+            id: userData.id,
+            nombre: userData.nombre,
+            usuario: userData.usuario,
+            rol: userData.rol,
+            estado_cuenta: userData.estado_cuenta,
+            forcePasswordChange: req.forcePasswordChange
         };
 
-        // 🔐 VERIFICACIÓN CRÍTICA: Verificar que el usuario existe en la BD antes de permitir acceso
-        pool.getConnection()
-            .then(conn => {
-                conn.query("SELECT id, usuario, rol FROM users WHERE id = ?", [req.userId])
-                    .then(([rows]) => {
-                        if (rows.length === 0) {
-                            conn.release();
-                            return res.status(401).json({ error: "Usuario no encontrado en la base de datos" });
-                        }
-
-                        const userData = rows[0];
-                        req.user = { ...req.user, ...userData }; // Actualizar con datos de BD
-
-                        // Actualizar último acceso de forma asíncrona (no bloquea la respuesta)
-                        conn.query("UPDATE users SET ultimo_acceso = NOW() WHERE id = ?", [req.userId])
-                            .catch(err => console.error('Error actualizando último acceso:', err))
-                            .finally(() => conn.release());
-
-                        next();
-                    })
-                    .catch(err => {
-                        conn.release();
-                        console.error('❌ Error verificando usuario en BD:', err.message);
-                        return res.status(500).json({ error: "Error interno del servidor al verificar usuario" });
-                    });
-            })
-            .catch(err => {
-                console.error('❌ Base de datos no disponible para autenticación:', err.message);
-                return res.status(503).json({ error: "Servicio no disponible: base de datos desconectada" });
+        const requestPath = String(req.originalUrl || req.url || '').split('?')[0];
+        if (req.forcePasswordChange && !PASSWORD_CHANGE_ALLOWED_PATHS.has(requestPath)) {
+            return res.status(403).json({
+                success: false,
+                code: 'PASSWORD_CHANGE_REQUIRED',
+                error: 'Debes cambiar la contrasena temporal antes de continuar.'
             });
-    } catch (err) {
-        console.error('❌ AUTHENTICATE - Error validando token:', err.message);
-        return res.status(403).json({ error: "Token inválido o expirado" });
+        }
+
+        return next();
+    } catch (error) {
+        const isTokenError = error.name === 'JsonWebTokenError'
+            || error.name === 'TokenExpiredError'
+            || error.name === 'NotBeforeError';
+
+        if (!isTokenError) {
+            console.error('Error verificando autenticación:', error.message);
+        }
+
+        return res.status(isTokenError ? 401 : 503).json({
+            error: isTokenError
+                ? 'Token inválido o expirado'
+                : 'Servicio de autenticación no disponible'
+        });
     }
 }
+
+authenticate.createAuthVersion = createAuthVersion;
+authenticate.tokenMatchesCurrentUser = tokenMatchesCurrentUser;
+authenticate.mustChangePassword = mustChangePassword;
 
 module.exports = authenticate;

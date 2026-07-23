@@ -1,63 +1,208 @@
-/* Estilos específicos para la página de acceso administrativo */
+/* Acceso administrativo alineado con la identidad del sitio principal. */
+html {
+  min-height: 100%;
+  background: var(--page-bg, #f8fafc);
+}
+
+html.visual-pending .admin-access-page {
+  opacity: 0;
+  visibility: hidden;
+}
+
 .admin-access-page {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    sans-serif;
-  background: linear-gradient(
-      rgba(180, 180, 180, 0.12) 0%,
-      rgba(200, 200, 200, 0.06) 100%
-    ),
-    url("../../recursos/Fondo.jpg");
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-repeat: no-repeat;
   min-height: 100vh;
+  margin: 0;
+  padding: clamp(20px, 4vw, 48px);
+  display: grid;
+  place-items: center;
+  font-family: "Poppins", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--text-color, #0f172a);
+  background-color: var(--page-bg, #f8fafc);
+  -webkit-user-select: none;
+  user-select: none;
+  visibility: visible;
+  transition: opacity 180ms ease, background 300ms ease;
+}
+
+.admin-access-page input,
+.admin-access-page textarea,
+.admin-access-page [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.access-shell {
+  width: min(1040px, 100%);
+  min-height: 580px;
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(400px, 1.1fr);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 18%, transparent);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface-raised, #ffffff) 94%, transparent);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+}
+
+.access-brand {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 42px;
+  padding: clamp(34px, 5vw, 58px);
+  color: #ffffff;
+  background: linear-gradient(
+    155deg,
+    var(--primary-color) 0%,
+    color-mix(in srgb, var(--primary-color) 76%, var(--secondary-color) 24%) 58%,
+    var(--secondary-color) 100%
+  );
+}
+
+.access-brand::before,
+.access-brand::after {
+  display: none;
+}
+
+.brand-link,
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.brand-link {
+  align-self: flex-start;
+  gap: 12px;
+  color: #ffffff;
+}
+
+.brand-logo {
+  width: 38px;
+  height: 38px;
+  display: block;
+  flex: 0 0 auto;
+  object-fit: contain;
+  border-radius: 50%;
+  filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.2));
+}
+
+.brand-name {
+  max-width: 260px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.brand-copy {
+  display: grid;
+  gap: 18px;
+}
+
+.brand-copy h2 {
+  margin: 0;
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  line-height: 1.14;
+  letter-spacing: -0.035em;
+}
+
+.brand-copy p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.96rem;
+  line-height: 1.75;
+}
+
+.security-note {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 20px;
-  transition: background 0.3s ease;
+  gap: 11px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.security-note svg {
+  flex: 0 0 auto;
 }
 
 .access-container {
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  padding: 40px;
   width: 100%;
-  max-width: 500px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(34px, 6vw, 64px);
+  background: color-mix(in srgb, var(--surface-raised, #ffffff) 98%, transparent);
+  color: var(--text-color, #0f172a);
+}
+
+.back-link {
+  align-self: flex-start;
+  gap: 8px;
+  margin-bottom: 44px;
+  color: var(--text-secondary-color, #64748b);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  color: var(--primary-color);
+  transform: translateX(-2px);
 }
 
 .access-header {
   margin-bottom: 30px;
+  text-align: left;
+}
+
+.mobile-brand {
+  display: none;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+  color: var(--primary-color);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.mobile-brand img {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  object-fit: contain;
+  border-radius: 50%;
 }
 
 .access-title {
-  font-size: 2rem;
+  margin: 0 0 12px;
+  color: var(--text-color, #0f172a);
+  font-size: clamp(1.8rem, 3vw, 2.35rem);
   font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 10px;
-  background: linear-gradient(
-    135deg,
-    var(--primary-color) 0%,
-    var(--secondary-color) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  transition: all 0.3s ease;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
 }
 
 .access-subtitle {
-  color: #64748b;
-  font-size: 1.1rem;
-  line-height: 1.6;
+  margin: 0;
+  color: var(--text-secondary-color, #64748b);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+.access-subtitle.password-only-mode {
+  color: var(--text-secondary-color, #64748b);
 }
 
 .access-form {
-  margin: 30px 0 0 0;
+  margin: 0;
 }
 
 .form-group {
@@ -67,365 +212,290 @@
 
 .form-group label {
   display: block;
-  font-weight: 600;
-  color: #1e293b;
   margin-bottom: 8px;
-  font-size: 0.9rem;
+  color: var(--text-color, #0f172a);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .form-input {
   width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 16px;
-  transition: all 0.2s;
-  background: #f8fafc;
-  color: #1e293b;
+  min-height: 50px;
+  padding: 12px 15px;
+  border: 1px solid var(--theme-border-color, #dbe3ee);
+  border-radius: 11px;
+  outline: none;
+  background: var(--surface-muted, #f8fafc);
+  color: var(--text-color, #0f172a);
+  font: inherit;
+  font-size: 0.94rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.form-input::placeholder {
+  color: color-mix(in srgb, var(--text-secondary-color, #64748b) 72%, transparent);
+}
+
+.form-input:hover {
+  border-color: color-mix(in srgb, var(--primary-color) 42%, var(--theme-border-color));
 }
 
 .form-input:focus {
-  outline: none;
   border-color: var(--primary-color);
-  background: white;
-  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+  background: var(--surface-raised, #ffffff);
+  box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.13);
+}
+
+.button-container {
+  display: block;
+  margin-top: 26px;
 }
 
 .access-btn {
   width: 100%;
-  padding: 14px 20px;
-  background: linear-gradient(
-    135deg,
-    var(--primary-color) 0%,
-    var(--secondary-color) 100%
-  );
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-top: 10px;
-  position: relative;
-  overflow: hidden;
-}
-
-.access-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(var(--primary-rgb), 0.4);
-}
-
-.access-btn:active {
-  transform: translateY(0);
-}
-
-.access-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.access-btn.secondary {
-  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-}
-
-.access-btn.secondary:hover {
-  box-shadow: 0 10px 15px -3px rgba(100, 116, 139, 0.3);
-}
-
-.access-btn.tertiary {
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-  border: 1px solid #6b7280;
-}
-
-.access-btn.tertiary:hover {
-  box-shadow: 0 10px 15px -3px rgba(107, 114, 128, 0.3);
-}
-
-/* Contenedor principal de botones - SIEMPRE visible */
-.button-container {
-  margin-top: 20px;
-  display: block !important; /* Forzar visibilidad */
-}
-
-.button-container #loginBtn {
-  display: block !important; /* Asegurar que el botón principal sea visible */
-  width: 100%;
-  visibility: visible !important; /* Forzar visibilidad completa */
-  opacity: 1 !important; /* Asegurar opacidad completa */
-  pointer-events: auto !important; /* Asegurar que reciba clicks */
-  cursor: pointer !important; /* Cursor de pointer */
-}
-
-/* Contenedor de botones secundarios */
-.secondary-buttons {
-  margin-top: 15px;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: all 0.3s ease;
-}
-
-.secondary-buttons.show {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Fila de botones para disposición horizontal */
-.button-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.button-row .access-btn {
-  flex: 1;
-  margin-top: 0;
-  min-width: 0;
-}
-
-/* Responsive: en móviles, los botones se apilan verticalmente */
-@media (max-width: 480px) {
-  .button-row {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .button-row .access-btn {
-    width: 100%;
-  }
-}
-
-/* Estilos para iconos SVG en botones */
-.btn-icon {
-  display: inline-block;
-  margin-right: 8px;
-  vertical-align: middle;
-  flex-shrink: 0;
-  transition: transform 0.2s ease;
-}
-
-.access-btn:hover .btn-icon {
-  transform: translateX(-2px);
-}
-
-.access-btn.tertiary:hover .btn-icon {
-  transform: translateX(-3px);
-}
-
-/* Ajustar el layout de los botones con iconos */
-.button-row .access-btn {
-  display: flex;
+  min-height: 50px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0;
+  gap: 8px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 11px;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
 }
 
-.button-row .access-btn .btn-text {
-  flex: 1;
-  text-align: center;
-}
-
-/* Mejorar la jerarquía visual */
 .access-btn.primary {
-  background: linear-gradient(
-    135deg,
-    var(--primary-color) 0%,
-    var(--secondary-color) 100%
-  );
-  font-size: 1.1rem;
-  padding: 16px 24px;
-  position: relative;
-  z-index: 10; /* Asegurar que esté por encima de otros elementos */
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  box-shadow: 0 10px 22px rgba(var(--primary-rgb), 0.24);
 }
 
 .access-btn.secondary,
 .access-btn.tertiary {
-  font-size: 0.9rem;
-  padding: 12px 18px;
-  opacity: 0.9;
+  border: 1px solid var(--theme-border-color, #dbe3ee);
+  background: var(--surface-muted, #f1f5f9);
+  color: var(--text-color, #0f172a);
+  box-shadow: none;
 }
 
-.access-btn.secondary:hover,
-.access-btn.tertiary:hover {
-  opacity: 1;
-}
-
-/* Asegurar que el botón principal sea siempre visible en modo solo contraseña */
-.secondary-buttons.show + .button-container,
-.button-container:has(#loginBtn) {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-/* Estilos específicos para el botón de confirmar en modo solo contraseña */
-.password-only-mode + .access-form .button-container #loginBtn {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-  box-shadow: 0 4px 14px 0 rgba(5, 150, 105, 0.3);
-}
-
-.password-only-mode + .access-form .button-container #loginBtn:hover {
-  box-shadow: 0 6px 20px 0 rgba(5, 150, 105, 0.4);
+.access-btn:hover:not(:disabled),
+.access-btn:focus-visible:not(:disabled) {
   transform: translateY(-1px);
+  box-shadow: 0 12px 25px rgba(var(--primary-rgb), 0.24);
 }
 
-/* Espaciado mejorado */
-.button-container + .secondary-buttons {
-  margin-top: 20px;
+.access-btn.secondary:hover:not(:disabled),
+.access-btn.tertiary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--primary-color) 45%, var(--theme-border-color));
+  color: var(--primary-color);
+  box-shadow: 0 8px 20px var(--theme-shadow-color, rgba(15, 23, 42, 0.1));
 }
 
-/* Transiciones suaves para todos los elementos */
-.access-form * {
-  transition: all 0.3s ease;
-}
-
-.password-only-mode .access-subtitle {
-  color: #059669;
+.access-btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
 }
 
 .current-user-info {
-  background: color-mix(in srgb, var(--primary-color) 8%, white);
-  border: 1px solid color-mix(in srgb, var(--primary-color) 30%, transparent);
-  border-radius: 10px;
-  padding: 15px;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid rgba(var(--primary-rgb), 0.28);
+  border-radius: 11px;
+  background: rgba(var(--primary-rgb), 0.08);
   text-align: left;
 }
 
+.current-user-copy {
+  min-width: 0;
+}
+
 .current-user-info .user-label {
-  font-size: 0.85rem;
+  margin-bottom: 3px;
   color: var(--primary-color);
-  font-weight: 600;
-  margin-bottom: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .current-user-info .user-email {
-  font-size: 1rem;
-  color: #1e293b;
-  font-weight: 500;
+  color: var(--text-color, #0f172a);
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.current-user-switch {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: inline-grid;
+  flex: 0 0 42px;
+  place-items: center;
+  color: var(--primary-color);
+  background: var(--surface-raised, #ffffff);
+  border: 1px solid rgba(var(--primary-rgb), 0.28);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(var(--primary-rgb), 0.12);
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.current-user-switch:hover,
+.current-user-switch:focus-visible {
+  color: #ffffff;
+  background: var(--primary-color);
+  outline: 0;
+  transform: translateY(-1px);
+}
+
+.current-user-switch:focus-visible {
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
+}
+
+.current-user-switch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.current-user-switch-icon {
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .access-alert {
-  padding: 12px 16px;
-  border-radius: 8px;
   margin-bottom: 20px;
-  border-left: 4px solid;
-  font-size: 0.9rem;
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  line-height: 1.45;
   text-align: left;
 }
 
 .access-alert.error {
-  background: rgba(239, 68, 68, 0.05);
-  border-left-color: #ef4444;
-  color: #991b1b;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.09);
+  color: #b91c1c;
 }
 
 .access-alert.success {
-  background: rgba(16, 185, 129, 0.05);
-  border-left-color: #10b981;
-  color: #065f46;
-}
-
-.access-info {
-  margin-top: 30px;
-  padding: 20px;
-  background: #f8fafc;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-}
-
-.access-info h4 {
-  color: #1e293b;
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
-.access-info ul {
-  text-align: left;
-  color: #64748b;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  margin: 0;
-  padding-left: 20px;
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.09);
+  color: #047857;
 }
 
 .loading-spinner {
   display: none;
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid white;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-right: 10px;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+  animation: admin-login-spin 700ms linear infinite;
 }
 
 .btn-loading .loading-spinner {
   display: inline-block;
 }
 
-/* Responsive */
-@media (max-width: 640px) {
+@keyframes admin-login-spin {
+  to { transform: rotate(360deg); }
+}
+
+[data-theme="dark"] .access-shell {
+  border-color: rgba(129, 140, 248, 0.22);
+  background: rgba(11, 17, 32, 0.9);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.52);
+}
+
+[data-theme="dark"] .access-brand {
+  background: linear-gradient(155deg, #273469 0%, #182443 58%, #111b2e 100%);
+}
+
+[data-theme="dark"] .access-container {
+  background: rgba(17, 27, 46, 0.98);
+}
+
+[data-theme="dark"] .access-alert.error {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .access-alert.success {
+  color: #6ee7b7;
+}
+
+@media (max-width: 820px) {
+  .admin-access-page {
+    padding: 18px;
+  }
+
+  .access-shell {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    max-width: 560px;
+  }
+
+  .access-brand {
+    display: none;
+  }
+
   .access-container {
-    padding: 30px 20px;
-    margin: 10px;
+    min-height: min(680px, calc(100vh - 36px));
+    padding: clamp(28px, 8vw, 54px);
   }
 
-  .access-title {
-    font-size: 1.5rem;
+  .mobile-brand {
+    display: inline-flex;
   }
 
-  .access-subtitle {
-    font-size: 1rem;
+  .back-link {
+    margin-bottom: 36px;
   }
 }
 
-/* Reglas adicionales para asegurar funcionalidad del botón */
-.button-container #loginBtn:not(.btn-loading):not(:disabled) {
-  pointer-events: auto !important; /* Asegurar clicks cuando no esté cargando */
-  cursor: pointer !important;
+@media (max-width: 480px) {
+  .admin-access-page {
+    padding: 0;
+  }
+
+  .access-shell {
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .access-container {
+    min-height: 100vh;
+    padding: 28px 22px;
+  }
+
+  .back-link {
+    margin-bottom: 30px;
+  }
+
 }
 
-/* Asegurar que el botón sea clickeable en modo solo contraseña */
-.password-only-mode
-  .button-container
-  #loginBtn:not(.btn-loading):not(:disabled) {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
+@media (prefers-reduced-motion: reduce) {
+    .admin-access-page,
+    .access-btn,
+    .back-link,
+    .current-user-switch,
+    .form-input {
+    transition: none;
+  }
 
-/* Fondos dinámicos para página de acceso administrativo */
-.admin-access-page[data-bg="fondo1"] {
-  background: linear-gradient(
-      rgba(180, 180, 180, 0.12) 0%,
-      rgba(200, 200, 200, 0.06) 100%
-    ),
-    url("../../../recursos/Fondo.jpg");
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-}
-
-.admin-access-page[data-bg="fondo2"] {
-  background: linear-gradient(
-      rgba(180, 180, 180, 0.12) 0%,
-      rgba(200, 200, 200, 0.06) 100%
-    ),
-    url("../../../recursos/Fondo2.jpg");
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-repeat: no-repeat;
+  .loading-spinner {
+    animation-duration: 1.4s;
+  }
 }

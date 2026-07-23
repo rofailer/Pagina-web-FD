@@ -1,255 +1,224 @@
 const express = require('express');
-const router = express.Router();
-const fs = require('fs');
-const path = require('path');
-const { exec } = require('child_process');
+const crypto = require('crypto');
 const pool = require('../db/pool');
 const authenticate = require('../middlewares/authenticate');
-const { encryptAES, encryptWithType, decryptWithType } = require('../utils/crypto');
+const {
+    V2_ENCRYPTION_TYPE,
+    encryptWithType,
+    decryptWithType,
+    isSupportedEncryptionType
+} = require('../utils/crypto');
 
-// Ruta para obtener las llaves del usuario (para verificar si tiene llaves)
-router.get("/api/user-keys", authenticate, async (req, res) => {
-    const userId = req.userId;
+const router = express.Router();
+const MIN_NEW_KEY_PASSWORD_LENGTH = 12;
+const MAX_KEY_PASSWORD_LENGTH = 1024;
 
+function generateRsaKeyPair() {
+    return new Promise((resolve, reject) => {
+        crypto.generateKeyPair('rsa', {
+            modulusLength: 4096,
+            publicExponent: 0x10001,
+            publicKeyEncoding: { type: 'spki', format: 'pem' },
+            privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+        }, (error, publicKey, privateKey) => {
+            if (error) return reject(error);
+            resolve({ publicKey, privateKey });
+        });
+    });
+}
+
+function isValidPassword(password, minimumLength = 1) {
+    return typeof password === 'string' &&
+        password.length >= minimumLength &&
+        password.length <= MAX_KEY_PASSWORD_LENGTH;
+}
+
+router.get('/api/user-keys', authenticate, async (req, res) => {
     try {
         const [rows] = await pool.query(
-            "SELECT id, key_name, created_at, expiration_date, encryption_type FROM user_keys WHERE user_id = ? ORDER BY created_at DESC",
-            [userId]
+            'SELECT id, key_name, created_at, expiration_date, encryption_type FROM user_keys WHERE user_id = ? ORDER BY created_at DESC',
+            [req.userId]
         );
-
-        res.json({
-            keys: rows,
-            hasKeys: rows.length > 0
-        });
-    } catch (err) {
-        console.error("Error al obtener llaves del usuario:", err);
-        res.status(500).json({ error: "Error al obtener las llaves del usuario" });
+        res.json({ keys: rows, hasKeys: rows.length > 0 });
+    } catch (error) {
+        console.error('Error al obtener llaves del usuario:', error);
+        res.status(500).json({ error: 'Error al obtener las llaves del usuario' });
     }
 });
 
-// Ruta para generar llaves (protegida)
-router.post("/generate-keys", authenticate, async (req, res) => {
+router.post('/generate-keys', authenticate, async (req, res) => {
     const userId = req.userId;
-    const { keyPassword, encryptionType = "aes-256-cbc", keyName } = req.body;
+    const {
+        keyPassword,
+        keyName,
+        encryptionType = V2_ENCRYPTION_TYPE
+    } = req.body;
 
-    if (!keyPassword || keyPassword.length < 4) {
-        return res.status(400).json({ error: "La contraseña es requerida y debe tener al menos 4 caracteres." });
+    if (!isValidPassword(keyPassword, MIN_NEW_KEY_PASSWORD_LENGTH)) {
+        return res.status(400).json({
+            error: `La contrasena debe tener entre ${MIN_NEW_KEY_PASSWORD_LENGTH} y ${MAX_KEY_PASSWORD_LENGTH} caracteres.`
+        });
     }
-    const keysDir = path.join(__dirname, "../llaves");
-    if (!fs.existsSync(keysDir)) {
-        fs.mkdirSync(keysDir, { recursive: true });
+    if (keyName != null && (typeof keyName !== 'string' || keyName.trim().length > 100)) {
+        return res.status(400).json({ error: 'El nombre de la llave debe tener maximo 100 caracteres.' });
+    }
+    if (!isSupportedEncryptionType(encryptionType)) {
+        return res.status(400).json({ error: 'El tipo de cifrado seleccionado no es compatible.' });
     }
 
     try {
-        // Contar las llaves existentes para el usuario
-        const [rows] = await pool.query("SELECT COUNT(*) AS count FROM user_keys WHERE user_id = ?", [userId]);
-        const keyCount = rows[0].count + 1;
-        const isFirstKey = rows[0].count === 0; // Es la primera llave si count es 0        // Determinar el nombre de la llave
-        let finalKeyName;
-        if (keyName && keyName.trim()) {
-            finalKeyName = keyName.trim();
-        } else {
-            finalKeyName = `Key${keyCount}`;
-        }
-
-        const privateKeyName = `key${keyCount}.pem`;
-        const publicKeyName = `key${keyCount}.pub`;
-
-        const privateKeyPath = path.join(keysDir, privateKeyName);
-        const publicKeyPath = path.join(keysDir, publicKeyName);
-
-        // Fecha de expiración: 30 días desde ahora
+        const [rows] = await pool.query('SELECT COUNT(*) AS count FROM user_keys WHERE user_id = ?', [userId]);
+        const existingKeyCount = Number(rows[0].count);
+        const keyCount = existingKeyCount + 1;
+        const isFirstKey = existingKeyCount === 0;
+        const finalKeyName = keyName && keyName.trim() ? keyName.trim() : `Key${keyCount}`;
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + 30);
 
-        // Generar llaves con OpenSSL
-        const privateKeyCommand = `openssl genrsa -out "${privateKeyPath}" 4096`;
-        const publicKeyCommand = `openssl rsa -in "${privateKeyPath}" -pubout -out "${publicKeyPath}"`;
+        // Ambas llaves se generan y cifran en memoria. La llave privada nunca toca el disco.
+        const { privateKey, publicKey } = await generateRsaKeyPair();
+        const encryptedPrivateKey = encryptWithType(privateKey, keyPassword, encryptionType);
+        // La pública no es secreta; el cifrado autenticado detecta alteraciones en la fila.
+        const encryptedPublicKey = encryptWithType(publicKey, String(userId), encryptionType);
 
-        exec(privateKeyCommand, (err) => {
-            if (err) {
-                console.error("Error al generar la llave privada:", err);
-                return res.status(500).json({ error: "Error al generar la llave privada" });
-            }
+        await pool.query(
+            'INSERT INTO user_keys (user_id, key_name, private_key, public_key, encryption_type, created_at, expiration_date) VALUES (?, ?, ?, ?, ?, NOW(), ?)',
+            [userId, finalKeyName, encryptedPrivateKey, encryptedPublicKey, encryptionType, expirationDate]
+        );
 
-            exec(publicKeyCommand, async (err) => {
-                if (err) {
-                    console.error("Error al generar la llave pública:", err);
-                    return res.status(500).json({ error: "Error al generar la llave pública" });
-                }
-
-                // Leer las llaves generadas
-                const privateKeyContent = fs.readFileSync(privateKeyPath, "utf8");
-                const publicKeyContent = fs.readFileSync(publicKeyPath, "utf8");
-
-                // Cifrar la privada con la contraseña del usuario y el tipo seleccionado
-                const encryptedPrivateKey = encryptWithType(privateKeyContent, keyPassword, encryptionType);
-
-                // Cifrar la pública con el userId como clave (simple, pero suficiente)
-                const encryptedPublicKey = encryptAES(publicKeyContent, String(userId), 'aes-256-cbc');
-
-                // Guarda la llave privada (cifrada), la pública y el tipo de cifrado en la base de datos
-                await pool.query(
-                    "INSERT INTO user_keys (user_id, key_name, private_key, public_key, encryption_type, created_at, expiration_date) VALUES (?, ?, ?, ?, ?, NOW(), ?)",
-                    [userId, finalKeyName, encryptedPrivateKey, encryptedPublicKey, encryptionType, expirationDate]
-                );
-
-                // Limpieza: elimina archivos temporales
-                fs.unlink(privateKeyPath, () => { });
-                fs.unlink(publicKeyPath, () => { });
-
-                res.json({
-                    success: true,
-                    keyName: finalKeyName,
-                    expirationDate,
-                    isFirstKey: isFirstKey,
-                    message: "Llaves generadas correctamente"
-                });
-            });
+        res.json({
+            success: true,
+            keyName: finalKeyName,
+            expirationDate,
+            isFirstKey,
+            encryptionType,
+            message: 'Llaves generadas correctamente'
         });
-    } catch (err) {
-        console.error("Error al generar las llaves:", err);
-        res.status(500).json({ error: "Error interno del servidor" });
+    } catch (error) {
+        console.error('Error al generar las llaves:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
 
-// Listar llaves del usuario
-router.get("/list-keys", authenticate, async (req, res) => {
-    const userId = req.userId;
+router.get('/list-keys', authenticate, async (req, res) => {
     try {
         const [keys] = await pool.query(
-            "SELECT id, key_name, expiration_date, encryption_type FROM user_keys WHERE user_id = ? ORDER BY expiration_date DESC",
-            [userId]
+            'SELECT id, key_name, expiration_date, encryption_type FROM user_keys WHERE user_id = ? ORDER BY expiration_date DESC',
+            [req.userId]
         );
-        const keysWithExpiration = keys.map((key) => {
-            const now = new Date();
-            const expirationDate = new Date(key.expiration_date);
-            const timeRemaining = expirationDate - now;
+        const now = new Date();
+        res.json(keys.map(key => {
+            const timeRemaining = new Date(key.expiration_date) - now;
             return {
                 ...key,
                 timeRemaining: timeRemaining > 0 ? timeRemaining : 0,
-                expired: timeRemaining <= 0,
+                expired: timeRemaining <= 0
             };
-        });
-        res.json(keysWithExpiration);
-    } catch (err) {
-        res.status(500).json({ error: "Error interno del servidor" });
+        }));
+    } catch (error) {
+        console.error('Error al listar llaves:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
 
-// Obtener llave activa
-router.get("/active-key", authenticate, async (req, res) => {
-    const userId = req.userId;
+router.get('/active-key', authenticate, async (req, res) => {
     try {
         const [rows] = await pool.query(
-            "SELECT key_name, expiration_date FROM user_keys WHERE id = (SELECT active_key_id FROM users WHERE id = ?)",
-            [userId]
+            'SELECT id, key_name, expiration_date, encryption_type FROM user_keys WHERE id = (SELECT active_key_id FROM users WHERE id = ?) AND user_id = ?',
+            [req.userId, req.userId]
         );
         if (rows.length === 0) {
-            return res.json({ activeKey: null, message: "No hay una llave activa seleccionada" });
+            return res.json({ activeKey: null, message: 'No hay una llave activa seleccionada' });
         }
-        res.json({ activeKey: rows[0].key_name, expirationDate: rows[0].expiration_date });
-    } catch (err) {
-        res.status(500).json({ error: "Error al obtener la llave activa" });
+        res.json({
+            activeKey: rows[0].key_name,
+            activeKeyId: rows[0].id,
+            expirationDate: rows[0].expiration_date,
+            encryptionType: rows[0].encryption_type
+        });
+    } catch (error) {
+        console.error('Error al obtener la llave activa:', error);
+        res.status(500).json({ error: 'Error al obtener la llave activa' });
     }
 });
 
-// Seleccionar llave activa
-router.post("/select-key", authenticate, async (req, res) => {
+router.post('/select-key', authenticate, async (req, res) => {
+    const keyId = Number.parseInt(req.body.keyId, 10);
+    if (!Number.isSafeInteger(keyId) || keyId <= 0) {
+        return res.status(400).json({ error: 'La llave seleccionada no es valida' });
+    }
+
     try {
-        const [rows] = await pool.query("SELECT id, key_name FROM user_keys WHERE id = ? AND user_id = ?", [req.body.keyId, req.userId]);
+        const [rows] = await pool.query(
+            'SELECT id, key_name, expiration_date FROM user_keys WHERE id = ? AND user_id = ?',
+            [keyId, req.userId]
+        );
         if (rows.length === 0) {
-            return res.status(400).json({ error: "La llave seleccionada no pertenece al usuario" });
+            return res.status(400).json({ error: 'La llave seleccionada no pertenece al usuario' });
         }
-        await pool.query("UPDATE users SET active_key_id = ? WHERE id = ?", [req.body.keyId, req.userId]);
+        if (new Date(rows[0].expiration_date) <= new Date()) {
+            return res.status(400).json({ error: 'No se puede activar una llave expirada' });
+        }
+        await pool.query('UPDATE users SET active_key_id = ? WHERE id = ?', [keyId, req.userId]);
         res.json({ success: true, activeKeyName: rows[0].key_name });
-    } catch (err) {
-        res.status(500).json({ error: "Error interno del servidor" });
+    } catch (error) {
+        console.error('Error al seleccionar la llave:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
 
-// Obtener todas las llaves del usuario (para modal, etc.)
-router.get("/user-keys", authenticate, async (req, res) => {
-    const userId = req.userId;
+router.get('/user-keys', authenticate, async (req, res) => {
     try {
         const [keys] = await pool.query(
-            "SELECT id, key_name, created_at, expiration_date FROM user_keys WHERE user_id = ?",
-            [userId]
+            'SELECT id, key_name, created_at, expiration_date, encryption_type FROM user_keys WHERE user_id = ?',
+            [req.userId]
         );
         res.json({ keys });
-    } catch (err) {
-        res.status(500).json({ error: "Error interno del servidor" });
+    } catch (error) {
+        console.error('Error al obtener llaves:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
 
-// Eliminar llave del usuario
-router.delete("/delete-key", authenticate, async (req, res) => {
-    const userId = req.userId;
+router.delete('/delete-key', authenticate, async (req, res) => {
     const { keyName, password } = req.body;
-
-    // Validaciones básicas
-    if (!keyName || !password) {
-        return res.status(400).json({ error: "Nombre de llave y contraseña son requeridos" });
-    }
-
-    if (password.length < 4) {
-        return res.status(400).json({ error: "La contraseña debe tener al menos 4 caracteres" });
+    if (typeof keyName !== 'string' || !keyName.trim() || !isValidPassword(password)) {
+        return res.status(400).json({ error: 'Nombre de llave y contrasena validos son requeridos' });
     }
 
     try {
-        // Verificar que la llave existe y pertenece al usuario
         const [keyRows] = await pool.query(
-            "SELECT id, private_key, encryption_type FROM user_keys WHERE user_id = ? AND key_name = ?",
-            [userId, keyName]
+            'SELECT id, private_key, encryption_type FROM user_keys WHERE user_id = ? AND key_name = ?',
+            [req.userId, keyName]
         );
-
         if (keyRows.length === 0) {
-            return res.status(404).json({ error: "Llave no encontrada" });
+            return res.status(404).json({ error: 'Llave no encontrada' });
         }
 
         const key = keyRows[0];
-        const encryptedPrivateKey = key.private_key;
-        const encryptionType = key.encryption_type;
-
-        // Verificar la contraseña intentando descifrar la llave privada
         try {
-            const decryptedPrivateKey = decryptWithType(encryptedPrivateKey, password, encryptionType);
-
-        } catch (decryptError) {
-            return res.status(401).json({ error: "Contraseña incorrecta" });
+            const privateKey = decryptWithType(key.private_key, password, key.encryption_type);
+            // Validar también la estructura PEM antes de autorizar la eliminación.
+            crypto.createPrivateKey(privateKey);
+        } catch (error) {
+            return res.status(401).json({ error: 'Contrasena incorrecta' });
         }
 
-        // Verificar si es la llave activa del usuario
-        const [userRows] = await pool.query(
-            "SELECT active_key_id FROM users WHERE id = ?",
-            [userId]
-        );
-
-        const isActiveKey = userRows.length > 0 && userRows[0].active_key_id === key.id;
-
-        // Si es la llave activa, desactivarla
+        const [userRows] = await pool.query('SELECT active_key_id FROM users WHERE id = ?', [req.userId]);
+        const isActiveKey = userRows.length > 0 && Number(userRows[0].active_key_id) === Number(key.id);
         if (isActiveKey) {
-            await pool.query(
-                "UPDATE users SET active_key_id = NULL WHERE id = ?",
-                [userId]
-            );
+            await pool.query('UPDATE users SET active_key_id = NULL WHERE id = ?', [req.userId]);
         }
-
-        // Eliminar la llave de la base de datos
-        await pool.query(
-            "DELETE FROM user_keys WHERE id = ? AND user_id = ?",
-            [key.id, userId]
-        );
+        await pool.query('DELETE FROM user_keys WHERE id = ? AND user_id = ?', [key.id, req.userId]);
 
         res.json({
             success: true,
             message: `Llave "${keyName}" eliminada correctamente`,
             wasActiveKey: isActiveKey
         });
-
-    } catch (err) {
-        console.error("Error al eliminar llave:", err);
-        res.status(500).json({ error: "Error interno del servidor" });
+    } catch (error) {
+        console.error('Error al eliminar llave:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
 

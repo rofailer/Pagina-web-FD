@@ -1,154 +1,224 @@
 .fixed_footer {
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  padding: 40px 20px 10px; /* espacio para CTA arriba, copyright abajo */
   position: relative;
-  text-align: center;
-  background: linear-gradient(
-    135deg,
-    rgba(30, 41, 59, 0.96) 0%,
-    rgba(51, 65, 85, 0.96) 100%
-  );
-  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.12);
-  display: grid;
-  justify-items: center; /* centrar todo el contenido */
-  gap: 16px; /* controlar el espacio entre bloques con gap */
   z-index: 100;
-
-  /* sin blur para mejor rendimiento */
-  transition: background 0.25s;
+  width: 100%;
+  padding: 50px 24px 22px;
+  overflow: hidden;
+  color: #ffffff;
+  background: #202a3a;
+  box-shadow: 0 -12px 34px rgba(15, 23, 42, 0.13);
 }
 
-.fixed_footer p {
-  color: #fff;
-  font-size: 0.95em;
-  margin: 0;
-  padding: 0 18px; /* sin padding inferior, usamos gap */
-  letter-spacing: 0.3px;
-  font-weight: 500;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  opacity: 0.97;
-  max-width: 100%;
-  overflow-wrap: anywhere; /* permitir saltos de línea en palabras largas */
-  white-space: normal; /* permitir saltos de línea */
+.footer-surface {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: min(100%, 1240px);
+  margin: 0 auto;
+  gap: 32px;
 }
 
-/* CTA migrada al footer */
 .fixed_footer .footer-cta {
-  max-width: 900px;
-  margin: 0 auto; /* sin margen inferior, usamos gap */
-  text-align: center;
-  display: grid; /* centrar hijos */
-  justify-items: center; /* centra todo horizontalmente */
-  gap: 15px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(270px, auto);
+  align-items: center;
+  gap: clamp(32px, 7vw, 100px);
+  text-align: left;
+}
+
+.footer-cta-copy {
+  max-width: 720px;
 }
 
 .fixed_footer .cta-title {
-  font-size: 2em;
+  max-width: 680px;
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1.8rem, 3vw, 2.65rem);
   font-weight: 700;
-  color: #fff;
-  margin: 0; /* el espacio lo maneja el gap del contenedor */
-  line-height: 1.2;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
 }
 
 .fixed_footer .cta-description {
-  font-size: 1.05em;
-  line-height: 1.6;
+  max-width: 690px;
+  margin: 14px 0 0;
   color: #cbd5e1;
-  margin: 0; /* el espacio lo maneja el gap */
-  max-width: 100%;
-  text-align: center;
-  overflow-wrap: anywhere; /* permitir saltos de línea en palabras largas */
+  font-size: clamp(0.95rem, 1.3vw, 1.05rem);
+  line-height: 1.65;
 }
 
-.fixed_footer .cta-buttons {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
+.footer-cta-actions {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
 }
 
-/* Estilos base del botón CTA en footer */
 .fixed_footer .cta-btn {
   display: inline-flex;
+  min-height: 48px;
   align-items: center;
-  padding: 12px 22px;
-  border: none;
-  border-radius: 12px;
-  font-size: 1em;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.25s ease;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 72%, #ffffff 28%);
+  border-radius: 13px;
+  color: #ffffff;
+  background: var(--primary-color);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--primary-color) 27%, transparent);
+  font-size: 0.92rem;
+  font-weight: 700;
   text-decoration: none;
-  color: #fff;
-}
-.fixed_footer .cta-btn.primary {
-  background: linear-gradient(
-    135deg,
-    var(--primary-color) 0%,
-    var(--secondary-color) 100%
-  );
-  box-shadow: 0 8px 25px
-    color-mix(in srgb, var(--primary-color) 30%, transparent);
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
 }
 
-.fixed_footer .cta-btn.primary:hover {
+.fixed_footer .cta-btn:hover,
+.fixed_footer .cta-btn:focus-visible {
+  filter: brightness(1.06);
+  outline: none;
   transform: translateY(-2px);
-  box-shadow: 0 12px 35px
-    color-mix(in srgb, var(--primary-color) 40%, transparent);
+  box-shadow: 0 16px 34px color-mix(in srgb, var(--primary-color) 34%, transparent);
+}
+
+.fixed_footer .cta-btn span {
+  font-size: 1.15rem;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.fixed_footer .cta-btn:hover span {
+  transform: translateX(3px);
 }
 
 .fixed_footer .cta-meta {
-  color: #cbd5e1;
-  font-size: 0.92em;
-  display: inline-flex; /* centra icono + texto */
+  display: inline-flex;
+  max-width: 320px;
+  margin: 0;
+  padding: 0;
   align-items: center;
-  justify-content: center;
-  max-width: 100%;
-  text-align: center;
+  gap: 8px;
+  color: #aeb9ca;
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.footer-lock {
+  position: relative;
+  width: 14px;
+  height: 11px;
+  flex: 0 0 14px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+}
+
+.footer-lock::before {
+  content: "";
+  position: absolute;
+  right: 2px;
+  bottom: 8px;
+  left: 2px;
+  height: 7px;
+  border: 1.5px solid currentColor;
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+}
+
+.footer-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.fixed_footer .footer-legal {
+  margin: 0;
+  padding: 0;
+  color: #aeb9ca;
+  font-size: 0.74rem;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: left;
   overflow-wrap: anywhere;
 }
-/* Normalizar alineación del ícono en la nota de privacidad */
-.fixed_footer .cta-meta svg {
-  vertical-align: middle !important;
-  margin-right: 6px !important;
+
+.footer-links {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
 }
 
-.fixed_footer .footer-divider {
-  height: 4px; /* más gruesa */
-  width: 100%;
-  max-width: 90vw;
-  margin: 0 auto; /* usamos gap del contenedor */
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    color-mix(in srgb, var(--primary-color) 55%, transparent) 20%,
-    color-mix(in srgb, var(--secondary-color) 55%, transparent) 80%,
-    transparent 100%
-  );
-  border-radius: 3px;
-  box-shadow: 0 0 10px color-mix(in srgb, var(--primary-color) 22%, transparent)
-      inset,
-    0 2px 6px rgba(0, 0, 0, 0.12);
+.footer-links a {
+  color: #d6deea;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-decoration: none;
 }
 
-@media (max-width: 700px) {
+.footer-links a:hover,
+.footer-links a:focus-visible {
+  color: #ffffff;
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+@media (max-width: 860px) {
   .fixed_footer {
-    padding: 26px 14px 8px;
-    gap: 12px; /* menor separación en móvil */
+    padding: 44px 20px 20px;
   }
+
+  .fixed_footer .footer-cta {
+    grid-template-columns: 1fr;
+    gap: 26px;
+  }
+
+  .footer-cta-actions {
+    justify-items: start;
+  }
+
+  .footer-bottom {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .fixed_footer {
+    padding: 36px 16px 18px;
+  }
+
+  .footer-surface {
+    gap: 30px;
+  }
+
   .fixed_footer .cta-title {
-    font-size: 1.45em;
+    font-size: 1.65rem;
   }
-  .fixed_footer .cta-description {
-    font-size: 0.98em;
-  }
+
   .fixed_footer .cta-btn {
-    padding: 11px 18px;
-    font-size: 0.98em;
+    width: 100%;
   }
-  .fixed_footer p {
-    font-size: 0.92em;
-    padding-bottom: 0;
+
+  .footer-cta-actions,
+  .fixed_footer .cta-meta {
+    width: 100%;
+  }
+
+  .footer-bottom {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .fixed_footer .footer-legal {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .footer-links {
+    justify-content: flex-start;
   }
 }

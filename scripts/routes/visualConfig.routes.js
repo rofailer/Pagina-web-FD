@@ -5,6 +5,7 @@ const authenticate = require('../middlewares/authenticate');
 const isAdmin = require('../middlewares/isAdmin');
 const multer = require('multer');
 const path = require('path');
+const ALLOWED_LOGO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 // Configuración de multer para logos
 const logoUpload = multer({
@@ -13,8 +14,7 @@ const logoUpload = multer({
         fileSize: 5 * 1024 * 1024 // 5MB máximo
     },
     fileFilter: (req, file, cb) => {
-        // Solo permitir imágenes
-        if (file.mimetype.startsWith('image/')) {
+        if (ALLOWED_LOGO_TYPES.has(file.mimetype)) {
             cb(null, true);
         } else {
             cb(new Error('Solo se permiten archivos de imagen'), false);

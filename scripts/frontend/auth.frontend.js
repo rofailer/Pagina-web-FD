@@ -26,6 +26,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // Recuperar tokens preservados del panel admin
     restorePreservedTokens();
 
+    if (localStorage.getItem('token') && localStorage.getItem('forcePasswordChange') === 'true') {
+        setTimeout(resumeForcedPasswordChange, 0);
+    }
+
     // Iniciar sistema de renovación automática
     startTokenRenewalSystem();
 
@@ -168,20 +172,32 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem("token", data.token);
             localStorage.setItem(
                 "user",
-                JSON.stringify({ nombre: data.nombre, rol: data.rol }),
+                JSON.stringify({
+                    nombre: data.nombre,
+                    rol: data.rol,
+                    presenceStatus: data.presenceStatus || "en_linea",
+                    estado_presencia: data.presenceStatus || "en_linea",
+                }),
             );
+            if (data.forcePasswordChange) {
+                localStorage.setItem("forcePasswordChange", "true");
+            } else {
+                localStorage.removeItem("forcePasswordChange");
+            }
 
-            // Cargar datos del perfil automáticamente después del login exitoso
-            setTimeout(() => {
-                if (typeof loadUserData === 'function') {
-                    loadUserData();
-                }
+            // Mientras la contraseña sea temporal no deben ejecutarse rutas de
+            // perfil: responden 403 de forma intencional hasta completar el cambio.
+            if (!data.forcePasswordChange) {
+                setTimeout(() => {
+                    if (typeof loadUserData === 'function') {
+                        loadUserData();
+                    }
 
-                // Verificar acceso de owner y mostrar pestaña si corresponde
-                if (typeof checkOwnerAccess === 'function') {
-                    checkOwnerAccess();
-                }
-            }, 500);
+                    if (typeof checkOwnerAccess === 'function') {
+                        checkOwnerAccess();
+                    }
+                }, 500);
+            }
 
             // PASO 1: Ocultar inmediatamente los botones de login/registro
             if (loginBtn) {
@@ -196,13 +212,20 @@ document.addEventListener("DOMContentLoaded", () => {
             // PASO 2: Actualizar la UI inmediatamente después del login
             checkAuthStatus();
 
-            // PASO 2.5: Cargar foto de perfil inmediatamente después del login
-            setTimeout(() => {
-                loadUserProfilePhoto();
-            }, 100);
+            // PASO 2.5: Cargar foto únicamente con la cuenta habilitada.
+            if (!data.forcePasswordChange) {
+                setTimeout(() => {
+                    loadUserProfilePhoto();
+                }, 100);
+            }
 
             // PASO 3: Cerrar el modal de login
             closeModals();
+
+            if (data.forcePasswordChange) {
+                showForcedPasswordChangeDialog();
+                return;
+            }
 
             // PASO 4: Disparar evento personalizado para el menú hamburguesa con un pequeño delay
             setTimeout(() => {
@@ -225,6 +248,151 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function clearInvalidForcedPasswordSession() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('forcePasswordChange');
+        checkAuthStatus();
+        window.dispatchEvent(new CustomEvent('authStateChanged', {
+            detail: { authenticated: false, user: null }
+        }));
+    }
+
+    async function resumeForcedPasswordChange() {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/auth/me', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (response.status === 401) {
+                clearInvalidForcedPasswordSession();
+                if (typeof showNotification === 'function') {
+                    showNotification('Tu sesión expiró. Inicia sesión nuevamente.', 'error');
+                }
+                return;
+            }
+        } catch (error) {
+            // Si la validación no está disponible, el formulario conserva el
+            // mensaje de error del servidor y permite reintentar.
+        }
+
+        showForcedPasswordChangeDialog();
+    }
+
+    function showForcedPasswordChangeDialog() {
+        if (document.getElementById('forcedPasswordChangeModal')) return;
+
+        const overlay = document.createElement('div');
+        overlay.id = 'forcedPasswordChangeModal';
+        overlay.className = 'auth-modal forced-password-modal';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-labelledby', 'forcedPasswordChangeTitle');
+        overlay.setAttribute('aria-describedby', 'forcedPasswordChangeDescription');
+
+        const panel = document.createElement('div');
+        panel.className = 'modal-content forced-password-panel';
+        panel.innerHTML = `
+            <div class="forced-password-heading">
+                <h2 id="forcedPasswordChangeTitle">Cambiar Contraseña</h2>
+                <p id="forcedPasswordChangeDescription">Configura una contraseña propia para habilitar todas las funciones de tu cuenta.</p>
+            </div>
+            <form id="forcedPasswordChangeForm" class="forced-password-form">
+                <label>Contraseña temporal
+                    <input name="currentPassword" type="password" autocomplete="current-password" required
+                        placeholder="Ingresa la contraseña recibida">
+                </label>
+                <label>Nueva contraseña
+                    <input name="newPassword" type="password" autocomplete="new-password" required
+                        placeholder="Crea una contraseña segura">
+                </label>
+                <label>Confirma la nueva contraseña
+                    <input name="confirmPassword" type="password" autocomplete="new-password" required
+                        placeholder="Repite la nueva contraseña">
+                </label>
+                <p id="forcedPasswordChangeError" class="forced-password-error" role="alert" aria-live="polite"></p>
+                <button type="submit">Guardar y continuar</button>
+                <p class="forced-password-help">Usa mínimo 10 caracteres e incluye mayúscula, minúscula, número y símbolo.</p>
+            </form>`;
+        overlay.appendChild(panel);
+        document.body.appendChild(overlay);
+
+        const form = panel.querySelector('#forcedPasswordChangeForm');
+        const errorElement = panel.querySelector('#forcedPasswordChangeError');
+        form.querySelector('input').focus();
+
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            errorElement.textContent = '';
+            const formData = new FormData(form);
+            const currentPassword = formData.get('currentPassword');
+            const newPassword = formData.get('newPassword');
+            const confirmPassword = formData.get('confirmPassword');
+            const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,128}$/;
+
+            if (newPassword !== confirmPassword) {
+                errorElement.textContent = 'Las contraseñas nuevas no coinciden.';
+                return;
+            }
+            if (!passwordPattern.test(newPassword)) {
+                errorElement.textContent = 'La nueva contraseña no cumple los requisitos de seguridad.';
+                return;
+            }
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Guardando...';
+
+            try {
+                const response = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (response.status === 401) {
+                    clearInvalidForcedPasswordSession();
+                    overlay.remove();
+                    showLoginModal();
+                    if (typeof showNotification === 'function') {
+                        showNotification('Tu sesión expiró. Inicia sesión nuevamente.', 'error');
+                    }
+                    return;
+                }
+                if (!response.ok) throw new Error(result.error || 'No fue posible cambiar la contraseña.');
+
+                localStorage.setItem('token', result.token);
+                localStorage.removeItem('forcePasswordChange');
+                overlay.remove();
+                if (typeof showNotification === 'function') {
+                    showNotification('Contraseña actualizada correctamente.', 'success');
+                } else {
+                    showSuccess('Contraseña actualizada correctamente.');
+                }
+                window.dispatchEvent(new CustomEvent('authStateChanged', { detail: { authenticated: true } }));
+                checkAuthStatus();
+                loadUserProfilePhoto();
+                if (typeof loadUserData === 'function') loadUserData();
+                if (typeof loadUserKeys === 'function') loadUserKeys();
+                if (typeof window.loadKeys === 'function') window.loadKeys();
+                if (typeof window.loadActiveKey === 'function') window.loadActiveKey();
+                checkUserKeysAfterLogin();
+            } catch (error) {
+                errorElement.textContent = error.message;
+                submitButton.disabled = false;
+                submitButton.textContent = 'Guardar y continuar';
+            }
+        });
+    }
+
     async function handleRegister(e) {
         e.preventDefault();
         const nombre = document.getElementById("registerNombre").value;
@@ -235,10 +403,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Validación en frontend antes de enviar
         const regex =
-            /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{4,}$/;
+            /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,128}$/;
         if (!regex.test(password)) {
             errorElement.textContent =
-                "La contraseña debe tener al menos 4 caracteres, una mayúscula, un número y un carácter especial.";
+                "La contraseña debe tener entre 10 y 128 caracteres, con mayúscula, minúscula, número y símbolo.";
             return;
         }
 
@@ -272,8 +440,10 @@ document.addEventListener("DOMContentLoaded", () => {
             profileMenuContainer.style.display = "flex";
             profileName.textContent = user.nombre || "Usuario";
 
-            // Cargar foto de perfil si el usuario está autenticado
-            loadUserProfilePhoto();
+            // Un 403 por contraseña temporal no significa que el token expiró.
+            if (localStorage.getItem('forcePasswordChange') !== 'true') {
+                loadUserProfilePhoto();
+            }
         } else if (profileMenuContainer) {
             profileMenuContainer.style.display = "none";
         }
@@ -352,10 +522,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function logoutUser() {
         localStorage.removeItem("token");
+        localStorage.removeItem("admin_token");
         localStorage.removeItem("userRole");
         localStorage.removeItem("userName");
         localStorage.removeItem("user");
+        localStorage.removeItem("forcePasswordChange");
         localStorage.removeItem("keysGuideShown"); // Limpiar la marca de guía mostrada
+        sessionStorage.removeItem("preserve_token");
+        sessionStorage.removeItem("preserve_admin_token");
 
         // Detener sistema de renovación automática
         if (window.stopTokenRenewalSystem) {
@@ -422,10 +596,10 @@ document.addEventListener("DOMContentLoaded", () => {
         passwordInput.addEventListener("input", () => {
             const value = passwordInput.value;
             const regex =
-                /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{4,}$/;
+                /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,128}$/;
             if (!regex.test(value)) {
                 passwordError.textContent =
-                    "La contraseña debe tener al menos 4 caracteres, una mayúscula, un número y un carácter especial.";
+                    "La contraseña debe tener entre 10 y 128 caracteres, con mayúscula, minúscula, número y símbolo.";
             } else {
                 passwordError.textContent = "";
             }
@@ -437,7 +611,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function checkUserKeysAfterLogin() {
         try {
             const token = localStorage.getItem("token");
-            if (!token) return;
+            if (!token || localStorage.getItem('forcePasswordChange') === 'true') return;
 
             // Verificando llaves del usuario después del login
 
@@ -472,7 +646,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function showCreateKeysGuide() {
         closeModals(); // Cerrar cualquier modal abierto
-        createKeysGuideModal.style.display = "block";
+        createKeysGuideModal.style.display = "flex";
     }
 
     function navigateToKeysSection() {
@@ -610,7 +784,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Función para cargar la foto de perfil del usuario autenticado
     async function loadUserProfilePhoto() {
         const token = localStorage.getItem("token");
-        if (!token) return;
+        if (!token || localStorage.getItem('forcePasswordChange') === 'true') return;
 
         try {
             const response = await fetch('/api/profile/photo', {
@@ -624,30 +798,46 @@ document.addEventListener("DOMContentLoaded", () => {
             if (response.ok) {
                 const data = await response.json();
 
-                if (data.success && data.hasPhoto && data.photoPath) {
-                    // Actualizar foto en el menú móvil (.user-profile-avatar)
-                    const mobileAvatar = document.querySelector('.user-profile-avatar');
-                    if (mobileAvatar) {
-                        mobileAvatar.innerHTML = `<img src="${data.photoPath}" alt="Avatar de usuario">`;
-                        mobileAvatar.classList.add('has-photo');
-                    }
+                if (data.success && data.hasPhoto && data.photoUrl) {
+                    const separator = data.photoUrl.includes('?') ? '&' : '?';
+                    const photoUrl = data.photoVersion
+                        ? `${data.photoUrl}${separator}v=${encodeURIComponent(data.photoVersion)}`
+                        : data.photoUrl;
+                    const photoResponse = await fetch(photoUrl, {
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        cache: 'no-store'
+                    });
+                    if (!photoResponse.ok) return;
 
-                    // Actualizar en el dropdown del perfil (desktop) si existe
-                    const desktopAvatar = document.querySelector('.profile-avatar-large');
-                    if (desktopAvatar) {
-                        desktopAvatar.src = data.photoPath;
+                    const photoBlob = await photoResponse.blob();
+                    if (window.__profilePhotoObjectUrl) {
+                        URL.revokeObjectURL(window.__profilePhotoObjectUrl);
                     }
+                    const objectUrl = URL.createObjectURL(photoBlob);
+                    window.__profilePhotoObjectUrl = objectUrl;
 
-                    // Actualizar avatar pequeño del header si existe
-                    const headerAvatar = document.querySelector('.profile-avatar-small');
-                    if (headerAvatar) {
-                        headerAvatar.src = data.photoPath;
+                    if (typeof window.updateProfilePhoto === 'function') {
+                        window.updateProfilePhoto(objectUrl);
+                    } else {
+                        const mobileAvatar = document.querySelector('.user-profile-avatar');
+                        if (mobileAvatar) {
+                            mobileAvatar.querySelectorAll(':scope > img').forEach(image => image.remove());
+                            const image = document.createElement('img');
+                            image.src = objectUrl;
+                            image.alt = 'Avatar de usuario';
+                            mobileAvatar.prepend(image);
+                            mobileAvatar.classList.add('has-photo');
+                        }
+                        const desktopAvatar = document.querySelector('.profile-avatar-large');
+                        if (desktopAvatar) desktopAvatar.src = objectUrl;
+                        const headerAvatar = document.querySelector('.profile-avatar-small');
+                        if (headerAvatar) headerAvatar.src = objectUrl;
                     }
                 } else {
                     // Sin foto: limpiar avatares y mostrar SVG por defecto
                     const mobileAvatar = document.querySelector('.user-profile-avatar');
                     if (mobileAvatar) {
-                        mobileAvatar.innerHTML = '';
+                        mobileAvatar.querySelectorAll(':scope > img').forEach(image => image.remove());
                         mobileAvatar.classList.remove('has-photo');
                     }
                 }
@@ -660,10 +850,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Sistema de renovación automática de tokens
     function startTokenRenewalSystem() {
-        const token = localStorage.getItem("token");
-        if (!token) return;
+        if (!localStorage.getItem("token")) return;
 
-        // Renovar token cada 7 días si hay actividad reciente
+        // Renovar a mitad de la sesión de 8 horas si hay actividad reciente.
         tokenRenewalInterval = setInterval(async () => {
             const timeSinceLastActivity = Date.now() - lastActivityTime;
 
@@ -674,10 +863,13 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             try {
+                const currentToken = localStorage.getItem("token");
+                if (!currentToken) return;
+
                 const response = await fetch('/api/auth/renew', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
+                        'Authorization': `Bearer ${currentToken}`,
                         'Content-Type': 'application/json'
                     }
                 });
@@ -692,7 +884,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (error) {
                 console.log('Error renovando token:', error);
             }
-        }, 7 * 24 * 60 * 60 * 1000); // 7 días
+        }, 4 * 60 * 60 * 1000); // 4 horas
 
         // Detectar actividad del usuario
         ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'].forEach(event => {

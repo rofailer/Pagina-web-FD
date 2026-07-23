@@ -3,9 +3,13 @@
 
 class VisualCustomizationManager {
     constructor() {
-        this.currentBackground = 'default';
+        if (window.visualManager instanceof VisualCustomizationManager) {
+            return window.visualManager;
+        }
+
+        this.currentBackground = 'fondo1';
         this.currentFavicon = '../../favicon.ico';
-        this.init();
+        this.ready = this.init();
     }
 
     async init() {
@@ -22,8 +26,9 @@ class VisualCustomizationManager {
 
     async loadSavedConfig() {
         try {
-            const token = localStorage.getItem('token');
-            const hasToken = token && token.trim() !== '';
+            const token = this.getAuthToken();
+            const passwordChangePending = localStorage.getItem('forcePasswordChange') === 'true';
+            const hasToken = token && token.trim() !== '' && !passwordChangePending;
 
             let apiUrl = '/api/visual-config/public';
             if (hasToken) {
@@ -42,18 +47,17 @@ class VisualCustomizationManager {
                 const data = await response.json();
                 if (data.success) {
                     const config = data.config;
-                    this.currentBackground = config.background || 'fondo1';
+                    this.currentBackground = this.normalizeBackground(config.background);
                     this.currentFavicon = config.favicon || '../../favicon.ico';
 
                     this.applyBackground(this.currentBackground);
                     this.applyFavicon(this.currentFavicon);
-
-                    if (config.institution_name) this.updateInstitutionName(config.institution_name);
+                    this.applyInstitutionalConfig(config);
 
                     // log eliminado
                     return;
                 }
-            } else if (response.status === 401 && hasToken) {
+            } else if ([401, 403].includes(response.status) && hasToken) {
                 // log eliminado
                 return this.loadPublicConfig();
             }
@@ -77,13 +81,12 @@ class VisualCustomizationManager {
                 const data = await response.json();
                 if (data.success) {
                     const config = data.config;
-                    this.currentBackground = config.background || 'fondo1';
+                    this.currentBackground = this.normalizeBackground(config.background);
                     this.currentFavicon = config.favicon || '../../favicon.ico';
 
                     this.applyBackground(this.currentBackground);
                     this.applyFavicon(this.currentFavicon);
-
-                    if (config.institution_name) this.updateInstitutionName(config.institution_name);
+                    this.applyInstitutionalConfig(config);
 
                     // log eliminado
                     return;
@@ -99,21 +102,25 @@ class VisualCustomizationManager {
     loadFromLocalStorage() {
         const savedConfig = localStorage.getItem('visualConfig');
         if (savedConfig) {
-            const config = JSON.parse(savedConfig);
-            this.currentBackground = config.background || 'fondo1';
+            let config;
+            try {
+                config = JSON.parse(savedConfig);
+            } catch (_error) {
+                localStorage.removeItem('visualConfig');
+                this.currentBackground = this.normalizeBackground(localStorage.getItem('globalBackground'));
+                this.applyBackground(this.currentBackground);
+                return;
+            }
+
+            this.currentBackground = this.normalizeBackground(config.background);
             this.currentFavicon = config.favicon || '../../favicon.ico';
 
             this.applyBackground(this.currentBackground);
             this.applyFavicon(this.currentFavicon);
-
-            if (config.siteTitle) this.updateSiteTitle(config.siteTitle);
-            if (config.headerTitle) this.updateHeaderTitle(config.headerTitle);
-            if (config.footerText) this.updateFooterText(config.footerText);
-            if (config.adminHeaderTitle) this.updateAdminHeaderTitle(config.adminHeaderTitle);
-            if (config.institution_name) this.updateAdminHeaderTitle(config.institution_name);
+            this.applyInstitutionalConfig(config);
         } else {
-            this.currentBackground = 'fondo1';
-            this.applyBackground('fondo1');
+            this.currentBackground = this.normalizeBackground(localStorage.getItem('globalBackground'));
+            this.applyBackground(this.currentBackground);
         }
     }
 
@@ -156,7 +163,7 @@ class VisualCustomizationManager {
 
     resetToDefaultBackground() {
         this.selectBackground('fondo1');
-        this.showNotification('Background restaurado por defecto', 'success');
+        this.showNotification('Fondo restaurado por defecto', 'success');
     }
 
     async saveGlobalBackgroundConfig() {
@@ -176,6 +183,7 @@ class VisualCustomizationManager {
     }
 
     selectBackground(bgType) {
+        bgType = this.normalizeBackground(bgType);
         // Remove selected class from all background options (both regular and admin panel)
         document.querySelectorAll('.background-option, .background-option-card').forEach(opt => {
             opt.classList.remove('selected');
@@ -214,19 +222,26 @@ class VisualCustomizationManager {
     }
 
     applyBackground(bgType) {
-        this.setGlobalBackground(bgType);
-        document.body.setAttribute('data-bg', bgType);
+        const normalizedBackground = this.normalizeBackground(bgType);
+        this.currentBackground = normalizedBackground;
+        this.setGlobalBackground(normalizedBackground);
+        document.body.setAttribute('data-bg', normalizedBackground);
     }
 
     setGlobalBackground(bgType) {
         localStorage.setItem('globalBackground', bgType);
         this.clearInlineBackgroundStyles();
+    }
 
-        if (bgType === 'fondo1') {
-            this.applyImageBackground('../../../recursos/Fondo.jpg');
-        } else if (bgType === 'fondo2') {
-            this.applyImageBackground('../../../recursos/Fondo2.jpg');
-        }
+    normalizeBackground(bgType) {
+        return ['fondo1', 'fondo2', 'fondoOscuro'].includes(bgType) ? bgType : 'fondo1';
+    }
+
+    getAuthToken() {
+        // Las rutas /api/visual-config usan el JWT normal. El token
+        // administrativo solo queda como respaldo para instalaciones que lo
+        // acepten explícitamente.
+        return localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
     }
 
     applyImageBackground(imagePath) {
@@ -283,6 +298,27 @@ class VisualCustomizationManager {
         }
 
         this.currentFavicon = faviconSrc;
+
+        const adminBrandLogo = document.querySelector('.admin-brand-logo');
+        if (adminBrandLogo) {
+            adminBrandLogo.style.backgroundImage = `url("${faviconSrc}")`;
+        }
+    }
+
+    applyInstitutionalConfig(config = {}) {
+        const institutionName = String(
+            config.institution_name
+            || config.institutionName
+            || config.siteTitle
+            || config.title
+            || 'Firmas Digitales FD'
+        ).trim();
+
+        this.updateInstitutionName(institutionName || 'Firmas Digitales FD');
+        this.updateContactDetails(
+            config.contact_email ?? config.contactEmail ?? '',
+            config.contact_phone ?? config.contactPhone ?? ''
+        );
     }
 
     updateSiteTitle(title) {
@@ -319,8 +355,8 @@ class VisualCustomizationManager {
             background: this.currentBackground,
             favicon: this.currentFavicon,
             siteTitle: document.getElementById('siteTitle')?.value || 'Firmas Digitales FD',
-            headerTitle: document.getElementById('headerTitle')?.value || 'Firmas Digitales FD',
-            footerText: document.getElementById('footerText')?.value || 'Firmas Digitales FD',
+            contactEmail: document.getElementById('contactEmail')?.value || '',
+            contactPhone: document.getElementById('contactPhone')?.value || '',
             adminHeaderTitle: document.getElementById('adminHeaderTitle')?.value || 'Sistema de Firmas Digitales',
             loginStyle: document.querySelector('.style-option.selected')?.dataset.style || 'solid'
         };
@@ -333,16 +369,14 @@ class VisualCustomizationManager {
         localStorage.removeItem('visualConfig');
         localStorage.removeItem('customBackground');
 
-        this.currentBackground = 'default';
+        this.currentBackground = 'fondo1';
         this.currentFavicon = '../../favicon.ico';
 
-        this.applyBackground('default');
+        this.applyBackground('fondo1');
         this.applyFavicon('../../favicon.ico');
 
-        this.updateSiteTitle('Firmas Digitales FD');
-        this.updateHeaderTitle('Firmas Digitales FD');
-        this.updateFooterText('Firmas Digitales FD');
-        this.updateAdminHeaderTitle('Firmas Digitales FD');
+        this.updateInstitutionName('Firmas Digitales FD');
+        this.updateContactDetails('', '');
 
         this.updateUI();
         this.showNotification('Configuración restablecida', 'info');
@@ -350,13 +384,12 @@ class VisualCustomizationManager {
 
     updateUI() {
         const siteTitleInput = document.getElementById('siteTitle');
-        const headerTitleInput = document.getElementById('headerTitle');
-        const footerTextInput = document.getElementById('footerText');
         const adminHeaderInput = document.getElementById('adminHeaderTitle');
 
-        if (siteTitleInput) siteTitleInput.value = document.title;
-        if (headerTitleInput) headerTitleInput.value = document.getElementById('tituloWeb')?.textContent || 'Firmas Digitales FD';
-        if (footerTextInput) footerTextInput.value = document.getElementById('footerCompanyName')?.textContent || 'Firmas Digitales FD';
+        if (siteTitleInput) {
+            siteTitleInput.value = document.querySelector('[data-institution-name]')?.textContent
+                || 'Firmas Digitales FD';
+        }
         if (adminHeaderInput) adminHeaderInput.value = document.getElementById('adminHeaderSubtitle')?.textContent || 'Sistema de Firmas Digitales';
     }
 
@@ -366,7 +399,7 @@ class VisualCustomizationManager {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                    'Authorization': `Bearer ${this.getAuthToken()}`
                 },
                 body: JSON.stringify(config)
             });
@@ -407,32 +440,68 @@ class VisualCustomizationManager {
     }
 
     updateInstitutionName(name) {
-        // Actualizar título de la página
-        document.title = name;
+        const institutionName = String(name || '').trim() || 'Firmas Digitales FD';
+        const pathname = window.location.pathname.toLowerCase();
+        if (pathname.includes('loginadmin')) {
+            document.title = `Acceso administrativo - ${institutionName}`;
+        } else if (pathname.includes('paneladmin')) {
+            document.title = `Administración | ${institutionName}`;
+        } else {
+            document.title = institutionName;
+        }
 
         // Actualizar elementos del header si existen
         const headerTitles = document.querySelectorAll('.site-title, .header-title, [data-institution-name]');
         headerTitles.forEach(element => {
-            element.textContent = name;
+            element.textContent = institutionName;
         });
 
         // Actualizar elementos del footer si existen
         const footerElements = document.querySelectorAll('.footer-institution, [data-footer-institution]');
         footerElements.forEach(element => {
-            element.textContent = name;
+            element.textContent = institutionName;
         });
 
         // Actualizar título específico de la página si existe
         const pageTitle = document.getElementById('pageTitle');
         if (pageTitle) {
-            pageTitle.textContent = name;
+            pageTitle.textContent = institutionName;
         }
 
         // Para compatibilidad con código anterior
         const tituloWeb = document.getElementById('tituloWeb');
         if (tituloWeb) {
-            tituloWeb.textContent = name;
+            tituloWeb.textContent = institutionName;
         }
+
+        this.updateFooterText(
+            `© ${new Date().getFullYear()} ${institutionName}. Todos los derechos reservados.`
+        );
+    }
+
+    updateContactDetails(emailValue, phoneValue) {
+        const email = String(emailValue || '').trim();
+        const phone = String(phoneValue || '').trim();
+
+        document.querySelectorAll('[data-contact-email]').forEach(element => {
+            element.textContent = email;
+        });
+        document.querySelectorAll('[data-contact-email-link]').forEach(link => {
+            link.href = email ? `mailto:${email}` : '#contacto';
+        });
+        document.querySelectorAll('[data-contact-email-item]').forEach(item => {
+            item.hidden = !email;
+        });
+
+        document.querySelectorAll('[data-contact-phone]').forEach(element => {
+            element.textContent = phone;
+        });
+        document.querySelectorAll('[data-contact-phone-link]').forEach(link => {
+            link.href = phone ? `tel:${phone.replace(/[^\d+]/g, '')}` : '#contacto';
+        });
+        document.querySelectorAll('[data-contact-phone-item]').forEach(item => {
+            item.hidden = !phone;
+        });
     }
 
     updateAdminHeaderTitle(title) {
@@ -452,7 +521,7 @@ function saveVisualConfig() {
 
 function previewVisualChanges() {
     if (window.visualManager) {
-        const institutionName = document.getElementById('siteTitle')?.value || document.getElementById('headerTitle')?.value;
+        const institutionName = document.getElementById('siteTitle')?.value;
 
         if (institutionName) window.visualManager.updateInstitutionName(institutionName);
         if (institutionName) window.visualManager.updateAdminHeaderTitle(institutionName);
@@ -469,5 +538,7 @@ function resetVisualConfig() {
 
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
-    window.visualManager = new VisualCustomizationManager();
+    if (!window.visualManager) {
+        window.visualManager = new VisualCustomizationManager();
+    }
 });

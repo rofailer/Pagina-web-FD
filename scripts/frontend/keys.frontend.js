@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Función para cargar la llave activa
     async function loadActiveKey() {
-        if (!localStorage.getItem("token")) return;
+        if (!localStorage.getItem("token") || localStorage.getItem('forcePasswordChange') === 'true') return;
         try {
             const response = await fetch("/active-key", {
                 headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Función para cargar la lista de llaves
     async function loadKeys() {
-        if (!localStorage.getItem("token")) return;
+        if (!localStorage.getItem("token") || localStorage.getItem('forcePasswordChange') === 'true') return;
         try {
             const response = await fetch("/list-keys", {
                 headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -157,7 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                     ${isActive ? '<span class="active-badge">ACTIVA</span>' : ''}
                                 </div>
                                 <div class="key-details">
-                                    <span>${key.encryption_type || 'RSA-2048'}</span>
+                                    <span>${window.cryptoConfig?.formatEncryptionType(key.encryption_type) || 'AES-256-GCM v2'}</span>
                                     <span class="expiration-status ${expirationClass}">${expirationText}</span>
                                 </div>
                             </div>

@@ -1,461 +1,293 @@
 /**
- * Clase para manejar la autenticación del panel administrativo
- * Soporta dos modos: login completo y confirmación de contraseña
+ * Acceso al panel administrativo.
+ * Admite autenticación completa y confirmación de contraseña cuando ya existe
+ * una sesión normal autorizada.
  */
 class AdminAccess {
     constructor() {
-        this.form = document.getElementById("adminAccessForm");
-        this.loginBtn = document.getElementById("loginBtn");
-        this.changeUserBtn = document.getElementById("changeUserBtn");
-        this.alertContainer = document.getElementById("alertContainer");
-        this.emailGroup = document.getElementById("emailGroup");
-        this.emailInput = document.getElementById("email");
-        this.passwordInput = document.getElementById("password");
-        this.secondaryButtons = document.getElementById("secondaryButtons");
+        this.form = document.getElementById('adminAccessForm');
+        this.loginBtn = document.getElementById('loginBtn');
+        this.changeUserBtn = null;
+        this.alertContainer = document.getElementById('alertContainer');
+        this.emailGroup = document.getElementById('emailGroup');
+        this.emailInput = document.getElementById('email');
+        this.passwordInput = document.getElementById('password');
 
         this.isPasswordOnlyMode = false;
-        this.currentUserEmail = null;
+        this.currentUser = null;
+        this.isSubmitting = false;
 
         this.init();
     }
 
     init() {
-        if (!this.form) {
-            console.error("No se encontró el formulario adminAccessForm");
-            return;
-        }
+        if (!this.form || !this.loginBtn || !this.emailInput || !this.passwordInput) return;
 
-        this.form.addEventListener("submit", (event) => {
-            this.handleLogin(event);
-        });
-
-        if (this.loginBtn) {
-            this.loginBtn.addEventListener("click", (event) => {
-                console.log("🖱️ BOTÓN LOGIN CLICK DETECTADO");
-                console.log("🖱️ Event:", event.type);
-                console.log("🖱️ Button disabled:", this.loginBtn.disabled);
-                console.log("🖱️ Password value:", this.passwordInput ? this.passwordInput.value : "NO INPUT");
-
-                if (this.loginBtn.disabled) {
-                    event.preventDefault();
-                    return;
-                }
-                event.preventDefault();
-                this.handleLogin(event);
-            });
-        }
-
-        if (this.changeUserBtn) {
-            this.changeUserBtn.addEventListener("click", this.switchToFullLogin.bind(this));
-        }
-
-        this.checkAuthStatus();
+        this.form.addEventListener('submit', (event) => void this.handleLogin(event));
+        void this.checkAuthStatus();
     }
 
     async checkAuthStatus() {
-        const token = localStorage.getItem("token");
-
-        if (token) {
-            try {
-                const response = await fetch("/api/auth/me", {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-
-                if (response.ok) {
-                    const userData = await response.json();
-
-                    if (userData.rol === "owner" || userData.rol === "admin") {
-                        // Usuario ya autenticado como admin, mostrar confirmación de contraseña por seguridad
-                        this.setupPasswordOnlyMode(userData.usuario);
-                        return;
-                    } else {
-                        localStorage.removeItem("token");
-                        this.setupFullLoginMode();
-                    }
-                } else {
-                    localStorage.removeItem("token");
-                    this.setupFullLoginMode();
-                }
-            } catch (error) {
-                localStorage.removeItem("token");
-                this.setupFullLoginMode();
-            }
-        } else {
+        const token = localStorage.getItem('token');
+        if (!token) {
             this.setupFullLoginMode();
+            return;
         }
+
+        try {
+            const response = await fetch('/api/auth/me', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const user = response.ok ? await this.readJson(response) : null;
+
+            if (user && this.isAdministrativeRole(user.rol)) {
+                this.setupPasswordOnlyMode(user.usuario);
+                return;
+            }
+        } catch (_error) {
+            // Una sesión no verificable se trata como cerrada.
+        }
+
+        localStorage.removeItem('token');
+        localStorage.removeItem('admin_token');
+        this.setupFullLoginMode();
     }
 
     setupPasswordOnlyMode(usuario) {
         this.isPasswordOnlyMode = true;
-        this.currentUserEmail = usuario;
-
-        this.emailGroup.style.display = 'none';
+        this.currentUser = usuario;
+        this.emailGroup.hidden = true;
         this.emailInput.required = false;
-
         this.showCurrentUserInfo(usuario);
 
-        if (this.loginBtn) {
-            this.loginBtn.style.display = 'block';
-            this.loginBtn.disabled = false;
-            this.loginBtn.classList.remove('btn-loading');
-            this.loginBtn.style.pointerEvents = 'auto';
-            this.loginBtn.style.cursor = 'pointer';
-            this.loginBtn.querySelector('.btn-text').textContent = 'Confirmar Acceso';
-        }
+        this.setButtonText('Confirmar acceso');
 
-        const secondaryButtons = document.getElementById('secondaryButtons');
-        if (secondaryButtons) {
-            secondaryButtons.style.display = 'block';
-            setTimeout(() => secondaryButtons.classList.add('show'), 50);
-        }
-
-        const titleElement = document.querySelector('.access-title');
-        const subtitleElement = document.querySelector('.access-subtitle');
-
-        if (titleElement) {
-            titleElement.textContent = 'Confirmar Acceso';
-        }
-        if (subtitleElement) {
-            subtitleElement.innerHTML = 'Ingresa tu contraseña para acceder al panel administrativo.';
-            subtitleElement.classList.add('password-only-mode');
-        }
-
-        setTimeout(() => {
-            if (this.passwordInput) {
-                this.passwordInput.focus();
-            }
-        }, 100);
+        this.updateHeader(
+            'Confirmar acceso',
+            'Ingresa nuevamente tu contraseña para abrir el panel administrativo.'
+        );
+        window.setTimeout(() => this.passwordInput.focus(), 80);
     }
 
     setupFullLoginMode() {
         this.isPasswordOnlyMode = false;
-        this.currentUserEmail = null;
-
-        this.emailGroup.style.display = 'block';
+        this.currentUser = null;
+        this.emailGroup.hidden = false;
         this.emailInput.required = true;
-
         this.removeCurrentUserInfo();
 
-        if (this.loginBtn) {
-            this.loginBtn.style.display = 'block';
-            this.loginBtn.querySelector('.btn-text').textContent = 'Acceder al Panel';
-        }
+        this.setButtonText('Acceder al panel');
 
-        const secondaryButtons = document.getElementById('secondaryButtons');
-        if (secondaryButtons) {
-            secondaryButtons.classList.remove('show');
-            setTimeout(() => secondaryButtons.style.display = 'none', 300);
-        }
+        this.updateHeader(
+            'Panel Administrativo',
+            'Ingresa con una cuenta autorizada para continuar.'
+        );
+        window.setTimeout(() => this.emailInput.focus(), 80);
+    }
 
+    updateHeader(title, subtitle) {
         const titleElement = document.querySelector('.access-title');
         const subtitleElement = document.querySelector('.access-subtitle');
-
-        if (titleElement) {
-            titleElement.textContent = 'Panel Administrativo';
-        }
-        if (subtitleElement) {
-            subtitleElement.innerHTML = 'Accede al sistema de administración para gestionar usuarios, configuraciones y monitorear el sistema.';
-            subtitleElement.classList.remove('password-only-mode');
-        }
-
-        setTimeout(() => {
-            if (this.emailInput) {
-                this.emailInput.focus();
-            }
-        }, 100);
+        if (titleElement) titleElement.textContent = title;
+        if (subtitleElement) subtitleElement.textContent = subtitle;
     }
 
     showCurrentUserInfo(usuario) {
         this.removeCurrentUserInfo();
 
         const userInfo = document.createElement('div');
+        const userCopy = document.createElement('div');
+        const label = document.createElement('div');
+        const value = document.createElement('div');
+        const changeButton = document.createElement('button');
+        const changeIcon = document.createElement('span');
+
         userInfo.className = 'current-user-info';
         userInfo.id = 'currentUserInfo';
-        userInfo.innerHTML = `
-      <div class="user-label">Usuario actual:</div>
-      <div class="user-email">${usuario}</div>
-    `;
-
-        this.form.insertBefore(userInfo, this.form.firstChild);
+        userCopy.className = 'current-user-copy';
+        label.className = 'user-label';
+        label.textContent = 'Usuario actual';
+        value.className = 'user-email';
+        value.textContent = usuario || '';
+        changeButton.type = 'button';
+        changeButton.className = 'current-user-switch';
+        changeButton.setAttribute('aria-label', 'Cambiar usuario');
+        changeButton.title = 'Cambiar usuario';
+        changeIcon.className = 'current-user-switch-icon';
+        changeIcon.setAttribute('aria-hidden', 'true');
+        changeIcon.textContent = '↻';
+        changeButton.append(changeIcon);
+        changeButton.addEventListener('click', () => this.switchToFullLogin());
+        userCopy.append(label, value);
+        userInfo.append(userCopy, changeButton);
+        this.changeUserBtn = changeButton;
+        this.form.prepend(userInfo);
     }
 
     removeCurrentUserInfo() {
-        const existingInfo = document.getElementById('currentUserInfo');
-        if (existingInfo) {
-            existingInfo.remove();
-        }
+        document.getElementById('currentUserInfo')?.remove();
+        this.changeUserBtn = null;
     }
 
     switchToFullLogin() {
-        localStorage.removeItem("token");
-        this.setupFullLoginMode();
+        localStorage.removeItem('token');
+        localStorage.removeItem('admin_token');
         this.clearAlerts();
         this.emailInput.value = '';
         this.passwordInput.value = '';
+        this.setupFullLoginMode();
     }
 
     async handleLogin(event) {
-        console.log("🎯 HANDLE LOGIN INICIADO");
-        console.log("🎯 Event type:", event ? event.type : "NO EVENT");
-        console.log("🎯 isPasswordOnlyMode:", this.isPasswordOnlyMode);
+        event.preventDefault();
+        if (this.isSubmitting) return;
 
-        if (event && event.preventDefault) {
-            event.preventDefault();
-        }
-
+        this.isSubmitting = true;
         this.setLoading(true);
         this.clearAlerts();
 
         try {
             if (this.isPasswordOnlyMode) {
-                console.log("🔑 Ejecutando modo solo contraseña");
                 await this.handlePasswordConfirmation();
             } else {
-                console.log("👤 Ejecutando modo login completo");
                 await this.handleFullLogin();
             }
-        } catch (error) {
-            console.error("❌ Error de autenticación:", error);
-            this.showAlert("Error de conexión. Intenta nuevamente.", "error");
+        } catch (_error) {
+            this.showAlert('No fue posible conectar con el servidor. Intenta nuevamente.', 'error');
         } finally {
+            this.isSubmitting = false;
             this.setLoading(false);
         }
     }
 
     async handlePasswordConfirmation() {
-        console.log("🚨🚨🚨 HANDLE PASSWORD CONFIRMATION EJECUTADO 🚨🚨🚨");
-        console.log("🔍 Timestamp:", new Date().toISOString());
-        console.log("🔍 this.passwordInput:", this.passwordInput);
-        console.log("🔍 this.currentUserEmail:", this.currentUserEmail);
-
         const password = this.passwordInput.value;
-
-        if (!password.trim()) {
-            this.showAlert("Por favor ingresa tu contraseña.", "error");
+        if (!password.trim() || !this.currentUser) {
+            this.showAlert('Ingresa tu contraseña para continuar.', 'error');
             return;
         }
 
-        console.log("🔐 Iniciando verificación de contraseña...");
-        console.log("👤 Usuario actual:", this.currentUserEmail);
-
-        const response = await fetch("/api/login", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                usuario: this.currentUserEmail,
-                password: password
-            }),
+        const response = await this.requestLogin({
+            usuario: this.currentUser,
+            password
         });
 
-        console.log("📡 Respuesta de login:", response.status, response.statusText);
-
-        const result = await response.json();
-        console.log("📋 Datos de respuesta:", result);
-
-        if (response.ok && result.token) {
-            console.log("✅ Login exitoso, guardando token...");
-            localStorage.setItem("token", result.token);
-            this.showAlert("Acceso confirmado. Redirigiendo...", "success");
-
-            setTimeout(() => {
-                console.log("⏰ Iniciando redirección...");
-                this.redirectToAdminPanel(result.token);
-            }, 1000);
-        } else {
-            console.log("❌ Login fallido:", result.message || "Error desconocido");
-            this.showAlert("Contraseña incorrecta.", "error");
+        if (!response.ok || !response.data.token) {
+            this.passwordInput.value = '';
+            this.passwordInput.focus();
+            this.showAlert('La contraseña no es correcta.', 'error');
+            return;
         }
+
+        localStorage.setItem('token', response.data.token);
+        this.showAlert('Acceso confirmado. Preparando el panel…', 'success');
+        await this.redirectToAdminPanel(response.data.token);
     }
 
     async handleFullLogin() {
-        const formData = new FormData(this.form);
-        const credentials = {
-            usuario: formData.get("email"),
-            password: formData.get("password"),
-        };
+        const usuario = this.emailInput.value.trim();
+        const password = this.passwordInput.value;
 
-        const response = await fetch("/api/login", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(credentials),
+        if (!usuario || !password.trim()) {
+            this.showAlert('Completa el usuario y la contraseña.', 'error');
+            return;
+        }
+
+        const login = await this.requestLogin({ usuario, password });
+        if (!login.ok || !login.data.token) {
+            this.showAlert(login.data.message || 'Las credenciales no son válidas.', 'error');
+            return;
+        }
+
+        const userResponse = await fetch('/api/auth/me', {
+            headers: { Authorization: `Bearer ${login.data.token}` }
+        });
+        const user = userResponse.ok ? await this.readJson(userResponse) : null;
+
+        if (!user || !this.isAdministrativeRole(user.rol)) {
+            this.passwordInput.value = '';
+            this.showAlert('Esta cuenta no tiene permisos de administración.', 'error');
+            return;
+        }
+
+        localStorage.setItem('token', login.data.token);
+        this.showAlert('Autenticación correcta. Preparando el panel…', 'success');
+        await this.redirectToAdminPanel(login.data.token);
+    }
+
+    async requestLogin(credentials) {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(credentials)
         });
 
-        const result = await response.json();
-
-        if (response.ok && result.token) {
-            const userResponse = await fetch("/api/auth/me", {
-                headers: {
-                    Authorization: `Bearer ${result.token}`,
-                },
-            });
-
-            if (userResponse.ok) {
-                const userData = await userResponse.json();
-
-                if (userData.rol === "owner" || userData.rol === "admin") {
-                    localStorage.setItem("token", result.token);
-                    this.showAlert("Autenticación exitosa. Redirigiendo...", "success");
-
-                    setTimeout(() => {
-                        this.redirectToAdminPanel(result.token);
-                    }, 1000);
-                } else {
-                    this.showAlert("No tienes permisos de administrador.", "error");
-                }
-            } else {
-                this.showAlert("Error verificando permisos.", "error");
-            }
-        } else {
-            this.showAlert(
-                result.message || "Credenciales inválidas. Verifica tu usuario y contraseña.",
-                "error"
-            );
-        }
+        return { ok: response.ok, data: await this.readJson(response) };
     }
 
     async redirectToAdminPanel(userToken) {
-        console.log("🔄 Iniciando redirección al panel admin...");
-        console.log("🔑 Token usado:", userToken ? userToken.substring(0, 20) + "..." : "null");
-
         try {
-            console.log("📡 Enviando solicitud a /api/admin/generate-admin-token");
             const response = await fetch('/api/admin/generate-admin-token', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${userToken}`,
+                    Authorization: `Bearer ${userToken}`,
                     'Content-Type': 'application/json'
                 }
             });
+            const data = await this.readJson(response);
 
-            console.log("📡 Respuesta del servidor:", {
-                status: response.status,
-                statusText: response.statusText,
-                ok: response.ok
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                console.log("✅ Token de admin generado exitosamente:", {
-                    success: data.success,
-                    tokenId: data.tokenId ? data.tokenId.substring(0, 10) + "..." : "null",
-                    expiresIn: data.expiresIn
-                });
-
-                const redirectUrl = `${window.location.origin}/panelAdmin?tid=${data.tokenId}`;
-                console.log("🔗 URL de redirección calculada:", redirectUrl);
-                console.log("🌐 Ejecutando window.location.href =", redirectUrl);
-
-                // Forzar redirección inmediata
-                window.location.href = redirectUrl;
-                console.log("✅ Redirección ejecutada");
-
-            } else {
-                const errorText = await response.text();
-                console.error("❌ Error generando token de admin:", {
-                    status: response.status,
-                    statusText: response.statusText,
-                    error: errorText
-                });
-
-                console.log("🔗 Intentando redirección fallback a /panelAdmin");
-                window.location.href = `${window.location.origin}/panelAdmin`;
+            if (!response.ok || !data.tokenId) {
+                throw new Error('admin_token_not_available');
             }
-        } catch (error) {
-            console.error("❌ Error de red generando token de admin:", {
-                message: error.message,
-                name: error.name,
-                stack: error.stack ? error.stack.substring(0, 200) : "No stack"
-            });
 
-            console.log("🔗 Intentando redirección fallback por error a /panelAdmin");
-            window.location.href = `${window.location.origin}/panelAdmin`;
+            window.location.assign(`/panelAdmin?tid=${encodeURIComponent(data.tokenId)}`);
+        } catch (_error) {
+            this.passwordInput.value = '';
+            this.showAlert('No fue posible preparar el acceso administrativo. Intenta nuevamente.', 'error');
         }
+    }
+
+    async readJson(response) {
+        try {
+            return await response.json();
+        } catch (_error) {
+            return {};
+        }
+    }
+
+    isAdministrativeRole(role) {
+        return role === 'owner' || role === 'admin';
     }
 
     setLoading(loading) {
-        if (loading) {
-            this.loginBtn.classList.add("btn-loading");
-            this.loginBtn.disabled = true;
-            this.loginBtn.style.pointerEvents = 'none';
-            this.loginBtn.style.cursor = 'not-allowed';
-            if (this.changeUserBtn) this.changeUserBtn.disabled = true;
-            this.loginBtn.querySelector(".btn-text").textContent = "Verificando...";
-        } else {
-            this.loginBtn.classList.remove("btn-loading");
-            this.loginBtn.disabled = false;
-            this.loginBtn.style.pointerEvents = 'auto';
-            this.loginBtn.style.cursor = 'pointer';
-            if (this.changeUserBtn) this.changeUserBtn.disabled = false;
+        this.loginBtn.classList.toggle('btn-loading', loading);
+        this.loginBtn.disabled = loading;
+        if (this.changeUserBtn) this.changeUserBtn.disabled = loading;
+        this.setButtonText(loading
+            ? 'Verificando…'
+            : (this.isPasswordOnlyMode ? 'Confirmar acceso' : 'Acceder al panel'));
+    }
 
-            const btnText = this.isPasswordOnlyMode ? "Confirmar Acceso" : "Acceder al Panel";
-            this.loginBtn.querySelector(".btn-text").textContent = btnText;
-        }
+    setButtonText(text) {
+        const label = this.loginBtn?.querySelector('.btn-text');
+        if (label) label.textContent = text;
     }
 
     showAlert(message, type) {
-        const alert = document.createElement("div");
+        if (!this.alertContainer) return;
+        const alert = document.createElement('div');
         alert.className = `access-alert ${type}`;
         alert.textContent = message;
-
-        this.alertContainer.innerHTML = "";
-        this.alertContainer.appendChild(alert);
-
-        if (type === "success") {
-            setTimeout(() => {
-                alert.style.transform = "translateY(-10px)";
-            }, 3000);
-        }
+        this.alertContainer.replaceChildren(alert);
     }
 
     clearAlerts() {
-        this.alertContainer.innerHTML = "";
+        this.alertContainer?.replaceChildren();
     }
 }
 
-// Función para probar redirección manual desde consola
-window.testRedirect = function () {
-    console.log("🧪 Probando redirección manual...");
-    const token = localStorage.getItem("token");
-    if (token) {
-        console.log("✅ Token encontrado, probando redirección...");
-        const adminAccess = window.adminAccessInstance;
-        if (adminAccess) {
-            adminAccess.redirectToAdminPanel(token);
-        } else {
-            console.error("❌ AdminAccess no encontrado");
-        }
-    } else {
-        console.error("❌ No hay token en localStorage");
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.adminAccessInstance) {
+        window.adminAccessInstance = new AdminAccess();
     }
-};
-
-// Función para verificar estado del sistema
-window.debugAdminLogin = function () {
-    console.log("🔍 Debug AdminLogin:");
-    console.log("  - Token en localStorage:", !!localStorage.getItem("token"));
-    console.log("  - AdminAccess instance:", !!window.adminAccessInstance);
-    console.log("  - Current URL:", window.location.href);
-    console.log("  - Origin:", window.location.origin);
-
-    const adminAccess = window.adminAccessInstance;
-    if (adminAccess) {
-        console.log("  - Modo contraseña:", adminAccess.isPasswordOnlyMode);
-        console.log("  - Usuario actual:", adminAccess.currentUserEmail);
-    }
-};
-
-// Inicializar cuando el DOM esté listo
-document.addEventListener("DOMContentLoaded", () => {
-    try {
-        const adminAccess = new AdminAccess();
-        window.adminAccessInstance = adminAccess;
-    } catch (error) {
-        console.error("Error al inicializar AdminAccess:", error);
-    }
-});
+}, { once: true });

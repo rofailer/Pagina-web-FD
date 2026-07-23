@@ -1,77 +1,42 @@
-document.addEventListener("DOMContentLoaded", () => {
-    // Sistema anterior (compatibilidad)
-    const select = document.getElementById("encryptionTypeSelect");
-    const btn = document.getElementById("confirmEncryptionTypeBtn");
-    const msg = document.getElementById("encryptionTypeMsg");
+document.addEventListener('DOMContentLoaded', () => {
+    const config = window.cryptoConfig;
+    if (!config) return;
 
-    // Nuevo sistema de opciones de cifrado
-    const encryptionOptions = document.querySelectorAll('.encryption-option');
-    const currentEncryptionDisplay = document.getElementById('currentEncryption');
+    const encryptionTypeMessage = document.getElementById('encryptionTypeMsg');
+    const newKeyEncryptionLabel = document.getElementById('newKeyEncryptionLabel');
+    const newKeyEncryptionDetails = document.getElementById('newKeyEncryptionDetails');
+    const options = Array.from(document.querySelectorAll('.encryption-option'));
 
-    // Cargar selección previa
-    const savedType = localStorage.getItem("encryptionType") || "aes-256-cbc";
+    function renderEncryptionSettings() {
+        const selected = config.getCurrentOption();
 
-    // Configurar sistema anterior si existe
-    if (select) {
-        select.value = savedType;
-    }
-
-    // Configurar nuevo sistema
-    if (encryptionOptions.length > 0) {
-        encryptionOptions.forEach(option => {
-            if (option.dataset.encryption === savedType) {
-                encryptionOptions.forEach(opt => opt.classList.remove('selected'));
-                option.classList.add('selected');
-            }
-
-            // Agregar event listener para selección
-            option.addEventListener('click', () => {
-                encryptionOptions.forEach(opt => opt.classList.remove('selected'));
-                option.classList.add('selected');
-            });
-        });
-
-        if (currentEncryptionDisplay) {
-            currentEncryptionDisplay.textContent = savedType.toUpperCase();
+        if (encryptionTypeMessage) {
+            encryptionTypeMessage.textContent =
+                `${selected.label} se aplicará a la nueva llave. Las llaves existentes conservan su cifrado original.`;
         }
-    }
+        if (newKeyEncryptionLabel) {
+            newKeyEncryptionLabel.textContent = selected.label;
+        }
+        if (newKeyEncryptionDetails) {
+            newKeyEncryptionDetails.textContent = selected.details;
+        }
 
-    // Event listener para sistema anterior
-    if (btn) {
-        btn.addEventListener("click", () => {
-            // Obtener tipo seleccionado del nuevo sistema o del anterior
-            let selectedType = savedType;
-
-            if (encryptionOptions.length > 0) {
-                const selectedOption = document.querySelector('.encryption-option.selected');
-                if (selectedOption) {
-                    selectedType = selectedOption.dataset.encryption;
-                }
-            } else if (select) {
-                selectedType = select.value;
-            }
-
-            localStorage.setItem("encryptionType", selectedType);
-
-            if (msg) {
-                msg.textContent = "Configuración guardada correctamente";
-                msg.classList.add("show");
-
-                // Ocultar el mensaje después de 3 segundos
-                setTimeout(() => {
-                    msg.classList.remove("show");
-                }, 3000);
-            }
-
-            // Actualizar display del nuevo sistema si existe
-            if (currentEncryptionDisplay) {
-                currentEncryptionDisplay.textContent = selectedType.toUpperCase();
-            }
-
-            // Mostrar notificación
-            if (typeof showNotification === 'function') {
-                showNotification('Configuración de cifrado actualizada', 'success');
-            }
+        options.forEach(option => {
+            const isSelected = option.dataset.encryption === selected.type;
+            option.classList.toggle('selected', isSelected);
+            option.setAttribute('aria-pressed', String(isSelected));
         });
     }
+
+    options.forEach(option => {
+        option.addEventListener('click', () => {
+            if (config.setCurrentType(option.dataset.encryption)) {
+                renderEncryptionSettings();
+            }
+        });
+    });
+
+    document.addEventListener('crypto-config:change', renderEncryptionSettings);
+    window.renderEncryptionSettings = renderEncryptionSettings;
+    renderEncryptionSettings();
 });

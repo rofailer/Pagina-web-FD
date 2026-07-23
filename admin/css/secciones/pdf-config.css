@@ -6,6 +6,63 @@
    Los componentes compartidos están en admin-shared.css
    =========================================== */
 
+/* Implementación 2026: editor autocontenido del PDF aval. */
+.pdf-admin-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.admin-tool-card {
+  background: var(--admin-card, #fff);
+  border: 1px solid var(--admin-border, #e2e8f0);
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+  padding: 1.35rem;
+}
+
+.admin-tool-heading,
+.admin-tool-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-tool-heading h2 { margin: .2rem 0 0; color: var(--admin-text, #0f172a); font-size: 1.2rem; }
+.admin-tool-description { color: var(--admin-text-muted, #64748b); line-height: 1.6; }
+.admin-tool-badge { border-radius: 999px; padding: .38rem .65rem; background: #fff1e8; color: #c2571b; font-size: .72rem; font-weight: 800; }
+.admin-tool-badge.neutral { background: #f1f5f9; color: #475569; }
+.admin-tool-badge.success { background: #dcfce7; color: #047857; }
+.admin-tool-badge.danger { background: #fee2e2; color: #b91c1c; }
+
+.pdf-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; }
+.admin-tool-field { display: grid; gap: .42rem; color: var(--admin-text, #1e293b); font-size: .78rem; font-weight: 750; }
+.admin-tool-field :is(input, select, textarea) { width: 100%; border: 1px solid var(--admin-border, #d8e0eb); border-radius: 11px; background: var(--admin-card, #fff); color: var(--admin-text, #0f172a); padding: .72rem .78rem; font: inherit; font-weight: 500; }
+.admin-tool-field textarea { resize: vertical; line-height: 1.55; }
+.pdf-fieldset { margin: 1.15rem 0; border: 1px solid var(--admin-border, #e2e8f0); border-radius: 14px; padding: 1rem; }
+.pdf-fieldset legend { padding: 0 .4rem; color: var(--admin-text, #334155); font-size: .78rem; font-weight: 800; }
+.pdf-color-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; }
+.pdf-color-grid label { display: grid; gap: .42rem; color: var(--admin-text-muted, #64748b); font-size: .72rem; }
+.pdf-color-grid input { width: 100%; min-height: 38px; border: 0; padding: 0; background: transparent; cursor: pointer; }
+.pdf-toggle-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; }
+.pdf-toggle-grid label { display: flex; align-items: center; gap: .45rem; color: var(--admin-text, #334155); font-size: .78rem; }
+.pdf-aval-field { margin-top: 1.15rem; }
+.pdf-variable-list { display: flex; flex-wrap: wrap; gap: .45rem; margin: .75rem 0 1.2rem; }
+.pdf-variable-list button { border: 1px solid #fdba8c; border-radius: 999px; background: #fff7ed; color: #c2410c; padding: .35rem .58rem; cursor: pointer; font: inherit; font-size: .7rem; font-weight: 750; }
+.pdf-variable-list button:hover { background: #ffedd5; }
+.pdf-preview-card { min-height: 820px; display: flex; flex-direction: column; }
+.pdf-preview-card iframe { width: 100%; height: clamp(700px, 78vh, 1000px); min-height: 700px; flex: none; border: 1px solid var(--admin-border, #e2e8f0); border-radius: 12px; margin-top: 1rem; background: #fff; }
+.pdf-preview-open { flex: 0 0 auto; white-space: nowrap; }
+.pdf-preview-open[hidden] { display: none; }
+.pdf-preview-empty { display: grid; place-items: center; flex: 1; min-height: 480px; margin-top: 1rem; border: 1px dashed var(--admin-border, #cbd5e1); border-radius: 12px; color: var(--admin-text-muted, #64748b); text-align: center; padding: 2rem; }
+
+[data-theme="dark"] .admin-tool-card { background: var(--admin-card, #111827); }
+[data-theme="dark"] .pdf-variable-list button { background: rgba(249, 115, 22, .14); }
+
+@media (max-width: 1050px) { .pdf-preview-card { min-height: 720px; } .pdf-preview-card iframe { height: 72vh; min-height: 640px; } }
+@media (max-width: 640px) { .pdf-form-grid, .pdf-color-grid { grid-template-columns: 1fr; } .pdf-toggle-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .admin-tool-actions { align-items: stretch; flex-direction: column; } .admin-tool-actions .admin-btn { width: 100%; } .pdf-preview-card { min-height: 620px; } .pdf-preview-card iframe { height: 70vh; min-height: 540px; } .pdf-preview-card .admin-tool-heading { align-items: flex-start; flex-direction: column; } }
+
 /* ===========================================
    PLANTILLAS PDF
    =========================================== */

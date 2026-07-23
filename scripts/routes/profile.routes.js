@@ -3,45 +3,86 @@ const router = express.Router();
 const pool = require('../db/pool');
 const authenticate = require('../middlewares/authenticate');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 
-// Configuración de multer para subida de fotos de perfil
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const uploadDir = path.join(__dirname, '../../uploads/profile-photos');
-        // Ya no necesitamos crear el directorio aquí porque server.js lo crea automáticamente
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        // Obtener datos del usuario para un nombre más descriptivo
-        const userId = req.user.id;
-        const userLogin = req.user.usuario || 'unknown';
-        const timestamp = Date.now();
-        const randomSuffix = Math.round(Math.random() * 1E6);
-        const extension = path.extname(file.originalname).toLowerCase();
+const MAX_PROFILE_PHOTO_SIZE = 5 * 1024 * 1024;
+const PRESENCE_TIMEOUT_MS = 2 * 60 * 1000;
+const VALID_PRESENCE_STATUSES = new Set([
+    'en_linea',
+    'ausente',
+    'ocupado',
+    'desconectado'
+]);
 
-        // Formato: profile_userid-username_timestamp-random.ext
-        // Ejemplo: profile_1-admin_1725456789-123456.jpg
-        const filename = `profile_${userId}-${userLogin}_${timestamp}-${randomSuffix}${extension}`;
+function detectImageMime(buffer) {
+    if (!Buffer.isBuffer(buffer)) return null;
 
-        cb(null, filename);
+    if (buffer.length >= 8
+        && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+        return 'image/png';
     }
-});
+    if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+        return 'image/jpeg';
+    }
+    if (buffer.length >= 6) {
+        const gifHeader = buffer.subarray(0, 6).toString('ascii');
+        if (gifHeader === 'GIF87a' || gifHeader === 'GIF89a') return 'image/gif';
+    }
+    if (buffer.length >= 12
+        && buffer.subarray(0, 4).toString('ascii') === 'RIFF'
+        && buffer.subarray(8, 12).toString('ascii') === 'WEBP') {
+        return 'image/webp';
+    }
+    return null;
+}
+
+function effectivePresenceStatus(status, lastActivity, now = Date.now()) {
+    if (status === 'desconectado' || !lastActivity) return 'desconectado';
+    const lastActivityMs = new Date(lastActivity).getTime();
+    if (!Number.isFinite(lastActivityMs) || now - lastActivityMs > PRESENCE_TIMEOUT_MS) {
+        return 'desconectado';
+    }
+    return VALID_PRESENCE_STATUSES.has(status) ? status : 'desconectado';
+}
+
+function photoVersion(value) {
+    if (!value) return null;
+    const timestamp = new Date(value).getTime();
+    return Number.isFinite(timestamp) ? String(timestamp) : null;
+}
+
+function setPhotoResponseHeaders(req, res, user) {
+    const version = photoVersion(user.foto_perfil_actualizada_at) || '0';
+    const etag = `\"profile-${user.id}-${version}-${user.foto_perfil.length}\"`;
+    res.setHeader('Content-Type', user.foto_perfil_mimetype);
+    res.setHeader('Content-Length', user.foto_perfil.length);
+    res.setHeader('Cache-Control', 'private, max-age=300, must-revalidate');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('ETag', etag);
+    if (req.headers['if-none-match'] === etag) {
+        res.status(304).end();
+        return false;
+    }
+    return true;
+}
 
 const upload = multer({
-    storage: storage,
+    storage: multer.memoryStorage(),
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB límite
-    },
-    fileFilter: function (req, file, cb) {
-        if (file.mimetype.startsWith('image/')) {
-            cb(null, true);
-        } else {
-            cb(new Error('Solo se permiten archivos de imagen'), false);
-        }
+        fileSize: MAX_PROFILE_PHOTO_SIZE,
+        files: 1,
+        fields: 5
     }
 });
+
+function uploadProfilePhoto(req, res, next) {
+    upload.single('photo')(req, res, error => {
+        if (!error) return next();
+        if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({ error: 'La imagen no puede superar 5 MB' });
+        }
+        return res.status(400).json({ error: 'No fue posible procesar la imagen' });
+    });
+}
 
 // ====================================
 // OBTENER PERFIL COMPLETO DEL USUARIO
@@ -50,13 +91,16 @@ router.get('/api/profile', authenticate, async (req, res) => {
 
     try {
 
-        // Consultar datos del usuario con estructura expandida
+        // Consultar únicamente los datos que forman parte del perfil actual.
         const [userRows] = await pool.query(`
       SELECT 
-        id, nombre, usuario, password, rol, active_key_id, created_at,
-        nombre_completo, email, organizacion, biografia, foto_perfil, telefono, 
-        direccion, cargo, departamento, grado_academico, zona_horaria, idioma, 
-        estado_cuenta, notificaciones_email, autenticacion_2fa, ultimo_acceso, updated_at
+        id, nombre, usuario, rol, active_key_id, created_at,
+        email, organizacion, biografia, telefono,
+        direccion, cargo, departamento, grado_academico,
+        estado_cuenta, estado_presencia, ultima_actividad,
+        ultimo_acceso, updated_at,
+        (foto_perfil IS NOT NULL) AS has_photo,
+        foto_perfil_actualizada_at
       FROM users 
       WHERE id = ?
     `, [req.user.id]);
@@ -68,24 +112,15 @@ router.get('/api/profile', authenticate, async (req, res) => {
         }
 
         const user = userRows[0];
-
-        // Intentar obtener preferencias del usuario (puede no existir la tabla)
-        let preferences = {};
-        try {
-            const [preferencesRows] = await pool.query(`
-        SELECT clave, valor 
-        FROM user_preferences 
-        WHERE user_id = ?
-      `, [req.user.id]);
-
-            preferencesRows.forEach(pref => {
-                preferences[pref.clave] = pref.valor;
-            });
-            console.log('✅ Preferencias cargadas:', Object.keys(preferences).length);
-        } catch (prefError) {
-            console.log('⚠️ Tabla user_preferences no existe, usando valores por defecto');
-            preferences = {};
-        }
+        user.hasPhoto = Boolean(user.has_photo);
+        user.photoVersion = photoVersion(user.foto_perfil_actualizada_at);
+        user.selectedPresenceStatus = user.estado_presencia;
+        user.presenceStatus = effectivePresenceStatus(
+            user.estado_presencia,
+            user.ultima_actividad
+        );
+        user.lastSeenAt = user.ultima_actividad;
+        delete user.has_photo;
 
         // Intentar obtener estadísticas básicas del usuario
         let stats = { total_keys: 0, active_keys: 0, expired_keys: 0 };
@@ -109,7 +144,6 @@ router.get('/api/profile', authenticate, async (req, res) => {
         res.json({
             success: true,
             user: user,
-            preferences: preferences,
             stats: stats
         });
 
@@ -125,7 +159,7 @@ router.get('/api/profile', authenticate, async (req, res) => {
 router.put('/api/profile/personal', authenticate, async (req, res) => {
     try {
         const {
-            nombre_completo,
+            nombre,
             email,
             organizacion,
             biografia,
@@ -136,11 +170,22 @@ router.put('/api/profile/personal', authenticate, async (req, res) => {
             grado_academico
         } = req.body;
 
+        const normalizedName = typeof nombre === 'string' ? nombre.trim() : '';
+        const normalizedEmail = typeof email === 'string' ? email.trim() : '';
+
+        if (!normalizedName) {
+            return res.status(400).json({ error: 'El nombre completo es obligatorio' });
+        }
+
+        if (normalizedName.length > 100) {
+            return res.status(400).json({ error: 'El nombre no puede superar los 100 caracteres' });
+        }
+
         // Validar email único si se está cambiando
-        if (email) {
+        if (normalizedEmail) {
             const [existingEmail] = await pool.query(
                 'SELECT id FROM users WHERE email = ? AND id != ?',
-                [email, req.user.id]
+                [normalizedEmail, req.user.id]
             );
             if (existingEmail.length > 0) {
                 return res.status(400).json({ error: 'El correo electrónico ya está en uso' });
@@ -149,7 +194,7 @@ router.put('/api/profile/personal', authenticate, async (req, res) => {
 
         await pool.query(`
       UPDATE users SET 
-        nombre_completo = ?,
+        nombre = ?,
         email = ?,
         organizacion = ?,
         biografia = ?,
@@ -161,7 +206,7 @@ router.put('/api/profile/personal', authenticate, async (req, res) => {
         updated_at = NOW()
       WHERE id = ?
     `, [
-            nombre_completo, email, organizacion, biografia,
+            normalizedName, normalizedEmail || null, organizacion, biografia,
             telefono, direccion, cargo, departamento,
             grado_academico, req.user.id
         ]);
@@ -181,65 +226,54 @@ router.put('/api/profile/personal', authenticate, async (req, res) => {
 });
 
 // ====================================
-// FUNCIONES AUXILIARES PARA GESTIÓN DE ARCHIVOS
-// ====================================
-
-// Función para limpiar fotos antiguas del usuario
-async function cleanupOldUserPhotos(userId, excludeFile = null) {
-    try {
-        const photosDir = path.join(__dirname, '../../uploads/profile-photos');
-        if (!fs.existsSync(photosDir)) return;
-
-        const files = fs.readdirSync(photosDir);
-        const userPhotos = files.filter(file =>
-            file.startsWith(`profile_${userId}-`) && file !== excludeFile
-        );
-
-        // Eliminar fotos antiguas del usuario (mantener solo la más reciente)
-        userPhotos.forEach(photo => {
-            const photoPath = path.join(photosDir, photo);
-            if (fs.existsSync(photoPath)) {
-                fs.unlinkSync(photoPath);
-            }
-        });
-
-    } catch (error) {
-        console.error('Error al limpiar fotos antiguas:', error);
-    }
-}
-
-// ====================================
 // SUBIR FOTO DE PERFIL
 // ====================================
-router.post('/api/profile/photo', authenticate, upload.single('photo'), async (req, res) => {
+router.post('/api/profile/photo', authenticate, uploadProfilePhoto, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No se proporcionó ninguna imagen' });
         }
 
-        const photoPath = `/uploads/profile-photos/${req.file.filename}`;
+        const detectedMime = detectImageMime(req.file.buffer);
+        const claimedMime = req.file.mimetype === 'image/jpg'
+            ? 'image/jpeg'
+            : req.file.mimetype;
+        if (!detectedMime || claimedMime !== detectedMime) {
+            return res.status(400).json({
+                error: 'El contenido del archivo no corresponde a una imagen permitida'
+            });
+        }
+
         const userId = req.user.id;
-
-        // Limpiar fotos anteriores del usuario (excluyendo la nueva)
-        await cleanupOldUserPhotos(userId, req.file.filename);
-
-        // Actualizar ruta de la foto en la base de datos
         await pool.query(
-            'UPDATE users SET foto_perfil = ?, updated_at = NOW() WHERE id = ?',
-            [photoPath, userId]
+            `UPDATE users
+             SET foto_perfil = ?,
+                 foto_perfil_mimetype = ?,
+                 foto_perfil_actualizada_at = NOW(3),
+                 updated_at = NOW()
+             WHERE id = ?`,
+            [req.file.buffer, detectedMime, userId]
         );
 
-        // Registrar actividad
-        await pool.query(`
-      INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address) 
-      VALUES (?, 'update_photo', ?, ?)
-    `, [userId, `Actualización de foto de perfil: ${req.file.filename}`, req.ip]);
+        pool.query(
+            `INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address)
+             VALUES (?, 'update_photo', ?, ?)`,
+            [userId, `Actualización de foto de perfil (${detectedMime}, ${req.file.size} bytes)`, req.ip]
+        ).catch(error => console.warn('No se pudo registrar la actualización de foto:', error.message));
+
+        const [versionRows] = await pool.query(
+            'SELECT foto_perfil_actualizada_at FROM users WHERE id = ? LIMIT 1',
+            [userId]
+        );
+        const version = photoVersion(versionRows[0]?.foto_perfil_actualizada_at);
 
         res.json({
             success: true,
             message: 'Foto de perfil actualizada correctamente',
-            photoPath: photoPath,
-            fileName: req.file.filename
+            hasPhoto: true,
+            photoUrl: '/api/profile/photo/content',
+            photoPath: '/api/profile/photo/content',
+            photoVersion: version
         });
 
     } catch (error) {
@@ -249,19 +283,24 @@ router.post('/api/profile/photo', authenticate, upload.single('photo'), async (r
 });
 
 // ====================================
-// OBTENER FOTO DE PERFIL DE USUARIO
+// OBTENER BYTES DE FOTO. Esta ruta debe declararse antes del parámetro opcional.
 // ====================================
-router.get('/api/profile/photo/:userId?', authenticate, async (req, res) => {
+router.get('/api/profile/photo/content/:userId?', authenticate, async (req, res) => {
     try {
-        const userId = req.params.userId || req.user.id;
+        const userId = Number(req.params.userId || req.user.id);
+        if (!Number.isInteger(userId) || userId <= 0) {
+            return res.status(400).json({ error: 'Usuario inválido' });
+        }
 
-        // Solo admin/owner pueden ver fotos de otros usuarios
-        if (userId != req.user.id && !['admin', 'owner'].includes(req.user.rol)) {
+        if (userId !== Number(req.user.id) && !['admin', 'owner'].includes(req.user.rol)) {
             return res.status(403).json({ error: 'No tienes permisos para ver esta foto' });
         }
 
         const [userRow] = await pool.query(
-            'SELECT foto_perfil, nombre_completo, usuario FROM users WHERE id = ?',
+            `SELECT id, foto_perfil, foto_perfil_mimetype, foto_perfil_actualizada_at
+             FROM users
+             WHERE id = ?
+             LIMIT 1`,
             [userId]
         );
 
@@ -270,41 +309,61 @@ router.get('/api/profile/photo/:userId?', authenticate, async (req, res) => {
         }
 
         const user = userRow[0];
-
-        if (!user.foto_perfil) {
-            return res.json({
-                success: true,
-                hasPhoto: false,
-                message: 'El usuario no tiene foto de perfil'
-            });
+        if (!user.foto_perfil || !detectImageMime(user.foto_perfil)) {
+            return res.status(404).json({ error: 'El usuario no tiene foto de perfil' });
         }
-
-        // Verificar que el archivo existe
-        const photoPath = path.join(__dirname, '../../', user.foto_perfil);
-        if (!fs.existsSync(photoPath)) {
-            // Limpiar referencia en BD si el archivo no existe
-            await pool.query(
-                'UPDATE users SET foto_perfil = NULL WHERE id = ?',
-                [userId]
-            );
-
-            return res.json({
-                success: true,
-                hasPhoto: false,
-                message: 'Archivo de foto no encontrado, referencia limpiada'
-            });
-        }
-
-        res.json({
-            success: true,
-            hasPhoto: true,
-            photoPath: user.foto_perfil,
-            userName: user.nombre_completo || user.usuario
-        });
+        if (!setPhotoResponseHeaders(req, res, user)) return;
+        return res.send(user.foto_perfil);
 
     } catch (error) {
-        console.error('Error al obtener foto de perfil:', error);
+        console.error('Error al obtener bytes de foto de perfil:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
+// ====================================
+// OBTENER METADATOS DE FOTO DE PERFIL
+// ====================================
+router.get('/api/profile/photo/:userId?', authenticate, async (req, res) => {
+    try {
+        const userId = Number(req.params.userId || req.user.id);
+        if (!Number.isInteger(userId) || userId <= 0) {
+            return res.status(400).json({ error: 'Usuario inválido' });
+        }
+        if (userId !== Number(req.user.id) && !['admin', 'owner'].includes(req.user.rol)) {
+            return res.status(403).json({ error: 'No tienes permisos para ver esta foto' });
+        }
+
+        const [userRows] = await pool.query(
+            `SELECT id, nombre, usuario,
+                    (foto_perfil IS NOT NULL) AS has_photo,
+                    foto_perfil_actualizada_at
+             FROM users
+             WHERE id = ?
+             LIMIT 1`,
+            [userId]
+        );
+        if (userRows.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        const user = userRows[0];
+        const hasPhoto = Boolean(user.has_photo);
+        const isOwnPhoto = userId === Number(req.user.id);
+        const photoUrl = hasPhoto
+            ? `/api/profile/photo/content${isOwnPhoto ? '' : `/${userId}`}`
+            : null;
+        return res.json({
+            success: true,
+            hasPhoto,
+            photoUrl,
+            photoPath: photoUrl,
+            photoVersion: photoVersion(user.foto_perfil_actualizada_at),
+            userName: user.nombre || user.usuario
+        });
+    } catch (error) {
+        console.error('Error al obtener metadatos de foto:', error);
+        return res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
 
@@ -315,43 +374,28 @@ router.delete('/api/profile/photo', authenticate, async (req, res) => {
     try {
         const userId = req.user.id;
 
-        // Obtener foto actual
-        const [currentUser] = await pool.query(
-            'SELECT foto_perfil FROM users WHERE id = ?',
-            [userId]
-        );
-
-        if (!currentUser[0]?.foto_perfil) {
-            return res.json({
-                success: true,
-                message: 'No hay foto de perfil para eliminar'
-            });
-        }
-
-        // Eliminar archivo físico
-        const photoPath = path.join(__dirname, '../../', currentUser[0].foto_perfil);
-        if (fs.existsSync(photoPath)) {
-            fs.unlinkSync(photoPath);
-        }
-
-        // Limpiar todas las fotos antiguas del usuario
-        await cleanupOldUserPhotos(userId);
-
-        // Actualizar base de datos
         await pool.query(
-            'UPDATE users SET foto_perfil = NULL, updated_at = NOW() WHERE id = ?',
+            `UPDATE users
+             SET foto_perfil = NULL,
+                 foto_perfil_mimetype = NULL,
+                 foto_perfil_actualizada_at = NULL,
+                 updated_at = NOW()
+             WHERE id = ?`,
             [userId]
         );
 
-        // Registrar actividad
-        await pool.query(`
-      INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address) 
-      VALUES (?, 'delete_photo', 'Eliminación de foto de perfil', ?)
-    `, [userId, req.ip]);
+        pool.query(
+            `INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address)
+             VALUES (?, 'delete_photo', 'Eliminación de foto de perfil', ?)`,
+            [userId, req.ip]
+        ).catch(error => console.warn('No se pudo registrar la eliminación de foto:', error.message));
 
         res.json({
             success: true,
-            message: 'Foto de perfil eliminada correctamente'
+            message: 'Foto de perfil eliminada correctamente',
+            hasPhoto: false,
+            photoUrl: null,
+            photoVersion: null
         });
 
     } catch (error) {
@@ -365,57 +409,30 @@ router.delete('/api/profile/photo', authenticate, async (req, res) => {
 // ====================================
 router.get('/api/profile/files-stats', authenticate, async (req, res) => {
     try {
-        // Solo admin puede ver estadísticas
-        if (req.user.rol !== 'admin') {
+        if (!['admin', 'owner'].includes(req.user.rol)) {
             return res.status(403).json({ error: 'Solo administradores pueden ver estas estadísticas' });
         }
 
-        const photosDir = path.join(__dirname, '../../uploads/profile-photos');
-        let stats = {
-            totalFiles: 0,
-            totalSize: 0,
-            userFiles: {},
+        const [summaryRows] = await pool.query(
+            `SELECT COUNT(*) AS total_files,
+                    COALESCE(SUM(OCTET_LENGTH(foto_perfil)), 0) AS total_size
+             FROM users
+             WHERE foto_perfil IS NOT NULL`
+        );
+        const [photoRows] = await pool.query(
+            `SELECT id, OCTET_LENGTH(foto_perfil) AS size
+             FROM users
+             WHERE foto_perfil IS NOT NULL`
+        );
+        const stats = {
+            totalFiles: Number(summaryRows[0]?.total_files || 0),
+            totalSize: Number(summaryRows[0]?.total_size || 0),
+            userFiles: Object.fromEntries(photoRows.map(row => [
+                String(row.id),
+                { count: 1, size: Number(row.size || 0) }
+            ])),
             orphanedFiles: []
         };
-
-        if (!fs.existsSync(photosDir)) {
-            return res.json({ success: true, stats });
-        }
-
-        const files = fs.readdirSync(photosDir);
-
-        // Obtener todos los usuarios con fotos
-        const [usersWithPhotos] = await pool.query(
-            'SELECT id, usuario, foto_perfil FROM users WHERE foto_perfil IS NOT NULL'
-        );
-
-        const validPhotos = usersWithPhotos.map(user => path.basename(user.foto_perfil));
-
-        files.forEach(file => {
-            const filePath = path.join(photosDir, file);
-            const fileStat = fs.statSync(filePath);
-
-            stats.totalFiles++;
-            stats.totalSize += fileStat.size;
-
-            // Extraer user ID del nombre del archivo
-            const match = file.match(/^profile_(\d+)-/);
-            if (match) {
-                const userId = match[1];
-                if (!stats.userFiles[userId]) {
-                    stats.userFiles[userId] = { count: 0, size: 0 };
-                }
-                stats.userFiles[userId].count++;
-                stats.userFiles[userId].size += fileStat.size;
-
-                // Verificar si es un archivo huérfano
-                if (!validPhotos.includes(file)) {
-                    stats.orphanedFiles.push(file);
-                }
-            }
-        });
-
-        // Convertir tamaños a formato legible
         stats.totalSizeFormatted = formatFileSize(stats.totalSize);
 
         res.json({ success: true, stats });
@@ -436,86 +453,57 @@ function formatFileSize(bytes) {
 }
 
 // ====================================
-// ACTUALIZAR CONFIGURACIONES
+// PRESENCIA DEL USUARIO
 // ====================================
-router.put('/api/profile/settings', authenticate, async (req, res) => {
+router.put('/api/profile/presence', authenticate, async (req, res) => {
+    const status = typeof req.body?.status === 'string'
+        ? req.body.status.trim().toLowerCase()
+        : '';
+    if (!VALID_PRESENCE_STATUSES.has(status)) {
+        return res.status(400).json({ error: 'Estado de presencia inválido' });
+    }
+
     try {
-        const {
-            zona_horaria,
-            idioma,
-            notificaciones_email,
-            autenticacion_2fa
-        } = req.body;
-
-        // Actualizar configuraciones en la tabla users
-        await pool.query(`
-      UPDATE users SET 
-        zona_horaria = ?,
-        idioma = ?,
-        notificaciones_email = ?,
-        autenticacion_2fa = ?,
-        updated_at = NOW()
-      WHERE id = ?
-    `, [zona_horaria, idioma, notificaciones_email, autenticacion_2fa, req.user.id]);
-
-        // Registrar actividad
-        await pool.query(`
-      INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address) 
-      VALUES (?, 'update_settings', 'Actualización de configuraciones', ?)
-    `, [req.user.id, req.ip]);
-
-        res.json({ success: true, message: 'Configuraciones actualizadas correctamente' });
-
+        await pool.query(
+            `UPDATE users
+             SET estado_presencia = ?, ultima_actividad = NOW()
+             WHERE id = ?`,
+            [status, req.user.id]
+        );
+        const [rows] = await pool.query(
+            'SELECT estado_presencia, ultima_actividad FROM users WHERE id = ? LIMIT 1',
+            [req.user.id]
+        );
+        const user = rows[0];
+        return res.json({
+            success: true,
+            selectedPresenceStatus: user.estado_presencia,
+            presenceStatus: effectivePresenceStatus(user.estado_presencia, user.ultima_actividad),
+            lastSeenAt: user.ultima_actividad
+        });
     } catch (error) {
-        console.error('Error al actualizar configuraciones:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        console.error('Error actualizando presencia:', error);
+        return res.status(500).json({ error: 'No fue posible actualizar la presencia' });
     }
 });
 
-// ====================================
-// ACTUALIZAR PREFERENCIAS PERSONALIZADAS
-// ====================================
-router.put('/api/profile/preferences', authenticate, async (req, res) => {
+router.post('/api/profile/heartbeat', authenticate, async (req, res) => {
     try {
-        const { preferences } = req.body;
-
-        if (!preferences || typeof preferences !== 'object') {
-            return res.status(400).json({ error: 'Formato de preferencias inválido' });
-        }
-
-        // Usar transacción para actualizar múltiples preferencias
-        const connection = await pool.getConnection();
-        await connection.beginTransaction();
-
-        try {
-            for (const [clave, valor] of Object.entries(preferences)) {
-                await connection.query(`
-          INSERT INTO user_preferences (user_id, clave, valor) 
-          VALUES (?, ?, ?) 
-          ON DUPLICATE KEY UPDATE valor = VALUES(valor), updated_at = NOW()
-        `, [req.user.id, clave, valor]);
-            }
-
-            await connection.commit();
-            connection.release();
-
-            // Registrar actividad
-            await pool.query(`
-        INSERT INTO user_activity_log (user_id, accion, descripcion, ip_address) 
-        VALUES (?, 'update_preferences', 'Actualización de preferencias personalizadas', ?)
-      `, [req.user.id, req.ip]);
-
-            res.json({ success: true, message: 'Preferencias actualizadas correctamente' });
-
-        } catch (error) {
-            await connection.rollback();
-            connection.release();
-            throw error;
-        }
-
+        await pool.query('UPDATE users SET ultima_actividad = NOW() WHERE id = ?', [req.user.id]);
+        const [rows] = await pool.query(
+            'SELECT estado_presencia, ultima_actividad FROM users WHERE id = ? LIMIT 1',
+            [req.user.id]
+        );
+        const user = rows[0];
+        return res.json({
+            success: true,
+            selectedPresenceStatus: user.estado_presencia,
+            presenceStatus: effectivePresenceStatus(user.estado_presencia, user.ultima_actividad),
+            lastSeenAt: user.ultima_actividad
+        });
     } catch (error) {
-        console.error('Error al actualizar preferencias:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        console.error('Error actualizando heartbeat:', error);
+        return res.status(500).json({ error: 'No fue posible actualizar la actividad' });
     }
 });
 
@@ -551,5 +539,10 @@ router.get('/api/profile/activity', authenticate, async (req, res) => {
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
+
+router.detectImageMime = detectImageMime;
+router.effectivePresenceStatus = effectivePresenceStatus;
+router.photoVersion = photoVersion;
+router.PRESENCE_TIMEOUT_MS = PRESENCE_TIMEOUT_MS;
 
 module.exports = router;

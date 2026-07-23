@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="orange">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Guía paso a paso para crear una llave, firmar y verificar documentos en Firmas Digitales FD."
+    />
+    <title>Guía de uso | Firmas Digitales FD</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <script>
+      (function () {
+        const themes = ["orange", "blue", "green", "purple", "red", "teal", "dark", "custom"];
+        const backgrounds = ["fondo1", "fondo2", "fondoOscuro"];
+        const cachedTheme = localStorage.getItem("selectedTheme");
+        const cachedColor = localStorage.getItem("customColor");
+        const cachedBackground = localStorage.getItem("globalBackground");
+
+        document.documentElement.classList.add("visual-pending");
+        if (themes.includes(cachedTheme)) document.documentElement.dataset.theme = cachedTheme;
+        if (cachedTheme === "custom" && /^#[0-9a-f]{6}$/i.test(cachedColor || "")) {
+          document.documentElement.style.setProperty("--primary-color", cachedColor);
+        }
+        window.__initialTutorialBackground = backgrounds.includes(cachedBackground)
+          ? cachedBackground
+          : "fondo1";
+        window.setTimeout(() => document.documentElement.classList.remove("visual-pending"), 2500);
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/themeSelector.css" />
+    <link rel="stylesheet" href="/css/tutorial-page.css?v=3" />
+  </head>
+
+  <body data-bg="fondo1">
+    <script>
+      document.body.dataset.bg = window.__initialTutorialBackground || "fondo1";
+    </script>
+    <a class="skip-link" href="#contenidoTutorial">Saltar al contenido</a>
+
+    <header class="tutorial-header">
+      <div class="tutorial-header__inner">
+        <a class="tutorial-brand" href="/" aria-label="Volver al inicio">
+          <img
+            src="/recursos/logotipo-de-github.png"
+            alt=""
+            data-brand-logo
+            data-default-logo="true"
+          />
+          <span data-institution-name>Firmas Digitales FD</span>
+        </a>
+
+        <nav class="tutorial-header__nav" aria-label="Navegación de la guía">
+          <a href="#preparacion">Preparación</a>
+          <a href="#firma">Firmar</a>
+          <a href="#verificacion">Verificar</a>
+          <a href="#preguntas">Preguntas</a>
+        </nav>
+
+        <a class="header-back-link" href="/">
+          <span aria-hidden="true">←</span>
+          Volver al sitio
+        </a>
+      </div>
+    </header>
+
+    <main id="contenidoTutorial">
+      <section class="tutorial-hero" aria-labelledby="tutorialTitle">
+        <div class="tutorial-container tutorial-hero__grid">
+          <div class="tutorial-hero__content">
+            <p class="eyebrow">Centro de ayuda · Guía de inicio</p>
+            <h1 id="tutorialTitle">De tu primer acceso a una firma verificada</h1>
+            <p class="tutorial-hero__lead">
+              Aprende el flujo completo del sistema, qué archivo necesitas en
+              cada momento y cómo reconocer un resultado válido.
+            </p>
+
+            <div class="hero-meta" aria-label="Información de la guía">
+              <span>Aproximadamente 10 minutos</span>
+              <span>Necesitas un archivo PDF</span>
+              <span>5 etapas</span>
+            </div>
+
+            <div class="hero-actions">
+              <a class="tutorial-button tutorial-button--primary" href="#preparacion">
+                Empezar desde cero
+                <span aria-hidden="true">↓</span>
+              </a>
+              <a class="tutorial-button tutorial-button--secondary" href="#verificacion">
+                Ya tengo un documento firmado
+              </a>
+            </div>
+          </div>
+
+          <div class="route-card" aria-label="Resumen del recorrido">
+            <div class="route-card__header">
+              <span class="route-card__label">Tu recorrido</span>
+              <span class="route-card__time">Paso a paso</span>
+            </div>
+            <ol class="route-list">
+              <li>
+                <span class="route-number">01</span>
+                <div>
+                  <strong>Crea tu acceso</strong>
+                  <small>Regístrate e inicia sesión</small>
+                </div>
+              </li>
+              <li>
+                <span class="route-number">02</span>
+                <div>
+                  <strong>Prepara tu llave</strong>
+                  <small>Protege tu identidad digital</small>
+                </div>
+              </li>
+              <li>
+                <span class="route-number">03</span>
+                <div>
+                  <strong>Firma el PDF</strong>
+                  <small>Descarga el documento resultante</small>
+                </div>
+              </li>
+              <li>
+                <span class="route-number">04</span>
+                <div>
+                  <strong>Comprueba la firma</strong>
+                  <small>Confirma autoría e integridad</small>
+                </div>
+              </li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <div class="tutorial-container tutorial-layout">
+        <aside class="tutorial-sidebar" aria-label="Progreso del tutorial">
+          <div class="progress-card">
+            <div class="progress-card__top">
+              <div>
+                <span class="progress-card__eyebrow">Tu progreso</span>
+                <strong id="progressText">0 de 5 etapas</strong>
+                <small class="progress-storage-status" id="progressStorageStatus">
+                  Cargando progreso…
+                </small>
+              </div>
+              <div
+                class="progress-dial"
+                id="progressDial"
+                role="progressbar"
+                aria-label="Progreso del tutorial"
+                aria-valuemin="0"
+                aria-valuemax="5"
+                aria-valuenow="0"
+              >
+                <span id="progressPercent">0%</span>
+              </div>
+            </div>
+
+            <nav class="tutorial-toc" aria-label="Contenido del tutorial">
+              <a href="#preparacion" data-nav-section="preparacion">
+                <span>Antes de empezar</span>
+              </a>
+              <a href="#cuenta" data-nav-section="cuenta">
+                <span>1. Crea tu cuenta</span>
+                <i data-step-status="cuenta" aria-hidden="true"></i>
+              </a>
+              <a href="#llave" data-nav-section="llave">
+                <span>2. Genera tu llave</span>
+                <i data-step-status="llave" aria-hidden="true"></i>
+              </a>
+              <a href="#firma" data-nav-section="firma">
+                <span>3. Firma el documento</span>
+                <i data-step-status="firma" aria-hidden="true"></i>
+              </a>
+              <a href="#verificacion" data-nav-section="verificacion">
+                <span>4. Verifica la firma</span>
+                <i data-step-status="verificacion" aria-hidden="true"></i>
+              </a>
+              <a href="#resultado" data-nav-section="resultado">
+                <span>5. Entiende el resultado</span>
+                <i data-step-status="resultado" aria-hidden="true"></i>
+              </a>
+            </nav>
+
+            <button class="progress-reset" id="resetTutorialProgress" type="button" hidden>
+              Reiniciar progreso
+            </button>
+          </div>
+        </aside>
+
+        <article class="tutorial-content">
+          <section
+            class="tutorial-section tutorial-section--preparation"
+            id="preparacion"
+            data-track-section="preparacion"
+            aria-labelledby="preparacionTitle"
+          >
+            <div class="section-heading">
+              <span class="section-kicker">Antes de empezar</span>
+              <h2 id="preparacionTitle">Ten a mano lo necesario</h2>
+              <p>
+                Preparar estos elementos evita interrupciones a mitad del proceso.
+              </p>
+            </div>
+
+            <div class="requirements-grid">
+              <div class="requirement-card">
+                <span class="requirement-card__mark" aria-hidden="true">PDF</span>
+                <strong>Documento original</strong>
+                <p>La versión sin firmar. La necesitarás otra vez al verificar.</p>
+              </div>
+              <div class="requirement-card">
+                <span class="requirement-card__mark" aria-hidden="true">ID</span>
+                <strong>Datos de tu cuenta</strong>
+                <p>Usa tu nombre real para que el autor sea identificable.</p>
+              </div>
+              <div class="requirement-card">
+                <span class="requirement-card__mark" aria-hidden="true">12+</span>
+                <strong>Contraseña de llave</strong>
+                <p>Una frase única de al menos 12 caracteres que puedas recordar.</p>
+              </div>
+              <div class="requirement-card">
+                <span class="requirement-card__mark" aria-hidden="true">+</span>
+                <strong>Anexos, si aplican</strong>
+                <p>Puedes incluir varios archivos y comprobarlos después.</p>
+              </div>
+            </div>
+
+            <div class="tutorial-callout tutorial-callout--important">
+              <div class="callout-label">Lo más importante</div>
+              <div>
+                <strong>Conserva el PDF original.</strong>
+                <p>
+                  La verificación compara el archivo firmado con esa versión
+                  original. Si la pierdes o la modificas, no podrás completar la
+                  comprobación de integridad.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="tutorial-section"
+            id="cuenta"
+            data-track-section="cuenta"
+            aria-labelledby="cuentaTitle"
+          >
+            <div class="section-heading section-heading--numbered">
+              <span class="section-number">01</span>
+              <div>
+                <span class="section-kicker">Acceso</span>
+                <h2 id="cuentaTitle">Crea tu cuenta e inicia sesión</h2>
+                <p>Tu cuenta vincula las llaves y documentos con tu identidad.</p>
+              </div>
+            </div>
+
+            <ol class="instruction-list">
+              <li>
+                <span>1</span>
+                <div>
+                  <strong>Abre la página principal</strong>
+                  <p>En el menú superior, selecciona <b>Iniciar sesión</b>.</p>
+                </div>
+              </li>
+              <li>
+                <span>2</span>
+                <div>
+                  <strong>Elige “Regístrate aquí”</strong>
+                  <p>Completa tu nombre, un usuario y una contraseña de acceso.</p>
+                </div>
+              </li>
+              <li>
+                <span>3</span>
+                <div>
+                  <strong>Entra con la cuenta creada</strong>
+                  <p>Cuando la sesión esté activa, el menú mostrará tu perfil.</p>
+                </div>
+              </li>
+            </ol>
+
+            <div class="section-action-row">
+              <a class="inline-action" href="/inicio">
+                Ir al inicio para registrarme <span aria-hidden="true">→</span>
+              </a>
+              <span>Regresa a esta guía cuando termines.</span>
+            </div>
+
+            <label class="completion-control" for="completeCuenta">
+              <input id="completeCuenta" type="checkbox" data-tutorial-step="cuenta" />
+              <span>Ya creé mi cuenta e inicié sesión</span>
+            </label>
+          </section>
+
+          <section
+            class="tutorial-section"
+            id="llave"
+            data-track-section="llave"
+            aria-labelledby="llaveTitle"
+          >
+            <div class="section-heading section-heading--numbered">
+              <span class="section-number">02</span>
+              <div>
+                <span class="section-kicker">Identidad digital</span>
+                <h2 id="llaveTitle">Genera y protege tu primera llave</h2>
+                <p>La llave activa es la que autorizará tu firma digital.</p>
+              </div>
+            </div>
+
+            <div class="split-instructions">
+              <ol class="instruction-list instruction-list--compact">
+                <li>
+                  <span>1</span>
+                  <div>
+                    <strong>Ve a Perfil</strong>
+                    <p>Abre la gestión de llaves digitales.</p>
+                  </div>
+                </li>
+                <li>
+                  <span>2</span>
+                  <div>
+                    <strong>Selecciona “Generar llaves”</strong>
+                    <p>La primera llave creada quedará activa automáticamente.</p>
+                  </div>
+                </li>
+                <li>
+                  <span>3</span>
+                  <div>
+                    <strong>Define una contraseña segura</strong>
+                    <p>Usa 12 caracteres o más y guárdala en un lugar seguro.</p>
+                  </div>
+                </li>
+              </ol>
+
+              <aside class="password-note">
+                <span class="password-note__label">Contraseña de la llave</span>
+                <h3>No es un dato recuperable</h3>
+                <p>
+                  Protege la llave privada y se solicitará al firmar. Si la
+                  olvidas, tendrás que crear y activar una llave nueva.
+                </p>
+                <ul>
+                  <li>Evita datos personales obvios.</li>
+                  <li>No uses una contraseña corta de prueba.</li>
+                  <li>No la compartas con otras personas.</li>
+                </ul>
+              </aside>
+            </div>
+
+            <div class="section-action-row">
+              <a class="inline-action" href="/perfil">
+                Abrir mi perfil <span aria-hidden="true">→</span>
+              </a>
+              <span>Necesitas tener la sesión iniciada.</span>
+            </div>
+
+            <label class="completion-control" for="completeLlave">
+              <input id="completeLlave" type="checkbox" data-tutorial-step="llave" />
+              <span>Ya tengo una llave activa</span>
+            </label>
+          </section>
+
+          <section
+            class="tutorial-section tutorial-section--workflow"
+            id="firma"
+            data-track-section="firma"
+            aria-labelledby="firmaTitle"
+          >
+            <div class="section-heading section-heading--numbered">
+              <span class="section-number">03</span>
+              <div>
+                <span class="section-kicker">Proceso de firma</span>
+                <h2 id="firmaTitle">Firma tu documento</h2>
+                <p>El sistema te guiará por estas cuatro pantallas.</p>
+              </div>
+            </div>
+
+            <div class="workflow-guide">
+              <div class="workflow-guide__copy">
+                <strong>Las cuatro pantallas que encontrarás</strong>
+                <span>
+                  Es un resumen del orden del proceso; no son botones.
+                </span>
+              </div>
+              <ol class="workflow-overview" aria-label="Etapas del proceso de firma">
+                <li><span>1</span><b>Seleccionar</b></li>
+                <li><span>2</span><b>Firmar</b></li>
+                <li><span>3</span><b>Firma del avalador</b></li>
+                <li><span>4</span><b>Descargar</b></li>
+              </ol>
+            </div>
+
+            <ol class="workflow-list">
+              <li class="workflow-item">
+                <span class="workflow-index">1</span>
+                <div class="workflow-copy">
+                  <span class="workflow-label">Preparar documento</span>
+                  <h3>Carga el PDF y completa sus datos</h3>
+                  <p>
+                    Selecciona el documento principal, añade anexos si los hay e
+                    ingresa el título y los autores. Los anexos son opcionales.
+                  </p>
+                </div>
+                <div class="workflow-tip">
+                  <strong>Antes de continuar</strong>
+                  <span>Comprueba que elegiste la versión final del PDF.</span>
+                </div>
+              </li>
+
+              <li class="workflow-item">
+                <span class="workflow-index">2</span>
+                <div class="workflow-copy">
+                  <span class="workflow-label">Llave de firma</span>
+                  <h3>Elige la llave activa y autoriza la operación</h3>
+                  <p>
+                    Selecciona una llave existente —o crea una nueva— e introduce
+                    la contraseña con la que la protegiste.
+                  </p>
+                </div>
+                <div class="workflow-tip">
+                  <strong>Si falla la contraseña</strong>
+                  <span>Revisa mayúsculas, espacios y la llave seleccionada.</span>
+                </div>
+              </li>
+
+              <li class="workflow-item">
+                <span class="workflow-index">3</span>
+                <div class="workflow-copy">
+                  <span class="workflow-label">Firma del avalador</span>
+                  <h3>Dibuja la firma o carga una imagen</h3>
+                  <p>
+                    Esta firma visible se incorpora al documento. Puedes dibujarla
+                    con el mouse o con el dedo, o usar una imagen existente.
+                  </p>
+                </div>
+                <div class="workflow-tip">
+                  <strong>Dos capas de firma</strong>
+                  <span>La imagen es visual; la llave crea la prueba criptográfica.</span>
+                </div>
+              </li>
+
+              <li class="workflow-item">
+                <span class="workflow-index">4</span>
+                <div class="workflow-copy">
+                  <span class="workflow-label">Documento listo</span>
+                  <h3>Descarga el archivo firmado</h3>
+                  <p>
+                    Guarda el resultado con un nombre fácil de reconocer. Desde
+                    esta pantalla también puedes pasar directamente a verificarlo.
+                  </p>
+                </div>
+                <div class="workflow-tip">
+                  <strong>Guarda ambos archivos</strong>
+                  <span>Conserva por separado el original y el firmado.</span>
+                </div>
+              </li>
+            </ol>
+
+            <div class="tutorial-callout tutorial-callout--info">
+              <div class="callout-label">Sobre los anexos</div>
+              <div>
+                <strong>El sistema registra su integridad junto con la firma.</strong>
+                <p>
+                  Para verificarlos después debes cargar exactamente los mismos
+                  archivos. El resultado indicará si falta alguno, si fue modificado
+                  o si se añadió un archivo extra.
+                </p>
+              </div>
+            </div>
+
+            <div class="section-action-row">
+              <a class="inline-action" href="/firmar">
+                Ir a firmar un documento <span aria-hidden="true">→</span>
+              </a>
+              <span>Requiere una cuenta y una llave activa.</span>
+            </div>
+
+            <label class="completion-control" for="completeFirma">
+              <input id="completeFirma" type="checkbox" data-tutorial-step="firma" />
+              <span>Ya descargué mi documento firmado</span>
+            </label>
+          </section>
+
+          <section
+            class="tutorial-section tutorial-section--workflow"
+            id="verificacion"
+            data-track-section="verificacion"
+            aria-labelledby="verificacionTitle"
+          >
+            <div class="section-heading section-heading--numbered">
+              <span class="section-number">04</span>
+              <div>
+                <span class="section-kicker">Comprobación</span>
+                <h2 id="verificacionTitle">Verifica una firma</h2>
+                <p>Usa el documento firmado y su PDF original de referencia.</p>
+              </div>
+            </div>
+
+            <div class="file-pair" aria-label="Archivos necesarios para verificar">
+              <div>
+                <span class="file-pair__tag">A</span>
+                <strong>PDF firmado</strong>
+                <small>El archivo descargado al terminar la firma</small>
+              </div>
+              <span class="file-pair__plus" aria-hidden="true">+</span>
+              <div>
+                <span class="file-pair__tag">B</span>
+                <strong>PDF original</strong>
+                <small>La versión exacta que se cargó antes de firmar</small>
+              </div>
+            </div>
+
+            <ol class="workflow-list">
+              <li class="workflow-item">
+                <span class="workflow-index">1</span>
+                <div class="workflow-copy">
+                  <span class="workflow-label">Configurar verificación</span>
+                  <h3>Identifica al avalador</h3>
+                  <p>
+                    Usa el modo <b>Automático</b> para subir el PDF firmado y
+                    detectar al firmante, o el modo <b>Manual</b> para buscarlo por
+                    nombre.
+                  </p>
+                </div>
+                <div class="workflow-tip workflow-tip--recommended">
+                  <strong>Recomendado</strong>
+                  <span>El modo automático reduce errores de selección.</span>
+                </div>
+              </li>
+
+              <li class="workflow-item">
+                <span class="workflow-index">2</span>
+                <div class="workflow-copy">
+                  <span class="workflow-label">Documento avalado</span>
+                  <h3>Carga el PDF firmado</h3>
+                  <p>
+                    Selecciona el archivo con la firma electrónica. Si incluía
+                    anexos, carga también esos archivos para comprobarlos.
+                  </p>
+                </div>
+                <div class="workflow-tip">
+                  <strong>Anexos opcionales</strong>
+                  <span>Puedes verificar primero el manifiesto y añadirlos después.</span>
+                </div>
+              </li>
+
+              <li class="workflow-item">
+                <span class="workflow-index">3</span>
+                <div class="workflow-copy">
+                  <span class="workflow-label">Documento original</span>
+                  <h3>Carga la versión sin firmar</h3>
+                  <p>
+                    Debe ser el mismo archivo que se utilizó al iniciar la firma,
+                    sin ediciones, conversiones ni cambios de nombre de contenido.
+                  </p>
+                </div>
+                <div class="workflow-tip">
+                  <strong>Comparación exacta</strong>
+                  <span>Incluso un cambio pequeño produce un resultado diferente.</span>
+                </div>
+              </li>
+
+              <li class="workflow-item">
+                <span class="workflow-index">4</span>
+                <div class="workflow-copy">
+                  <span class="workflow-label">Resultado</span>
+                  <h3>Revisa autenticidad e integridad</h3>
+                  <p>
+                    El análisis comprueba que el avalador coincida, que la firma
+                    sea válida y que el original corresponda con el documento.
+                  </p>
+                </div>
+                <div class="workflow-tip">
+                  <strong>Lee el detalle</strong>
+                  <span>El color ayuda, pero el mensaje explica qué se comprobó.</span>
+                </div>
+              </li>
+            </ol>
+
+            <div class="section-action-row">
+              <a class="inline-action" href="/verificar">
+                Ir a verificar una firma <span aria-hidden="true">→</span>
+              </a>
+              <span>Mantén tu sesión iniciada durante el proceso.</span>
+            </div>
+
+            <label class="completion-control" for="completeVerificacion">
+              <input
+                id="completeVerificacion"
+                type="checkbox"
+                data-tutorial-step="verificacion"
+              />
+              <span>Ya completé una verificación</span>
+            </label>
+          </section>
+
+          <section
+            class="tutorial-section"
+            id="resultado"
+            data-track-section="resultado"
+            aria-labelledby="resultadoTitle"
+          >
+            <div class="section-heading section-heading--numbered">
+              <span class="section-number">05</span>
+              <div>
+                <span class="section-kicker">Lectura del análisis</span>
+                <h2 id="resultadoTitle">Entiende el resultado</h2>
+                <p>No todos los avisos significan lo mismo. Revisa el detalle.</p>
+              </div>
+            </div>
+
+            <div class="result-grid">
+              <article class="result-card result-card--success">
+                <span class="result-card__status">Firma válida</span>
+                <h3>Todo coincide</h3>
+                <p>
+                  El firmante, la firma criptográfica y el PDF original superaron
+                  la comprobación.
+                </p>
+              </article>
+              <article class="result-card result-card--warning">
+                <span class="result-card__status">Revisar archivos</span>
+                <h3>Hay información pendiente</h3>
+                <p>
+                  Puede faltar un anexo o no haberse cargado todavía. Lee el mensaje
+                  antes de repetir el proceso.
+                </p>
+              </article>
+              <article class="result-card result-card--danger">
+                <span class="result-card__status">No válido</span>
+                <h3>La comprobación falló</h3>
+                <p>
+                  El firmante no coincide, el original es distinto, la firma no es
+                  válida o un archivo fue modificado.
+                </p>
+              </article>
+            </div>
+
+            <div class="security-panel">
+              <div>
+                <span class="section-kicker">Qué protege el sistema</span>
+                <h3>Seguridad aplicada en cada operación</h3>
+              </div>
+              <ul>
+                <li>
+                  <strong>AES-256-GCM</strong>
+                  <span>Protege la llave privada con cifrado autenticado.</span>
+                </li>
+                <li>
+                  <strong>RSA-4096 + SHA-256</strong>
+                  <span>Permite comprobar autoría e integridad.</span>
+                </li>
+                <li>
+                  <strong>Archivos temporales</strong>
+                  <span>Las cargas se eliminan al terminar el proceso.</span>
+                </li>
+                <li>
+                  <strong>Descarga de un solo uso</strong>
+                  <span>El enlace se consume al descargar y expira como máximo en 10 minutos.</span>
+                </li>
+              </ul>
+            </div>
+
+            <label class="completion-control" for="completeResultado">
+              <input
+                id="completeResultado"
+                type="checkbox"
+                data-tutorial-step="resultado"
+              />
+              <span>Ya sé cómo interpretar una verificación</span>
+            </label>
+          </section>
+
+          <section
+            class="tutorial-section tutorial-section--faq"
+            id="preguntas"
+            data-track-section="preguntas"
+            aria-labelledby="preguntasTitle"
+          >
+            <div class="section-heading">
+              <span class="section-kicker">Ayuda rápida</span>
+              <h2 id="preguntasTitle">Preguntas frecuentes</h2>
+            </div>
+
+            <div class="faq-list">
+              <details>
+                <summary>¿La firma dibujada es la que valida el documento?</summary>
+                <p>
+                  No por sí sola. La firma dibujada o cargada es la representación
+                  visual. La comprobación real utiliza la firma criptográfica creada
+                  con tu llave privada.
+                </p>
+              </details>
+              <details>
+                <summary>¿Por qué necesito el PDF original para verificar?</summary>
+                <p>
+                  Porque el sistema compara su contenido con la prueba criptográfica
+                  incluida en el documento firmado. Así puede detectar cualquier
+                  alteración.
+                </p>
+              </details>
+              <details>
+                <summary>¿Qué ocurre si olvidé la contraseña de mi llave?</summary>
+                <p>
+                  Esa contraseña no se puede recuperar. Crea una llave nueva desde tu
+                  perfil, actívala y úsala para las próximas firmas.
+                </p>
+              </details>
+              <details>
+                <summary>¿Qué debo compartir con quien verificará el documento?</summary>
+                <p>
+                  Comparte el PDF firmado, el PDF original y, si los incluiste, los
+                  anexos originales. Nunca compartas la contraseña ni la llave privada.
+                </p>
+              </details>
+              <details>
+                <summary>¿Puedo verificar documentos firmados por otra persona?</summary>
+                <p>
+                  Sí. Selecciona al avalador correcto manualmente o permite que el
+                  sistema lo detecte desde el PDF firmado, y carga el original
+                  correspondiente.
+                </p>
+              </details>
+            </div>
+          </section>
+
+          <section class="tutorial-finish" aria-labelledby="finishTitle">
+            <span class="section-kicker">Ya conoces el recorrido</span>
+            <h2 id="finishTitle">¿Qué quieres hacer ahora?</h2>
+            <p>
+              Puedes volver a esta guía en cualquier momento desde el menú principal.
+            </p>
+            <div class="tutorial-finish__actions">
+              <a class="tutorial-button tutorial-button--light" href="/firmar">
+                Firmar un documento
+              </a>
+              <a class="tutorial-button tutorial-button--ghost" href="/verificar">
+                Verificar una firma
+              </a>
+            </div>
+          </section>
+        </article>
+      </div>
+    </main>
+
+    <footer class="tutorial-footer-page">
+      <div class="tutorial-container">
+        <a class="tutorial-brand tutorial-brand--footer" href="/">
+          <img
+            src="/recursos/logotipo-de-github.png"
+            alt=""
+            data-brand-logo
+            data-default-logo="true"
+          />
+          <span data-institution-name>Firmas Digitales FD</span>
+        </a>
+        <p>
+          Guía de uso del sistema de firmas digitales ·
+          <span id="tutorialYear">2026</span>
+        </p>
+      </div>
+    </footer>
+
+    <script src="/scripts/utils/themeManager.js"></script>
+    <script src="/scripts/frontend/tutorial-page.js?v=4"></script>
+  </body>
+</html>

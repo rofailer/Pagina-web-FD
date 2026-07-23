@@ -77,7 +77,6 @@ Un sistema completo para la **firma y verificación de documentos PDF** usando c
 ```
 scripts/
 ├── server.js                 # Servidor principal
-├── setup-db.js              # Configuración de base de datos
 ├── db/
 │   └── pool.js              # Pool de conexiones MySQL
 ├── controllers/             # Lógica de negocio
@@ -198,8 +197,7 @@ CREATE TABLE users (
   rol ENUM('admin','profesor','owner') DEFAULT 'profesor',
   active_key_id INT DEFAULT NULL,
 
-  -- Información Personal Expandida
-  nombre_completo VARCHAR(255),
+  -- Información Personal
   email VARCHAR(255) UNIQUE,
   organizacion VARCHAR(255),
   biografia TEXT,
@@ -212,12 +210,9 @@ CREATE TABLE users (
   departamento VARCHAR(255),
   grado_academico VARCHAR(100),
 
-  -- Configuraciones del Sistema
-  zona_horaria VARCHAR(50) DEFAULT 'America/Bogota',
-  idioma VARCHAR(10) DEFAULT 'es',
+  -- Estado y seguridad de la cuenta
   estado_cuenta ENUM('activo','inactivo','suspendido','pendiente') DEFAULT 'activo',
-  notificaciones_email BOOLEAN DEFAULT TRUE,
-  autenticacion_2fa BOOLEAN DEFAULT FALSE,
+  force_password_change BOOLEAN NOT NULL DEFAULT FALSE,
   ultimo_acceso TIMESTAMP,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -234,7 +229,7 @@ CREATE TABLE user_keys (
   key_name VARCHAR(255) NOT NULL,
   private_key TEXT NOT NULL,     -- Cifrada con AES
   public_key TEXT NOT NULL,      -- Cifrada con userId
-  encryption_type VARCHAR(32) DEFAULT 'aes-256-cbc',
+  encryption_type VARCHAR(32) NOT NULL DEFAULT 'aes-256-gcm-v2',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   expiration_date DATETIME NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -274,7 +269,6 @@ SistemaFirmasDigitales/
 │   └── sections/                 # Estilos por sección
 ├── scripts/                       # Backend Node.js
 │   ├── server.js                 # Servidor principal
-│   ├── setup-db.js               # Configurador de BD
 │   ├── db/pool.js                # Pool de conexiones
 │   ├── routes/                   # Rutas de API
 │   │   ├── auth.routes.js        # Autenticación
@@ -313,21 +307,9 @@ SistemaFirmasDigitales/
 
 #### **1. Cifrado Simétrico (AES)**
 
-```javascript
-// Tipos soportados
-- AES-256-CBC (Más seguro - Recomendado)
-- AES-192-CBC (Intermedio)
-- AES-128-CBC (Básico)
-
-// Implementación
-function encryptAES(text, key, type = 'aes-256-cbc') {
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(type, Buffer.from(getKey(key, type)), iv);
-    let encrypted = cipher.update(text, 'utf8', 'base64');
-    encrypted += cipher.final('base64');
-    return iv.toString('base64') + ':' + encrypted;
-}
-```
+Las llaves privadas y públicas se protegen exclusivamente con un sobre
+`AES-256-GCM v2`, derivación `scrypt`, sal aleatoria, IV independiente y etiqueta
+de autenticación. El formato no es seleccionable desde el navegador.
 
 #### **2. Criptografía Asimétrica (RSA)**
 
@@ -399,24 +381,23 @@ openssl rsa -in private.pem -pubout -out public.pem
 
 ```javascript
 {
-  nombre_completo: "Dr. María García López",
+  nombre: "Dr. María García López",
   email: "maria.garcia@universidad.edu",
   organizacion: "Universidad Nacional",
   cargo: "Profesora Titular",
   departamento: "Facultad de Ingeniería",
   grado_academico: "Doctor",
   biografia: "Especialista en criptografía...",
-  telefono: "+57 300 123 4567",
-  zona_horaria: "America/Bogota"
+  telefono: "+57 300 123 4567"
 }
 ```
 
 #### **Configuraciones Avanzadas**
 
-- Notificaciones por email
-- Autenticación de dos factores (2FA)
-- Preferencias de idioma
-- Configuración de zona horaria
+- Recordar la última sección visitada del perfil
+- Reducir el movimiento de la interfaz
+- Cambio seguro de contraseña
+- Acceso al panel administrativo para owner
 - Temas personalizados
 
 ---
@@ -436,15 +417,10 @@ openssl rsa -in private.pem -pubout -out public.pem
 5. **Almacenamiento**: Base de datos con metadata
 6. **Limpieza**: Eliminación de archivos temporales
 
-#### **Tipos de Cifrado Disponibles**
+#### **Formato de cifrado**
 
-```javascript
-const encryptionTypes = {
-  "aes-256-cbc": "AES-256-CBC (Máxima Seguridad)",
-  "aes-192-cbc": "AES-192-CBC (Alta Seguridad)",
-  "aes-128-cbc": "AES-128-CBC (Seguridad Estándar)",
-};
-```
+Todas las llaves nuevas usan `aes-256-gcm-v2`. No se conservan formatos CBC
+heredados porque el esquema está diseñado para instalaciones nuevas.
 
 ### **Gestión de Llaves**
 
@@ -719,20 +695,13 @@ const maxFileSize = 10 * 1024 * 1024; // 10MB
 npm run dev
 npm start
 
-# Base de datos
-npm run db:setup          # Configuración inicial
-npm run db:status          # Estado de la BD
-npm run db:sync           # Sincronización
-npm run db:backup         # Crear backup
-npm run db:restore        # Restaurar backup
-npm run db:reset          # Resetear BD
-npm run db:drop-all       # Eliminar todo
-npm run db:install        # Instalación completa
-
-# Utilidades
-npm test                  # Ejecutar tests
-npm run db:help          # Ayuda de BD
+# Verificaciones
+npm test
 ```
+
+La base de datos se crea importando `firmas_digitales_v2.sql` desde MySQL o el
+proveedor de alojamiento. El panel administrativo solo permite consultar datos
+redactados y exportar una copia SQL; no instala, restaura ni elimina la base.
 
 ### **Scripts de Producción**
 
@@ -904,7 +873,7 @@ query_cache_size = 32M
       "key_name": "Key1",
       "created_at": "2024-01-15T10:30:00Z",
       "expiration_date": "2024-02-15T10:30:00Z",
-      "encryption_type": "aes-256-cbc"
+      "encryption_type": "aes-256-gcm-v2"
     }
   ],
   "hasKeys": true
@@ -917,7 +886,6 @@ query_cache_size = 32M
 // Request
 {
   "keyPassword": "password123",
-  "encryptionType": "aes-256-cbc",
   "keyName": "Mi Llave Principal"
 }
 

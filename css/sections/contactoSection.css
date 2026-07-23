@@ -125,6 +125,27 @@
   line-height: 1.5;
 }
 
+#contactoSection .contact-config-value {
+  display: inline-block;
+  max-width: 100%;
+  color: inherit;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+#contactoSection .contact-config-value:hover small,
+#contactoSection .contact-config-value:focus-visible small {
+  color: var(--primary-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+#contactoSection .contact-config-value:focus-visible {
+  border-radius: 4px;
+  outline: 3px solid color-mix(in srgb, var(--primary-color) 20%, transparent);
+  outline-offset: 3px;
+}
+
 #contactoSection .contact-form-panel {
   padding: 40px 62px 34px;
   background: var(--contact-surface);

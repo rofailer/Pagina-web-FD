@@ -769,7 +769,20 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Logout ---
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
-        logoutBtn.addEventListener("click", () => {
+        logoutBtn.addEventListener("click", async () => {
+            const token = localStorage.getItem("token");
+            if (token) {
+                try {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        keepalive: true
+                    });
+                } catch (_) {
+                    // El cierre local continúa aunque el servidor no esté disponible.
+                }
+            }
+
             localStorage.removeItem("token");
             localStorage.removeItem("userRole");
             localStorage.removeItem("userName");
@@ -952,18 +965,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (content) content.classList.add("active");
         });
     });
-
-    // Ejemplo de mensaje dinámico para el selector de cifrado
-    const select = document.getElementById("encryptionTypeSelect");
-    const btn = document.getElementById("confirmEncryptionTypeBtn");
-    const msg = document.getElementById("encryptionTypeMsg");
-    if (btn && select && msg) {
-        btn.onclick = () => {
-            msg.textContent = "Tipo de cifrado actualizado correctamente.";
-            msg.style.color = "#2e7d32";
-            setTimeout(() => { msg.textContent = ""; }, 2000);
-        };
-    }
 
     // =========================
     // FUNCIONES AUXILIARES

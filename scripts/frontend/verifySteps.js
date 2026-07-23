@@ -7,6 +7,14 @@ document.addEventListener("DOMContentLoaded", () => {
     let filteredProfessors = [];
     let autoDetectedSigner = null;
 
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+    })[character]);
+
     // --- Gestión de ANEXOS para Verificación ---
     let verifyAttachmentFiles = [];
     const MAX_TOTAL_SIZE = 100 * 1024 * 1024;
@@ -101,21 +109,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const ext = file.name.split('.').pop().slice(0, 3).toUpperCase();
 
-        div.innerHTML = `
-            <div class="attachment-icon">${ext}</div>
-            <div class="attachment-details">
-                <span class="attachment-name" title="${file.name}">${file.name}</span>
-                <span class="attachment-size">${formatFileSize(file.size)}</span>
-            </div>
-            <button type="button" class="attachment-remove-btn" data-index="${index}" title="Eliminar anexo">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
-        `;
+        const icon = document.createElement('div');
+        icon.className = 'attachment-icon';
+        icon.textContent = ext;
 
-        const removeBtn = div.querySelector('.attachment-remove-btn');
+        const details = document.createElement('div');
+        details.className = 'attachment-details';
+
+        const name = document.createElement('span');
+        name.className = 'attachment-name';
+        name.title = file.name;
+        name.textContent = file.name;
+
+        const size = document.createElement('span');
+        size.className = 'attachment-size';
+        size.textContent = formatFileSize(file.size);
+        details.append(name, size);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'attachment-remove-btn';
+        removeBtn.dataset.index = String(index);
+        removeBtn.title = 'Eliminar anexo';
+        removeBtn.setAttribute('aria-label', `Eliminar anexo ${file.name}`);
+        removeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         removeBtn.addEventListener('click', () => removeVerifyAttachment(index));
+
+        div.append(icon, details, removeBtn);
 
         return div;
     }
@@ -158,8 +178,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (verifyModeSwitch && manualOption && autoOption && manualLabel && autoLabel) {
         verifyModeSwitch.addEventListener("change", function () {
-            const acceptProfesorBtn = document.getElementById("acceptProfesorBtn");
-
             if (this.checked) {
                 // Cambiar a automatico
                 manualOption.style.display = "none";
@@ -168,9 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 autoLabel.classList.add("switch-label-active");
                 isManualMode = false;
 
-                // Mostrar/ocultar botones
-                if (acceptProfesorBtn) acceptProfesorBtn.style.display = "none";
-                if (continueBtn) continueBtn.style.display = "flex"; // O "block" según el CSS
+                if (continueBtn) continueBtn.style.display = "flex";
 
                 // Limpiar datos del modo manual al cambiar a automatico
                 selectedProfesorId = null;
@@ -191,8 +207,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 autoLabel.classList.remove("switch-label-active");
                 isManualMode = true;
 
-                // Mostrar/ocultar botones
-                if (acceptProfesorBtn) acceptProfesorBtn.style.display = "flex"; // O "block" según el CSS
                 if (continueBtn) continueBtn.style.display = "flex";
 
                 // Limpiar datos del modo automatico al cambiar a manual
@@ -229,9 +243,6 @@ document.addEventListener("DOMContentLoaded", () => {
         autoLabel.classList.add("switch-label-active");
         isManualMode = false;
 
-        // Mostrar botón automático inicialmente y ocultar manual
-        const acceptProfesorBtn = document.getElementById("acceptProfesorBtn");
-        if (acceptProfesorBtn) acceptProfesorBtn.style.display = "none";
         if (continueBtn) continueBtn.style.display = "flex";
 
         // Asegurar que el boton este visible y el estado sea correcto
@@ -241,16 +252,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Función para seleccionar profesor automáticamente ---
     function selectProfessorAutomatically(professorId) {
         // Buscar al profesor en la lista
-        const professorElement = document.querySelector(`[data-professor-id="${professorId}"]`);
+        const professorElement = Array.from(document.querySelectorAll('.professor-item'))
+            .find(item => item.dataset.professorId === String(professorId));
 
         if (professorElement) {
             // Limpiar selecciones previas
             document.querySelectorAll('.professor-item').forEach(item => {
                 item.classList.remove('selected');
+                item.setAttribute('aria-pressed', 'false');
             });
 
             // Seleccionar el profesor detectado
             professorElement.classList.add('selected');
+            professorElement.setAttribute('aria-pressed', 'true');
             selectedProfesorId = professorId;
             window.selectedProfesorId = professorId;
 
@@ -316,8 +330,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // Actualizar estado visual de los pasos
         indicatorSteps.forEach((el, i) => {
             el.classList.remove("active", "completed");
+            el.removeAttribute("aria-current");
             if (i === step - 1) {
                 el.classList.add("active");
+                el.setAttribute("aria-current", "step");
             } else if (i < step - 1) {
                 el.classList.add("completed");
             }
@@ -439,12 +455,14 @@ document.addEventListener("DOMContentLoaded", () => {
                         errorData = { error: "Error de comunicación con el servidor" };
                     }
 
-                    // Solo mostrar modal de login si tenemos token (sesión expirada) 
-                    // No mostrar si no hay token (acceso público)
-                    if (token) {
+                    // Solo un 401 invalida la sesión. Un 403 puede indicar que
+                    // todavía está pendiente el cambio de contraseña obligatorio.
+                    if (token && res.status === 401) {
                         if (window.showLoginModal) window.showLoginModal();
                         else showNotification(errorData.error || "Sesión expirada. Por favor, inicia sesión de nuevo.", "error");
                         localStorage.removeItem("token");
+                    } else if (token && res.status === 403) {
+                        showNotification(errorData.error || "Completa primero el cambio de contraseña requerido.", "error");
                     } else {
                         // Error en acceso público, mostrar mensaje sin modal de login
                         showNotification("Error al cargar la lista de profesores. Por favor, intenta de nuevo.", "error");
@@ -514,25 +532,31 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const professorsHTML = professors.map(prof => `
-            <div class="professor-item" data-professor-id="${prof.id}" data-professor-name="${prof.nombre}">
-                <span class="professor-name">${prof.nombre}</span>
-                <span class="professor-id">ID: ${prof.id}</span>
-            </div>
-        `).join('');
+        const fragment = document.createDocumentFragment();
+        professors.forEach(professor => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'professor-item';
+            item.dataset.professorId = String(professor.id);
+            item.dataset.professorName = String(professor.nombre || '');
+            item.setAttribute('aria-pressed', 'false');
 
-        professorsList.innerHTML = professorsHTML;
+            const name = document.createElement('span');
+            name.className = 'professor-name';
+            name.textContent = professor.nombre || 'Sin nombre';
 
-        // Agregar event listeners a los items
-        const professorItems = professorsList.querySelectorAll('.professor-item');
-        professorItems.forEach(item => {
+            const id = document.createElement('span');
+            id.className = 'professor-id';
+            id.textContent = `ID: ${professor.id}`;
+
+            item.append(name, id);
             item.addEventListener('click', () => {
-                selectProfessor(
-                    item.dataset.professorId,
-                    item.dataset.professorName
-                );
+                selectProfessor(item.dataset.professorId, item.dataset.professorName);
             });
+            fragment.appendChild(item);
         });
+
+        professorsList.replaceChildren(fragment);
     }
 
     // --- Función para seleccionar un profesor ---
@@ -545,11 +569,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Actualizar selección visual
         const allItems = document.querySelectorAll('.professor-item');
-        allItems.forEach(item => item.classList.remove('selected'));
+        allItems.forEach(item => {
+            item.classList.remove('selected');
+            item.setAttribute('aria-pressed', 'false');
+        });
 
-        const selectedItem = document.querySelector(`[data-professor-id="${professorId}"]`);
+        const selectedItem = Array.from(allItems)
+            .find(item => item.dataset.professorId === String(professorId));
         if (selectedItem) {
             selectedItem.classList.add('selected');
+            selectedItem.setAttribute('aria-pressed', 'true');
         }
 
         // Mostrar profesor seleccionado de forma compacta
@@ -622,15 +651,18 @@ document.addEventListener("DOMContentLoaded", () => {
             changeProfessor.addEventListener('click', () => {
                 // Resetear selección
                 selectedProfesorId = null;
+                window.selectedProfesorId = null;
                 const selectedProfDiv = document.getElementById('selectedProfessor');
-                const acceptBtn = document.getElementById('acceptProfesorBtn');
 
                 if (selectedProfDiv) selectedProfDiv.style.display = 'none';
-                if (acceptBtn) acceptBtn.disabled = true;
 
                 // Limpiar selección visual
                 const allItems = document.querySelectorAll('.professor-item');
-                allItems.forEach(item => item.classList.remove('selected'));
+                allItems.forEach(item => {
+                    item.classList.remove('selected');
+                    item.setAttribute('aria-pressed', 'false');
+                });
+                updateContinueBtnState();
             });
         }
     }
@@ -677,19 +709,6 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     }
 
-    // --- Paso 1: Seleccionar profesor ---
-    const acceptProfesorBtn = document.getElementById("acceptProfesorBtn");
-    if (acceptProfesorBtn) {
-        acceptProfesorBtn.onclick = () => {
-            if (!selectedProfesorId) {
-                showNotification("Selecciona un profesor o tutor.", "warning");
-                return;
-            }
-            window.verificacionEnCurso = true; // Asegurar que está marcado
-            showStep(2);
-        };
-    }
-
     // --- Botón continuar para modo automático (continueVerifyStep1Btn) ---
     const continueVerifyStep1BtnElement = document.getElementById("continueVerifyStep1Btn");
     if (continueVerifyStep1BtnElement) {
@@ -718,7 +737,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("acceptAvalBtn").onclick = () => {
         const signedFile = document.getElementById("signedFile").files[0];
         if (!signedFile) {
-            alert("Selecciona el archivo avalado (PDF firmado).");
+            showNotification("Selecciona el archivo avalado (PDF firmado).", "warning");
             return;
         }
         window.verificacionEnCurso = true; // Asegurar que está marcado
@@ -732,17 +751,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const profesorId = window.selectedProfesorId || selectedProfesorId;
 
         if (!originalFile) {
-            alert("Selecciona el archivo original (PDF).");
+            showNotification("Selecciona el archivo original (PDF).", "warning");
             return;
         }
 
         if (!signedFile) {
-            alert("Falta el archivo firmado. Vuelve al paso 2.");
+            showNotification("Falta el archivo firmado. Vuelve al paso 2.", "warning");
             return;
         }
 
         if (!profesorId) {
-            alert("Falta el profesor seleccionado. Vuelve al paso 1.");
+            showNotification("Falta el avalador seleccionado. Vuelve al paso 1.", "warning");
             return;
         }
 
@@ -923,16 +942,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 const selectedProfessorName = document.getElementById("selectedProfessorName");
                 if (selectedProfessor && selectedProfessorName) {
                     selectedProfessor.style.display = 'block';
-                    selectedProfessorName.innerHTML = `
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="m9 12 2 2 4-4"/>
-                                <circle cx="12" cy="12" r="10"/>
-                            </svg>
-                            <span>${result.signer.nombre || result.signer.name || 'Profesor detectado'}</span>
-                            <small style="color: #28a745; font-weight: 500;">(Auto-detectado)</small>
-                        </div>
-                    `;
+                    const detectedName = document.createElement('span');
+                    detectedName.textContent = result.signer.nombre || result.signer.name || 'Avalador detectado';
+                    const detectedStatus = document.createElement('small');
+                    detectedStatus.className = 'auto-detected-label';
+                    detectedStatus.textContent = 'Detectado automáticamente';
+                    selectedProfessorName.replaceChildren(detectedName, detectedStatus);
                 }
 
                 if (window.showNotification) {
@@ -984,7 +999,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --- Acciones finales ---
-    function limpiarFormulariosVerificar(showNotificationFlag = false) {
+    function limpiarFormulariosVerificar(showNotificationFlag = false, reloadProfessors = true) {
         // Realizar reset de formularios
         const verifyAvalForm = document.getElementById("verifyAvalForm");
         const verifyOriginalForm = document.getElementById("verifyOriginalForm");
@@ -1092,7 +1107,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Reload la lista de profesores
-        if (window.loadProfessors) {
+        if (reloadProfessors && window.loadProfessors) {
             window.loadProfessors().catch(console.error);
         }
 
@@ -1121,13 +1136,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Volver al paso 1
         currentStep = 1;
         showStep(1);
-    }
-
-    // --- Función para actualizar la visualización del file input en verificar (DESACTIVADA) ---
-    function updateVerifyFileInputDisplay(input) {
-        // Esta función ya no se usa con el nuevo diseño moderno
-        // Los nuevos inputs usan las funciones handleSignedFileInput y handleOriginalFileInput
-        return;
     }
 
     document.getElementById("continueVerifyBtn").onclick = () => {
@@ -1194,7 +1202,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Hacer la función global para frontend.js ---
     window.cargarProfesoresYMostrarPaso1 = cargarProfesoresYMostrarPaso1;
     window.limpiarFormulariosVerificar = limpiarFormulariosVerificar;
-    window.updateVerifyFileInputDisplay = updateVerifyFileInputDisplay;
+    window.clearAllVerifyAttachments = function () {
+        verifyAttachmentFiles = [];
+        const listContainer = document.getElementById('verifyAttachmentsList');
+        const itemsContainer = document.getElementById('verifyAttachmentsItems');
+        const inputElement = document.getElementById('verifyAttachmentsInput');
+        if (listContainer) listContainer.style.display = 'none';
+        if (itemsContainer) itemsContainer.replaceChildren();
+        if (inputElement) inputElement.value = '';
+    };
+    window.cleanVerifyFormsOnLogout = function () {
+        limpiarFormulariosVerificar(false, false);
+        window.verificacionEnCurso = false;
+    };
     window.verificacionEnCurso = false;
     window.firmaEnCurso = false;
 
@@ -1286,31 +1306,34 @@ document.addEventListener("DOMContentLoaded", () => {
     // === FUNCIONES PARA EL NUEVO DISEÑO DE PASOS 2 Y 3 ===
 
     function createVerificationCard(result) {
+        const safeStatus = ['success', 'error', 'warning', 'info'].includes(result.status)
+            ? result.status
+            : 'info';
         const detailsList = (result.details || [])
-            .map(item => `<li>${item}</li>`)
+            .map(item => `<li>${escapeHtml(item)}</li>`)
             .join('');
 
         const metaList = (result.meta || [])
             .map(item => `
                 <div class="verification-meta-item">
-                    <span class="verification-meta-label">${item.label}</span>
-                    <span class="verification-meta-value">${item.value}</span>
+                    <span class="verification-meta-label">${escapeHtml(item.label)}</span>
+                    <span class="verification-meta-value">${escapeHtml(item.value)}</span>
                 </div>
             `)
             .join('');
 
         return `
-            <div class="verification-card ${result.status}">
+            <div class="verification-card ${safeStatus}">
                 <div class="verification-card-header">
                     <div class="verification-card-title-group">
-                        <h4 class="verification-card-title">${result.title}</h4>
-                        <span class="status-badge ${result.status}">${result.statusLabel}</span>
+                        <h4 class="verification-card-title">${escapeHtml(result.title)}</h4>
+                        <span class="status-badge ${safeStatus}">${escapeHtml(result.statusLabel)}</span>
                     </div>
-                    <div class="verification-card-icon ${result.status}">
+                    <div class="verification-card-icon ${safeStatus}">
                         ${result.icon}
                     </div>
                 </div>
-                <p class="verification-card-summary">${result.summary}</p>
+                <p class="verification-card-summary">${escapeHtml(result.summary)}</p>
                 ${metaList ? `<div class="verification-meta">${metaList}</div>` : ''}
                 ${detailsList ? `<ul class="verification-list">${detailsList}</ul>` : ''}
             </div>
@@ -1689,73 +1712,3 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 100);
 });
-
-// Función global para limpiar todos los anexos de verificación
-window.clearAllVerifyAttachments = function () {
-    if (typeof verifyAttachmentFiles !== 'undefined') {
-        verifyAttachmentFiles.length = 0;
-        const listContainer = document.getElementById('verifyAttachmentsList');
-        if (listContainer) {
-            listContainer.style.display = 'none';
-        }
-        const itemsContainer = document.getElementById('verifyAttachmentsItems');
-        if (itemsContainer) {
-            itemsContainer.innerHTML = '';
-        }
-        const inputElement = document.getElementById('verifyAttachmentsInput');
-        if (inputElement) {
-            inputElement.value = '';
-        }
-    }
-};
-
-// Función global para limpiar formularios cuando se hace logout
-window.cleanVerifyFormsOnLogout = function () {
-
-    // Limpiar anexos de verificación
-    if (window.clearAllVerifyAttachments) {
-        window.clearAllVerifyAttachments();
-    }
-
-    // Limpiar variables de estado
-    currentStep = 1;
-    verificationResult = null;
-    window.verificacionEnCurso = false;
-
-    // Limpiar archivos subidos
-    const signedFileInput = document.getElementById('signedFile');
-    if (signedFileInput) {
-        signedFileInput.value = '';
-        // Limpiar display del archivo
-        const fileDisplay = signedFileInput.closest('.file-input-container')?.querySelector('.file-input-display');
-        if (fileDisplay) {
-            fileDisplay.innerHTML = '<span class="placeholder">Seleccionar archivo firmado...</span>';
-        }
-    }
-
-    const originalFileInput = document.getElementById('originalFile');
-    if (originalFileInput) {
-        originalFileInput.value = '';
-        // Limpiar display del archivo
-        const fileDisplay = originalFileInput.closest('.file-input-container')?.querySelector('.file-input-display');
-        if (fileDisplay) {
-            fileDisplay.innerHTML = '<span class="placeholder">Seleccionar archivo original...</span>';
-        }
-    }
-
-    // Limpiar selector de profesor
-    const profesorSelect = document.getElementById('profesorSelect');
-    if (profesorSelect) {
-        profesorSelect.value = '';
-    }
-
-    // Limpiar resultados de verificación
-    const resultContainer = document.getElementById('verificationResult');
-    if (resultContainer) {
-        resultContainer.innerHTML = '';
-        resultContainer.style.display = 'none';
-    }
-
-    // Resetear pasos
-    showStep(1);
-};

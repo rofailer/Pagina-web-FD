@@ -44,102 +44,6 @@
 }
 
 /* =========================
-   ESTRUCTURA DE PASOS CON HEADERS - ESTILO MODERNO UNIFICADO
-   ========================= */
-
-/* Contenedor del header del paso */
-.step-header-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  margin-bottom: 32px;
-  padding: 24px;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.9) 0%,
-    rgba(248, 250, 252, 0.8) 100%
-  );
-  border-radius: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.6);
-  backdrop-filter: blur(10px);
-  max-width: 700px;
-  width: 100%;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: center;
-}
-
-.step-icon-container {
-  flex-shrink: 0;
-}
-
-.step-icon-wrapper {
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(
-    135deg,
-    var(--primary-color) 0%,
-    color-mix(in srgb, var(--primary-color) 80%, #000) 100%
-  );
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.25);
-  position: relative;
-  overflow: hidden;
-}
-
-.step-icon-wrapper::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.2) 0%,
-    rgba(255, 255, 255, 0.05) 100%
-  );
-  border-radius: 16px;
-}
-
-.step-icon-wrapper.result-icon {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
-}
-
-.step-icon {
-  color: white;
-  z-index: 1;
-  position: relative;
-  width: 24px;
-  height: 24px;
-  stroke-width: 2;
-}
-
-.step-header-content {
-  flex: 1;
-}
-
-.step-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--primary-color);
-  margin: 0 0 8px 0;
-  letter-spacing: -0.025em;
-}
-
-.step-description {
-  font-size: 1rem;
-  color: #64748b;
-  margin: 0;
-  line-height: 1.5;
-}
-
-/* =========================
    FIRMA ELECTRÓNICA - NUEVOS ESTILOS
    ========================= */
 
@@ -322,23 +226,6 @@
 }
 
 /* =========================
-   INFORMACIÓN DEL AVALADOR
-   ========================= */
-
-.avalador-info-section {
-  margin-top: 32px;
-  padding: 24px;
-  background: #f9fafb;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-}
-
-.avalador-info-section .upload-title {
-  color: var(--primary-color);
-  margin-bottom: 16px;
-}
-
-/* =========================
    RESPONSIVE DESIGN
    ========================= */
 
@@ -363,11 +250,6 @@
   .signature-options-container {
     max-width: 100%;
   }
-}
-
-.step-description {
-  margin: 0;
-  line-height: 1.4;
 }
 
 /* Contenido principal del paso */
@@ -420,36 +302,9 @@
   box-shadow: 0 12px 35px rgba(59, 130, 246, 0.15);
 }
 
-.upload-icon-container {
-  margin-bottom: 20px;
-}
-
-.upload-icon {
-  color: #94a3b8;
-  transition: all 0.3s ease;
-}
-
-.upload-section:hover .upload-icon {
-  color: var(--primary-color);
-  transform: scale(1.1);
-}
-
 .upload-content {
   position: relative;
   z-index: 1;
-}
-
-.upload-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--primary-color);
-  margin: 0 0 8px 0;
-}
-
-.upload-subtitle {
-  font-size: 0.9rem;
-  color: #64748b;
-  margin: 0 0 24px 0;
 }
 
 /* Sección de metadatos moderna */
@@ -806,59 +661,6 @@
   height: 100%;
   cursor: pointer;
   z-index: 2;
-}
-
-.file-input-display {
-  border: 2px dashed #ddd;
-  border-radius: 12px;
-  padding: 32px 20px;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.9);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-}
-
-.file-input-display::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.4),
-    transparent
-  );
-  transition: left 0.5s ease;
-}
-
-.file-input-display:hover {
-  border-color: var(--primary-color);
-  background: color-mix(
-    in srgb,
-    var(--primary-color) 5%,
-    rgba(255, 255, 255, 0.9)
-  );
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-}
-
-.file-input-display:hover::before {
-  left: 100%;
-}
-
-.file-input-display.dragover {
-  border-color: var(--primary-color);
-  background: color-mix(
-    in srgb,
-    var(--primary-color) 10%,
-    rgba(255, 255, 255, 0.9)
-  );
-  transform: scale(1.02);
 }
 
 .file-icon {
@@ -1625,8 +1427,8 @@ button[id*="restart"] {
 }
 
 /* Estado deshabilitado del botón */
-button:disabled,
-button.disabled {
+#firmarSection button:disabled,
+#firmarSection button.disabled {
   opacity: 0.6;
   cursor: not-allowed;
   background: #ccc !important;
@@ -1635,8 +1437,8 @@ button.disabled {
   box-shadow: none !important;
 }
 
-button:disabled:hover,
-button.disabled:hover {
+#firmarSection button:disabled:hover,
+#firmarSection button.disabled:hover {
   opacity: 0.6;
   background: #ccc !important;
   color: #666 !important;
@@ -1849,22 +1651,6 @@ button.disabled:hover {
   font-size: 0.9em !important;
 }
 
-.author-required {
-  font-size: 0.8em !important;
-  color: #dc2626 !important;
-  background: rgba(220, 38, 38, 0.1) !important;
-  padding: 2px 8px !important;
-  border-radius: 12px !important;
-}
-
-.author-optional {
-  font-size: 0.8em !important;
-  color: #059669 !important;
-  background: rgba(5, 150, 105, 0.1) !important;
-  padding: 2px 8px !important;
-  border-radius: 12px !important;
-}
-
 .author-input-container {
   display: flex !important;
   align-items: center !important;
@@ -1940,43 +1726,6 @@ button.disabled:hover {
   stroke: currentColor !important;
 }
 
-.remove-author-btn {
-  background: transparent !important;
-  color: #ef4444 !important;
-  border: none !important;
-  border-radius: 0 !important;
-  width: auto !important;
-  height: auto !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  cursor: pointer !important;
-  transition: all 0.3s ease !important;
-  margin: 0 !important;
-  padding: 4px !important;
-  flex-shrink: 0 !important;
-  box-shadow: none !important;
-}
-
-.remove-author-btn:hover {
-  background: transparent !important;
-  transform: scale(1.1) !important;
-  color: #dc2626 !important;
-}
-
-.remove-author-btn:active {
-  transform: scale(0.95) !important;
-}
-
-.remove-author-btn svg {
-  width: 18px !important;
-  height: 18px !important;
-  color: inherit !important;
-  stroke: currentColor !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
 .authors-count-text {
   font-size: 0.9em !important;
   color: #6b7280 !important;
@@ -2046,97 +1795,9 @@ button.disabled:hover {
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
 }
 
-.remove-author-btn {
-  width: 32px;
-  height: 32px;
-  background: #dc2626;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.remove-author-btn:hover {
-  background: #b91c1c;
-  transform: scale(1.1);
-}
-
-/* Controles inline para el primer autor */
-.authors-controls-inline {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.add-author-btn-inline {
-  width: 32px;
-  height: 32px;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.add-author-btn-inline:hover {
-  background: var(--accent-color);
-  transform: scale(1.1);
-}
-
-.add-author-btn-inline:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.authors-count-inline {
-  font-size: 0.9em;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-/* Ocultar los controles viejos */
-.authors-controls {
-  display: none;
-}
-
-.add-author-btn {
-  display: none;
-}
-
-.authors-count {
-  display: none;
-}
-
 @media (max-width: 768px) {
-  .authors-controls {
-    flex-direction: column;
-    gap: 8px;
-    align-items: center;
-  }
-
   .author-field-group {
     padding: 10px;
-  }
-
-  .remove-author-btn {
-    top: 6px;
-    right: 6px;
-    width: 20px;
-    height: 20px;
-    font-size: 14px;
   }
 }
 
@@ -2177,31 +1838,6 @@ button.disabled:hover {
   align-items: center;
   justify-content: center;
   gap: 10px;
-}
-
-.optional-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  border-radius: 20px;
-  font-size: 0.75em;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
-  animation: pulseGlow 2s ease-in-out infinite;
-}
-
-@keyframes pulseGlow {
-  0%,
-  100% {
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
-  }
-  50% {
-    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
-  }
 }
 
 .attachments-header .upload-subtitle {
@@ -2439,11 +2075,6 @@ button.disabled:hover {
     font-size: 1.1em;
     flex-direction: column;
     gap: 6px;
-  }
-
-  .optional-badge {
-    font-size: 0.7em;
-    padding: 3px 10px;
   }
 
   .attachment-item {

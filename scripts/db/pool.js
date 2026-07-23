@@ -17,24 +17,11 @@ const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'firmas_digitales',
+    database: process.env.DB_NAME || 'firmas_digitales_v2',
     port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
-
-// Probar conexión al iniciar (opcional, útil en desarrollo)
-(async () => {
-    try {
-        const conn = await pool.getConnection();
-        console.log('✅ Conexión a la base de datos establecida correctamente');
-        conn.release();
-    } catch (err) {
-        console.error('❌ Error de conexión a la base de datos:', err.message);
-        // Puedes decidir si quieres terminar el proceso aquí:
-        // process.exit(1);
-    }
-})();
 
 module.exports = pool;
