@@ -6,7 +6,7 @@ const authenticate = require('../middlewares/authenticate');
 const loginRateLimit = require('../middlewares/loginRateLimit');
 
 const router = express.Router();
-const SESSION_DURATION = '8h';
+const SESSION_DURATION_SECONDS = 8 * 60 * 60;
 const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 const GENERIC_LOGIN_ERROR = 'No fue posible iniciar sesión. Verifica tus credenciales.';
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync('invalid-login-password', 10);
@@ -15,6 +15,7 @@ const PRESENCE_TIMEOUT_MS = 2 * 60 * 1000;
 const AUTH_USER_COLUMNS = `
     id, nombre, usuario, password, rol, email, estado_cuenta,
     organizacion, cargo, departamento, force_password_change,
+    session_version,
     estado_presencia, ultima_actividad,
     (foto_perfil IS NOT NULL) AS has_photo,
     foto_perfil_actualizada_at
@@ -39,17 +40,43 @@ function mustChangePassword(user) {
     return authenticate.mustChangePassword(user);
 }
 
-function createSessionToken(user) {
+function sessionLifetimeSeconds(sessionStartedAt, nowSeconds = Math.floor(Date.now() / 1000)) {
+    const absoluteExpiresAt = sessionStartedAt
+        + authenticate.ABSOLUTE_SESSION_LIFETIME_SECONDS;
+    return Math.max(
+        1,
+        Math.min(SESSION_DURATION_SECONDS, absoluteExpiresAt - nowSeconds)
+    );
+}
+
+function createSessionToken(user, session = {}) {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const sessionStartedAt = Number.isSafeInteger(session.sessionStartedAt)
+        ? session.sessionStartedAt
+        : nowSeconds;
+    const authenticatedAt = Number.isSafeInteger(session.authenticatedAt)
+        ? session.authenticatedAt
+        : nowSeconds;
+    const expiresIn = sessionLifetimeSeconds(sessionStartedAt, nowSeconds);
+    const sessionVersion = authenticate.normalizeSessionVersion(user.session_version);
+
     return jwt.sign(
         {
             id: user.id,
             rol: user.rol,
             nombre: user.nombre,
             usuario: user.usuario,
-            authVersion: authenticate.createAuthVersion(user.id, user.password)
+            sessionVersion,
+            sessionStartedAt,
+            authenticatedAt,
+            authVersion: authenticate.createAuthVersion(
+                user.id,
+                user.password,
+                sessionVersion
+            )
         },
         process.env.JWT_SECRET,
-        { expiresIn: SESSION_DURATION }
+        { expiresIn }
     );
 }
 
@@ -66,6 +93,7 @@ router.post('/login', loginRateLimit, async (req, res) => {
     const password = typeof req.body?.password === 'string' ? req.body.password : '';
 
     try {
+        await authenticate.ensureSessionVersionColumn();
         const [rows] = usuario
             ? await pool.query(
                 `SELECT ${AUTH_USER_COLUMNS}
@@ -182,7 +210,12 @@ router.post('/auth/change-password', authenticate, async (req, res) => {
 
         const passwordHash = await bcrypt.hash(newPassword, 12);
         await pool.query(
-            'UPDATE users SET password = ?, force_password_change = 0, updated_at = NOW() WHERE id = ?',
+            `UPDATE users
+             SET password = ?,
+                 force_password_change = 0,
+                 session_version = session_version + 1,
+                 updated_at = NOW()
+             WHERE id = ?`,
             [passwordHash, user.id]
         );
 
@@ -192,7 +225,12 @@ router.post('/auth/change-password', authenticate, async (req, res) => {
             [user.id, req.ip]
         ).catch(error => console.warn('No se pudo registrar el cambio de contrasena:', error.message));
 
-        const updatedUser = { ...user, password: passwordHash, force_password_change: 0 };
+        const updatedUser = {
+            ...user,
+            password: passwordHash,
+            force_password_change: 0,
+            session_version: authenticate.normalizeSessionVersion(user.session_version) + 1
+        };
         return res.json({
             success: true,
             token: createSessionToken(updatedUser),
@@ -207,6 +245,15 @@ router.post('/auth/change-password', authenticate, async (req, res) => {
 
 router.post('/auth/renew', authenticate, async (req, res) => {
     try {
+        if (!authenticate.isSessionWithinAbsoluteLifetime({
+            sessionStartedAt: req.sessionStartedAt
+        })) {
+            return res.status(401).json({
+                code: 'SESSION_MAX_AGE_REACHED',
+                error: 'La sesión alcanzó su duración máxima. Inicia sesión nuevamente.'
+            });
+        }
+
         const [users] = await pool.query(
             `SELECT ${AUTH_USER_COLUMNS} FROM users WHERE id = ? LIMIT 1`,
             [req.userId]
@@ -216,12 +263,15 @@ router.post('/auth/renew', authenticate, async (req, res) => {
         }
 
         const user = users[0];
-        const newToken = createSessionToken(user);
+        const newToken = createSessionToken(user, {
+            sessionStartedAt: req.sessionStartedAt,
+            authenticatedAt: req.authenticatedAt
+        });
         await pool.query('UPDATE users SET ultima_actividad = NOW() WHERE id = ?', [user.id]);
 
         return res.json({
             token: newToken,
-            expiresIn: SESSION_DURATION_MS,
+            expiresIn: sessionLifetimeSeconds(req.sessionStartedAt) * 1000,
             forcePasswordChange: mustChangePassword(user)
         });
     } catch (error) {
@@ -230,13 +280,15 @@ router.post('/auth/renew', authenticate, async (req, res) => {
     }
 });
 
-// El JWT sigue expirando por tiempo; este endpoint registra de inmediato que
-// la sesión dejó de estar visible para otros usuarios.
+// Invalida de inmediato todos los JWT normales y administrativos emitidos para
+// la versión actual de la cuenta.
 router.post('/auth/logout', authenticate, async (req, res) => {
     try {
         await pool.query(
             `UPDATE users
-             SET estado_presencia = 'desconectado', ultima_actividad = NOW()
+             SET estado_presencia = 'desconectado',
+                 ultima_actividad = NOW(),
+                 session_version = session_version + 1
              WHERE id = ?`,
             [req.userId]
         );
@@ -259,5 +311,8 @@ router.post('/auth/logout', authenticate, async (req, res) => {
 
 router.effectivePresenceStatus = effectivePresenceStatus;
 router.PRESENCE_TIMEOUT_MS = PRESENCE_TIMEOUT_MS;
+router.createSessionToken = createSessionToken;
+router.SESSION_DURATION_SECONDS = SESSION_DURATION_SECONDS;
+router.sessionLifetimeSeconds = sessionLifetimeSeconds;
 
 module.exports = router;

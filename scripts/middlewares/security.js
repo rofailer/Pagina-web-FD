@@ -1,5 +1,10 @@
 'use strict';
 
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const { Transform, pipeline } = require('stream');
+
 const DEFAULT_ALLOWED_METHODS = Object.freeze([
   'GET',
   'HEAD',
@@ -23,17 +28,64 @@ const DEFAULT_EXPOSED_HEADERS = Object.freeze([
 ]);
 
 const DEFAULT_API_BODY_LIMIT = 10 * 1024 * 1024;
+const PLACEHOLDER_SECRET_PATTERN =
+  /^(?:change-?me|changeme|replace-?me|reemplaza(?:r)?(?:-?esto)?|example|ejemplo|secret|password|test(?:-?only)?)(?:[-_].*)?$/i;
+const AGGREGATE_UPLOAD_LIMIT_CODE = 'LIMIT_TOTAL_FILE_SIZE';
 
-// Esta es una politica de transicion: el HTML actual contiene atributos style,
-// controladores onclick y algunos scripts inline. Por eso script-src y style-src
-// conservan 'unsafe-inline'. Migrar esos bloques a archivos externos o nonces
-// permitira retirar esa excepcion y hacer que CSP tambien mitigue XSS inline.
+// Los scripts y controladores de eventos se sirven desde archivos propios. Los
+// estilos conservan una excepción transitoria porque el HTML todavía contiene
+// atributos style y varios componentes aplican estilos dinámicos.
 const CSP_COMPATIBILITY_NOTE =
-  "La CSP mantiene 'unsafe-inline' temporalmente porque el HTML actual usa " +
-  'scripts, eventos y estilos inline. Deben migrarse a archivos externos o nonces.';
+  "La CSP bloquea scripts y eventos inline. 'unsafe-inline' permanece " +
+  'temporalmente limitado a estilos hasta migrar los atributos style.';
 
 function getEnvironment(value) {
   return String(value || process.env.NODE_ENV || 'development').toLowerCase();
+}
+
+function isPlaceholderSecret(value) {
+  const normalized = String(value || '').trim();
+  if (!normalized) return false;
+
+  return (
+    PLACEHOLDER_SECRET_PATTERN.test(normalized) ||
+    /(?:reemplaza|replace|change)[-_ ]?(?:me|esto)/i.test(normalized) ||
+    /(?:example|ejemplo|test)[-_ ]?(?:only[-_ ])?secret/i.test(normalized)
+  );
+}
+
+function validateJwtConfiguration(environment = process.env) {
+  const secret = String(environment.JWT_SECRET || '');
+  const isProduction = getEnvironment(environment.NODE_ENV) === 'production';
+  const warnings = [];
+
+  if (!secret.trim()) {
+    const error = new Error('JWT_SECRET es obligatorio');
+    error.code = 'MISSING_JWT_SECRET';
+    throw error;
+  }
+
+  if (Buffer.byteLength(secret, 'utf8') < 32) {
+    const message = 'JWT_SECRET debe tener al menos 32 bytes';
+    if (isProduction) {
+      const error = new Error(message);
+      error.code = 'WEAK_JWT_SECRET';
+      throw error;
+    }
+    warnings.push(message);
+  }
+
+  if (isPlaceholderSecret(secret)) {
+    const message = 'JWT_SECRET no puede conservar un valor de ejemplo';
+    if (isProduction) {
+      const error = new Error(message);
+      error.code = 'PLACEHOLDER_JWT_SECRET';
+      throw error;
+    }
+    warnings.push(message);
+  }
+
+  return { warnings };
 }
 
 function parseOriginList(value = process.env.CORS_ORIGINS || '') {
@@ -128,8 +180,12 @@ function buildContentSecurityPolicy({ environment } = {}) {
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
-    "script-src 'self' 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "script-src 'self'",
+    "script-src-elem 'self'",
+    "script-src-attr 'none'",
+    "style-src 'self'",
+    "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "style-src-attr 'unsafe-inline'",
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: blob:",
     "connect-src 'self'",
@@ -141,9 +197,108 @@ function buildContentSecurityPolicy({ environment } = {}) {
 
   if (isProduction) {
     directives.push('upgrade-insecure-requests');
+    directives.push('block-all-mixed-content');
   }
 
   return directives.join('; ');
+}
+
+function createAggregateDiskStorage(options = {}) {
+  const rawDestination = String(options.destination || '').trim();
+  const maxBytes = Number(options.maxBytes);
+
+  if (!rawDestination || !Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
+    throw new TypeError('destination y maxBytes positivo son obligatorios');
+  }
+  const destination = path.resolve(rawDestination);
+
+  function removeTemporaryFile(filePath, callback) {
+    const resolvedPath = path.resolve(String(filePath || ''));
+    if (!resolvedPath.startsWith(`${destination}${path.sep}`)) {
+      return callback?.();
+    }
+    fs.unlink(resolvedPath, (error) => {
+      if (error && error.code !== 'ENOENT') {
+        return callback?.(error);
+      }
+      callback?.();
+    });
+  }
+
+  return {
+    _handleFile(req, file, callback) {
+      req.aggregateUploadState ||= { bytes: 0, maxBytes, exceeded: false };
+      const state = req.aggregateUploadState;
+      const filename = crypto.randomBytes(24).toString('hex');
+      const filePath = path.join(destination, filename);
+      let bytesWritten = 0;
+
+      const aggregateLimiter = new Transform({
+        transform(chunk, encoding, done) {
+          state.bytes += chunk.length;
+          if (state.bytes > state.maxBytes) {
+            state.exceeded = true;
+            const error = new Error('La carga total de archivos supera el limite permitido');
+            error.name = 'MulterError';
+            error.code = AGGREGATE_UPLOAD_LIMIT_CODE;
+            error.field = file.fieldname;
+            error.limit = state.maxBytes;
+            return done(error);
+          }
+          bytesWritten += chunk.length;
+          done(null, chunk);
+        }
+      });
+      const output = fs.createWriteStream(filePath, {
+        flags: 'wx',
+        mode: 0o600
+      });
+
+      pipeline(file.stream, aggregateLimiter, output, (error) => {
+        if (error) {
+          return removeTemporaryFile(filePath, () => callback(error));
+        }
+        callback(null, {
+          destination,
+          filename,
+          path: filePath,
+          size: bytesWritten
+        });
+      });
+    },
+
+    _removeFile(req, file, callback) {
+      removeTemporaryFile(file.path, (error) => {
+        delete file.destination;
+        delete file.filename;
+        delete file.path;
+        callback(error);
+      });
+    }
+  };
+}
+
+function getHealthPayload(healthy, environment = process.env.NODE_ENV, details = {}) {
+  if (getEnvironment(environment) === 'production') {
+    return healthy ? { status: 'ok' } : { status: 'unavailable' };
+  }
+
+  return healthy
+    ? {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        database: 'connected',
+        environment: getEnvironment(environment),
+        ...details
+      }
+    : {
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: 'database_unavailable',
+        database: 'disconnected',
+        ...details
+      };
 }
 
 function createSecurityHeaders(options = {}) {
@@ -361,6 +516,7 @@ function configureAppSecurity(app, options = {}) {
 }
 
 module.exports = {
+  AGGREGATE_UPLOAD_LIMIT_CODE,
   CSP_COMPATIBILITY_NOTE,
   DEFAULT_ALLOWED_HEADERS,
   DEFAULT_ALLOWED_METHODS,
@@ -368,10 +524,14 @@ module.exports = {
   apiNoCache,
   buildContentSecurityPolicy,
   configureAppSecurity,
+  createAggregateDiskStorage,
   createCorsMiddleware,
   createMethodGuard,
   createRequestSizeGuard,
   createSecurityHeaders,
   disablePoweredBy,
-  parseOriginList
+  getHealthPayload,
+  isPlaceholderSecret,
+  parseOriginList,
+  validateJwtConfiguration
 };

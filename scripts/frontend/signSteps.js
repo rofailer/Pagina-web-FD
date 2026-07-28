@@ -5,6 +5,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     let selectedKeyId = null;
     let userKeys = [];
 
+    function resolveSafeDownloadUrl(value) {
+        if (typeof value !== 'string' || !value.trim()) {
+            throw new Error('URL de descarga inválida');
+        }
+        const resolved = new URL(value, window.location.origin);
+        if (!['http:', 'https:'].includes(resolved.protocol)
+            || resolved.origin !== window.location.origin) {
+            throw new Error('El servidor devolvió una URL de descarga no permitida');
+        }
+        return resolved.href;
+    }
+
     // --- Variables para firma electrónica ---
     let signatureCanvas = null;
     let signatureCtx = null;
@@ -313,7 +325,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const container = document.getElementById('documentAuthorsContainer');
         if (!container) return;
 
-        container.innerHTML = '';
+        container.replaceChildren();
 
         documentAuthors.forEach((author, index) => {
             const authorGroup = document.createElement('div');
@@ -323,43 +335,66 @@ document.addEventListener("DOMContentLoaded", async () => {
             const containerClass = isFirst ? 'author-input-container-with-add' : 'author-input-container';
             const inputId = `documentAuthor${index + 1}`;
 
-            authorGroup.innerHTML = `
-                <div class="author-field-header">
-                    <label class="author-number" for="${inputId}">Autor ${index + 1}</label>
-                    <span class="${isFirst ? 'required-badge' : 'optional-badge'} author-requirement-badge">
-                        ${isFirst ? 'Obligatorio' : 'Opcional'}
-                    </span>
-                </div>
-                <div class="${containerClass}">
-                    <input 
-                        type="text" 
-                        id="${inputId}"
-                        class="author-input" 
-                        data-index="${index}"
-                        placeholder="Nombre completo del autor"
-                        value="${author}"
-                        ${isFirst ? 'required aria-required="true"' : ''}
-                    >
-                    ${isFirst ? `
-                        <button type="button" class="add-author-btn-inline" id="addDocumentAuthorBtn" onclick="addDocumentAuthor()" ${documentAuthors.length >= maxAuthors ? 'disabled' : ''}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                                <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                            </svg>
-                        </button>
-                        <span class="authors-count-text">${documentAuthors.length}/${maxAuthors}</span>
-                    ` : `
-                        <button type="button" class="remove-author-btn" onclick="removeDocumentAuthor(${index})" aria-label="Eliminar Autor ${index + 1}">
-                            ×
-                        </button>
-                    `}
-                </div>
-            `;
+            const header = document.createElement('div');
+            header.className = 'author-field-header';
+            const label = document.createElement('label');
+            label.className = 'author-number';
+            label.htmlFor = inputId;
+            label.textContent = `Autor ${index + 1}`;
+            const requirement = document.createElement('span');
+            requirement.className = `${isFirst ? 'required-badge' : 'optional-badge'} author-requirement-badge`;
+            requirement.textContent = isFirst ? 'Obligatorio' : 'Opcional';
+            header.append(label, requirement);
+
+            const inputContainer = document.createElement('div');
+            inputContainer.className = containerClass;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.id = inputId;
+            input.className = 'author-input';
+            input.dataset.index = String(index);
+            input.placeholder = 'Nombre completo del autor';
+            input.value = String(author ?? '');
+            if (isFirst) {
+                input.required = true;
+                input.setAttribute('aria-required', 'true');
+            }
+            inputContainer.appendChild(input);
+
+            if (isFirst) {
+                const addButton = document.createElement('button');
+                addButton.type = 'button';
+                addButton.className = 'add-author-btn-inline';
+                addButton.id = 'addDocumentAuthorBtn';
+                addButton.disabled = documentAuthors.length >= maxAuthors;
+                addButton.setAttribute('aria-label', 'Agregar autor');
+                addButton.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                `;
+                addButton.addEventListener('click', addDocumentAuthor);
+
+                const count = document.createElement('span');
+                count.className = 'authors-count-text';
+                count.textContent = `${documentAuthors.length}/${maxAuthors}`;
+                inputContainer.append(addButton, count);
+            } else {
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'remove-author-btn';
+                removeButton.setAttribute('aria-label', `Eliminar Autor ${index + 1}`);
+                removeButton.textContent = '×';
+                removeButton.addEventListener('click', () => removeDocumentAuthor(index));
+                inputContainer.appendChild(removeButton);
+            }
+
+            authorGroup.append(header, inputContainer);
 
             container.appendChild(authorGroup);
 
             // Agregar event listener al input para validación
-            const input = authorGroup.querySelector('.author-input');
             input.addEventListener('input', (e) => {
                 const idx = parseInt(e.target.dataset.index);
                 documentAuthors[idx] = e.target.value;
@@ -673,7 +708,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // --- Paso 2: Preparar documento para firma ---
     document.getElementById("signDocumentButton").onclick = () => {
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token");
         if (!token) {
             if (window.showLoginModal) window.showLoginModal();
             else showNotification("Debes iniciar sesión para firmar documentos.", "error");
@@ -750,10 +785,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             try {
                 // Construir URL completa si es necesario
-                let fullUrl = downloadUrl;
-                if (downloadUrl.startsWith('/')) {
-                    fullUrl = window.location.origin + downloadUrl;
-                }
+                const fullUrl = resolveSafeDownloadUrl(downloadUrl);
 
                 // Método alternativo: Usar fetch para descargar
                 try {
@@ -964,7 +996,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token");
 
         if (!token) {
             keysListContainer.innerHTML = `
@@ -989,7 +1021,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 userKeys = keys || [];
                 displayKeys(userKeys);
             } else if (response.status === 401) {
-                localStorage.removeItem("token");
+                sessionStorage.removeItem("token");
                 keysListContainer.innerHTML = `
                     <div class="no-keys-message">
                         <p>Tu sesión ha expirado. Por favor, inicia sesión nuevamente.</p>
@@ -1010,9 +1042,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.error('Error cargando llaves:', error);
             keysListContainer.innerHTML = `
                 <div class="no-keys-message">
-                    <p>Error al cargar las llaves. <a href="#perfil" onclick="navigateToProfile()">Ir al perfil</a> para crear llaves.</p>
+                    <p>Error al cargar las llaves. <a href="#perfil" class="keys-error-profile-link">Ir al perfil</a> para crear llaves.</p>
                 </div>
             `;
+            keysListContainer.querySelector('.keys-error-profile-link')
+                ?.addEventListener('click', event => {
+                    event.preventDefault();
+                    window.navigateToProfile();
+                });
         }
     }
 
@@ -1046,17 +1083,21 @@ document.addEventListener("DOMContentLoaded", async () => {
                                 autocomplete="off"
                                 placeholder="Ej: Llave para tesis"
                             >
-                            <button type="button" class="btn-primary key-empty-create-btn" onclick="createKeyFromSignStep()">
+                            <button type="button" class="btn-primary key-empty-create-btn">
                                 Crear llave
                             </button>
                         </div>
                         <p id="signNewKeyError" class="key-empty-error" role="alert" aria-live="polite"></p>
                     </div>
-                    <button type="button" class="key-empty-profile-link" onclick="navigateToProfile()">
+                    <button type="button" class="key-empty-profile-link">
                         Administrar llaves desde el perfil
                     </button>
                 </div>
             `;
+            keysListContainer.querySelector('.key-empty-create-btn')
+                ?.addEventListener('click', () => window.createKeyFromSignStep());
+            keysListContainer.querySelector('.key-empty-profile-link')
+                ?.addEventListener('click', () => window.navigateToProfile());
 
             // Deshabilitar botón de firmar si no hay llaves
             const signButton = document.getElementById("signDocumentButton");
@@ -1072,7 +1113,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Obtener la llave activa actual
         let activeKeyId = null;
         fetch('/active-key', {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+            headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` }
         })
             .then(response => response.json())
             .then(data => {
@@ -1090,25 +1131,47 @@ document.addEventListener("DOMContentLoaded", async () => {
             .catch(() => renderKeysList());
 
         function renderKeysList() {
-            const keysHTML = keys.map(key => {
+            const fragment = document.createDocumentFragment();
+            keys.forEach(key => {
                 const expDate = new Date(key.expiration_date);
                 const isExpired = expDate <= new Date();
                 const expStatus = isExpired ? 'Expirada' : `Expira: ${expDate.toLocaleDateString()}`;
                 const expClass = isExpired ? 'expired' : 'valid';
                 const isSelected = activeKeyId === key.id;
+                const keyItem = document.createElement('div');
+                keyItem.className = `key-item${isExpired ? ' disabled' : ''}${isSelected ? ' selected' : ''}`;
+                keyItem.dataset.keyId = String(key.id);
 
-                return `
-                    <div class="key-item ${isExpired ? 'disabled' : ''} ${isSelected ? 'selected' : ''}" data-key-id="${key.id}">
-                        <div class="key-info">
-                            <div class="key-name">${key.key_name || `Llave ${key.id}`} ${isSelected ? '<span class="key-active-label">ACTIVA</span>' : ''}</div>
-                            <div class="key-algorithm">Cifrado: ${window.cryptoConfig?.formatEncryptionType(key.encryption_type) || 'AES-256-GCM v2'}</div>
-                            <div class="key-expiration ${expClass}">${expStatus}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                const keyInfo = document.createElement('div');
+                keyInfo.className = 'key-info';
+                const keyName = document.createElement('div');
+                keyName.className = 'key-name';
+                keyName.append(document.createTextNode(
+                    String(key.key_name || `Llave ${key.id}`)
+                ));
+                if (isSelected) {
+                    const activeLabel = document.createElement('span');
+                    activeLabel.className = 'key-active-label';
+                    activeLabel.textContent = 'ACTIVA';
+                    keyName.append(' ', activeLabel);
+                }
 
-            keysListContainer.innerHTML = keysHTML;
+                const algorithm = document.createElement('div');
+                algorithm.className = 'key-algorithm';
+                algorithm.textContent = `Cifrado: ${
+                    window.cryptoConfig?.formatEncryptionType(key.encryption_type)
+                    || 'AES-256-GCM v2'
+                }`;
+                const expiration = document.createElement('div');
+                expiration.className = `key-expiration ${expClass}`;
+                expiration.textContent = expStatus;
+
+                keyInfo.append(keyName, algorithm, expiration);
+                keyItem.appendChild(keyInfo);
+                fragment.appendChild(keyItem);
+            });
+
+            keysListContainer.replaceChildren(fragment);
 
             // Agregar event listeners después de crear el HTML
             attachKeyClickListeners();
@@ -1154,7 +1217,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
                 },
                 body: JSON.stringify({ keyId })
             });
@@ -1220,7 +1283,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         // Seleccionar nueva llave
-        const selectedItem = document.querySelector(`[data-key-id="${keyId}"]`);
+        const selectedItem = Array.from(document.querySelectorAll('[data-key-id]'))
+            .find(item => item.dataset.keyId === String(keyId));
         if (selectedItem) {
             selectedItem.classList.add('selected');
 
@@ -1629,7 +1693,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
 
             // Realizar petición al servidor para generar PDF final con firma
-            const token = localStorage.getItem("token");
+            const token = sessionStorage.getItem("token");
             const response = await fetch('/sign-document', {
                 method: 'POST',
                 headers: {

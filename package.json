@@ -1,16 +1,35 @@
 {
-  "name": "demo",
+  "name": "firmas-digitales-fd",
   "version": "1.0.0",
+  "private": true,
   "main": "scripts/server.js",
   "scripts": {
     "start": "node scripts/server.js",
     "dev": "node scripts/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "security:secrets": "node scripts/security/checkTrackedSecrets.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "firma-digital",
+    "pdf",
+    "rsa",
+    "criptografia",
+    "verificacion"
+  ],
+  "author": "Roberto Florez Bernal",
+  "contributors": [
+    "Camilo Beltran Acosta"
+  ],
   "license": "ISC",
-  "description": "Este proyecto esta en fase de creacion por el momento, permite, firmar y verificar documentos digitales utilizando llaves públicas y privadas. Las llaves tienen un tiempo de expiración configurable, y el sistema asegura que las firmas expiradas solo puedan usarse para verificar documentos, no para firmar nuevos.",
+  "description": "Plataforma web open source para firmar, avalar y verificar documentos PDF con RSA-4096 y anexos verificables.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rofailer/Pagina-web-FD.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rofailer/Pagina-web-FD/issues"
+  },
+  "homepage": "https://github.com/rofailer/Pagina-web-FD#readme",
   "engines": {
     "node": ">=26.5.0"
   },

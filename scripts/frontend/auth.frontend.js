@@ -1,4 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // Eliminar sesiones heredadas que versiones anteriores persistían entre
+    // cierres del navegador. Las sesiones actuales viven solo en esta pestaña.
+    ["token", "user", "userRole", "userName", "forcePasswordChange"]
+        .forEach(key => localStorage.removeItem(key));
+
     // Elementos del DOM
     const loginBtn = document.getElementById("loginBtn");
     const registerBtn = document.getElementById("registerBtn");
@@ -23,10 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Verificar autenticación al cargar
     checkAuthStatus();
 
-    // Recuperar tokens preservados del panel admin
-    restorePreservedTokens();
-
-    if (localStorage.getItem('token') && localStorage.getItem('forcePasswordChange') === 'true') {
+    if (sessionStorage.getItem('token') && sessionStorage.getItem('forcePasswordChange') === 'true') {
         setTimeout(resumeForcedPasswordChange, 0);
     }
 
@@ -64,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
             createKeysGuideModal.style.display = "none";
 
             // Verificar si hay token de autenticación
-            if (!localStorage.getItem("token")) {
+            if (!sessionStorage.getItem("token")) {
                 // Si no hay token, mostrar modal de autenticación requerida
                 showKeysAuthRequiredModal();
             } else {
@@ -169,8 +171,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            localStorage.setItem("token", data.token);
-            localStorage.setItem(
+            sessionStorage.setItem("token", data.token);
+            sessionStorage.setItem(
                 "user",
                 JSON.stringify({
                     nombre: data.nombre,
@@ -180,9 +182,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 }),
             );
             if (data.forcePasswordChange) {
-                localStorage.setItem("forcePasswordChange", "true");
+                sessionStorage.setItem("forcePasswordChange", "true");
             } else {
-                localStorage.removeItem("forcePasswordChange");
+                sessionStorage.removeItem("forcePasswordChange");
             }
 
             // Mientras la contraseña sea temporal no deben ejecutarse rutas de
@@ -249,11 +251,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function clearInvalidForcedPasswordSession() {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('forcePasswordChange');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
+        sessionStorage.removeItem('userRole');
+        sessionStorage.removeItem('userName');
+        sessionStorage.removeItem('forcePasswordChange');
         checkAuthStatus();
         window.dispatchEvent(new CustomEvent('authStateChanged', {
             detail: { authenticated: false, user: null }
@@ -261,7 +263,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function resumeForcedPasswordChange() {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (!token) return;
 
         try {
@@ -352,7 +354,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const response = await fetch('/api/auth/change-password', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ currentPassword, newPassword })
@@ -369,8 +371,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 if (!response.ok) throw new Error(result.error || 'No fue posible cambiar la contraseña.');
 
-                localStorage.setItem('token', result.token);
-                localStorage.removeItem('forcePasswordChange');
+                sessionStorage.setItem('token', result.token);
+                sessionStorage.removeItem('forcePasswordChange');
                 overlay.remove();
                 if (typeof showNotification === 'function') {
                     showNotification('Contraseña actualizada correctamente.', 'success');
@@ -432,8 +434,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function checkAuthStatus() {
-        const token = localStorage.getItem("token");
-        const user = JSON.parse(localStorage.getItem("user")) || null;
+        const token = sessionStorage.getItem("token");
+        const user = JSON.parse(sessionStorage.getItem("user")) || null;
 
         // Mostrar/ocultar el menú de perfil y nombre
         if (user && profileMenuContainer && profileName) {
@@ -441,7 +443,7 @@ document.addEventListener("DOMContentLoaded", () => {
             profileName.textContent = user.nombre || "Usuario";
 
             // Un 403 por contraseña temporal no significa que el token expiró.
-            if (localStorage.getItem('forcePasswordChange') !== 'true') {
+            if (sessionStorage.getItem('forcePasswordChange') !== 'true') {
                 loadUserProfilePhoto();
             }
         } else if (profileMenuContainer) {
@@ -495,41 +497,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Función para recuperar tokens preservados del panel admin
-    function restorePreservedTokens() {
-        const preservedToken = sessionStorage.getItem("preserve_token");
-        const preservedAdminToken = sessionStorage.getItem("preserve_admin_token");
-
-        if (preservedToken) {
-            // Restaurar el token principal
-            localStorage.setItem("token", preservedToken);
-
-            // Si hay un token admin, usarlo también
-            if (preservedAdminToken) {
-                localStorage.setItem("admin_token", preservedAdminToken);
-            }
-
-            // Limpiar los tokens preservados
-            sessionStorage.removeItem("preserve_token");
-            sessionStorage.removeItem("preserve_admin_token");
-
-            console.log('🔄 Sesión restaurada desde el panel administrativo');
-
-            // Verificar el estado de autenticación con el token restaurado
-            checkAuthStatus();
-        }
-    }
-
     function logoutUser() {
-        localStorage.removeItem("token");
+        const token = sessionStorage.getItem("token");
+        if (token) {
+            void fetch("/api/auth/logout", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+                keepalive: true,
+            }).catch(() => {
+                // La sesión local se cierra incluso si la red no está disponible.
+            });
+        }
+
+        sessionStorage.removeItem("token");
         localStorage.removeItem("admin_token");
-        localStorage.removeItem("userRole");
-        localStorage.removeItem("userName");
-        localStorage.removeItem("user");
-        localStorage.removeItem("forcePasswordChange");
+        sessionStorage.removeItem("admin_token");
+        sessionStorage.removeItem("userRole");
+        sessionStorage.removeItem("userName");
+        sessionStorage.removeItem("user");
+        sessionStorage.removeItem("forcePasswordChange");
         localStorage.removeItem("keysGuideShown"); // Limpiar la marca de guía mostrada
-        sessionStorage.removeItem("preserve_token");
-        sessionStorage.removeItem("preserve_admin_token");
 
         // Detener sistema de renovación automática
         if (window.stopTokenRenewalSystem) {
@@ -576,7 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function isAuthenticated() {
-        return !!localStorage.getItem("token");
+        return !!sessionStorage.getItem("token");
     }
 
     function showError(elementId, message) {
@@ -610,8 +597,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function checkUserKeysAfterLogin() {
         try {
-            const token = localStorage.getItem("token");
-            if (!token || localStorage.getItem('forcePasswordChange') === 'true') return;
+            const token = sessionStorage.getItem("token");
+            if (!token || sessionStorage.getItem('forcePasswordChange') === 'true') return;
 
             // Verificando llaves del usuario después del login
 
@@ -703,7 +690,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Función global para manejar el clic del botón "Crear Llaves"
     window.handleCreateKeysClick = function () {
         // Verificar si hay token de autenticación
-        if (!localStorage.getItem("token")) {
+        if (!sessionStorage.getItem("token")) {
             // Si no hay token, mostrar modal de autenticación requerida
             showKeysAuthRequiredModal();
         } else {
@@ -714,7 +701,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Función global para manejar el clic del botón "Firmar Documento"
     window.handleSignDocumentClick = function () {
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token");
         if (token) {
             // Si está autenticado, ir directamente a la sección de firmar
             window.location.hash = 'firmar';
@@ -783,8 +770,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Función para cargar la foto de perfil del usuario autenticado
     async function loadUserProfilePhoto() {
-        const token = localStorage.getItem("token");
-        if (!token || localStorage.getItem('forcePasswordChange') === 'true') return;
+        const token = sessionStorage.getItem("token");
+        if (!token || sessionStorage.getItem('forcePasswordChange') === 'true') return;
 
         try {
             const response = await fetch('/api/profile/photo', {
@@ -850,7 +837,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Sistema de renovación automática de tokens
     function startTokenRenewalSystem() {
-        if (!localStorage.getItem("token")) return;
+        if (!sessionStorage.getItem("token")) return;
 
         // Renovar a mitad de la sesión de 8 horas si hay actividad reciente.
         tokenRenewalInterval = setInterval(async () => {
@@ -863,7 +850,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             try {
-                const currentToken = localStorage.getItem("token");
+                const currentToken = sessionStorage.getItem("token");
                 if (!currentToken) return;
 
                 const response = await fetch('/api/auth/renew', {
@@ -876,7 +863,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (response.ok) {
                     const data = await response.json();
-                    localStorage.setItem("token", data.token);
+                    sessionStorage.setItem("token", data.token);
                     console.log('🔄 Token renovado automáticamente');
                 } else {
                     console.log('⚠️ No se pudo renovar el token automáticamente');

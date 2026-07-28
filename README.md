@@ -1,1328 +1,327 @@
-# 🔐 Sistema de Firmas Digitales
+# Firmas Digitales FD
 
-**Sistema web profesional para la autenticación criptográfica de documentos académicos y de investigación**
+Aplicación web para firmar, avalar y verificar documentos PDF mediante criptografía de clave pública. El proyecto reúne en una sola plataforma la gestión de usuarios, llaves digitales, perfiles, plantillas PDF, anexos verificables y configuración institucional.
 
-Un sistema completo para la **firma y verificación de documentos PDF** usando criptografía de llaves públicas y privadas, diseñado específicamente para proteger documentos de investigación, trabajos académicos, proyectos científicos y documentos profesionales con tecnología de cifrado militar.
+> Proyecto académico **open source**, publicado bajo la licencia permisiva [ISC](LICENSE).
 
----
+## Contenido
 
-## 📋 Tabla de Contenido
+- [Qué permite hacer](#qué-permite-hacer)
+- [Cómo funciona](#cómo-funciona)
+- [Tecnologías](#tecnologías)
+- [Instalación local](#instalación-local)
+- [Variables de entorno](#variables-de-entorno)
+- [Cuentas y roles](#cuentas-y-roles)
+- [Comandos disponibles](#comandos-disponibles)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Seguridad](#seguridad)
+- [Despliegue](#despliegue)
+- [Documentación](#documentación)
+- [Autores](#autores)
+- [Licencia y código abierto](#licencia-y-código-abierto)
 
-- [🚀 Características Principales](#-características-principales)
-- [🏗️ Arquitectura del Sistema](#️-arquitectura-del-sistema)
-- [⚙️ Instalación y Configuración](#️-instalación-y-configuración)
-- [🗄️ Base de Datos](#️-base-de-datos)
-- [🔧 Estructura del Proyecto](#-estructura-del-proyecto)
-- [🛡️ Seguridad y Criptografía](#️-seguridad-y-criptografía)
-- [👤 Gestión de Usuarios](#-gestión-de-usuarios)
-- [🔑 Sistema de Llaves](#-sistema-de-llaves)
-- [📝 Proceso de Firma](#-proceso-de-firma)
-- [✅ Verificación de Documentos](#-verificación-de-documentos)
-- [🎨 Panel de Administración](#-panel-de-administración)
-- [📱 Interfaz de Usuario](#-interfaz-de-usuario)
-- [🚀 Comandos de NPM](#-comandos-de-npm)
-- [🔧 Configuración Avanzada](#-configuración-avanzada)
-- [📖 API Documentation](#-api-documentation)
-- [🧪 Testing](#-testing)
-- [🚀 Despliegue](#-despliegue)
-- [📋 Troubleshooting](#-troubleshooting)
-- [🔄 Actualizaciones y Mantenimiento](#-actualizaciones-y-mantenimiento)
-- [🤝 Contribución](#-contribución)
-- [📞 Soporte y Contacto](#-soporte-y-contacto)
-- [📄 Licencia](#-licencia)
-- [🎯 Roadmap Futuro](#-roadmap-futuro)
-- [📊 Estadísticas del Proyecto](#-estadísticas-del-proyecto)
+## Qué permite hacer
 
----
+- Firmar documentos PDF con llaves RSA de 4096 bits.
+- Verificar la autenticidad e integridad de documentos firmados.
+- Vincular anexos a un documento mediante manifiestos criptográficos.
+- Crear y administrar llaves personales con fecha de expiración.
+- Proteger llaves privadas mediante cifrado autenticado y una contraseña elegida por el usuario.
+- Gestionar perfiles, fotografías y estados de presencia.
+- Personalizar la apariencia institucional y las plantillas de aval PDF.
+- Administrar usuarios, roles, estados de cuenta y contraseñas temporales.
+- Consultar información redactada de la base de datos.
+- Exportar una copia SQL completa desde una cuenta `owner`.
 
-## 🚀 Características Principales
+El registro público está deshabilitado. Las cuentas se crean desde el panel administrativo.
 
-### 🔒 **Seguridad Criptográfica Avanzada**
+## Cómo funciona
 
-- **Cifrado AES-256-CBC/192/128**: Protección de llaves privadas con algoritmos militares
-- **Llaves RSA-4096**: Generación de pares de llaves criptográficas robustas
-- **Firma Digital PKI**: Implementación completa de infraestructura de clave pública
-- **Integridad de Documentos**: Verificación criptográfica de autenticidad
-- **Expiración de Llaves**: Sistema automatizado de vencimiento de llaves
-
-### 👥 **Sistema de Usuarios Expandido**
-
-- **Roles Diferenciados**: Admin, Profesor/Investigador, Owner
-- **Perfiles Completos**: Información académica, profesional y personal
-- **Autenticación JWT**: Tokens seguros con expiración configurable
-- **Gestión de Sesiones**: Control avanzado de acceso y persistencia
-
-### 📄 **Procesamiento de Documentos**
-
-- **Firma de PDFs**: Aplicación de firmas digitales a documentos
-- **Verificación Automática**: Detección automática de firmantes
-- **Metadatos de Documentos**: Gestión de títulos, autores y información
-- **Plantillas Personalizables**: Sistema de templates para documentos firmados
-- **Historial Completo**: Registro de todas las operaciones de firma
-
-### 🎨 **Interfaz y Experiencia de Usuario**
-
-- **Diseño Responsive**: Adaptación completa a dispositivos móviles
-- **Interfaz Moderna**: UI/UX profesional con Material Design
-- **Sistema de Pestañas**: Navegación intuitiva y organizada
-- **Tutorial Interactivo**: Guía paso a paso para nuevos usuarios
-- **Temas Personalizables**: Configuración visual avanzada
-
----
-
-## 🏗️ Arquitectura del Sistema
-
-### **Backend (Node.js/Express)**
-
-```
-scripts/
-├── server.js                 # Servidor principal
-├── db/
-│   └── pool.js              # Pool de conexiones MySQL
-├── controllers/             # Lógica de negocio
-├── routes/                  # Endpoints de API
-├── middlewares/            # Middleware de autenticación
-├── utils/                  # Utilidades y helpers
-└── templates/              # Plantillas de documentos
+```text
+Navegador
+   │
+   ├── HTML, CSS y JavaScript
+   │
+   └── API HTTP con JWT
+          │
+          ├── Node.js + Express
+          ├── criptografía y procesamiento de PDF
+          └── MySQL
 ```
 
-### **Frontend (HTML/CSS/JS)**
+Durante la firma, el servidor genera o recupera la llave del usuario, valida su vigencia, descifra la llave privada únicamente para la operación autorizada y produce el documento avalado. La verificación compara la firma RSA y los hashes SHA-256 del documento y sus anexos.
 
-```
-html/
-├── index.html              # Aplicación principal SPA
-├── components/             # Componentes reutilizables
-admin/
-├── html/                   # Panel de administración
-├── css/                    # Estilos del admin
-└── js/                     # Lógica del admin
-css/
-├── mainStyle.css           # Estilos principales
-├── sections/               # Estilos por sección
-└── Header/                 # Estilos del header
-```
+Las llaves privadas nuevas no se escriben como archivos sin cifrar: se generan en memoria y se almacenan cifradas en MySQL. Los documentos generados se entregan mediante enlaces temporales de un solo uso.
 
-### **Base de Datos (MySQL)**
+## Tecnologías
 
-- **users**: Información completa de usuarios
-- **user_keys**: Gestión de llaves criptográficas
-- **global_pdf_config**: Configuración de plantillas
-- **user_preferences**: Preferencias personalizadas
-- **user_activity_log**: Registro de actividades
+| Área | Tecnología |
+| --- | --- |
+| Backend | Node.js, Express 4 |
+| Base de datos | MySQL, `mysql2` |
+| Frontend | HTML5, CSS3, JavaScript |
+| Autenticación | JSON Web Tokens, `bcryptjs` |
+| Criptografía | `node:crypto`, RSA-4096, SHA-256, scrypt |
+| Cifrado de llaves | AES-256-GCM v2 y ChaCha20-Poly1305 v3 |
+| PDF | `pdf-lib` |
+| Archivos | `multer` |
+| Pruebas | Node.js Test Runner |
+| Despliegue | Railway |
 
----
+## Instalación local
 
-## ⚙️ Instalación y Configuración
+### Requisitos
 
-### **Requisitos del Sistema**
+- Node.js `26.5.0` o posterior, según `package.json`.
+- npm.
+- MySQL 8 o una instancia compatible.
+- Cliente de Git.
 
-- **Node.js** v18+
-- **MySQL** 8.0+
-- **OpenSSL** (en PATH del sistema)
-- **NPM** o **Yarn**
-
-### **1. Clonación del Repositorio**
+### 1. Clonar el repositorio
 
 ```bash
 git clone https://github.com/rofailer/Pagina-web-FD.git
 cd Pagina-web-FD
 ```
 
-### **2. Instalación de Dependencias**
+### 2. Instalar dependencias
 
 ```bash
-npm install
+npm ci
 ```
 
-### **3. Configuración de Variables de Entorno**
+### 3. Crear la configuración local
 
-Crear archivo `.env` en la raíz del proyecto:
+En Windows PowerShell:
 
-```env
-# Base de datos
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=firmas_digitales_v2
-DB_USER=root
-DB_PASSWORD=tu_password
-
-# JWT
-JWT_SECRET=tu_jwt_secret_super_seguro
-
-# Configuración del servidor
-PORT=3000
-NODE_ENV=development
-
-# Railway (Producción)
-RAILWAY_STATIC_URL=tu_url_de_railway
+```powershell
+Copy-Item .env.example .env
 ```
 
-### **4. Configuración de Base de Datos**
+En Linux o macOS:
 
 ```bash
-# Instalar y configurar base de datos
-npm run db:install
-
-# Verificar estado
-npm run db:status
-
-# Crear backup
-npm run db:backup
+cp .env.example .env
 ```
 
-### **5. Inicialización del Servidor**
+Genera un secreto JWT aleatorio:
 
 ```bash
-# Desarrollo
-npm run dev
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
 
-# Producción
+Copia el resultado en `JWT_SECRET` dentro de `.env`. No publiques ni confirmes este archivo en Git.
+
+### 4. Crear la base de datos
+
+Abre el cliente de MySQL:
+
+```bash
+mysql -u root -p
+```
+
+Importa el esquema:
+
+```sql
+CREATE DATABASE IF NOT EXISTS firmas_digitales_v2
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE firmas_digitales_v2;
+SOURCE firmas_digitales_v2.sql;
+```
+
+Si ejecutas el cliente desde otra carpeta, usa la ruta absoluta del archivo SQL en `SOURCE`.
+
+### 5. Iniciar la aplicación
+
+```bash
 npm start
 ```
 
----
+La aplicación quedará disponible en `http://localhost:3000`, salvo que cambies `PORT`.
 
-## 🗄️ Base de Datos
+## Variables de entorno
 
-### **Esquema Completo**
+| Variable | Obligatoria | Descripción |
+| --- | --- | --- |
+| `NODE_ENV` | Sí | `development` o `production`. |
+| `PORT` | No | Puerto HTTP. Valor predeterminado: `3000`. |
+| `JWT_SECRET` | Sí | Secreto aleatorio de al menos 32 bytes para firmar JWT. |
+| `DB_HOST` | Sí | Host de MySQL. |
+| `DB_PORT` | Sí | Puerto de MySQL. |
+| `DB_USER` | Sí | Usuario de la base de datos. |
+| `DB_PASSWORD` | Sí | Contraseña de la base de datos. |
+| `DB_NAME` | Sí | Nombre de la base de datos. |
+| `DB_SSL_MODE` | Producción | `required`, `verify-ca` o `verify-identity`. En producción usa TLS; para desarrollo local puede ser `disabled`. |
+| `DB_SSL_CA` | Según proveedor | Certificado CA en formato PEM, aceptando saltos de línea como `\n`. |
+| `DB_SSL_CA_BASE64` | Según proveedor | Alternativa Base64 a `DB_SSL_CA`. |
+| `DB_CONNECTION_LIMIT` | No | Máximo de conexiones del pool. Valor predeterminado: `10`. |
+| `DB_MAX_IDLE` | No | Máximo de conexiones inactivas. Valor predeterminado: `10`. |
+| `DB_QUEUE_LIMIT` | No | Solicitudes máximas en espera de conexión. Valor predeterminado: `20`. |
+| `DB_CONNECT_TIMEOUT_MS` | No | Tiempo máximo para conectar con MySQL. Valor predeterminado: `10000`. |
+| `DB_IDLE_TIMEOUT_MS` | No | Tiempo de inactividad de una conexión. Valor predeterminado: `60000`. |
+| `MAX_UPLOAD_SIZE_MB` | No | Tamaño máximo por archivo; valor predeterminado: 25 MB. |
+| `MAX_UPLOAD_TOTAL_SIZE_MB` | No | Suma máxima por solicitud multipart; valor predeterminado: 100 MB. |
+| `MAX_KEYS_PER_USER` | No | Cuota de llaves almacenadas por usuario. Valor predeterminado: `10`. |
+| `KEY_GENERATION_MAX_REQUESTS` | No | Generaciones permitidas por ventana y usuario. Valor predeterminado: `3`. |
+| `KEY_GENERATION_WINDOW_MS` | No | Duración de la ventana de generación. Valor predeterminado: una hora. |
+| `KEY_GENERATION_CONCURRENCY` | No | Generaciones RSA simultáneas por proceso. Valor predeterminado: `2`. |
+| `CORS_ORIGINS` | Producción | Lista de orígenes permitidos, separados por comas. |
+| `INITIAL_ADMIN_PASSWORD` | Primer inicio | Contraseña temporal para la cuenta seed `admin`; obligatoria en producción mientras siga sin inicializar. |
+| `INITIAL_OWNER_PASSWORD` | Primer inicio | Contraseña temporal para la cuenta seed `owner`; obligatoria en producción mientras siga sin inicializar. |
 
-#### **Tabla: users**
+Usa `.env.example` como referencia. En producción, configura las variables en el proveedor de alojamiento y no incluyas archivos `.env` en la imagen o repositorio.
 
-```sql
-CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(100) NOT NULL,
-  usuario VARCHAR(50) NOT NULL UNIQUE,
-  password VARCHAR(255) NOT NULL,
-  rol ENUM('admin','profesor','owner') DEFAULT 'profesor',
-  active_key_id INT DEFAULT NULL,
+El servidor se niega a iniciar en producción si `JWT_SECRET` es débil o conserva un placeholder, si faltan credenciales MySQL, si `DB_USER=root` o si alguna credencial de base de datos parece un valor de ejemplo.
 
-  -- Información Personal
-  email VARCHAR(255) UNIQUE,
-  organizacion VARCHAR(255),
-  biografia TEXT,
-  foto_perfil TEXT,
-  telefono VARCHAR(20),
-  direccion TEXT,
+Para actualizar una base existente, comprueba que `users.session_version` exista antes de desplegar. El esquema incluido ya contiene esa columna. En desarrollo la aplicación puede añadirla automáticamente; en producción exige una migración explícita para que el usuario de ejecución no necesite permisos `ALTER`.
 
-  -- Información Académica/Profesional
-  cargo VARCHAR(255),
-  departamento VARCHAR(255),
-  grado_academico VARCHAR(100),
+## Cuentas y roles
 
-  -- Estado y seguridad de la cuenta
-  estado_cuenta ENUM('activo','inactivo','suspendido','pendiente') DEFAULT 'activo',
-  force_password_change BOOLEAN NOT NULL DEFAULT FALSE,
-  ultimo_acceso TIMESTAMP,
+| Rol | Alcance |
+| --- | --- |
+| `profesor` | Perfil, llaves personales, firma y verificación. |
+| `admin` | Gestión operativa de usuarios y consulta de configuración. |
+| `owner` | Acciones de máximo privilegio, cambios globales y exportación SQL. |
 
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-```
+El esquema incluye cuentas privilegiadas deshabilitadas. En el primer arranque, la aplicación inicializa únicamente las cuentas que todavía conservan el marcador seguro del esquema:
 
-#### **Tabla: user_keys**
+- Si se configuró la variable correspondiente, usa esa contraseña temporal.
+- En desarrollo, si no se configuró, genera una contraseña aleatoria y la muestra una sola vez en el registro de inicio.
+- En producción, el arranque se detiene si una cuenta seed pendiente no tiene su variable `INITIAL_*` configurada.
+- En ambos casos obliga a cambiar la contraseña antes de usar el resto de la aplicación.
 
-```sql
-CREATE TABLE user_keys (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  key_name VARCHAR(255) NOT NULL,
-  private_key TEXT NOT NULL,     -- Cifrada con AES
-  public_key TEXT NOT NULL,      -- Cifrada con userId
-  encryption_type VARCHAR(32) NOT NULL DEFAULT 'aes-256-gcm-v2',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  expiration_date DATETIME NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-```
+En un despliegue real define las contraseñas iniciales mediante el gestor de secretos de la plataforma y elimínalas del entorno después de completar y comprobar el primer cambio de contraseña.
 
-#### **Tabla: global_pdf_config**
-
-```sql
-CREATE TABLE global_pdf_config (
-  id INT PRIMARY KEY DEFAULT 1,
-  selected_template VARCHAR(50) DEFAULT 'clasico',
-  color_config JSON DEFAULT ('{"primary": "#2563eb", "secondary": "#64748b"}'),
-  font_config JSON DEFAULT ('{"title": "Helvetica-Bold", "body": "Helvetica"}'),
-  layout_config JSON DEFAULT ('{"marginTop": 50, "marginBottom": 50}'),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-```
-
----
-
-## 🔧 Estructura del Proyecto
-
-### **Organización de Directorios**
-
-```
-SistemaFirmasDigitales/
-├── html/                          # Frontend principal
-│   ├── index.html                 # SPA principal
-│   ├── 403-unauthorized.html      # Página de error
-│   └── components/                # Componentes reutilizables
-├── css/                           # Estilos de la aplicación
-│   ├── mainStyle.css             # Estilos principales
-│   ├── authModal.css             # Modal de autenticación
-│   ├── Header/                   # Estilos del header
-│   └── sections/                 # Estilos por sección
-├── scripts/                       # Backend Node.js
-│   ├── server.js                 # Servidor principal
-│   ├── db/pool.js                # Pool de conexiones
-│   ├── routes/                   # Rutas de API
-│   │   ├── auth.routes.js        # Autenticación
-│   │   ├── keys.routes.js        # Gestión de llaves
-│   │   ├── admin.routes.js       # Admin panel
-│   │   └── profile.routes.js     # Perfiles de usuario
-│   ├── controllers/              # Controladores
-│   ├── middlewares/              # Middleware personalizado
-│   ├── utils/                    # Utilidades
-│   │   ├── crypto.js             # Funciones criptográficas
-│   │   ├── pdfGenerator.js       # Generación de PDFs
-│   │   └── themeManager.js       # Gestión de temas
-│   └── templates/                # Plantillas de documentos
-├── admin/                         # Panel de administración
-│   ├── html/                     # Páginas del admin
-│   ├── css/                      # Estilos del admin
-│   └── js/                       # Lógica del admin
-├── uploads/                       # Archivos subidos
-│   ├── template.pdf              # Plantillas
-│   ├── profile-photos/           # Fotos de perfil
-│   └── logos/                    # Logos personalizados
-├── downloads/                     # PDFs firmados generados
-├── llaves/                        # Almacén de llaves (temporal)
-├── config/                        # Configuraciones
-├── docs/                          # Documentación técnica
-├── package.json                   # Dependencias del proyecto
-├── firmas_digitales_v2.sql       # Schema de base de datos
-└── README.md                      # Documentación principal
-```
-
----
-
-## 🛡️ Seguridad y Criptografía
-
-### **Algoritmos de Cifrado Implementados**
-
-#### **1. Cifrado Simétrico (AES)**
-
-Las llaves privadas y públicas se protegen exclusivamente con un sobre
-`AES-256-GCM v2`, derivación `scrypt`, sal aleatoria, IV independiente y etiqueta
-de autenticación. El formato no es seleccionable desde el navegador.
-
-#### **2. Criptografía Asimétrica (RSA)**
+## Comandos disponibles
 
 ```bash
-# Generación de llaves RSA-4096
-openssl genrsa -out private.pem 4096
-openssl rsa -in private.pem -pubout -out public.pem
-```
-
-#### **3. Funciones Hash**
-
-- **SHA-256**: Para integridad de documentos
-- **bcrypt**: Para hash de contraseñas (salt rounds: 10)
-
-### **Flujo de Seguridad**
-
-1. **Generación de Llaves**:
-
-   - RSA-4096 para firma/verificación
-   - AES para cifrado de llaves privadas
-   - IV único para cada operación
-
-2. **Almacenamiento Seguro**:
-
-   - Llaves privadas cifradas con contraseña del usuario
-   - Llaves públicas cifradas con userId
-   - Separación de datos sensibles
-
-3. **Proceso de Firma**:
-
-   ```
-   Documento → Hash SHA-256 → Firma RSA → Documento Firmado
-   ```
-
-4. **Verificación**:
-   ```
-   Documento Firmado → Extracción de Firma → Verificación RSA → Resultado
-   ```
-
----
-
-## 👤 Gestión de Usuarios
-
-### **Sistema de Roles**
-
-#### **Admin**
-
-- Gestión completa del sistema
-- Configuración global de plantillas
-- Administración de usuarios
-- Acceso a logs y estadísticas
-
-#### **Profesor/Investigador**
-
-- Firma de documentos académicos
-- Gestión de llaves personales
-- Verificación de documentos
-- Perfil profesional completo
-
-#### **Owner**
-
-- Permisos de administrador
-- Configuración de sistema
-- Gestión de backups
-
-### **Características del Perfil**
-
-#### **Información Personal**
-
-```javascript
-{
-  nombre: "Dr. María García López",
-  email: "maria.garcia@universidad.edu",
-  organizacion: "Universidad Nacional",
-  cargo: "Profesora Titular",
-  departamento: "Facultad de Ingeniería",
-  grado_academico: "Doctor",
-  biografia: "Especialista en criptografía...",
-  telefono: "+57 300 123 4567"
-}
-```
-
-#### **Configuraciones Avanzadas**
-
-- Recordar la última sección visitada del perfil
-- Reducir el movimiento de la interfaz
-- Cambio seguro de contraseña
-- Acceso al panel administrativo para owner
-- Temas personalizados
-
----
-
-## 🔑 Sistema de Llaves
-
-### **Generación de Llaves**
-
-#### **Proceso Completo**
-
-1. **Validación de Usuario**: Autenticación requerida
-2. **Configuración**: Selección de algoritmo de cifrado
-3. **Generación**: Par de llaves RSA-4096 con OpenSSL
-4. **Cifrado**:
-   - Llave privada: AES con contraseña del usuario
-   - Llave pública: AES con userId
-5. **Almacenamiento**: Base de datos con metadata
-6. **Limpieza**: Eliminación de archivos temporales
-
-#### **Formato de cifrado**
-
-Todas las llaves nuevas usan `aes-256-gcm-v2`. No se conservan formatos CBC
-heredados porque el esquema está diseñado para instalaciones nuevas.
-
-### **Gestión de Llaves**
-
-#### **Características**
-
-- **Expiración Configurable**: 30 días por defecto
-- **Múltiples Llaves**: Soporte para varias llaves por usuario
-- **Selección Activa**: Una llave activa para firma
-- **Rotación**: Renovación automática antes del vencimiento
-- **Eliminación Segura**: Proceso confirmado con contraseña
-
-#### **Estados de Llaves**
-
-- ✅ **Activa**: Disponible para firma
-- ⚠️ **Próxima a Vencer**: Menos de 7 días
-- ❌ **Expirada**: Solo verificación
-- 🗑️ **Eliminada**: No disponible
-
----
-
-## 📝 Proceso de Firma
-
-### **Flujo Completo de Firma**
-
-#### **Paso 1: Selección de Documento**
-
-```javascript
-// Validación de archivo
-const validExtensions = ['.pdf'];
-const maxFileSize = 10 * 1024 * 1024; // 10MB
-
-// Metadatos del documento
-{
-  titulo: "Título del trabajo",
-  autores: ["Autor 1", "Autor 2"],
-  fechaCreacion: new Date(),
-  tipoDocumento: "Trabajo de Investigación"
-}
-```
-
-#### **Paso 2: Selección de Llave**
-
-- Lista de llaves disponibles del usuario
-- Información de expiración
-- Algoritmo de cifrado utilizado
-- Estado de la llave
-
-#### **Paso 3: Firma Electrónica del Avalador**
-
-- **Método Dibujo**: Canvas HTML5 para firma manuscrita
-- **Método Imagen**: Subida de imagen de firma
-- Validación de firma antes de continuar
-
-#### **Paso 4: Generación del Documento Firmado**
-
-```javascript
-// Proceso de firma
-1. Generación de hash SHA-256 del documento
-2. Aplicación de firma RSA con llave privada
-3. Integración de firma en plantilla PDF
-4. Aplicación de metadatos y marca de tiempo
-5. Generación de documento final avalado
-```
-
-### **Plantillas de Documentos**
-
-#### **Template Clásico**
-
-```javascript
-// scripts/templates/clasico.template.js
-{
-  layout: 'portrait',
-  margins: { top: 50, bottom: 50, left: 50, right: 50 },
-  colors: { primary: '#2563eb', secondary: '#64748b' },
-  fonts: { title: 'Helvetica-Bold', body: 'Helvetica' },
-  signatures: {
-    position: 'bottom-right',
-    size: { width: 200, height: 100 }
-  }
-}
-```
-
----
-
-## ✅ Verificación de Documentos
-
-### **Métodos de Verificación**
-
-#### **1. Verificación Manual**
-
-- Búsqueda y selección manual del avalador
-- Filtros por nombre y orden alfabético
-- Lista completa de profesores/investigadores
-
-#### **2. Verificación Automática**
-
-- Detección automática del firmante
-- Análisis de metadatos del documento
-- Identificación por firma digital
-
-### **Proceso de Verificación**
-
-#### **Pasos del Proceso**
-
-1. **Selección de Método**: Manual o automático
-2. **Carga de Documento Firmado**: Archivo PDF avalado
-3. **Carga de Documento Original**: Archivo sin firmar
-4. **Verificación Criptográfica**:
-   ```javascript
-   // Proceso de verificación
-   1. Extracción de firma del PDF
-   2. Generación de hash del documento original
-   3. Verificación RSA con llave pública
-   4. Comparación de integridad
-   5. Validación de vigencia de llave
-   ```
-
-#### **Resultados Posibles**
-
-- ✅ **Válida**: Documento íntegro y firma verificada
-- ⚠️ **Advertencia**: Llave expirada pero firma válida
-- ❌ **Inválida**: Documento alterado o firma incorrecta
-- 🔍 **No Encontrada**: No se pudo verificar la firma
-
----
-
-## 🎨 Panel de Administración
-
-### **Acceso y Seguridad**
-
-- **URL**: `/admin` o `/panelAdmin`
-- **Autenticación**: Roles admin/owner únicamente
-- **Token de Administrador**: Generación segura temporal
-
-### **Funcionalidades Disponibles**
-
-#### **1. Gestión de Usuarios**
-
-```javascript
-// Operaciones disponibles
-- Crear nuevos usuarios
-- Modificar roles y permisos
-- Suspender/activar cuentas
-- Ver historial de actividad
-- Gestionar configuraciones de usuario
-```
-
-#### **2. Configuración Visual Global**
-
-- **Logo del Sistema**: Subida y gestión de logos
-- **Colores Primarios**: Personalización de paleta
-- **Título de la Aplicación**: Configuración de branding
-- **Footer Personalizado**: Información institucional
-- **Favicon**: Icono del sitio web
-
-#### **3. Gestión de Plantillas PDF**
-
-```javascript
-// Configuración de templates
-{
-  selectedTemplate: 'clasico',
-  colorConfig: {
-    primary: '#2563eb',
-    secondary: '#64748b',
-    accent: '#f59e0b'
-  },
-  fontConfig: {
-    title: 'Helvetica-Bold',
-    body: 'Helvetica',
-    metadata: 'Helvetica-Oblique'
-  },
-  layoutConfig: {
-    marginTop: 50,
-    marginBottom: 50,
-    lineHeight: 1.5
-  }
-}
-```
-
-#### **4. Estadísticas y Monitoreo**
-
-- Número de usuarios registrados
-- Documentos firmados por período
-- Uso de llaves criptográficas
-- Errores y logs del sistema
-
----
-
-## 📱 Interfaz de Usuario
-
-### **Diseño Responsive**
-
-#### **Breakpoints**
-
-```css
-/* Móvil */
-@media (max-width: 768px) {
-  ...;
-}
-
-/* Tablet */
-@media (min-width: 769px) and (max-width: 1024px) {
-  ...;
-}
-
-/* Desktop */
-@media (min-width: 1025px) {
-  ...;
-}
-```
-
-#### **Características Mobile-First**
-
-- Menú hamburguesa adaptativo
-- Touch-friendly buttons
-- Optimización de formularios
-- Carga progresiva de contenido
-
-### **Componentes de UI**
-
-#### **Sistema de Navegación**
-
-- **Header Responsive**: Logo, menú y perfil de usuario
-- **Navegación por Pestañas**: Inicio, Firmar, Verificar, Perfil
-- **Breadcrumbs**: Navegación contextual en procesos
-
-#### **Modales y Overlays**
-
-- Modal de autenticación (login/registro)
-- Modal de gestión de llaves
-- Modal de tutorial interactivo
-- Confirmaciones de acciones críticas
-
-#### **Formularios Avanzados**
-
-- Validación en tiempo real
-- Indicadores de progreso
-- Drag & drop para archivos
-- Autocompletado inteligente
-
-### **Sistema de Temas**
-
-#### **Tema por Defecto**
-
-```css
-:root {
-  --primary-color: #2563eb;
-  --secondary-color: #64748b;
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --error-color: #ef4444;
-  --background-color: #ffffff;
-  --text-color: #1f2937;
-}
-```
-
-#### **Personalización Avanzada**
-
-- Configuración por usuario
-- Modo oscuro/claro
-- Paletas de colores predefinidas
-- Fuentes personalizables
-
----
-
-## 🚀 Comandos de NPM
-
-### **Scripts de Desarrollo**
-
-```bash
-# Iniciar servidor de desarrollo
-npm run dev
+# Iniciar el servidor
 npm start
 
-# Verificaciones
-npm test
-```
+# Iniciar el mismo servidor durante desarrollo
+npm run dev
 
-La base de datos se crea importando `firmas_digitales_v2.sql` desde MySQL o el
-proveedor de alojamiento. El panel administrativo solo permite consultar datos
-redactados y exportar una copia SQL; no instala, restaura ni elimina la base.
-
-### **Scripts de Producción**
-
-```bash
-# Despliegue
-npm run build            # Build para producción
-npm run start:prod       # Servidor de producción
-
-# Mantenimiento
-npm run backup:auto      # Backup automatizado
-npm run clean:uploads    # Limpiar archivos temporales
-npm run optimize:db      # Optimizar base de datos
-```
-
----
-
-## 🔧 Configuración Avanzada
-
-### **Variables de Entorno Completas**
-
-```env
-# ====== CONFIGURACIÓN DE BASE DE DATOS ======
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=firmas_digitales_v2
-DB_USER=root
-DB_PASSWORD=tu_password_mysql
-DB_CONNECTION_LIMIT=10
-DB_TIMEOUT=10000
-
-# ====== CONFIGURACIÓN JWT ======
-JWT_SECRET=tu_jwt_secret_super_seguro_minimo_32_caracteres
-JWT_EXPIRES_IN=30d
-JWT_REFRESH_EXPIRES_IN=7d
-
-# ====== CONFIGURACIÓN DEL SERVIDOR ======
-PORT=3000
-NODE_ENV=development
-HOST=localhost
-
-# ====== CONFIGURACIÓN DE ARCHIVOS ======
-MAX_FILE_SIZE=10485760  # 10MB
-UPLOAD_PATH=./uploads
-DOWNLOAD_PATH=./downloads
-KEYS_PATH=./llaves
-
-# ====== CONFIGURACIÓN DE SEGURIDAD ======
-BCRYPT_ROUNDS=10
-SESSION_SECRET=tu_session_secret
-CORS_ORIGIN=http://localhost:3000
-
-# ====== CONFIGURACIÓN DE EMAIL (OPCIONAL) ======
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=tu_email@gmail.com
-SMTP_PASS=tu_password_email
-
-# ====== CONFIGURACIÓN DE RAILWAY (PRODUCCIÓN) ======
-RAILWAY_STATIC_URL=https://tu-app.railway.app
-DATABASE_URL=mysql://usuario:password@host:puerto/database
-```
-
-### **Configuración de OpenSSL**
-
-#### **Windows**
-
-```bash
-# Verificar instalación
-openssl version
-
-# Si no está instalado, descargar desde:
-# https://slproweb.com/products/Win32OpenSSL.html
-
-# Agregar al PATH del sistema:
-# C:\Program Files\OpenSSL-Win64\bin
-```
-
-#### **Linux/macOS**
-
-```bash
-# Ubuntu/Debian
-sudo apt-get install openssl
-
-# macOS (Homebrew)
-brew install openssl
-
-# Verificar
-openssl version -a
-```
-
-### **Configuración de MySQL**
-
-#### **Configuración Básica**
-
-```sql
--- Crear usuario dedicado
-CREATE USER 'firmas_user'@'localhost' IDENTIFIED BY 'password_seguro';
-GRANT ALL PRIVILEGES ON firmas_digitales_v2.* TO 'firmas_user'@'localhost';
-FLUSH PRIVILEGES;
-
--- Configuración de caracteres
-ALTER DATABASE firmas_digitales_v2 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-#### **Optimizaciones de Rendimiento**
-
-```sql
--- my.cnf optimizaciones
-[mysqld]
-innodb_buffer_pool_size = 256M
-innodb_log_file_size = 64M
-max_connections = 100
-query_cache_size = 32M
-```
-
----
-
-## 📖 API Documentation
-
-### **Endpoints de Autenticación**
-
-#### **POST /api/register**
-
-```javascript
-// Request
-{
-  "nombre": "Dr. Juan Pérez",
-  "usuario": "juan.perez",
-  "password": "Password123!"
-}
-
-// Response
-{
-  "success": true,
-  "message": "Usuario registrado exitosamente"
-}
-```
-
-#### **POST /api/login**
-
-```javascript
-// Request
-{
-  "usuario": "juan.perez",
-  "password": "Password123!"
-}
-
-// Response
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "nombre": "Dr. Juan Pérez",
-  "rol": "profesor",
-  "usuario": "juan.perez"
-}
-```
-
-### **Endpoints de Llaves**
-
-#### **GET /api/user-keys**
-
-```javascript
-// Headers: Authorization: Bearer <token>
-
-// Response
-{
-  "keys": [
-    {
-      "id": 1,
-      "key_name": "Key1",
-      "created_at": "2024-01-15T10:30:00Z",
-      "expiration_date": "2024-02-15T10:30:00Z",
-      "encryption_type": "aes-256-gcm-v2"
-    }
-  ],
-  "hasKeys": true
-}
-```
-
-#### **POST /generate-keys**
-
-```javascript
-// Request
-{
-  "keyPassword": "password123",
-  "keyName": "Mi Llave Principal"
-}
-
-// Response
-{
-  "success": true,
-  "message": "Llaves generadas exitosamente",
-  "keyId": 1,
-  "keyName": "Mi Llave Principal"
-}
-```
-
-### **Endpoints de Verificación**
-
-#### **POST /verify-signature**
-
-```javascript
-// Request (FormData)
-{
-  "professorId": 1,
-  "signedFile": <PDF File>,
-  "originalFile": <PDF File>,
-  "keyPassword": "password123"
-}
-
-// Response
-{
-  "success": true,
-  "verification": {
-    "isValid": true,
-    "professor": "Dr. Juan Pérez",
-    "signDate": "2024-01-15T10:30:00Z",
-    "keyExpiration": "2024-02-15T10:30:00Z",
-    "documentIntegrity": true
-  }
-}
-```
-
----
-
-## 🧪 Testing
-
-### **Estructura de Tests**
-
-```
-tests/
-├── unit/                    # Tests unitarios
-│   ├── crypto.test.js      # Funciones criptográficas
-│   ├── auth.test.js        # Autenticación
-│   └── database.test.js    # Operaciones de BD
-├── integration/            # Tests de integración
-│   ├── api.test.js         # Endpoints de API
-│   └── workflows.test.js   # Flujos completos
-└── e2e/                    # Tests end-to-end
-    ├── login.test.js       # Proceso de login
-    ├── signing.test.js     # Proceso de firma
-    └── verification.test.js # Proceso de verificación
-```
-
-### **Ejecutar Tests**
-
-```bash
-# Todos los tests
+# Ejecutar la suite automatizada
 npm test
 
-# Tests unitarios
-npm run test:unit
-
-# Tests de integración
-npm run test:integration
-
-# Tests E2E
-npm run test:e2e
-
-# Coverage
-npm run test:coverage
+# Comprobar que no se versionen secretos conocidos
+npm run security:secrets
 ```
 
----
+El proyecto no requiere una fase de compilación del frontend.
 
-## 🚀 Despliegue
+## Estructura del proyecto
 
-### **Despliegue en Railway**
+```text
+.
+├── admin/                    # Interfaz del panel administrativo
+├── config/                   # Configuración de plantillas
+├── css/                      # Estilos del sitio público
+├── docs/                     # Guías técnicas y de implementación
+├── html/                     # Páginas públicas
+├── recursos/                 # Imágenes y recursos visuales
+├── scripts/
+│   ├── controllers/         # Lógica de configuración y PDF
+│   ├── db/                  # Pool de conexiones MySQL
+│   ├── frontend/            # JavaScript del navegador
+│   ├── middlewares/         # Autenticación, roles y seguridad HTTP
+│   ├── routes/              # Rutas de la API
+│   ├── templates/           # Plantillas de documentos
+│   ├── utils/               # Criptografía, exportación y utilidades
+│   └── server.js            # Entrada de la aplicación
+├── test/                     # Pruebas automatizadas
+├── firmas_digitales_v2.sql  # Esquema e información inicial
+├── railway.json             # Configuración de Railway
+└── package.json
+```
 
-#### **1. Configuración Inicial**
+`uploads/`, `downloads/` y `llaves/` se reservan para datos temporales. Git conserva únicamente sus archivos `.gitkeep`.
+
+## Seguridad
+
+El proyecto incluye:
+
+- Validación del rol actual contra la base de datos en cada petición protegida.
+- Revocación inmediata de sesiones mediante una versión almacenada en la cuenta.
+- Vida absoluta de sesión de 24 horas, incluso cuando se renueva el JWT.
+- JWT normales y administrativos almacenados solo en `sessionStorage`; cerrar la pestaña elimina las credenciales del navegador.
+- Tokens administrativos de hasta dos horas y ligados a la sesión normal vigente.
+- Reautenticación reciente antes de abrir el panel administrativo.
+- Acceso exclusivo del rol `owner` a la inspección de MySQL.
+- Confirmación de contraseña dentro de la misma solicitud que genera la exportación SQL.
+- Credenciales administrativas transmitidas únicamente en cuerpos o cabeceras HTTPS, nunca en la URL.
+- Límite de intentos de inicio de sesión.
+- Cuota, rate limit y concurrencia controlada para generar llaves RSA.
+- CSP sin scripts ni eventos inline, HSTS en producción, `nosniff` y protección contra framing.
+- CORS mediante lista de orígenes permitidos.
+- Consultas parametrizadas y validación de identificadores SQL.
+- Redacción de columnas sensibles en la vista administrativa.
+- Cifrado autenticado de llaves privadas.
+- Límites por archivo y por solicitud completa durante el streaming de cargas.
+- Descargas temporales sin exposición estática del directorio.
+- Configuración MySQL con TLS, timeouts, cola finita y usuario no-root en producción.
+- Respuesta `/health` mínima en producción.
+- Guard local y de CI contra `.env`, llaves privadas y formatos conocidos de tokens.
+- Pruebas y auditoría de dependencias en cada push y pull request.
+
+La seguridad del sistema no depende de ocultar la URL del panel. Conocer o abrir su HTML no concede permisos: las operaciones sensibles deben seguir protegidas por autenticación y autorización en el servidor.
+
+Para reportar una vulnerabilidad, evita publicar credenciales, llaves, volcados SQL o datos personales en un issue público. Contacta primero a los autores o responsables del despliegue.
+
+La guía [Operación segura y respuesta a secretos expuestos](docs/SECURITY_OPERATIONS.md) explica el alta de producción, la rotación de credenciales y el tratamiento coordinado del historial Git.
+
+## Despliegue
+
+El repositorio incluye `Procfile` y `railway.json`. Railway ejecuta:
 
 ```bash
-# Instalar Railway CLI
-npm install -g @railway/cli
-
-# Login y conectar proyecto
-railway login
-railway link
+npm start
 ```
 
-#### **2. Variables de Entorno en Railway**
+Antes de desplegar:
 
-```bash
-# Configurar variables críticas
-railway variables set JWT_SECRET=tu_jwt_secret
-railway variables set DB_HOST=tu_mysql_host
-railway variables set DB_PASSWORD=tu_mysql_password
-railway variables set NODE_ENV=production
-```
+1. Crea una instancia MySQL e importa `firmas_digitales_v2.sql`.
+2. Si actualizas una base existente, aplica primero la columna `users.session_version` incluida en el esquema actual.
+3. Crea un usuario MySQL exclusivo, sin privilegios globales ni DDL y distinto de `root`.
+4. Configura todas las variables sensibles en el gestor de secretos.
+5. Activa TLS con `DB_SSL_MODE=verify-identity` cuando el proveedor permita validar nombre y CA; usa `verify-ca` como segunda opción.
+6. Usa un `JWT_SECRET` exclusivo del entorno.
+7. Define `NODE_ENV=production`.
+8. Limita `CORS_ORIGINS` a los dominios HTTPS reales.
+9. Configura `INITIAL_ADMIN_PASSWORD` e `INITIAL_OWNER_PASSWORD` si las cuentas seed todavía no se han inicializado.
+10. Verifica que `/health` responda correctamente sin publicar detalles internos.
+11. Ejecuta `npm test` y `npm audit --omit=dev`.
 
-#### **3. Deploy**
+No reutilices credenciales entre desarrollo y producción.
 
-```bash
-# Deploy automático
-git push origin main
+## Documentación
 
-# Deploy manual
-railway up
-```
+La carpeta `docs/` contiene guías sobre:
 
-### **Despliegue en Docker**
+- sistema de usuarios y perfiles;
+- fotografías y presencia;
+- temas y configuración visual;
+- plantillas y personalización PDF;
+- flujos de firma y verificación;
+- operación segura, rotación de secretos y respuesta a incidentes.
 
-#### **Dockerfile**
+Consulta también:
 
-```dockerfile
-FROM node:18-alpine
+- [SECURITY.md](SECURITY.md), para reportar vulnerabilidades de forma privada;
+- [CONTRIBUTING.md](CONTRIBUTING.md), para preparar y enviar cambios;
+- [LICENSE](LICENSE), con los términos de la licencia ISC.
 
-WORKDIR /app
+## Autores
 
-COPY package*.json ./
-RUN npm ci --omit=dev
+- Roberto Florez Bernal
+- Camilo Beltran Acosta
 
-COPY . .
+Proyecto desarrollado en el contexto de un trabajo académico sobre firmas digitales y autenticidad documental.
 
-EXPOSE 3000
+## Licencia y código abierto
 
-CMD ["npm", "start"]
-```
+Firmas Digitales FD se distribuye bajo la licencia [ISC](LICENSE). Puedes usar, copiar, modificar y distribuir el software, con o sin fines comerciales, siempre que conserves el aviso de copyright y el texto de la licencia.
 
-#### **docker-compose.yml**
-
-```yaml
-version: "3.8"
-services:
-  app:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - DB_HOST=mysql
-    depends_on:
-      - mysql
-
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: firmas_digitales_v2
-    volumes:
-      - mysql_data:/var/lib/mysql
-
-volumes:
-  mysql_data:
-```
-
----
-
-## 🛠️ Requisitos del Sistema
-
-### **Servidor de Desarrollo**
-
-- **OS**: Windows 10+, macOS 10.15+, Ubuntu 18.04+
-- **RAM**: 4GB mínimo, 8GB recomendado
-- **Almacenamiento**: 2GB libres
-- **Red**: Conexión a internet para dependencias
-
-### **Servidor de Producción**
-
-- **OS**: Ubuntu 20.04+ LTS recomendado
-- **RAM**: 8GB mínimo, 16GB recomendado
-- **CPU**: 2 cores mínimo, 4 cores recomendado
-- **Almacenamiento**: 10GB mínimo SSD
-- **Base de Datos**: MySQL 8.0+ o compatible
-
-### **Dependencias del Sistema**
-
-```json
-{
-  "bcryptjs": "^3.0.2", // Hash de contraseñas
-  "body-parser": "^1.20.3", // Parser de requests
-  "canvas": "^3.2.0", // Generación de imágenes
-  "cors": "^2.8.5", // CORS policy
-  "dotenv": "^16.5.0", // Variables de entorno
-  "express": "^4.21.2", // Framework web
-  "jsonwebtoken": "^9.0.2", // JWT tokens
-  "multer": "^1.4.5-lts.2", // Upload de archivos
-  "mysql2": "^3.14.0", // Driver MySQL
-  "pdf-lib": "^1.17.1", // Manipulación de PDFs
-  "pdf2pic": "^3.2.0" // Conversión PDF a imagen
-}
-```
-
----
-
-## 📋 Troubleshooting
-
-### **Problemas Comunes**
-
-#### **Error: OpenSSL no encontrado**
-
-```bash
-# Windows
-# Descargar e instalar desde: https://slproweb.com/products/Win32OpenSSL.html
-# Agregar al PATH: C:\Program Files\OpenSSL-Win64\bin
-
-# Verificar instalación
-openssl version
-```
-
-#### **Error de conexión a MySQL**
-
-```bash
-# Verificar servicio MySQL activo
-# Windows (XAMPP): Iniciar Apache y MySQL desde panel
-# Linux: sudo systemctl start mysql
-
-# Verificar credenciales en .env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=tu_password
-```
-
-#### **Error: JWT_SECRET no configurado**
-
-```bash
-# Configurar en .env
-JWT_SECRET=tu_jwt_secret_super_seguro_minimo_32_caracteres
-
-# Railway
-railway variables set JWT_SECRET=tu_jwt_secret
-```
-
-#### **Error: Puerto ya en uso**
-
-```bash
-# Cambiar puerto en .env
-PORT=3001
-
-# O terminar proceso que usa el puerto
-# Windows: netstat -ano | findstr :3000
-# Linux/macOS: lsof -ti:3000 | xargs kill
-```
-
-### **Logs y Debugging**
-
-#### **Activar Logs Detallados**
-
-```bash
-# En .env
-NODE_ENV=development
-DEBUG=true
-```
-
-#### **Ubicación de Logs**
-
-- **Aplicación**: Consola del servidor
-- **MySQL**: XAMPP logs o `/var/log/mysql/`
-- **Errores**: `logs/error.log` (si existe)
-
----
-
-## 🔄 Actualizaciones y Mantenimiento
-
-### **Actualización del Sistema**
-
-```bash
-# Backup previo
-npm run db:backup
-
-# Actualizar dependencias
-npm update
-
-# Verificar funcionamiento
-npm run db:status
-npm test
-```
-
-### **Rotación de Llaves**
-
-```bash
-# Ejecutar script de rotación
-npm run keys:rotate
-
-# Notificar usuarios de llaves próximas a vencer
-npm run keys:notify-expiration
-```
-
-### **Limpieza de Sistema**
-
-```bash
-# Limpiar archivos temporales
-npm run clean:temp
-
-# Optimizar base de datos
-npm run db:optimize
-
-# Limpiar uploads antiguos
-npm run clean:old-uploads
-```
-
----
-
-## 🤝 Contribución
-
-### **Código de Conducta**
-
-- Seguir estándares de código JavaScript ES6+
-- Documentar funciones complejas
-- Escribir tests para nuevas características
-- Mantener compatibilidad con versiones anteriores
-
-### **Proceso de Contribución**
-
-1. **Fork** del repositorio
-2. **Branch** para nueva característica: `git checkout -b feature/nueva-caracteristica`
-3. **Commit** cambios: `git commit -m 'Agregar nueva característica'`
-4. **Push** al branch: `git push origin feature/nueva-caracteristica`
-5. **Pull Request** con descripción detallada
-
-### **Estructura de Commits**
-
-```bash
-# Formato
-tipo(scope): descripción breve
-
-# Ejemplos
-feat(auth): agregar autenticación 2FA
-fix(crypto): corregir algoritmo de cifrado AES
-docs(readme): actualizar documentación de API
-style(css): mejorar responsive design
-```
-
----
-
-## 📞 Soporte y Contacto
-
-### **Recursos de Ayuda**
-
-- **Documentación**: Ver carpeta `/docs/` para guías técnicas
-- **Issues**: [GitHub Issues](https://github.com/rofailer/Pagina-web-FD/issues)
-- **Discusiones**: [GitHub Discussions](https://github.com/rofailer/Pagina-web-FD/discussions)
-
-### **Información del Proyecto**
-
-- **Autor**: Roberto Florez
-- **Universidad**: Universidad de san buenaventura cartagena
-- **Proyecto**: Trabajo de Grado - Sistema de Firmas Digitales
-- **Año**: 2024-2025
-
-### **Tecnologías Utilizadas**
-
-- **Backend**: Node.js, Express.js, MySQL
-- **Frontend**: HTML5, CSS3, JavaScript ES6+
-- **Criptografía**: OpenSSL, crypto (Node.js)
-- **Seguridad**: JWT, bcrypt, AES-256
-- **Base de Datos**: MySQL 8.0+
-- **Deploy**: Railway, Docker
-
----
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para más detalles.
-
-```
-MIT License
-
-Copyright (c) 2024 Roberto Failer
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
----
-
-## 🎯 Roadmap Futuro
-
-### **Versión 3.0 - Planificada**
-
-- [ ] **Blockchain Integration**: Registro inmutable de firmas
-- [ ] **API REST Completa**: Endpoints para integración externa
-- [ ] **Mobile App**: Aplicación móvil nativa
-- [ ] **Advanced Analytics**: Dashboard de estadísticas avanzadas
-- [ ] **Multi-tenant**: Soporte para múltiples organizaciones
-- [ ] **SSO Integration**: Single Sign-On con LDAP/OAuth
-
-### **Mejoras Inmediatas**
-
-- [ ] **Tests Automatizados**: Cobertura completa de testing
-- [ ] **CI/CD Pipeline**: Integración y deploy automático
-- [ ] **Performance Optimization**: Optimización de consultas DB
-- [ ] **Security Audit**: Auditoría de seguridad completa
-- [ ] **Documentation**: API documentation con Swagger
-
----
-
-## 📊 Estadísticas del Proyecto
-
-### **Métricas de Código**
-
-- **Líneas de Código**: ~15,000+
-- **Archivos**: 100+
-- **Dependencias**: 15+ paquetes
-- **Rutas de API**: 30+
-- **Componentes UI**: 50+
-
-### **Características Técnicas**
-
-- **Algoritmos Criptográficos**: 3 (AES-256/192/128)
-- **Tipos de Firma**: RSA-4096
-- **Roles de Usuario**: 3 (Admin, Profesor, Owner)
-- **Formatos Soportados**: PDF
-- **Navegadores Soportados**: Chrome, Firefox, Safari, Edge
-
----
-
-**✨ ¡Gracias por usar el Sistema de Firmas Digitales! ✨**
-
-_Sistema desarrollado como parte del trabajo de grado en [Tu Universidad]. Contribuyendo a la seguridad y autenticidad de documentos académicos y de investigación._
+La licencia es permisiva y no ofrece garantías. Las contribuciones aceptadas se publican bajo los mismos términos.

@@ -13,6 +13,88 @@ const router = express.Router();
 const MIN_NEW_KEY_PASSWORD_LENGTH = 12;
 const MAX_KEY_PASSWORD_LENGTH = 1024;
 
+function parseBoundedInteger(value, fallback, minimum, maximum) {
+    const parsed = value === undefined || value === '' ? fallback : Number(value);
+    return Number.isSafeInteger(parsed) && parsed >= minimum && parsed <= maximum
+        ? parsed
+        : fallback;
+}
+
+const MAX_KEYS_PER_USER = parseBoundedInteger(process.env.MAX_KEYS_PER_USER, 10, 1, 100);
+const KEY_GENERATION_WINDOW_MS = parseBoundedInteger(
+    process.env.KEY_GENERATION_WINDOW_MS,
+    60 * 60 * 1000,
+    60 * 1000,
+    24 * 60 * 60 * 1000
+);
+const KEY_GENERATION_MAX_REQUESTS = parseBoundedInteger(
+    process.env.KEY_GENERATION_MAX_REQUESTS,
+    3,
+    1,
+    100
+);
+const KEY_GENERATION_CONCURRENCY = parseBoundedInteger(
+    process.env.KEY_GENERATION_CONCURRENCY,
+    2,
+    1,
+    16
+);
+
+class KeyGenerationGate {
+    constructor(options = {}) {
+        this.windowMs = options.windowMs || KEY_GENERATION_WINDOW_MS;
+        this.maxRequests = options.maxRequests || KEY_GENERATION_MAX_REQUESTS;
+        this.maxConcurrent = options.maxConcurrent || KEY_GENERATION_CONCURRENCY;
+        this.attempts = new Map();
+        this.activeUsers = new Set();
+        this.activeCount = 0;
+    }
+
+    acquire(userId, now = Date.now()) {
+        const identifier = String(userId);
+        let rate = this.attempts.get(identifier);
+        if (!rate || now - rate.windowStartedAt >= this.windowMs) {
+            rate = { windowStartedAt: now, count: 0 };
+            this.attempts.set(identifier, rate);
+        }
+
+        if (rate.count >= this.maxRequests) {
+            return {
+                allowed: false,
+                code: 'KEY_GENERATION_RATE_LIMIT',
+                retryAfterSeconds: Math.max(
+                    1,
+                    Math.ceil((rate.windowStartedAt + this.windowMs - now) / 1000)
+                )
+            };
+        }
+        rate.count += 1;
+
+        if (this.activeUsers.has(identifier) || this.activeCount >= this.maxConcurrent) {
+            return {
+                allowed: false,
+                code: 'KEY_GENERATION_BUSY',
+                retryAfterSeconds: 5
+            };
+        }
+
+        this.activeUsers.add(identifier);
+        this.activeCount += 1;
+        let released = false;
+        return {
+            allowed: true,
+            release: () => {
+                if (released) return;
+                released = true;
+                this.activeUsers.delete(identifier);
+                this.activeCount = Math.max(0, this.activeCount - 1);
+            }
+        };
+    }
+}
+
+const keyGenerationGate = new KeyGenerationGate();
+
 function generateRsaKeyPair() {
     return new Promise((resolve, reject) => {
         crypto.generateKeyPair('rsa', {
@@ -25,6 +107,69 @@ function generateRsaKeyPair() {
             resolve({ publicKey, privateKey });
         });
     });
+}
+
+async function insertGeneratedKeyWithQuota(connection, options) {
+    const {
+        userId,
+        requestedKeyName,
+        encryptedPrivateKey,
+        encryptedPublicKey,
+        encryptionType,
+        expirationDate,
+        maximumKeys = MAX_KEYS_PER_USER
+    } = options;
+
+    await connection.beginTransaction();
+    try {
+        // Bloquear la fila del usuario serializa el COUNT + INSERT incluso
+        // cuando distintas instancias de la aplicación reciben solicitudes.
+        const [userRows] = await connection.query(
+            'SELECT id FROM users WHERE id = ? FOR UPDATE',
+            [userId]
+        );
+        if (userRows.length === 0) {
+            const error = new Error('Usuario no encontrado');
+            error.code = 'KEY_USER_NOT_FOUND';
+            throw error;
+        }
+
+        const [countRows] = await connection.query(
+            'SELECT COUNT(*) AS count FROM user_keys WHERE user_id = ?',
+            [userId]
+        );
+        const existingKeyCount = Number(countRows[0].count);
+        if (!Number.isSafeInteger(existingKeyCount) || existingKeyCount >= maximumKeys) {
+            const error = new Error('El usuario alcanzo el limite de llaves');
+            error.code = 'KEY_QUOTA_EXCEEDED';
+            throw error;
+        }
+
+        const finalKeyName = requestedKeyName || `Key${existingKeyCount + 1}`;
+        await connection.query(
+            'INSERT INTO user_keys (user_id, key_name, private_key, public_key, encryption_type, created_at, expiration_date) VALUES (?, ?, ?, ?, ?, NOW(), ?)',
+            [
+                userId,
+                finalKeyName,
+                encryptedPrivateKey,
+                encryptedPublicKey,
+                encryptionType,
+                expirationDate
+            ]
+        );
+        await connection.commit();
+        return {
+            finalKeyName,
+            isFirstKey: existingKeyCount === 0
+        };
+    } catch (error) {
+        try {
+            await connection.rollback();
+        } catch (rollbackError) {
+            console.error('No se pudo revertir la reserva de llave:', rollbackError.message);
+        }
+        throw error;
+    }
 }
 
 function isValidPassword(password, minimumLength = 1) {
@@ -66,12 +211,31 @@ router.post('/generate-keys', authenticate, async (req, res) => {
         return res.status(400).json({ error: 'El tipo de cifrado seleccionado no es compatible.' });
     }
 
+    const permit = keyGenerationGate.acquire(userId);
+    if (!permit.allowed) {
+        res.setHeader('Retry-After', String(permit.retryAfterSeconds));
+        return res.status(429).json({
+            error: permit.code === 'KEY_GENERATION_RATE_LIMIT'
+                ? 'Has alcanzado el limite temporal de generacion de llaves.'
+                : 'El servicio de generacion de llaves esta ocupado. Intenta de nuevo en unos segundos.',
+            code: permit.code
+        });
+    }
+
+    let connection;
     try {
+        // Esta consulta evita gastar CPU si la cuota ya estaba agotada. La
+        // comprobación transaccional posterior es la que garantiza el límite.
         const [rows] = await pool.query('SELECT COUNT(*) AS count FROM user_keys WHERE user_id = ?', [userId]);
         const existingKeyCount = Number(rows[0].count);
-        const keyCount = existingKeyCount + 1;
-        const isFirstKey = existingKeyCount === 0;
-        const finalKeyName = keyName && keyName.trim() ? keyName.trim() : `Key${keyCount}`;
+        if (!Number.isSafeInteger(existingKeyCount) || existingKeyCount >= MAX_KEYS_PER_USER) {
+            return res.status(409).json({
+                error: `No puedes almacenar mas de ${MAX_KEYS_PER_USER} llaves.`,
+                code: 'KEY_QUOTA_EXCEEDED'
+            });
+        }
+
+        const requestedKeyName = keyName && keyName.trim() ? keyName.trim() : null;
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + 30);
 
@@ -81,10 +245,16 @@ router.post('/generate-keys', authenticate, async (req, res) => {
         // La pública no es secreta; el cifrado autenticado detecta alteraciones en la fila.
         const encryptedPublicKey = encryptWithType(publicKey, String(userId), encryptionType);
 
-        await pool.query(
-            'INSERT INTO user_keys (user_id, key_name, private_key, public_key, encryption_type, created_at, expiration_date) VALUES (?, ?, ?, ?, ?, NOW(), ?)',
-            [userId, finalKeyName, encryptedPrivateKey, encryptedPublicKey, encryptionType, expirationDate]
-        );
+        connection = await pool.getConnection();
+        const { finalKeyName, isFirstKey } = await insertGeneratedKeyWithQuota(connection, {
+            userId,
+            requestedKeyName,
+            encryptedPrivateKey,
+            encryptedPublicKey,
+            encryptionType,
+            expirationDate,
+            maximumKeys: MAX_KEYS_PER_USER
+        });
 
         res.json({
             success: true,
@@ -95,8 +265,20 @@ router.post('/generate-keys', authenticate, async (req, res) => {
             message: 'Llaves generadas correctamente'
         });
     } catch (error) {
+        if (error.code === 'KEY_QUOTA_EXCEEDED') {
+            return res.status(409).json({
+                error: `No puedes almacenar mas de ${MAX_KEYS_PER_USER} llaves.`,
+                code: error.code
+            });
+        }
+        if (error.code === 'KEY_USER_NOT_FOUND') {
+            return res.status(404).json({ error: 'Usuario no encontrado', code: error.code });
+        }
         console.error('Error al generar las llaves:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
+    } finally {
+        if (connection) connection.release();
+        permit.release();
     }
 });
 
@@ -221,5 +403,9 @@ router.delete('/delete-key', authenticate, async (req, res) => {
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
+
+router.KeyGenerationGate = KeyGenerationGate;
+router.insertGeneratedKeyWithQuota = insertGeneratedKeyWithQuota;
+router.MAX_KEYS_PER_USER = MAX_KEYS_PER_USER;
 
 module.exports = router;

@@ -434,7 +434,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
         // Crear headers - con token si existe, sin token si no existe
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token");
         const headers = {
             'Content-Type': 'application/json'
         };
@@ -460,7 +460,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (token && res.status === 401) {
                         if (window.showLoginModal) window.showLoginModal();
                         else showNotification(errorData.error || "Sesión expirada. Por favor, inicia sesión de nuevo.", "error");
-                        localStorage.removeItem("token");
+                        sessionStorage.removeItem("token");
                     } else if (token && res.status === 403) {
                         showNotification(errorData.error || "Completa primero el cambio de contraseña requerido.", "error");
                     } else {
@@ -608,15 +608,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Filtrar por término de búsqueda
         let filtered = allProfessors.filter(prof =>
-            prof.nombre.toLowerCase().includes(searchTerm)
+            String(prof.nombre || '').toLowerCase().includes(searchTerm)
         );
 
         // Ordenar
         filtered.sort((a, b) => {
             if (order === 'asc') {
-                return a.nombre.localeCompare(b.nombre);
+                return String(a.nombre || '').localeCompare(String(b.nombre || ''));
             } else {
-                return b.nombre.localeCompare(a.nombre);
+                return String(b.nombre || '').localeCompare(String(a.nombre || ''));
             }
         });
 
@@ -676,30 +676,31 @@ document.addEventListener("DOMContentLoaded", () => {
             'info': 'ℹ'
         };
 
+        const safeType = Object.hasOwn(iconMap, type) ? type : 'info';
         const detailsList = details.length > 0 ? `
             <div class="alert-details">
                 <ul>
-                    ${details.map(detail => `<li>${detail}</li>`).join('')}
+                    ${details.map(detail => `<li>${escapeHtml(detail)}</li>`).join('')}
                 </ul>
             </div>
         ` : '';
 
         const additionalSection = additionalMsg ? `
             <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 0.95em;">
-                ${additionalMsg}
+                ${escapeHtml(additionalMsg)}
             </div>
         ` : '';
 
         return `
-            <div class="alert-message ${type}">
+            <div class="alert-message ${safeType}">
                 <div style="display: flex; gap: 12px;">
                     <div class="alert-icon" style="font-size: 1.2em; font-weight: bold; flex-shrink: 0;">
-                        ${iconMap[type] || '•'}
+                        ${iconMap[safeType]}
                     </div>
                     <div style="flex: 1;">
-                        <h4 style="margin: 0 0 8px 0; font-size: 1.05em;">${title}</h4>
+                        <h4 style="margin: 0 0 8px 0; font-size: 1.05em;">${escapeHtml(title)}</h4>
                         <div class="alert-content">
-                            ${message}
+                            ${escapeHtml(message)}
                             ${detailsList}
                             ${additionalSection}
                         </div>
@@ -801,12 +802,12 @@ document.addEventListener("DOMContentLoaded", () => {
         Promise.allSettled([
             fetch("/verify-document", {
                 method: "POST",
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` },
                 body: docFormData
             }),
             fetch("/verify-attachments", {
                 method: "POST",
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` },
                 body: attachmentsFormData
             })
         ]).then(async (results) => {
@@ -895,7 +896,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch('/extract-signer-info', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
                 },
                 body: formData
             });

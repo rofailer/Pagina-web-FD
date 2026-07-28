@@ -5,10 +5,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Función para cargar la llave activa
     async function loadActiveKey() {
-        if (!localStorage.getItem("token") || localStorage.getItem('forcePasswordChange') === 'true') return;
+        if (!sessionStorage.getItem("token") || sessionStorage.getItem('forcePasswordChange') === 'true') return;
         try {
             const response = await fetch("/active-key", {
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` },
             });
             if (!response.ok) return;
             const data = await response.json();
@@ -31,10 +31,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Función para cargar la lista de llaves
     async function loadKeys() {
-        if (!localStorage.getItem("token") || localStorage.getItem('forcePasswordChange') === 'true') return;
+        if (!sessionStorage.getItem("token") || sessionStorage.getItem('forcePasswordChange') === 'true') return;
         try {
             const response = await fetch("/list-keys", {
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` },
             });
             if (!response.ok) return;
             const keys = await response.json();
@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
             let activeKeyName = null;
             try {
                 const activeResp = await fetch("/active-key", {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                    headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` },
                 });
                 if (activeResp.ok) {
                     const activeData = await activeResp.json();
@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Solo actualizar si existe el contenedor
             if (keysList) {
-                keysList.innerHTML = "";
+                keysList.replaceChildren();
                 keys.forEach(key => {
                     // Usar expiration_date directamente del servidor
                     const expirationDate = new Date(key.expiration_date);
@@ -149,28 +149,53 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (isExpired) itemClass += " expired";
                     listItem.className = itemClass;
 
-                    listItem.innerHTML = `
-                        <div class="key-info">
-                            <div class="key-details-container">
-                                <div class="key-name">
-                                    ${key.key_name}
-                                    ${isActive ? '<span class="active-badge">ACTIVA</span>' : ''}
-                                </div>
-                                <div class="key-details">
-                                    <span>${window.cryptoConfig?.formatEncryptionType(key.encryption_type) || 'AES-256-GCM v2'}</span>
-                                    <span class="expiration-status ${expirationClass}">${expirationText}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="key-actions">
-                            <button class="key-action-btn key-delete-btn clear-btn" onclick="event.stopPropagation(); deleteKey('${key.key_name}')" title="Eliminar llave">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                                    <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
-                        </div>
+                    const keyInfo = document.createElement("div");
+                    keyInfo.className = "key-info";
+                    const detailsContainer = document.createElement("div");
+                    detailsContainer.className = "key-details-container";
+                    const keyName = document.createElement("div");
+                    keyName.className = "key-name";
+                    keyName.append(document.createTextNode(String(key.key_name ?? '')));
+                    if (isActive) {
+                        const activeBadge = document.createElement("span");
+                        activeBadge.className = "active-badge";
+                        activeBadge.textContent = "ACTIVA";
+                        keyName.append(" ", activeBadge);
+                    }
+
+                    const keyDetails = document.createElement("div");
+                    keyDetails.className = "key-details";
+                    const algorithm = document.createElement("span");
+                    algorithm.textContent = window.cryptoConfig?.formatEncryptionType(key.encryption_type)
+                        || 'AES-256-GCM v2';
+                    const expiration = document.createElement("span");
+                    expiration.className = `expiration-status ${expirationClass}`;
+                    expiration.textContent = expirationText;
+                    keyDetails.append(algorithm, expiration);
+                    detailsContainer.append(keyName, keyDetails);
+                    keyInfo.appendChild(detailsContainer);
+
+                    const keyActions = document.createElement("div");
+                    keyActions.className = "key-actions";
+                    const deleteButton = document.createElement("button");
+                    deleteButton.type = "button";
+                    deleteButton.className = "key-action-btn key-delete-btn clear-btn";
+                    deleteButton.title = "Eliminar llave";
+                    deleteButton.setAttribute('aria-label', `Eliminar llave ${String(key.key_name ?? '')}`);
+                    deleteButton.innerHTML = `
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                     `;
+                    deleteButton.addEventListener("click", event => {
+                        event.stopPropagation();
+                        if (typeof window.deleteKey === "function") {
+                            window.deleteKey(String(key.key_name ?? ''));
+                        }
+                    });
+                    keyActions.appendChild(deleteButton);
+                    listItem.append(keyInfo, keyActions);
 
                     listItem.addEventListener("click", () => {
                         if (typeof window.selectKeyProfile === "function") {
@@ -196,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('token')}`
+                    Authorization: `Bearer ${sessionStorage.getItem('token')}`
                 },
                 body: JSON.stringify({ keyId })
             });

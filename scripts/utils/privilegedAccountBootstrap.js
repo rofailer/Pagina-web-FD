@@ -35,8 +35,16 @@ function generateInitialPassword(length = 20) {
 function resolveInitialPassword(role, environment = process.env) {
     const variableName = PRIVILEGED_ACCOUNTS[role];
     const configuredPassword = variableName ? environment[variableName] : null;
+    const isProduction = String(environment.NODE_ENV || 'development').toLowerCase() === 'production';
 
     if (!configuredPassword) {
+        if (isProduction) {
+            const error = new Error(
+                `${variableName} es obligatoria en produccion mientras la cuenta ${role} conserve el marcador inicial`
+            );
+            error.code = 'MISSING_INITIAL_PASSWORD';
+            throw error;
+        }
         return { password: generateInitialPassword(), generated: true, variableName };
     }
 
@@ -98,6 +106,8 @@ async function initializePrivilegedAccounts(options = {}) {
         });
 
         if (credential.generated) {
+            // Este camino solo existe en desarrollo: producción exige que la
+            // credencial llegue por una variable de entorno y nunca la registra.
             logger.warn(
                 `[inicio seguro] Contraseña temporal generada para ${account.usuario}: ${credential.password}`
             );

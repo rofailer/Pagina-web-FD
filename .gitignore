@@ -1,11 +1,38 @@
 node_modules/
-.env
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Environment files
-.env
-.env.production
+.env*
+!.env.example
+.npmrc
+.netrc
+
+# Credenciales, llaves y certificados locales
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cer
+*.ovpn
+id_rsa*
+credentials*.json
+service-account*.json
+
+# Exportaciones y copias de bases de datos. El esquema público sí se versiona.
+*.sql
+!firmas_digitales_v2.sql
+*.dump
+*.sqlite
+*.sqlite3
+*.db
+*.bak
 
 # Archivos temporales
 uploads/*
@@ -14,7 +41,14 @@ downloads/*
 !downloads/.gitkeep
 llaves/*
 !llaves/.gitkeep
+coverage/
+.nyc_output/
+tmp/
+temp/
+*.tmp
+*.swp
 
 # OS files
 .DS_Store
 Thumbs.db
+Desktop.ini

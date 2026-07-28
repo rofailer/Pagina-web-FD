@@ -27,7 +27,7 @@ class VisualCustomizationManager {
     async loadSavedConfig() {
         try {
             const token = this.getAuthToken();
-            const passwordChangePending = localStorage.getItem('forcePasswordChange') === 'true';
+            const passwordChangePending = sessionStorage.getItem('forcePasswordChange') === 'true';
             const hasToken = token && token.trim() !== '' && !passwordChangePending;
 
             let apiUrl = '/api/visual-config/public';
@@ -241,7 +241,7 @@ class VisualCustomizationManager {
         // Las rutas /api/visual-config usan el JWT normal. El token
         // administrativo solo queda como respaldo para instalaciones que lo
         // acepten explícitamente.
-        return localStorage.getItem('token') || localStorage.getItem('admin_token') || '';
+        return sessionStorage.getItem('token') || sessionStorage.getItem('admin_token') || '';
     }
 
     applyImageBackground(imagePath) {

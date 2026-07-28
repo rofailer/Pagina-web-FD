@@ -710,7 +710,7 @@ class UserManagement {
     const now = Date.now();
     if (now - this.lastPresenceHeartbeatAt < 30000) return;
 
-    const sessionToken = localStorage.getItem('token');
+    const sessionToken = sessionStorage.getItem('token');
     if (!sessionToken || !this.sessionTokenBelongsToCurrentUser(sessionToken)) return;
 
     this.lastPresenceHeartbeatAt = now;

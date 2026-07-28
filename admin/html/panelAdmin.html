@@ -509,12 +509,42 @@
       </div>
     </dialog>
 
+    <dialog class="admin-dialog admin-dialog-small" id="ownerPasswordDialog">
+      <form class="admin-dialog-card admin-form" id="ownerPasswordForm">
+        <header class="admin-dialog-header">
+          <div>
+            <span class="admin-eyebrow">Acción sensible</span>
+            <h2>Confirmar copia de seguridad</h2>
+          </div>
+          <button class="admin-icon-button" type="button" data-close-dialog="ownerPasswordDialog" aria-label="Cerrar">×</button>
+        </header>
+        <div class="admin-dialog-body">
+          <p>Vuelve a ingresar tu contraseña de propietario. Se usará únicamente para autorizar esta descarga.</p>
+          <label class="admin-field">
+            <span>Contraseña actual</span>
+            <input
+              id="ownerPasswordInput"
+              name="password"
+              type="password"
+              maxlength="128"
+              autocomplete="current-password"
+              required
+            />
+          </label>
+        </div>
+        <footer class="admin-dialog-footer">
+          <button class="admin-btn admin-btn-secondary" type="button" data-close-dialog="ownerPasswordDialog">Cancelar</button>
+          <button class="admin-btn admin-btn-primary" type="submit">Autorizar descarga</button>
+        </footer>
+      </form>
+    </dialog>
+
     <script src="/scripts/frontend/notifications.js"></script>
     <script src="/admin/js/user-management.js?v=20260722-4"></script>
     <script src="/admin/js/admin.frontend.js?v=20260722-5"></script>
     <script src="/admin/js/advanced-config.js?v=20260722-4"></script>
     <script src="/scripts/utils/themeManager.js"></script>
     <script src="/scripts/frontend/visualConfig.frontend.js?v=4"></script>
-    <script src="/admin/js/panelAdmin.js?v=20260722"></script>
+    <script src="/admin/js/panelAdmin.js?v=20260726"></script>
   </body>
 </html>

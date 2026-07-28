@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-visual-context="admin-login">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -14,27 +14,7 @@
     <meta name="robots" content="noindex, nofollow" />
 
     <!-- Aplicar la última preferencia conocida antes del primer render. -->
-    <script>
-      (function () {
-        const allowedThemes = ["orange", "blue", "green", "purple", "red", "teal", "dark", "custom"];
-        const allowedBackgrounds = ["fondo1", "fondo2", "fondoOscuro"];
-        const cachedTheme = localStorage.getItem("selectedTheme");
-        const cachedColor = localStorage.getItem("customColor");
-        const cachedBackground = localStorage.getItem("globalBackground");
-
-        document.documentElement.classList.add("visual-pending");
-        if (allowedThemes.includes(cachedTheme)) {
-          document.documentElement.dataset.theme = cachedTheme;
-        }
-        if (cachedTheme === "custom" && /^#[0-9a-f]{6}$/i.test(cachedColor || "")) {
-          document.documentElement.style.setProperty("--primary-color", cachedColor);
-        }
-
-        window.__initialAdminVisuals = {
-          background: allowedBackgrounds.includes(cachedBackground) ? cachedBackground : "fondo1",
-        };
-      })();
-    </script>
+    <script src="/scripts/frontend/themeBootstrap.frontend.js"></script>
 
     <!-- Estilos del panel administrativo -->
     <link rel="stylesheet" href="/admin/css/admin.css" />
@@ -54,9 +34,6 @@
     />
   </head>
   <body class="admin-access-page" data-bg="fondo1">
-    <script>
-      document.body.dataset.bg = window.__initialAdminVisuals?.background || "fondo1";
-    </script>
 
     <main class="access-shell">
       <section class="access-brand" aria-label="Información del sistema">
@@ -149,39 +126,6 @@
         </form>
       </section>
     </main>
-
-    <!-- Revelar la interfaz cuando tema y fondo estén listos. -->
-    <script>
-      (function () {
-        const state = {
-          theme: window.themeManagerReady === true,
-          visual: window.visualConfigLoaded === true,
-        };
-        const reveal = () => {
-          if (!state.theme || !state.visual) return;
-          document.documentElement.classList.remove("visual-pending");
-          document.documentElement.classList.add("visual-ready");
-        };
-
-        window.addEventListener("themeReady", () => {
-          state.theme = true;
-          reveal();
-        }, { once: true });
-
-        window.addEventListener("visualConfigLoaded", () => {
-          state.visual = true;
-          reveal();
-        }, { once: true });
-
-        window.setTimeout(() => {
-          state.theme = true;
-          state.visual = true;
-          reveal();
-        }, 2500);
-
-        reveal();
-      })();
-    </script>
 
     <!-- Sistema de Temas -->
     <script src="/scripts/utils/themeManager.js"></script>

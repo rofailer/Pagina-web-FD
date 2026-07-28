@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="orange">
+<html lang="es" data-theme="orange" data-visual-context="tutorial">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,25 +9,7 @@
     />
     <title>Guía de uso | Firmas Digitales FD</title>
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-    <script>
-      (function () {
-        const themes = ["orange", "blue", "green", "purple", "red", "teal", "dark", "custom"];
-        const backgrounds = ["fondo1", "fondo2", "fondoOscuro"];
-        const cachedTheme = localStorage.getItem("selectedTheme");
-        const cachedColor = localStorage.getItem("customColor");
-        const cachedBackground = localStorage.getItem("globalBackground");
-
-        document.documentElement.classList.add("visual-pending");
-        if (themes.includes(cachedTheme)) document.documentElement.dataset.theme = cachedTheme;
-        if (cachedTheme === "custom" && /^#[0-9a-f]{6}$/i.test(cachedColor || "")) {
-          document.documentElement.style.setProperty("--primary-color", cachedColor);
-        }
-        window.__initialTutorialBackground = backgrounds.includes(cachedBackground)
-          ? cachedBackground
-          : "fondo1";
-        window.setTimeout(() => document.documentElement.classList.remove("visual-pending"), 2500);
-      })();
-    </script>
+    <script src="/scripts/frontend/themeBootstrap.frontend.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -39,9 +21,6 @@
   </head>
 
   <body data-bg="fondo1">
-    <script>
-      document.body.dataset.bg = window.__initialTutorialBackground || "fondo1";
-    </script>
     <a class="skip-link" href="#contenidoTutorial">Saltar al contenido</a>
 
     <header class="tutorial-header">

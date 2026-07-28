@@ -132,10 +132,14 @@ class NotificationManager {
             this.isProcessing = false;
         }, 100);
 
+        const safeType = ['success', 'error', 'warning', 'info'].includes(type)
+            ? type
+            : 'info';
+
         // Verificar si ya existe una notificación idéntica reciente
         const recentDuplicate = this.notifications.find(notif =>
             notif.message === message &&
-            notif.type === type &&
+            notif.type === safeType &&
             (Date.now() - notif.timestamp) < 1000
         );
 
@@ -144,7 +148,7 @@ class NotificationManager {
         }
 
         // Crear la notificación
-        const notification = this.createNotification(message, type, duration);
+        const notification = this.createNotification(message, safeType, duration);
 
         // Remover exceso ANTES de agregar la nueva
         this.removeOldNotifications();
@@ -169,10 +173,18 @@ class NotificationManager {
         const element = document.createElement('div');
         element.className = `notification-item ${type}`;
 
-        element.innerHTML = `
-            <span class="notification-close" style="color: white !important;">&times;</span>
-            <div style="padding-right: 25px;">${message}</div>
-        `;
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'notification-close';
+        closeBtn.style.setProperty('color', 'white', 'important');
+        closeBtn.setAttribute('aria-label', 'Cerrar notificación');
+        closeBtn.textContent = '×';
+
+        const messageElement = document.createElement('div');
+        messageElement.style.paddingRight = '25px';
+        messageElement.textContent = message;
+
+        element.append(closeBtn, messageElement);
 
         const notification = {
             element,
@@ -183,7 +195,6 @@ class NotificationManager {
         };
 
         // Evento para cerrar manualmente
-        const closeBtn = element.querySelector('.notification-close');
         closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             this.remove(notification);

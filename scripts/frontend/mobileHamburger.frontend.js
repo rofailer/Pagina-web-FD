@@ -232,7 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Verificar y forzar la visibilidad del botón
     function forceButtonVisibility() {
         if (menuBtn) {
-            const token = localStorage.getItem("token");
+            const token = sessionStorage.getItem("token");
 
             if (token) {
                 // Usuario logueado: mostrar botón
@@ -326,8 +326,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         mobileMenuList.innerHTML = "";
 
-        const token = localStorage.getItem("token");
-        const user = JSON.parse(localStorage.getItem("user")) || null;
+        const token = sessionStorage.getItem("token");
+        const user = JSON.parse(sessionStorage.getItem("user")) || null;
         const isLogged = !!token;
         const userRole = user?.rol || null;
         const userName = user?.nombre || "";
@@ -533,7 +533,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Logout
         if (e.target && e.target.id === "mobileLogoutBtn") {
             e.preventDefault();
-            const sessionToken = localStorage.getItem("token");
+            const sessionToken = sessionStorage.getItem("token");
             if (sessionToken) {
                 fetch("/api/auth/logout", {
                     method: "POST",
@@ -541,10 +541,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     keepalive: true,
                 }).catch(() => {});
             }
-            localStorage.removeItem("token");
-            localStorage.removeItem("userRole");
-            localStorage.removeItem("userName");
-            localStorage.removeItem("user");
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("userRole");
+            sessionStorage.removeItem("userName");
+            sessionStorage.removeItem("user");
             localStorage.removeItem("keysGuideShown");
 
             // Limpiar estados de procesos en curso

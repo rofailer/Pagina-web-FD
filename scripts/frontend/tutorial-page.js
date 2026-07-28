@@ -1,4 +1,10 @@
 document.addEventListener("DOMContentLoaded", async () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  localStorage.removeItem("userRole");
+  localStorage.removeItem("userName");
+  localStorage.removeItem("forcePasswordChange");
+
   const localStorageKey = "fd_tutorial_progress_v2";
   const progressEndpoint = "/api/tutorial/progress";
   const allowedSteps = new Set([
@@ -19,10 +25,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   );
   const resetButton = document.getElementById("resetTutorialProgress");
   const passwordChangePending =
-    localStorage.getItem("forcePasswordChange") === "true";
+    sessionStorage.getItem("forcePasswordChange") === "true";
   const authToken = passwordChangePending
     ? null
-    : localStorage.getItem("token")?.trim() || null;
+    : sessionStorage.getItem("token")?.trim() || null;
 
   let storageMode = "local";
   let pendingSave = null;

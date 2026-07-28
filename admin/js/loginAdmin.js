@@ -3,6 +3,12 @@
  * Admite autenticación completa y confirmación de contraseña cuando ya existe
  * una sesión normal autorizada.
  */
+localStorage.removeItem('token');
+localStorage.removeItem('user');
+localStorage.removeItem('userRole');
+localStorage.removeItem('userName');
+localStorage.removeItem('forcePasswordChange');
+
 class AdminAccess {
     constructor() {
         this.form = document.getElementById('adminAccessForm');
@@ -28,7 +34,7 @@ class AdminAccess {
     }
 
     async checkAuthStatus() {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (!token) {
             this.setupFullLoginMode();
             return;
@@ -41,6 +47,7 @@ class AdminAccess {
             const user = response.ok ? await this.readJson(response) : null;
 
             if (user && this.isAdministrativeRole(user.rol)) {
+                this.storeNormalSession({ token, ...user });
                 this.setupPasswordOnlyMode(user.usuario);
                 return;
             }
@@ -48,7 +55,8 @@ class AdminAccess {
             // Una sesión no verificable se trata como cerrada.
         }
 
-        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('admin_token');
         localStorage.removeItem('admin_token');
         this.setupFullLoginMode();
     }
@@ -130,7 +138,8 @@ class AdminAccess {
     }
 
     switchToFullLogin() {
-        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('admin_token');
         localStorage.removeItem('admin_token');
         this.clearAlerts();
         this.emailInput.value = '';
@@ -179,7 +188,7 @@ class AdminAccess {
             return;
         }
 
-        localStorage.setItem('token', response.data.token);
+        this.storeNormalSession(response.data);
         this.showAlert('Acceso confirmado. Preparando el panel…', 'success');
         await this.redirectToAdminPanel(response.data.token);
     }
@@ -210,9 +219,24 @@ class AdminAccess {
             return;
         }
 
-        localStorage.setItem('token', login.data.token);
+        this.storeNormalSession({ ...login.data, ...user });
         this.showAlert('Autenticación correcta. Preparando el panel…', 'success');
         await this.redirectToAdminPanel(login.data.token);
+    }
+
+    storeNormalSession(data = {}) {
+        if (data.token) sessionStorage.setItem('token', data.token);
+        sessionStorage.setItem('user', JSON.stringify({
+            nombre: data.nombre || data.name || data.usuario || 'Administrador',
+            rol: data.rol || data.role,
+            presenceStatus: data.presenceStatus || data.estado_presencia || 'en_linea',
+            estado_presencia: data.presenceStatus || data.estado_presencia || 'en_linea'
+        }));
+        if (data.forcePasswordChange) {
+            sessionStorage.setItem('forcePasswordChange', 'true');
+        } else {
+            sessionStorage.removeItem('forcePasswordChange');
+        }
     }
 
     async requestLogin(credentials) {
@@ -236,11 +260,12 @@ class AdminAccess {
             });
             const data = await this.readJson(response);
 
-            if (!response.ok || !data.tokenId) {
+            if (!response.ok || !data.token) {
                 throw new Error('admin_token_not_available');
             }
 
-            window.location.assign(`/panelAdmin?tid=${encodeURIComponent(data.tokenId)}`);
+            sessionStorage.setItem('admin_token', data.token);
+            window.location.assign('/panelAdmin');
         } catch (_error) {
             this.passwordInput.value = '';
             this.showAlert('No fue posible preparar el acceso administrativo. Intenta nuevamente.', 'error');

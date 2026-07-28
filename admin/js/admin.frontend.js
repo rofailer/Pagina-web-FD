@@ -33,7 +33,7 @@ class AdminPanel {
   }
 
   getAdminToken() {
-    return localStorage.getItem('admin_token') || '';
+    return sessionStorage.getItem('admin_token') || '';
   }
 
   bindEvents() {

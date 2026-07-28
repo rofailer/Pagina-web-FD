@@ -9,12 +9,13 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function passwordChangeIsPending() {
-    return localStorage.getItem('forcePasswordChange') === 'true';
+    return sessionStorage.getItem('forcePasswordChange') === 'true';
 }
 
 const PROFILE_LAST_TAB_KEY = 'profileLastTab';
 const PROFILE_REMEMBER_TAB_KEY = 'profileRememberLastTab';
 const PROFILE_REDUCED_MOTION_KEY = 'profileReducedMotion';
+const PROFILE_NAME_PATTERN = /^[\p{L}\p{M}\p{N} .,'’_-]+$/u;
 
 // ===========================
 // SISTEMA DE PESTAÑAS
@@ -53,7 +54,10 @@ function initializeTabs() {
 
     const shouldRemember = localStorage.getItem(PROFILE_REMEMBER_TAB_KEY) !== 'false';
     const savedTab = shouldRemember ? localStorage.getItem(PROFILE_LAST_TAB_KEY) : null;
-    const initialTab = savedTab && profileSection.querySelector(`[data-tab="${savedTab}"]`)
+    const savedTabExists = savedTab && tabButtons.some(
+        button => button.getAttribute('data-tab') === savedTab
+    );
+    const initialTab = savedTabExists
         ? savedTab
         : (profileSection.querySelector('.perfil-tab-btn.active')?.getAttribute('data-tab') || 'datos-personales');
 
@@ -66,7 +70,8 @@ function activateProfileTab(targetTab, persist = true) {
 
     const tabButtons = profileSection.querySelectorAll('.perfil-tab-btn');
     const tabContents = profileSection.querySelectorAll('.perfil-tab-content');
-    const targetButton = profileSection.querySelector(`.perfil-tab-btn[data-tab="${targetTab}"]`);
+    const targetButton = Array.from(tabButtons)
+        .find(button => button.getAttribute('data-tab') === targetTab);
     const targetContent = document.getElementById(`tab-${targetTab}`);
     if (!targetButton || !targetContent) return;
 
@@ -161,7 +166,7 @@ function loadCurrentTemplate() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
                 },
                 body: JSON.stringify({ template: 'clasico' })
             });
@@ -229,7 +234,7 @@ async function handleProfilePhoto(event) {
         const response = await fetch('/api/profile/photo', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
             },
             body: formData
         });
@@ -259,7 +264,10 @@ function updateProfilePhoto(photoPath) {
     const photoContainer = document.querySelector('.perfil-photo');
     if (photoContainer) {
         if (photoPath) {
-            photoContainer.innerHTML = `<img src="${photoPath}" alt="Foto de perfil">`;
+            const image = document.createElement('img');
+            image.src = photoPath;
+            image.alt = 'Foto de perfil';
+            photoContainer.replaceChildren(image);
             photoContainer.classList.add('has-photo');
         } else {
             photoContainer.innerHTML = `
@@ -302,7 +310,7 @@ function updateProfilePhoto(photoPath) {
 }
 
 async function loadPersistentProfilePhoto(photoUrl = '/api/profile/photo/content', version = null) {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) return false;
 
     try {
@@ -361,10 +369,10 @@ function updatePresenceUI(status) {
     });
 
     try {
-        const storedUser = JSON.parse(localStorage.getItem('user')) || {};
+        const storedUser = JSON.parse(sessionStorage.getItem('user')) || {};
         storedUser.presenceStatus = normalizedStatus;
         storedUser.estado_presencia = normalizedStatus;
-        localStorage.setItem('user', JSON.stringify(storedUser));
+        sessionStorage.setItem('user', JSON.stringify(storedUser));
     } catch (_) {
         // La interfaz sigue funcionando aunque el almacenamiento local esté dañado.
     }
@@ -372,7 +380,7 @@ function updatePresenceUI(status) {
 
 async function changePresenceStatus(status) {
     const normalizedStatus = normalizePresenceStatus(status);
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) return;
 
     try {
@@ -432,7 +440,7 @@ function initializePresenceControls() {
 }
 
 async function sendPresenceHeartbeat() {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token || document.visibilityState === 'hidden') return;
 
     try {
@@ -450,7 +458,7 @@ async function sendPresenceHeartbeat() {
 }
 
 function startPresenceHeartbeat() {
-    if (!localStorage.getItem('token') || presenceHeartbeatInterval) return;
+    if (!sessionStorage.getItem('token') || presenceHeartbeatInterval) return;
     sendPresenceHeartbeat();
     presenceHeartbeatInterval = window.setInterval(sendPresenceHeartbeat, 45_000);
 }
@@ -478,7 +486,7 @@ window.updateProfilePhoto = updateProfilePhoto;
 // Función para cargar datos del usuario desde el backend
 async function loadUserData() {
     // Verificar si hay un token válido antes de hacer la request
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token || passwordChangeIsPending()) {
         // No hay token de autenticación, saltando carga de datos del usuario
         return;
@@ -495,7 +503,7 @@ async function loadUserData() {
 
         if (!response.ok) {
             if (response.status === 401) {
-                localStorage.removeItem('token');
+                sessionStorage.removeItem('token');
                 return;
             }
             if (response.status === 403) return;
@@ -534,7 +542,7 @@ async function loadUserData() {
     } catch (error) {
         console.error('Error al cargar datos del usuario:', error);
         // Solo mostrar notificación si hay un token (evita spam en usuarios no logueados)
-        if (localStorage.getItem('token')) {
+        if (sessionStorage.getItem('token')) {
             showNotification('Error al cargar los datos del perfil', 'error');
         }
     }
@@ -592,7 +600,7 @@ async function saveUserData() {
     try {
         // Recopilar datos del formulario
         const personalData = {
-            nombre: document.getElementById('userName')?.value || '',
+            nombre: (document.getElementById('userName')?.value || '').normalize('NFC').trim(),
             email: document.getElementById('userEmail')?.value || '',
             organizacion: document.getElementById('userOrganization')?.value || '',
             biografia: document.getElementById('userBio')?.value || '',
@@ -604,8 +612,18 @@ async function saveUserData() {
         };
 
         // Validación básica
-        if (!personalData.nombre.trim()) {
+        if (!personalData.nombre) {
             showNotification('El nombre completo es obligatorio', 'error');
+            return;
+        }
+
+        if (personalData.nombre.length < 2
+            || personalData.nombre.length > 100
+            || !PROFILE_NAME_PATTERN.test(personalData.nombre)) {
+            showNotification(
+                'El nombre debe tener entre 2 y 100 caracteres y no puede incluir etiquetas ni símbolos especiales',
+                'error'
+            );
             return;
         }
 
@@ -617,7 +635,7 @@ async function saveUserData() {
         const response = await fetch('/api/profile/personal', {
             method: 'PUT',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(personalData)
@@ -691,7 +709,7 @@ async function loadUserKeys() {
     if (!keysList) return;
 
     // Verificar si hay un token válido antes de hacer la request
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token || passwordChangeIsPending()) {
         // No hay token de autenticación, saltando carga de llaves
         keysList.innerHTML = '<p class="no-keys-message">Inicia sesión para ver tus llaves.</p>';
@@ -720,7 +738,7 @@ async function loadUserKeys() {
             }
         } else {
             if (response.status === 401) {
-                localStorage.removeItem('token');
+                sessionStorage.removeItem('token');
                 keysList.innerHTML = '<p class="no-keys-message">Sesión expirada. Inicia sesión nuevamente.</p>';
                 return;
             }
@@ -738,34 +756,56 @@ async function loadUserKeys() {
 function createKeyElement(key) {
     const keyDiv = document.createElement('div');
     keyDiv.className = 'key-item';
-    keyDiv.innerHTML = `
-        <div class="key-info">
-            <div class="key-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <rect x="8" y="6" width="13" height="12" rx="1" stroke="currentColor" stroke-width="2"/>
-                    <circle cx="10" cy="12" r="1" fill="currentColor"/>
-                    <path d="M3 15a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1z" stroke="currentColor" stroke-width="2"/>
-                    <path d="M7 15h1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-            </div>
-            <div class="key-details-container">
-                <div class="key-name">${key.key_name}</div>
-                <div class="key-details">
-                    <span>${window.cryptoConfig?.formatEncryptionType(key.encryption_type) || 'AES-256-GCM v2'}</span>
-                    <span>Creada: ${new Date(key.created_at).toLocaleDateString()}</span>
-                </div>
-            </div>
-        </div>
-        <div class="key-actions">
-            <button class="key-action-btn key-delete-btn" onclick="event.stopPropagation(); deleteKey('${key.key_name}')">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Eliminar
-            </button>
-        </div>
+    const keyInfo = document.createElement('div');
+    keyInfo.className = 'key-info';
+    const keyIcon = document.createElement('div');
+    keyIcon.className = 'key-icon';
+    keyIcon.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="8" y="6" width="13" height="12" rx="1" stroke="currentColor" stroke-width="2"/>
+            <circle cx="10" cy="12" r="1" fill="currentColor"/>
+            <path d="M3 15a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1z" stroke="currentColor" stroke-width="2"/>
+            <path d="M7 15h1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
     `;
+
+    const detailsContainer = document.createElement('div');
+    detailsContainer.className = 'key-details-container';
+    const keyName = document.createElement('div');
+    keyName.className = 'key-name';
+    keyName.textContent = String(key.key_name ?? '');
+    const keyDetails = document.createElement('div');
+    keyDetails.className = 'key-details';
+    const algorithm = document.createElement('span');
+    algorithm.textContent = window.cryptoConfig?.formatEncryptionType(key.encryption_type)
+        || 'AES-256-GCM v2';
+    const createdAt = document.createElement('span');
+    createdAt.textContent = `Creada: ${new Date(key.created_at).toLocaleDateString()}`;
+    keyDetails.append(algorithm, createdAt);
+    detailsContainer.append(keyName, keyDetails);
+    keyInfo.append(keyIcon, detailsContainer);
+
+    const keyActions = document.createElement('div');
+    keyActions.className = 'key-actions';
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'key-action-btn key-delete-btn';
+    deleteButton.setAttribute('aria-label', `Eliminar llave ${String(key.key_name ?? '')}`);
+    deleteButton.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    `;
+    deleteButton.append(' Eliminar');
+    deleteButton.addEventListener('click', event => {
+        event.stopPropagation();
+        if (typeof window.deleteKey === 'function') {
+            window.deleteKey(String(key.key_name ?? ''));
+        }
+    });
+    keyActions.appendChild(deleteButton);
+    keyDiv.append(keyInfo, keyActions);
     return keyDiv;
 }
 
@@ -818,7 +858,7 @@ function showCreateKeyModal(providedKeyName = '') {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
-                            Authorization: `Bearer ${localStorage.getItem("token")}`,
+                            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
                         },
                         body: JSON.stringify({
                             keyPassword,
@@ -943,7 +983,10 @@ function handleLogo(event) {
         reader.onload = function (e) {
             const preview = document.querySelector('.pdf-preview');
             if (preview) {
-                preview.innerHTML = `<img src="${e.target.result}" alt="Logo personalizado">`;
+                const image = document.createElement('img');
+                image.src = e.target.result;
+                image.alt = 'Logo personalizado';
+                preview.replaceChildren(image);
             }
         };
         reader.readAsDataURL(file);
@@ -1000,7 +1043,7 @@ function renderPdfTemplateSelector(currentTemplate) {
     // Si es custom, recargar autores/firmas/posiciones
     if (currentTemplate === 'custom') {
         fetch('/api/pdf-template/config', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
         })
             .then(res => res.json())
             .then(cfg => setupCustomTemplateForm(cfg.customConfig || {}));
@@ -1038,7 +1081,11 @@ function handleLogo(event) {
         const reader = new FileReader();
         reader.onload = function (e) {
             const preview = document.querySelector('.pdf-preview');
-            preview.innerHTML = `<img src="${e.target.result}" alt="Logo personalizado">`;
+            if (!preview) return;
+            const image = document.createElement('img');
+            image.src = e.target.result;
+            image.alt = 'Logo personalizado';
+            preview.replaceChildren(image);
         };
         reader.readAsDataURL(file);
     }
@@ -1109,7 +1156,7 @@ function formatDate(dateString) {
 function setupPdfTemplates() {
     fetch('/api/pdf-template/config', {
         headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         }
     })
         .then(res => res.json())
@@ -1162,12 +1209,12 @@ function setupPdfTemplates() {
                             body.append('template', selectedTemplate);
                             body.append('customConfig', JSON.stringify(customConfig));
                             body.append('logo', customConfig.logo);
-                            headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+                            headers = { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` };
                         } else {
                             body = JSON.stringify({ template: selectedTemplate, customConfig });
                             headers = {
                                 'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
                             };
                         }
                         const res = await fetch('/api/pdf-template/config', {
@@ -1178,7 +1225,7 @@ function setupPdfTemplates() {
                         if (res.ok) {
                             // Hacer GET para obtener el estado real
                             const getRes = await fetch('/api/pdf-template/config', {
-                                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                                headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
                             });
                             if (getRes.ok) {
                                 const config = await getRes.json();
@@ -1542,9 +1589,9 @@ function setupCustomTemplateForm(customConfig) {
             }
             const res = await fetch('/api/pdf-template/config', {
                 method: 'POST',
-                headers: useFormData ? { 'Authorization': `Bearer ${localStorage.getItem('token')}` } : {
+                headers: useFormData ? { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` } : {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
                 },
                 body: useFormData ? formData : JSON.stringify({ template: 'custom', customConfig: config })
             });
@@ -1795,9 +1842,9 @@ function setupCustomTemplateForm(customConfig) {
             }
             const res = await fetch('/api/pdf-template/config', {
                 method: 'POST',
-                headers: useFormData ? { 'Authorization': `Bearer ${localStorage.getItem('token')}` } : {
+                headers: useFormData ? { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` } : {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
                 },
                 body: useFormData ? formData : JSON.stringify({ template: 'custom', customConfig: config })
             });
@@ -1850,7 +1897,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const res = await fetch('/sign-document', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${sessionStorage.getItem('token')}`
                     },
                     body: formData
                 });
@@ -1932,7 +1979,7 @@ async function changeProfilePassword() {
         const response = await fetch('/api/auth/change-password', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ currentPassword, newPassword })
@@ -1940,8 +1987,8 @@ async function changeProfilePassword() {
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.error || 'No fue posible cambiar la contraseña.');
 
-        if (result.token) localStorage.setItem('token', result.token);
-        localStorage.removeItem('forcePasswordChange');
+        if (result.token) sessionStorage.setItem('token', result.token);
+        sessionStorage.removeItem('forcePasswordChange');
         currentInput.value = '';
         newInput.value = '';
         confirmInput.value = '';
@@ -1962,7 +2009,7 @@ window.changeProfilePassword = changeProfilePassword;
 
 // Verificar si el usuario es owner y mostrar/ocultar secciones correspondientes
 function checkOwnerAccess() {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
         return;
     }

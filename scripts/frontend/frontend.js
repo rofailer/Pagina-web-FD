@@ -178,7 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function showSection(sectionKey) {
         // Verificar si la sección requiere autenticación
         const protectedSections = ['firmar', 'perfil'];
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
 
         if (protectedSections.includes(sectionKey) && !token) {
             // Redirigir a la página de error 403
@@ -247,7 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Asegurar que la foto del avatar se mantenga después del cambio de sección
         setTimeout(() => {
-            if (localStorage.getItem('token') && window.loadUserProfilePhoto) {
+            if (sessionStorage.getItem('token') && window.loadUserProfilePhoto) {
                 window.loadUserProfilePhoto();
             }
         }, 100);
@@ -616,7 +616,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Verificar si la sección requiere autenticación ANTES de cualquier otra verificación
         const protectedSections = ['firmar', 'perfil'];
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
 
         if (protectedSections.includes(sectionKey) && !token) {
             // Redirigir a la página de error 403 y salir
@@ -690,7 +690,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 // Validación de sesión solo para la sección de firmar
-                if (key === "firmar" && !localStorage.getItem("token")) {
+                if (key === "firmar" && !sessionStorage.getItem("token")) {
                     if (window.showSignAuthRequiredModal) window.showSignAuthRequiredModal();
                     else alert("Debes iniciar sesión para firmar documentos.");
                     // No cambiar el hash ni mostrar la sección firmar
@@ -770,7 +770,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
         logoutBtn.addEventListener("click", async () => {
-            const token = localStorage.getItem("token");
+            const token = sessionStorage.getItem("token");
             if (token) {
                 try {
                     await fetch('/api/auth/logout', {
@@ -783,10 +783,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            localStorage.removeItem("token");
-            localStorage.removeItem("userRole");
-            localStorage.removeItem("userName");
-            localStorage.removeItem("user");
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("userRole");
+            sessionStorage.removeItem("userName");
+            sessionStorage.removeItem("user");
             localStorage.removeItem("keysGuideShown");
 
             // Limpiar estados de procesos en curso
@@ -939,7 +939,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Actualizar visibilidad de botones de autenticación ---
     function updateAuthButtonsVisibility() {
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token");
         const loginBtnLi = document.getElementById("loginBtnLi");
         const registerBtnLi = document.getElementById("registerBtnLi");
 

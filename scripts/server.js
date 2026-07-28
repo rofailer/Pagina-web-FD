@@ -10,9 +10,13 @@ const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
 const { PDFDocument } = require("pdf-lib");
-const pool = require('./db/pool');
-const authenticate = require('./middlewares/authenticate');
-const { configureAppSecurity } = require('./middlewares/security');
+const {
+  AGGREGATE_UPLOAD_LIMIT_CODE,
+  configureAppSecurity,
+  createAggregateDiskStorage,
+  getHealthPayload,
+  validateJwtConfiguration
+} = require('./middlewares/security');
 const { initializePrivilegedAccounts } = require('./utils/privilegedAccountBootstrap');
 const {
   decryptWithType,
@@ -24,6 +28,19 @@ const {
 } = require('./utils/crypto');
 const PORT = process.env.PORT || 3000;
 
+try {
+  const validation = validateJwtConfiguration(process.env);
+  validation.warnings.forEach(message => console.warn(`ADVERTENCIA: ${message}`));
+} catch (error) {
+  console.error(`ERROR: ${error.message}`);
+  process.exit(1);
+}
+
+// El pool valida su configuración antes de crear conexiones. Se importa
+// después de JWT para que ambas superficies fallen cerradas en producción.
+const pool = require('./db/pool');
+const authenticate = require('./middlewares/authenticate');
+
 const authRoutes = require('./routes/auth.routes');
 const keysRoutes = require('./routes/keys.routes');
 const pdfTemplateRoutes = require('./routes/pdfTemplate.routes');
@@ -32,22 +49,6 @@ const adminRoutes = require('./routes/admin.routes');
 const visualConfigRoutes = require('./routes/visualConfig.routes');
 const tutorialRoutes = require('./routes/tutorial.routes');
 
-
-// Validar variables de entorno críticas
-if (!process.env.JWT_SECRET) {
-  console.error('❌ ERROR: JWT_SECRET no está configurado en las variables de entorno');
-  console.error('Por favor, configura JWT_SECRET en Railway');
-  process.exit(1);
-}
-
-if (Buffer.byteLength(process.env.JWT_SECRET, 'utf8') < 32) {
-  const message = 'JWT_SECRET debe tener al menos 32 bytes para resistir ataques de fuerza bruta';
-  if (process.env.NODE_ENV === 'production') {
-    console.error(`ERROR: ${message}`);
-    process.exit(1);
-  }
-  console.warn(`ADVERTENCIA: ${message}`);
-}
 
 // =================== Crear directorios necesarios ===================
 function createRequiredDirectories() {
@@ -197,13 +198,32 @@ app.use('/.well-known', (req, res) => {
 
 // Configuración general de archivos. Los anexos pueden ser de cualquier tipo,
 // pero cada archivo tiene un límite para evitar agotar el almacenamiento.
-const maxUploadSizeMb = Number.parseInt(process.env.MAX_UPLOAD_SIZE_MB, 10) || 25;
+function parseUploadLimit(value, fallback, variableName) {
+  const parsed = value === undefined || value === '' ? fallback : Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 1024) {
+    throw new Error(`${variableName} debe ser un entero entre 1 y 1024`);
+  }
+  return parsed;
+}
+
+const maxUploadSizeMb = parseUploadLimit(process.env.MAX_UPLOAD_SIZE_MB, 25, 'MAX_UPLOAD_SIZE_MB');
+const maxUploadTotalSizeMb = parseUploadLimit(
+  process.env.MAX_UPLOAD_TOTAL_SIZE_MB,
+  100,
+  'MAX_UPLOAD_TOTAL_SIZE_MB'
+);
+const uploadDirectory = path.join(__dirname, "../uploads");
 const upload = multer({
-  dest: path.join(__dirname, "../uploads"),
+  storage: createAggregateDiskStorage({
+    destination: uploadDirectory,
+    maxBytes: maxUploadTotalSizeMb * 1024 * 1024
+  }),
   limits: {
     fileSize: maxUploadSizeMb * 1024 * 1024,
     files: 51,
-    fields: 50
+    fields: 50,
+    fieldSize: 64 * 1024,
+    parts: 102
   }
 });
 
@@ -270,27 +290,17 @@ app.get("/", (req, res) => {
 
 // Health check endpoint para Railway
 app.get('/health', async (req, res) => {
+  let connection;
   try {
     // Verificar conexión a la base de datos
-    const connection = await pool.getConnection();
+    connection = await pool.getConnection();
     await connection.ping();
-    connection.release();
-
-    res.status(200).json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      database: 'connected',
-      environment: process.env.NODE_ENV || 'development'
-    });
+    res.status(200).json(getHealthPayload(true));
   } catch (error) {
     console.error('Health check failed:', error.message);
-    res.status(503).json({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      error: 'database_unavailable',
-      database: 'disconnected'
-    });
+    res.status(503).json(getHealthPayload(false));
+  } finally {
+    if (connection) connection.release();
   }
 });
 
@@ -1106,11 +1116,19 @@ app.use((err, req, res, next) => {
     return res.status(400).json({ error: 'El cuerpo JSON de la solicitud no es válido' });
   }
 
-  if (err instanceof multer.MulterError) {
-    return res.status(400).json({
+  if (err instanceof multer.MulterError || err.code === AGGREGATE_UPLOAD_LIMIT_CODE) {
+    cleanupUploadedFiles(req);
+    if (err.code === AGGREGATE_UPLOAD_LIMIT_CODE) {
+      return res.status(413).json({
+        error: `La carga total de archivos debe pesar máximo ${maxUploadTotalSizeMb} MB`,
+        code: AGGREGATE_UPLOAD_LIMIT_CODE
+      });
+    }
+    return res.status(err.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({
       error: err.code === 'LIMIT_FILE_SIZE'
         ? `Cada archivo debe pesar máximo ${maxUploadSizeMb} MB`
-        : 'La carga de archivos supera los límites permitidos'
+        : 'La carga de archivos supera los límites permitidos',
+      code: err.code
     });
   }
 
@@ -1132,14 +1150,19 @@ let server;
 
 async function startServer() {
   try {
+    await authenticate.ensureSessionVersionColumn();
     await initializePrivilegedAccounts();
   } catch (error) {
-    if (error.code === 'INVALID_INITIAL_PASSWORD') {
+    if (
+      String(process.env.NODE_ENV || '').toLowerCase() === 'production' ||
+      error.code === 'INVALID_INITIAL_PASSWORD' ||
+      error.code === 'MISSING_INITIAL_PASSWORD'
+    ) {
       throw error;
     }
     // La página pública y /health siguen disponibles si la base de datos aún
     // no está lista. Al conectarla o importarla, basta reiniciar la aplicación.
-    console.warn('No se pudieron preparar las cuentas iniciales:', error.message);
+    console.warn('No se pudieron preparar el esquema o las cuentas iniciales:', error.message);
   }
 
   server = app.listen(PORT, '0.0.0.0', () => {

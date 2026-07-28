@@ -36,30 +36,6 @@
       </a>
     </div>
 
-    <script>
-      // Inicialización temprana del tema - NO aplica tema, solo prepara para themeManager
-      (function () {
-        // Solo preparar configuración inicial, NO aplicar tema
-        // themeManager.js se encargará de aplicar el tema correcto
-        const availableThemes = [
-          "orange",
-          "blue",
-          "green",
-          "purple",
-          "red",
-          "teal",
-          "dark",
-        ];
-
-        // Leer configuración actual para que themeManager la considere
-        const storedTheme = localStorage.getItem("selectedTheme");
-        const storedCustomColor = localStorage.getItem("customColor");
-
-        // NO aplicar tema aquí - dejar que themeManager.js lo haga
-        // Esto evita conflictos entre la inicialización y el sistema unificado
-      })();
-    </script>
-
     <!-- Sistema unificado de temas -->
     <script src="../scripts/utils/themeManager.js"></script>
   </body>

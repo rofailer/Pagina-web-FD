@@ -30,6 +30,10 @@ const ALLOWED_PROFILE_PHOTO_MIMES = new Set([
     'image/gif'
 ]);
 const PRESENCE_TIMEOUT_MS = 2 * 60 * 1000;
+const ADMIN_SESSION_DURATION_SECONDS = 2 * 60 * 60;
+const RECENT_AUTH_MAX_AGE_SECONDS = 5 * 60;
+const OWNER_PASSWORD_MAX_ATTEMPTS = 5;
+const OWNER_PASSWORD_WINDOW_MS = 15 * 60 * 1000;
 const PDF_TEMPLATE_IDS = new Set(['clasico', 'moderno', 'minimalista', 'elegante']);
 const PDF_FONT_IDS = new Set([
     'Helvetica', 'Helvetica-Bold', 'Helvetica-Oblique',
@@ -253,6 +257,7 @@ async function authenticateAdmin(req, res, next) {
     }
 
     try {
+        await authenticate.ensureSessionVersionColumn();
         const authHeader = req.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -268,7 +273,8 @@ async function authenticateAdmin(req, res, next) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         // Verificar que sea un token de tipo admin-panel
-        if (decoded.type !== 'admin-panel') {
+        if (decoded.type !== 'admin-panel'
+            || !authenticate.isSessionWithinAbsoluteLifetime(decoded)) {
             return res.status(401).json({
                 success: false,
                 message: 'Tipo de token inválido'
@@ -276,7 +282,8 @@ async function authenticateAdmin(req, res, next) {
         }
 
         const [users] = await pool.query(
-            `SELECT id, nombre, usuario, email, rol, estado_cuenta, password, updated_at
+            `SELECT id, nombre, usuario, email, rol, estado_cuenta, password,
+                    session_version, updated_at
              FROM users
              WHERE id = ?
              LIMIT 1`,
@@ -315,7 +322,14 @@ async function authenticateAdmin(req, res, next) {
 
         req.userId = user.id;
         req.userRole = user.rol;
-        req.authVersion = authenticate.createAuthVersion(user.id, user.password);
+        req.sessionVersion = authenticate.normalizeSessionVersion(user.session_version);
+        req.authVersion = authenticate.createAuthVersion(
+            user.id,
+            user.password,
+            req.sessionVersion
+        );
+        req.sessionStartedAt = Number(decoded.sessionStartedAt);
+        req.authenticatedAt = Number(decoded.authenticatedAt);
         req.user = {
             id: user.id,
             nombre: user.nombre,
@@ -345,85 +359,84 @@ async function authenticateAdmin(req, res, next) {
    TOKENS TEMPORALES DE ADMINISTRACIÓN
    ======================================== */
 
-// Almacén temporal para tokens de admin (en memoria)
-const adminTokens = new Map();
+const ownerPasswordFailures = new Map();
+
+function cleanupOwnerPasswordFailures(now = Date.now()) {
+    for (const [key, data] of ownerPasswordFailures.entries()) {
+        if (data.windowStartedAt + OWNER_PASSWORD_WINDOW_MS <= now) {
+            ownerPasswordFailures.delete(key);
+        }
+    }
+}
+
+function ownerPasswordFailureKey(req) {
+    return `${req.userId}:${String(req.ip || req.socket?.remoteAddress || 'unknown')}`;
+}
+
+function isOwnerPasswordBlocked(req, now = Date.now()) {
+    cleanupOwnerPasswordFailures(now);
+    const entry = ownerPasswordFailures.get(ownerPasswordFailureKey(req));
+    return Boolean(entry && entry.attempts >= OWNER_PASSWORD_MAX_ATTEMPTS);
+}
+
+function recordOwnerPasswordFailure(req, now = Date.now()) {
+    const key = ownerPasswordFailureKey(req);
+    const current = ownerPasswordFailures.get(key);
+    if (!current || current.windowStartedAt + OWNER_PASSWORD_WINDOW_MS <= now) {
+        ownerPasswordFailures.set(key, { attempts: 1, windowStartedAt: now });
+        return;
+    }
+    current.attempts += 1;
+}
+
+function clearOwnerPasswordFailures(req) {
+    ownerPasswordFailures.delete(ownerPasswordFailureKey(req));
+}
 
 // Generar token temporal para panel de administración
 router.post('/api/admin/generate-admin-token', authenticate, isAdmin, async (req, res) => {
     try {
-        // Generar token temporal con expiración extendida
+        if (!authenticate.isRecentlyAuthenticated(
+            req.authenticatedAt,
+            RECENT_AUTH_MAX_AGE_SECONDS
+        )) {
+            return res.status(401).json({
+                success: false,
+                code: 'RECENT_AUTH_REQUIRED',
+                message: 'Confirma nuevamente tu contraseña para abrir el panel administrativo.'
+            });
+        }
+
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        const absoluteExpiresAt = req.sessionStartedAt
+            + authenticate.ABSOLUTE_SESSION_LIFETIME_SECONDS;
+        const expiresIn = Math.max(
+            1,
+            Math.min(ADMIN_SESSION_DURATION_SECONDS, absoluteExpiresAt - nowSeconds)
+        );
+
         const adminToken = jwt.sign(
             {
-                id: req.userId,           // Cambiar de 'userId' a 'id' para compatibilidad
+                id: req.userId,
                 rol: req.userRole,
                 usuario: req.user?.usuario || 'admin',
                 type: 'admin-panel',
-                timestamp: Date.now(),
+                sessionVersion: req.sessionVersion,
+                sessionStartedAt: req.sessionStartedAt,
+                authenticatedAt: req.authenticatedAt,
                 authVersion: req.authVersion
             },
             process.env.JWT_SECRET,
-            { expiresIn: '12h' }
+            { expiresIn }
         );
-
-        // Guardar en memoria con expiración
-        const tokenId = crypto.randomBytes(32).toString('hex');
-        adminTokens.set(tokenId, {
-            token: adminToken,
-            userId: req.userId,
-            createdAt: Date.now(),
-            expiresAt: Date.now() + (5 * 60 * 1000)
-        });
-
-        // Limpiar tokens expirados cada vez que se crea uno nuevo
-        for (const [id, data] of adminTokens.entries()) {
-            if (data.expiresAt < Date.now()) {
-                adminTokens.delete(id);
-            }
-        }
 
         res.json({
             success: true,
-            tokenId: tokenId,
-            expiresIn: 300
+            token: adminToken,
+            expiresIn
         });
     } catch (error) {
         console.error('Error generando token de admin:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
-});
-
-// Intercambiar tokenId por token real
-router.post('/api/admin/exchange-admin-token', async (req, res) => {
-    try {
-        const { tokenId } = req.body;
-
-        if (!tokenId) {
-            return res.status(400).json({ error: 'Token ID requerido' });
-        }
-
-        // Buscar token en memoria
-        const tokenData = adminTokens.get(tokenId);
-
-        if (!tokenData) {
-            return res.status(404).json({ error: 'Token ID inválido o expirado' });
-        }
-
-        // Verificar si el token no ha expirado
-        if (tokenData.expiresAt < Date.now()) {
-            adminTokens.delete(tokenId); // Limpiar token expirado
-            return res.status(404).json({ error: 'Token ID expirado' });
-        }
-
-        // El identificador temporal solo puede intercambiarse una vez.
-        adminTokens.delete(tokenId);
-
-        res.json({
-            success: true,
-            token: tokenData.token,
-            expiresIn: 43200
-        });
-    } catch (error) {
-        console.error('Error intercambiando token de admin:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 });
@@ -480,7 +493,7 @@ router.post('/api/admin/session/heartbeat', async (req, res) => {
    ======================================== */
 
 // Obtener configuración actual
-router.get('/api/admin/config', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/config', isAdmin, async (req, res) => {
     try {
         const configPath = path.join(__dirname, '../../config.json');
 
@@ -527,7 +540,7 @@ router.get('/api/admin/config', authenticate, isAdmin, async (req, res) => {
 });
 
 // Actualizar configuración
-router.post('/api/admin/config', authenticate, isOwner, async (req, res) => {
+router.post('/api/admin/config', isOwner, async (req, res) => {
     try {
         const { siteTitle, contactEmail, contactPhone } = req.body;
         const normalizedSiteTitle = typeof siteTitle === 'string'
@@ -623,71 +636,12 @@ router.post('/api/admin/config', authenticate, isOwner, async (req, res) => {
     }
 });
 
-// Verificar acceso del owner con contraseña
-router.post('/api/admin/verify-owner', authenticate, async (req, res) => {
-    try {
-        const { password } = req.body;
-
-        // Verificar que el usuario actual sea owner
-        if (req.user.rol !== 'owner') {
-            return res.status(403).json({
-                success: false,
-                message: 'Acceso denegado. Solo el propietario puede acceder.'
-            });
-        }
-
-        if (!password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Contraseña requerida'
-            });
-        }
-
-        const pool = require('../db/pool');
-
-        // Obtener la contraseña hasheada del usuario desde la BD
-        const [userResult] = await pool.query(
-            'SELECT password FROM users WHERE id = ?',
-            [req.user.id]
-        );
-
-        if (userResult.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Usuario no encontrado'
-            });
-        }
-
-        // Verificar la contraseña
-        const isValidPassword = await bcrypt.compare(password, userResult[0].password);
-
-        if (!isValidPassword) {
-            return res.status(401).json({
-                success: false,
-                message: 'Contraseña incorrecta'
-            });
-        }
-
-        res.json({
-            success: true,
-            message: 'Acceso verificado correctamente'
-        });
-
-    } catch (error) {
-        console.error('Error verificando acceso de owner:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor'
-        });
-    }
-});
-
 /* ========================================
    GESTIÓN DE USUARIOS
    ======================================== */
 
 // Obtener lista de usuarios
-router.get('/api/admin/users', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/users', isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
 
@@ -785,7 +739,7 @@ router.get('/api/admin/users/:userId/photo', async (req, res) => {
 });
 
 // Crear nuevo usuario
-router.post('/api/admin/users', authenticate, isAdmin, async (req, res) => {
+router.post('/api/admin/users', isAdmin, async (req, res) => {
     try {
         const name = normalizeText(req.body?.name);
         const email = normalizeText(req.body?.email).toLowerCase();
@@ -959,7 +913,9 @@ router.post('/api/admin/users/bulk-action', isAdmin, async (req, res) => {
         } else if (statusActions[normalizedAction]) {
             [result] = await pool.query(
                 `UPDATE users
-                 SET estado_cuenta = ?, updated_at = NOW()
+                 SET estado_cuenta = ?,
+                     session_version = session_version + 1,
+                     updated_at = NOW()
                  WHERE id IN (${placeholders})${protectOwners}`,
                 [statusActions[normalizedAction], ...ids]
             );
@@ -985,7 +941,7 @@ router.post('/api/admin/users/bulk-action', isAdmin, async (req, res) => {
 });
 
 // Actualizar usuario
-router.put('/api/admin/users/:userId', authenticate, isAdmin, async (req, res) => {
+router.put('/api/admin/users/:userId', isAdmin, async (req, res) => {
     try {
         const targetUser = await findManagedUser(req.params.userId);
         if (!targetUser) {
@@ -1050,6 +1006,7 @@ router.put('/api/admin/users/:userId', authenticate, isAdmin, async (req, res) =
                 email = ?,
                 usuario = ?,
                 rol = ?,
+                session_version = session_version + 1,
                 updated_at = NOW()
             WHERE id = ?
         `;
@@ -1112,7 +1069,7 @@ router.put('/api/admin/users/:userId', authenticate, isAdmin, async (req, res) =
 });
 
 // Cambiar rol de usuario
-router.put('/api/admin/users/:userId/role', authenticate, isAdmin, async (req, res) => {
+router.put('/api/admin/users/:userId/role', isAdmin, async (req, res) => {
     try {
         const targetUser = await findManagedUser(req.params.userId);
         if (!targetUser) {
@@ -1142,7 +1099,9 @@ router.put('/api/admin/users/:userId/role', authenticate, isAdmin, async (req, r
         }
 
         const [result] = await pool.query(
-            'UPDATE users SET rol = ?, updated_at = NOW() WHERE id = ?',
+            `UPDATE users
+             SET rol = ?, session_version = session_version + 1, updated_at = NOW()
+             WHERE id = ?`,
             [dbRole, targetUser.id]
         );
 
@@ -1162,7 +1121,7 @@ router.put('/api/admin/users/:userId/role', authenticate, isAdmin, async (req, r
 });
 
 // Cambiar estado de usuario
-router.put('/api/admin/users/:userId/status', authenticate, isAdmin, async (req, res) => {
+router.put('/api/admin/users/:userId/status', isAdmin, async (req, res) => {
     try {
         const targetUser = await findManagedUser(req.params.userId);
         if (!targetUser) {
@@ -1200,7 +1159,11 @@ router.put('/api/admin/users/:userId/status', authenticate, isAdmin, async (req,
         }
 
         const [result] = await pool.query(
-            'UPDATE users SET estado_cuenta = ?, updated_at = NOW() WHERE id = ?',
+            `UPDATE users
+             SET estado_cuenta = ?,
+                 session_version = session_version + 1,
+                 updated_at = NOW()
+             WHERE id = ?`,
             [dbStatus, targetUser.id]
         );
 
@@ -1221,7 +1184,7 @@ router.put('/api/admin/users/:userId/status', authenticate, isAdmin, async (req,
 });
 
 // Resetear contraseña de usuario
-router.post('/api/admin/users/:userId/reset-password', authenticate, isAdmin, async (req, res) => {
+router.post('/api/admin/users/:userId/reset-password', isAdmin, async (req, res) => {
     try {
         const targetUser = await findManagedUser(req.params.userId);
         if (!targetUser) {
@@ -1236,7 +1199,12 @@ router.post('/api/admin/users/:userId/reset-password', authenticate, isAdmin, as
         const temporaryPassword = generateSecurePassword();
         const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
         const [result] = await pool.query(
-            'UPDATE users SET password = ?, force_password_change = 1, updated_at = NOW() WHERE id = ?',
+            `UPDATE users
+             SET password = ?,
+                 force_password_change = 1,
+                 session_version = session_version + 1,
+                 updated_at = NOW()
+             WHERE id = ?`,
             [hashedPassword, targetUser.id]
         );
 
@@ -1259,7 +1227,7 @@ router.post('/api/admin/users/:userId/reset-password', authenticate, isAdmin, as
 });
 
 // Eliminar usuario
-router.delete('/api/admin/users/:userId', authenticate, isAdmin, async (req, res) => {
+router.delete('/api/admin/users/:userId', isAdmin, async (req, res) => {
     try {
         const targetUser = await findManagedUser(req.params.userId);
         if (!targetUser) {
@@ -1310,7 +1278,7 @@ router.delete('/api/admin/users/:userId', authenticate, isAdmin, async (req, res
 });
 
 // Obtener actividad de usuario
-router.get('/api/admin/users/:userId/activity', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/users/:userId/activity', isAdmin, async (req, res) => {
     try {
         const { userId } = req.params;
         const pool = require('../db/pool');
@@ -1347,7 +1315,7 @@ router.get('/api/admin/users/:userId/activity', authenticate, isAdmin, async (re
 // Ruta duplicada eliminada - usar la implementación en línea 1006
 
 // Obtener estado del sistema
-router.get('/api/admin/status', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/status', isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
 
@@ -1382,7 +1350,7 @@ router.get('/api/admin/status', authenticate, isAdmin, async (req, res) => {
    ======================================== */
 
 // Obtener temas disponibles
-router.get('/api/admin/themes', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/themes', isAdmin, async (req, res) => {
     try {
         const themes = [
             {
@@ -1426,7 +1394,7 @@ router.get('/api/admin/themes', authenticate, isAdmin, async (req, res) => {
 });
 
 // Aplicar tema
-router.post('/api/admin/themes/:themeId/apply', authenticate, isOwner, async (req, res) => {
+router.post('/api/admin/themes/:themeId/apply', isOwner, async (req, res) => {
     try {
         const { themeId } = req.params;
 
@@ -1451,7 +1419,7 @@ router.post('/api/admin/themes/:themeId/apply', authenticate, isOwner, async (re
    ======================================== */
 
 // Toggle modo mantenimiento
-router.post('/api/admin/maintenance', authenticate, isOwner, async (req, res) => {
+router.post('/api/admin/maintenance', isOwner, async (req, res) => {
     try {
         const { enabled } = req.body;
 
@@ -1525,7 +1493,7 @@ const upload = multer({
 });
 
 // Subir archivo
-router.post('/api/admin/upload', authenticate, isAdmin, upload.single('file'), async (req, res) => {
+router.post('/api/admin/upload', isAdmin, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -1556,7 +1524,7 @@ router.post('/api/admin/upload', authenticate, isAdmin, upload.single('file'), a
    ======================================== */
 
 // Guardar configuración global de temas
-router.post('/api/admin/theme-configuration', authenticate, isOwner, async (req, res) => {
+router.post('/api/admin/theme-configuration', isOwner, async (req, res) => {
     try {
         const { selectedTheme, customColor, timestamp } = req.body;
 
@@ -1621,7 +1589,7 @@ router.post('/api/admin/theme-configuration', authenticate, isOwner, async (req,
    ======================================== */
 
 // Ruta compatible para el nuevo themeManager - guardar configuración
-router.post('/api/admin/save-theme-configuration', authenticate, isOwner, async (req, res) => {
+router.post('/api/admin/save-theme-configuration', isOwner, async (req, res) => {
     try {
         const { selectedTheme, customColor, timestamp } = req.body;
         const pool = require('../db/pool');
@@ -1720,7 +1688,7 @@ router.get('/api/global-theme-config', async (req, res) => {
    ======================================== */
 
 // Obtener métricas generales del sistema
-router.get('/api/admin/metrics', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/metrics', isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
 
@@ -1816,7 +1784,7 @@ router.get('/api/admin/metrics', authenticate, isAdmin, async (req, res) => {
 });
 
 // Obtener estado de la base de datos
-router.get('/api/admin/database/status', authenticateAdmin, isAdmin, async (req, res) => {
+router.get('/api/admin/database/status', isOwner, async (req, res) => {
     let connection;
 
     try {
@@ -1859,7 +1827,7 @@ router.get('/api/admin/database/status', authenticateAdmin, isAdmin, async (req,
 });
 
 // Probar la conexión sin ejecutar operaciones de mantenimiento.
-router.post('/api/admin/database/test-connection', authenticateAdmin, isAdmin, async (req, res) => {
+router.post('/api/admin/database/test-connection', isOwner, async (req, res) => {
     let connection;
 
     try {
@@ -1889,7 +1857,7 @@ router.post('/api/admin/database/test-connection', authenticateAdmin, isAdmin, a
 });
 
 // Obtener lista de tablas
-router.get('/api/admin/database/tables', authenticateAdmin, isAdmin, async (req, res) => {
+router.get('/api/admin/database/tables', isOwner, async (req, res) => {
     try {
         const pool = require('../db/pool');
         const connection = await pool.getConnection();
@@ -1938,9 +1906,42 @@ router.get('/api/admin/database/tables', authenticateAdmin, isAdmin, async (req,
 });
 
 // Exportar una copia SQL sin ejecutar cambios sobre la base de datos activa.
-router.get('/api/admin/database/export', authenticateAdmin, isOwner, async (req, res) => {
+router.post('/api/admin/database/export', isOwner, async (req, res) => {
     let connection;
     try {
+        const password = typeof req.body?.password === 'string' ? req.body.password : '';
+        if (!password) {
+            return res.status(400).json({
+                success: false,
+                message: 'La contraseña actual es obligatoria.'
+            });
+        }
+
+        if (isOwnerPasswordBlocked(req)) {
+            return res.status(429).json({
+                success: false,
+                message: 'Demasiados intentos. Espera antes de volver a confirmar tu contraseña.'
+            });
+        }
+
+        const [userResult] = await pool.query(
+            `SELECT password
+             FROM users
+             WHERE id = ? AND rol = 'owner' AND estado_cuenta = 'activo'
+             LIMIT 1`,
+            [req.userId]
+        );
+        const passwordMatches = userResult.length > 0
+            && await bcrypt.compare(password, userResult[0].password);
+        if (!passwordMatches) {
+            recordOwnerPasswordFailure(req);
+            return res.status(401).json({
+                success: false,
+                message: 'No fue posible confirmar la autorización.'
+            });
+        }
+        clearOwnerPasswordFailures(req);
+
         connection = await pool.getConnection();
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const databaseName = sanitizeExportName(process.env.DB_NAME || 'firmas_digitales');
@@ -1969,7 +1970,7 @@ router.get('/api/admin/database/export', authenticateAdmin, isOwner, async (req,
     }
 });
 
-router.post('/api/admin/database/table-details', authenticateAdmin, isAdmin, async (req, res) => {
+router.post('/api/admin/database/table-details', isOwner, async (req, res) => {
     try {
         const pool = require('../db/pool');
         const { tableName } = req.body;
@@ -2043,7 +2044,7 @@ router.post('/api/admin/database/table-details', authenticateAdmin, isAdmin, asy
     }
 });
 
-router.post('/api/admin/database/table-data', authenticateAdmin, isAdmin, async (req, res) => {
+router.post('/api/admin/database/table-data', isOwner, async (req, res) => {
     try {
         const pool = require('../db/pool');
         const { tableName, page = 1, limit = 10 } = req.body;
@@ -2157,7 +2158,7 @@ router.post('/api/admin/database/table-data', authenticateAdmin, isAdmin, async 
    ENDPOINT: OBTENER ROLES DE USUARIO
    ======================================== */
 
-router.get('/api/admin/user-roles', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/user-roles', isAdmin, async (req, res) => {
     try {
 
         // Roles disponibles en el sistema
@@ -2229,7 +2230,7 @@ const faviconUpload = multer({
 });
 
 // Subir favicon
-router.post('/api/admin/upload-favicon', authenticate, isAdmin, faviconUpload.single('favicon'), async (req, res) => {
+router.post('/api/admin/upload-favicon', isAdmin, faviconUpload.single('favicon'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -2281,7 +2282,7 @@ router.post('/api/admin/upload-favicon', authenticate, isAdmin, faviconUpload.si
    ======================================== */
 
 // Ruta para obtener lista de plantillas PDF
-router.get('/api/admin/pdf/templates', authenticateAdmin, isAdmin, async (req, res) => {
+router.get('/api/admin/pdf/templates', isAdmin, async (req, res) => {
     try {
         const [configurationRows] = await pool.execute(
             'SELECT selected_template FROM global_pdf_config WHERE id = 1 LIMIT 1'
@@ -2350,7 +2351,7 @@ router.get('/api/admin/pdf/templates', authenticateAdmin, isAdmin, async (req, r
 });
 
 // Ruta para obtener configuración de base de datos
-router.get('/api/admin/database/config', authenticateAdmin, isAdmin, async (req, res) => {
+router.get('/api/admin/database/config', isOwner, async (req, res) => {
     try {
         const dbConfig = {
             host: process.env.DB_HOST || 'localhost',
@@ -2391,7 +2392,7 @@ router.get('/api/admin/database/config', authenticateAdmin, isAdmin, async (req,
 });
 
 // Ruta para obtener logs del sistema
-router.get('/api/admin/system/logs', authenticate, isAdmin, async (req, res) => {
+router.get('/api/admin/system/logs', isAdmin, async (req, res) => {
     try {
         const requestedLimit = Number.parseInt(req.query.limit, 10);
         const limit = Number.isInteger(requestedLimit)
@@ -2439,7 +2440,7 @@ router.get('/api/admin/system/logs', authenticate, isAdmin, async (req, res) => 
 });
 
 // Ruta para obtener configuración específica de template
-router.get('/api/admin/pdf/templates/:templateId/config', authenticateAdmin, isAdmin, async (req, res) => {
+router.get('/api/admin/pdf/templates/:templateId/config', isAdmin, async (req, res) => {
     try {
         const { templateId } = req.params;
 
@@ -2507,7 +2508,7 @@ router.get('/api/admin/pdf/templates/:templateId/config', authenticateAdmin, isA
 });
 
 // Ruta para guardar configuración de template específico
-router.put('/api/admin/pdf/templates/:templateId/config', authenticateAdmin, isOwner, async (req, res) => {
+router.put('/api/admin/pdf/templates/:templateId/config', isOwner, async (req, res) => {
     try {
         const { templateId } = req.params;
         const configData = req.body;
@@ -2539,7 +2540,7 @@ router.put('/api/admin/pdf/templates/:templateId/config', authenticateAdmin, isO
 });
 
 // Ruta para obtener configuración PDF general
-router.get('/api/admin/pdf/config', authenticateAdmin, isAdmin, async (req, res) => {
+router.get('/api/admin/pdf/config', isAdmin, async (req, res) => {
     try {
         const pool = require('../db/pool');
         // Consultar configuración PDF global desde la base de datos
@@ -2632,7 +2633,7 @@ router.get('/api/admin/pdf/config', authenticateAdmin, isAdmin, async (req, res)
 });
 
 // Ruta para guardar configuración PDF global
-router.put('/api/admin/pdf/config', authenticateAdmin, isOwner, async (req, res) => {
+router.put('/api/admin/pdf/config', isOwner, async (req, res) => {
     try {
         const configData = normalizePdfConfiguration(req.body);
         const adminUsername = req.user?.usuario || req.user?.email || `user:${req.userId}`;
@@ -2692,7 +2693,7 @@ router.put('/api/admin/pdf/config', authenticateAdmin, isOwner, async (req, res)
 });
 
 // Ruta para generar vista previa de PDF con configuración específica
-router.post('/api/admin/pdf/preview', authenticateAdmin, isAdmin, async (req, res) => {
+router.post('/api/admin/pdf/preview', isAdmin, async (req, res) => {
     try {
         const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
         const { TemplateManager } = require('../templates/template.manager');

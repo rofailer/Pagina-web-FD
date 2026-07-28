@@ -4,26 +4,22 @@
   let completed = false;
 
   window.goToMainSite = function goToMainSite() {
+    sessionStorage.removeItem('admin_token');
     window.location.assign('/');
   };
 
   start();
 
   async function start() {
-    const params = new URLSearchParams(window.location.search);
-    const tokenId = params.get('tid');
-    let adminToken = localStorage.getItem('admin_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('forcePasswordChange');
 
-    if (tokenId) {
-      clearSensitiveQuery();
-      try {
-        adminToken = await exchangeToken(tokenId);
-        localStorage.setItem('admin_token', adminToken);
-      } catch (error) {
-        failAuthentication(error, UNAUTHORIZED_URL);
-        return;
-      }
-    }
+    const adminToken = sessionStorage.getItem('admin_token');
+    // Nunca conservar una sesión administrativa en almacenamiento persistente.
+    localStorage.removeItem('admin_token');
 
     if (!adminToken) {
       failAuthentication(new Error('No existe una sesión administrativa'), ADMIN_LOGIN_URL);
@@ -39,21 +35,10 @@
       completed = true;
       window.dispatchEvent(new CustomEvent('admin:authenticated', { detail: { user } }));
     } catch (error) {
+      sessionStorage.removeItem('admin_token');
       localStorage.removeItem('admin_token');
       failAuthentication(error, error.status === 403 ? UNAUTHORIZED_URL : ADMIN_LOGIN_URL);
     }
-  }
-
-  async function exchangeToken(tokenId) {
-    const response = await fetch('/api/admin/exchange-admin-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tokenId })
-    });
-    if (!response.ok) throw await responseError(response, 'El acceso administrativo expiró');
-    const payload = await response.json();
-    if (!payload.token) throw new Error('El servidor no entregó una sesión válida');
-    return payload.token;
   }
 
   async function validateSession(token) {
@@ -84,13 +69,8 @@
     return error;
   }
 
-  function clearSensitiveQuery() {
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
-
   function failAuthentication(error, destination) {
     if (completed) return;
-    console.error('Acceso administrativo rechazado:', error.message);
     const loading = document.getElementById('adminAuthLoading');
     const message = loading?.querySelector('p');
     if (message) message.textContent = 'No fue posible validar el acceso. Redirigiendo…';

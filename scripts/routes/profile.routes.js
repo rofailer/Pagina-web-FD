@@ -6,12 +6,21 @@ const multer = require('multer');
 
 const MAX_PROFILE_PHOTO_SIZE = 5 * 1024 * 1024;
 const PRESENCE_TIMEOUT_MS = 2 * 60 * 1000;
+const NAME_PATTERN = /^[\p{L}\p{M}\p{N} .,'’_-]+$/u;
 const VALID_PRESENCE_STATUSES = new Set([
     'en_linea',
     'ausente',
     'ocupado',
     'desconectado'
 ]);
+
+function normalizeProfileName(value) {
+    return typeof value === 'string' ? value.normalize('NFC').trim() : '';
+}
+
+function isValidProfileName(value) {
+    return value.length >= 2 && value.length <= 100 && NAME_PATTERN.test(value);
+}
 
 function detectImageMime(buffer) {
     if (!Buffer.isBuffer(buffer)) return null;
@@ -170,15 +179,17 @@ router.put('/api/profile/personal', authenticate, async (req, res) => {
             grado_academico
         } = req.body;
 
-        const normalizedName = typeof nombre === 'string' ? nombre.trim() : '';
+        const normalizedName = normalizeProfileName(nombre);
         const normalizedEmail = typeof email === 'string' ? email.trim() : '';
 
         if (!normalizedName) {
             return res.status(400).json({ error: 'El nombre completo es obligatorio' });
         }
 
-        if (normalizedName.length > 100) {
-            return res.status(400).json({ error: 'El nombre no puede superar los 100 caracteres' });
+        if (!isValidProfileName(normalizedName)) {
+            return res.status(400).json({
+                error: 'El nombre debe tener entre 2 y 100 caracteres y solo puede incluir letras, números, espacios, puntos, comas, apóstrofes, guiones y guiones bajos'
+            });
         }
 
         // Validar email único si se está cambiando
@@ -544,5 +555,8 @@ router.detectImageMime = detectImageMime;
 router.effectivePresenceStatus = effectivePresenceStatus;
 router.photoVersion = photoVersion;
 router.PRESENCE_TIMEOUT_MS = PRESENCE_TIMEOUT_MS;
+router.NAME_PATTERN = NAME_PATTERN;
+router.normalizeProfileName = normalizeProfileName;
+router.isValidProfileName = isValidProfileName;
 
 module.exports = router;

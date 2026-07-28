@@ -940,7 +940,7 @@
             <div class="hero-buttons">
               <button
                 class="hero-btn primary"
-                onclick="handleSignDocumentClick()"
+                data-fd-action="sign-document"
               >
                 <span class="btn-icon">
                   <svg
@@ -963,7 +963,7 @@
               </button>
               <button
                 class="hero-btn secondary"
-                onclick="window.location.hash='verificar'"
+                data-fd-action="verify-document"
               >
                 <span class="btn-icon">
                   <svg
@@ -1599,7 +1599,7 @@
                         </svg>
                         Cambiar archivo
                       </span>
-                      <button type="button" class="file-remove-btn" onclick="clearSignFile()" title="Eliminar archivo" aria-label="Eliminar archivo seleccionado">
+                      <button type="button" class="file-remove-btn" data-fd-action="clear-sign-file" title="Eliminar archivo" aria-label="Eliminar archivo seleccionado">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                           <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2"/>
                         </svg>
@@ -1868,7 +1868,7 @@
                     <div class="signature-preview">
                       <img id="signatureImagePreview" alt="Vista previa de firma" />
                     </div>
-                    <button type="button" class="file-remove-btn" onclick="clearSignatureImage()" title="Eliminar imagen">
+                    <button type="button" class="file-remove-btn" data-fd-action="clear-signature-image" title="Eliminar imagen">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2"/>
                       </svg>
@@ -2233,7 +2233,7 @@
                         <div class="file-name" id="signedFileName"></div>
                         <div class="file-size" id="signedFileSize"></div>
                       </div>
-                      <button type="button" class="file-remove-btn" onclick="clearSignedFile()">
+                      <button type="button" class="file-remove-btn" data-fd-action="clear-signed-file">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                           <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -2359,7 +2359,7 @@
                         <div class="file-name" id="originalFileName"></div>
                         <div class="file-size" id="originalFileSize"></div>
                       </div>
-                      <button type="button" class="file-remove-btn" onclick="clearOriginalFile()">
+                      <button type="button" class="file-remove-btn" data-fd-action="clear-original-file">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                           <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -2603,7 +2603,13 @@
               <div class="datos-personales-grid">
                 <div class="perfil-photo-section">
                   <div class="profile-photo-control">
-                    <div class="perfil-photo" onclick="selectProfilePhoto()">
+                    <div
+                      class="perfil-photo"
+                      data-fd-action="select-profile-photo"
+                      role="button"
+                      tabindex="0"
+                      aria-label="Seleccionar foto de perfil"
+                    >
                       <div class="perfil-photo-placeholder">
                         <svg
                           width="40"
@@ -2668,7 +2674,7 @@
                   <button
                     type="button"
                     class="photo-upload-btn"
-                    onclick="selectProfilePhoto()"
+                    data-fd-action="select-profile-photo"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                       <path d="M12 20h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -2681,7 +2687,7 @@
                     id="profilePhotoInput"
                     accept="image/*"
                     style="display: none"
-                    onchange="handleProfilePhoto(event)"
+                    data-fd-change="profile-photo"
                   />
                 </div>
 
@@ -2776,7 +2782,7 @@
               </div>
 
               <div class="tab-actions">
-                <button class="save-btn" onclick="saveUserData()">
+                <button type="button" class="save-btn" data-fd-action="save-profile">
                   <svg
                     width="16"
                     height="16"
@@ -3366,7 +3372,7 @@
                   <button
                     type="button"
                     class="create-key-btn inline-btn"
-                    onclick="showCreateKeyModal()"
+                    data-fd-action="create-key"
                   >
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                       <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -3414,7 +3420,7 @@
                     La gestión de usuarios, respaldos y configuración global permanece
                     dentro del panel administrativo.
                   </p>
-                  <button type="button" class="admin-panel-link" onclick="openAdminPanel()">
+                  <button type="button" class="admin-panel-link" data-fd-action="open-admin-panel">
                     Abrir panel administrativo
                     <span aria-hidden="true">→</span>
                   </button>
@@ -3435,7 +3441,7 @@
                         <span class="setting-description">Al volver al perfil, abre la pestaña que estabas consultando.</span>
                       </span>
                       <span class="profile-switch">
-                        <input type="checkbox" id="rememberProfileTab" checked onchange="updateProfileExperience(this)" />
+                        <input type="checkbox" id="rememberProfileTab" checked data-fd-change="profile-experience" />
                         <span class="profile-switch-track" aria-hidden="true"></span>
                       </span>
                     </label>
@@ -3446,7 +3452,7 @@
                         <span class="setting-description">Desactiva transiciones y desplazamientos suaves en todo el sitio.</span>
                       </span>
                       <span class="profile-switch">
-                        <input type="checkbox" id="reduceProfileMotion" onchange="updateProfileExperience(this)" />
+                        <input type="checkbox" id="reduceProfileMotion" data-fd-change="profile-experience" />
                         <span class="profile-switch-track" aria-hidden="true"></span>
                       </span>
                     </label>
@@ -3480,7 +3486,7 @@
                   </div>
                   <div class="password-settings-actions">
                     <p id="profilePasswordMessage" role="status" aria-live="polite"></p>
-                    <button type="button" class="save-btn secondary-action" onclick="changeProfilePassword()">
+                    <button type="button" class="save-btn secondary-action" data-fd-action="change-profile-password">
                       Actualizar contraseña
                     </button>
                   </div>
@@ -3730,5 +3736,6 @@
     <script src="/scripts/utils/themeManager.js"></script>
     <script src="/scripts/frontend/visualConfig.frontend.js?v=4"></script>
     <script src="/scripts/frontend/inicioTimelineReveal.js"></script>
+    <script src="/scripts/frontend/pageActions.frontend.js?v=1"></script>
   </body>
 </html>

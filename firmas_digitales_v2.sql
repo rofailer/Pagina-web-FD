@@ -43,12 +43,12 @@ CREATE TABLE users (
   -- Información personal
   email VARCHAR(255) DEFAULT NULL,
   organizacion VARCHAR(255) DEFAULT NULL,
-  biografia TEXT DEFAULT NULL,
-  foto_perfil MEDIUMBLOB DEFAULT NULL COMMENT 'Contenido binario persistente de la foto de perfil',
+  biografia TEXT NULL,
+  foto_perfil MEDIUMBLOB NULL COMMENT 'Contenido binario persistente de la foto de perfil',
   foto_perfil_mimetype VARCHAR(50) DEFAULT NULL,
   foto_perfil_actualizada_at TIMESTAMP(3) NULL DEFAULT NULL,
   telefono VARCHAR(20) DEFAULT NULL,
-  direccion TEXT DEFAULT NULL,
+  direccion TEXT NULL,
   
   -- Información académica/profesional
   cargo VARCHAR(255) DEFAULT NULL,
@@ -60,6 +60,7 @@ CREATE TABLE users (
   estado_presencia ENUM('en_linea','ausente','ocupado','desconectado') NOT NULL DEFAULT 'desconectado',
   ultima_actividad TIMESTAMP NULL DEFAULT NULL,
   force_password_change BOOLEAN NOT NULL DEFAULT FALSE,
+  session_version BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Versión incrementada para revocar todas las sesiones emitidas',
   ultimo_acceso TIMESTAMP NULL DEFAULT NULL,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
@@ -93,25 +94,25 @@ DROP TABLE IF EXISTS global_template_config;
 CREATE TABLE global_pdf_config (
   id INT PRIMARY KEY DEFAULT 1,
   selected_template VARCHAR(50) NOT NULL DEFAULT 'clasico',
-  logo_path TEXT DEFAULT NULL COMMENT 'OBSOLETO: Ya no se usa. El logo ahora se guarda en visual_config como datos binarios',
+  logo_path TEXT NULL COMMENT 'OBSOLETO: Ya no se usa. El logo ahora se guarda en visual_config como datos binarios',
 
   -- Configuración de colores (JSON para flexibilidad)
-  color_config JSON DEFAULT ('{"primary": "#2563eb", "secondary": "#64748b", "accent": "#f59e0b"}'),
+  color_config JSON NULL,
 
   -- Configuración de fuentes
-  font_config JSON DEFAULT ('{"title": "Helvetica-Bold", "body": "Helvetica", "metadata": "Helvetica-Oblique"}'),
+  font_config JSON NULL,
 
   -- Configuración de márgenes y layout
-  layout_config JSON DEFAULT ('{"marginTop": 50, "marginBottom": 50, "marginLeft": 50, "marginRight": 50, "lineHeight": 1.5}'),
+  layout_config JSON NULL,
 
   -- Configuración específica de bordes y elementos decorativos
-  border_config JSON DEFAULT ('{"style": "classic", "width": 2, "color": "#1f2937", "cornerRadius": 0}'),
+  border_config JSON NULL,
 
   -- Configuración de elementos visuales
-  visual_config JSON DEFAULT ('{"showLogo": true, "showInstitution": true, "showDate": true, "showSignature": true, "showAuthors": true, "showAvalador": true}'),
+  visual_config JSON NULL,
 
   -- Configuración del texto del aval con variables dinámicas
-  aval_text_config JSON DEFAULT ('{"template": "Concepto de aval: $modalidad desarrollado por $autores con título $titulo. Concepto: APROBADO. Solicito designación de jurados.", "variables": ["$autores", "$titulo", "$modalidad", "$avalador", "$fecha", "$institucion", "$ubicacion"]}') COMMENT 'Configuración del texto del aval con variables dinámicas',
+  aval_text_config JSON NULL COMMENT 'Configuración del texto del aval con variables dinámicas',
 
   -- Metadatos de auditoría
   updated_by VARCHAR(100) DEFAULT 'system',
@@ -167,7 +168,7 @@ CREATE TABLE visual_config (
   logo_data LONGBLOB NULL COMMENT 'Datos binarios del logo',
   logo_mimetype VARCHAR(100) NULL COMMENT 'Tipo MIME del logo (image/png, image/jpeg, etc.)',
   logo_filename VARCHAR(255) NULL COMMENT 'Nombre original del archivo del logo',
-  footer_text TEXT DEFAULT '© 2026 Firmas Digitales FD. Todos los derechos reservados.',
+  footer_text TEXT NOT NULL,
   admin_header_title VARCHAR(255) DEFAULT 'Panel Administrativo',
   updated_by VARCHAR(100) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -183,9 +184,9 @@ CREATE TABLE user_activity_log (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   accion VARCHAR(100) NOT NULL,
-  descripcion TEXT DEFAULT NULL,
+  descripcion TEXT NULL,
   ip_address VARCHAR(45) DEFAULT NULL,
-  user_agent TEXT DEFAULT NULL,
+  user_agent TEXT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

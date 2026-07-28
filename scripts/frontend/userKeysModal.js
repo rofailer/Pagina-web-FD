@@ -20,14 +20,14 @@
         keySelectModal.style.display = "flex";
         // Obtener la llave activa actual
         fetch("/active-key", {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+            headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` }
         })
             .then(res => res.json())
             .then(activeData => {
                 const activeKeyId = activeData.activeKey ? activeData.activeKey.id : null;
                 // Ahora obtener todas las llaves
                 fetch("/user-keys", {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+                    headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` }
                 })
                     .then(res => res.json())
                     .then(data => {
@@ -112,7 +112,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${localStorage.getItem('token')}`
+                Authorization: `Bearer ${sessionStorage.getItem('token')}`
             },
             body: JSON.stringify({ keyId: selectedKeyId })
         });
@@ -136,8 +136,8 @@
     // Expón la función globalmente
     window.openUserKeysModal = openUserKeysModal;
 
-    // Verifica si hay token en localStorage antes de intentar cargar llaves
-    if (!localStorage.getItem("token")) {
+    // Verifica si hay una sesión activa antes de intentar cargar llaves.
+    if (!sessionStorage.getItem("token")) {
         // No hay sesión, no intentes cargar llaves
         return;
     }

@@ -19,7 +19,7 @@
     }
 
     get token() {
-      return this.adminPanel?.getAdminToken?.() || localStorage.getItem('admin_token') || '';
+      return this.adminPanel?.getAdminToken?.() || sessionStorage.getItem('admin_token') || '';
     }
 
     get isOwner() {
@@ -346,7 +346,15 @@
       if (!this.isOwner) return this.notify('Solo el propietario puede descargar copias de seguridad', 'warning');
       const button = document.getElementById('downloadDatabaseBackupBtn'); this.setBusy(button, true, 'Preparando…');
       try {
-        const response = await fetch('/api/admin/database/export', { headers: this.headers(), cache: 'no-store' });
+        const password = await this.requestOwnerPassword();
+        if (!password) return;
+
+        const response = await fetch('/api/admin/database/export', {
+          method: 'POST',
+          headers: this.headers(true),
+          cache: 'no-store',
+          body: JSON.stringify({ password })
+        });
         if (!response.ok) throw await this.responseError(response, 'No se pudo generar la copia de seguridad');
         const disposition = response.headers.get('Content-Disposition') || '';
         const fileName = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `firmas-digitales-${new Date().toISOString().slice(0, 10)}.sql`;
@@ -357,6 +365,41 @@
       } finally {
         this.setBusy(button, false, 'Descargar copia SQL');
       }
+    }
+
+    requestOwnerPassword() {
+      const dialog = document.getElementById('ownerPasswordDialog');
+      const form = document.getElementById('ownerPasswordForm');
+      const input = document.getElementById('ownerPasswordInput');
+      if (!dialog || !form || !input || typeof dialog.showModal !== 'function') {
+        this.notify('No fue posible abrir la confirmación de seguridad', 'error');
+        return Promise.resolve(null);
+      }
+
+      input.value = '';
+      dialog.showModal();
+      window.setTimeout(() => input.focus(), 50);
+
+      return new Promise(resolve => {
+        let settled = false;
+        const finish = value => {
+          if (settled) return;
+          settled = true;
+          form.removeEventListener('submit', onSubmit);
+          dialog.removeEventListener('close', onClose);
+          input.value = '';
+          if (dialog.open) dialog.close();
+          resolve(value);
+        };
+        const onSubmit = event => {
+          event.preventDefault();
+          if (!form.reportValidity()) return;
+          finish(input.value);
+        };
+        const onClose = () => finish(null);
+        form.addEventListener('submit', onSubmit);
+        dialog.addEventListener('close', onClose);
+      });
     }
 
     setBusy(button, busy, label) { if (!button) return; button.disabled = busy; button.textContent = label; button.setAttribute('aria-busy', String(busy)); }

@@ -162,7 +162,7 @@ class ThemeManager {
     }
 
     async saveToServer() {
-        const adminToken = localStorage.getItem('admin_token') || localStorage.getItem('token');
+        const adminToken = sessionStorage.getItem('admin_token') || sessionStorage.getItem('token');
         if (!adminToken) return false;
 
         try {
