@@ -38,7 +38,7 @@
     "dotenv": "^16.6.1",
     "express": "^4.22.2",
     "jsonwebtoken": "^9.0.3",
-    "multer": "^2.2.0",
+    "multer": "^2.4.0",
     "mysql2": "^3.23.1",
     "pdf-lib": "^1.17.1"
   }
